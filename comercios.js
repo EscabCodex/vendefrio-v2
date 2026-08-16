@@ -1,0 +1,53 @@
+// =====================================================
+// VendeFrio Lite - Comercios iniciales
+// =====================================================
+// Este archivo contiene la lista inicial.
+// Los cambios que hagas en la app se guardan en localStorage.
+
+const COMERCIOS = [
+  { nombre: "Anibal", direccion: "", telefono: "" },
+  { nombre: "Cachete", direccion: "", telefono: "" },
+  { nombre: "Ceci", direccion: "", telefono: "" },
+  { nombre: "Chamu", direccion: "", telefono: "" },
+  { nombre: "Chino ABC", direccion: "", telefono: "" },
+  { nombre: "Chino Abuelo", direccion: "", telefono: "" },
+  { nombre: "Chino Acha", direccion: "", telefono: "" },
+  { nombre: "Chino Aquiles", direccion: "", telefono: "" },
+  { nombre: "Chino Cartero", direccion: "", telefono: "" },
+  { nombre: "Chino Centenera", direccion: "", telefono: "" },
+  { nombre: "Chino Chen", direccion: "", telefono: "" },
+  { nombre: "Chino Fernandez", direccion: "", telefono: "" },
+  { nombre: "Chino Felix Frias", direccion: "", telefono: "" },
+  { nombre: "Chino La Gritona", direccion: "", telefono: "" },
+  { nombre: "Chino Malarredo", direccion: "", telefono: "" },
+  { nombre: "Chino Rolland", direccion: "", telefono: "" },
+  { nombre: "Chino Stepi", direccion: "", telefono: "" },
+  { nombre: "Chino SuperMorris", direccion: "", telefono: "" },
+  { nombre: "Chino Tokio", direccion: "", telefono: "" },
+  { nombre: "Chino Villegas", direccion: "", telefono: "" },
+  { nombre: "Don Luis", direccion: "", telefono: "" },
+  { nombre: "Frigorifico Jufre", direccion: "", telefono: "" },
+  { nombre: "Frigorifico Malaspina", direccion: "", telefono: "" },
+  { nombre: "Gaboto Market", direccion: "", telefono: "" },
+  { nombre: "Guille", direccion: "", telefono: "" },
+  { nombre: "Jorgito", direccion: "", telefono: "" },
+  { nombre: "Juan Garibaldi", direccion: "", telefono: "" },
+  { nombre: "Kiosco Blandengues", direccion: "", telefono: "" },
+  { nombre: "La Alemana", direccion: "", telefono: "" },
+  { nombre: "La Bonita", direccion: "", telefono: "" },
+  { nombre: "Las Margaritas", direccion: "", telefono: "" },
+  { nombre: "Las Rubias", direccion: "", telefono: "" },
+  { nombre: "Las chicas Cartero", direccion: "", telefono: "" },
+  { nombre: "Marita", direccion: "", telefono: "" },
+  { nombre: "Matadero", direccion: "", telefono: "" },
+  { nombre: "MiniPanda", direccion: "", telefono: "" },
+  { nombre: "Moni", direccion: "", telefono: "" },
+  { nombre: "Pelotita Caban", direccion: "", telefono: "" },
+  { nombre: "Pepe", direccion: "", telefono: "" },
+  { nombre: "Porte\u00f1o Aconcagua", direccion: "", telefono: "" },
+  { nombre: "Roxana", direccion: "", telefono: "" },
+  { nombre: "Super Lucas", direccion: "", telefono: "" },
+  { nombre: "Super Market", direccion: "", telefono: "" },
+  { nombre: "Super Nico", direccion: "", telefono: "" },
+  { nombre: "Susana", direccion: "", telefono: "" }
+];

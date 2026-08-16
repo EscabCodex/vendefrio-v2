@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VendeFrío</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f9d63">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VendeFrío">
+<link rel="stylesheet" href="styles.css">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<section id="pantallaMenu">
+  <header style="background: linear-gradient(135deg, #0f9d63, #0b7a4d); color: white; padding: 22px 20px 24px 20px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <h1 style="font-size: 22px; font-weight: 800; margin: 0;">📱 VendeFrío</h1>
+      <span style="background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">Reparto Activo</span>
+    </div>
+
+    <div class="resumenDashboardGrid">
+      <div class="tarjetaDashboard tarjetaDashboardVerde clickeableDashboard" data-dashboard-accion="pedidosHoy" role="button" tabindex="0" title="Abrir pedidos de hoy">
+        <div>Pedidos de hoy</div>
+        <strong id="dashPedidosHoy">0</strong>
+      </div>
+
+      <div class="tarjetaDashboard tarjetaDashboardAzul clickeableDashboard" data-dashboard-accion="visitadosSemana" role="button" tabindex="0" title="Abrir comercios visitados esta semana">
+        <div>Visitados semana</div>
+        <strong id="dashVisitadosSemana">0</strong>
+      </div>
+
+      <div class="tarjetaDashboard tarjetaDashboardVioleta clickeableDashboard" data-dashboard-accion="pedidosSemana" role="button" tabindex="0" title="Abrir pedidos de esta semana">
+        <div>Pedidos semana</div>
+        <strong id="dashPedidosSemana">0</strong>
+      </div>
+
+      <div class="tarjetaDashboard tarjetaDashboardNaranja clickeableDashboard" data-dashboard-accion="pendientesSemana" role="button" tabindex="0" title="Abrir comercios pendientes esta semana">
+        <div>Pendientes semana</div>
+        <strong id="dashPendientesSemana">0</strong>
+      </div>
+    </div>
+
+    <div class="totalesDashboard">
+      <span>Comercios: <strong id="dashTotalComercios">0</strong></span>
+      <span>Marcas: <strong id="dashTotalMarcas">0</strong></span>
+      <span>Productos: <strong id="dashTotalProductos">0</strong></span>
+      <span>📍 GPS: <strong id="dashConGps">0</strong></span>
+    </div>
+  </header>
+
+  <main class="container">
+    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 20px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">⚡ Próxima Parada Sugerida</h2>
+
+    <div id="dashProximaParada" class="card" style="border-left: 5px solid #0f9d63; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+      <p style="color: #6b7280; font-size: 13px;">Buscando próximo comercio pendiente...</p>
+    </div>
+
+    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 24px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">🧾 Último pedido</h2>
+
+    <div id="dashUltimoPedido" class="card ultimoPedidoDashboard">
+      <p>Buscando último pedido...</p>
+    </div>
+
+    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 24px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">🛠️ Accesos Rápidos</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <button class="menuBtn" onclick="mostrarPantalla('pedido')" style="margin: 0; font-size: 14px; padding: 16px; background: #ecfdf5; color: #065f46; border: 1px solid #10b981; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+        📝 Nuevo Pedido
+      </button>
+
+      <button class="menuBtn" onclick="mostrarPantalla('comercios')" style="margin: 0; font-size: 14px; padding: 16px; background: #fffbeb; color: #92400e; border: 1px solid #f59e0b; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+        🏪 Mis Comercios
+      </button>
+
+      <button class="menuBtn" onclick="mostrarPantalla('rutas')" style="margin: 0; font-size: 14px; padding: 16px; background: #eff6ff; color: #1e40af; border: 1px solid #3b82f6; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+        🗺️ Mapa y Rutas
+      </button>
+
+      <button class="menuBtn" onclick="mostrarPantalla('historial')" style="margin: 0; font-size: 14px; padding: 16px; background: #f3e8ff; color: #581c87; border: 1px solid #a855f7; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+        🕒 Ver Historial
+      </button>
+    </div>
+
+    <section class="card" style="margin-top: 24px; border-left: 5px solid #8b5cf6;">
+      <h2 style="font-size: 15px; margin: 0 0 8px 0; color: #581c87;">💾 Respaldo de datos</h2>
+
+      <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px 0;">
+        Guardá una copia de tus comercios, productos, pedidos y rutas para no perderlos.
+      </p>
+
+      <p id="estadoRespaldo" class="estadoRespaldo" aria-live="polite">
+        Último respaldo: todavía no se creó ninguno.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button id="exportarRespaldo" class="btnAccion agregar" type="button" style="justify-content: center; margin: 0;">
+          ⬇️ Exportar
+        </button>
+
+        <button id="importarRespaldo" class="btnAccion ver" type="button" style="justify-content: center; margin: 0;">
+          ⬆️ Importar
+        </button>
+      </div>
+
+      <button id="borrarTodosDatos" class="btnAccion eliminar botonBorrarTodosDatos" type="button">
+        🗑️ Borrar todos los datos de la app
+      </button>
+
+      <input id="archivoRespaldo" type="file" accept="application/json,.json" style="display: none;">
+    </section>
+  </main>
+</section>
+
+<section id="pantallaPedido" class="oculto">
+  <header>
+    <div class="logo">📝</div>
+    <div>
+      <h1>Nuevo Pedido</h1>
+      <p>VendeFrío</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="resumenPedido" class="resumenPedido" aria-live="polite">
+      <span>Unidades: <strong id="totalUnidadesPedido">0</strong></span>
+      <span>Productos: <strong id="totalTiposPedido">0</strong></span>
+    </div>
+
+    <section class="card">
+      <label>Comercio</label>
+      <input id="cliente" list="listaComercios" placeholder="Elegí un comercio">
+      <datalist id="listaComercios"></datalist>
+    </section>
+
+    <div id="productos"></div>
+
+    <section class="card observacionesPedido">
+      <label>Observaciones</label>
+      <textarea id="obs" placeholder="Observaciones"></textarea>
+    </section>
+  </main>
+
+  <footer>
+    <button id="reset">Vaciar</button>
+    <button id="generar">Generar Pedido</button>
+  </footer>
+</section>
+
+<section id="pantallaComercios" class="oculto">
+  <header>
+    <div class="logo">🏪</div>
+    <div>
+      <h1>Comercios</h1>
+      <p>Etiquetas automáticas de visita</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card filtrosComercios">
+      <input id="buscarComercio" type="text" placeholder="Buscar comercio...">
+
+      <select id="filtroEstadoComercios" aria-label="Filtrar comercios por visitas">
+        <option value="todos">Todos los comercios</option>
+        <option value="pendientes">Pendientes esta semana</option>
+        <option value="visitados">Visitados esta semana</option>
+      </select>
+
+      <p id="resumenComercios" class="resumenComercios" aria-live="polite">
+        Comercios: 0 - Pendientes: 0 - Visitados: 0
+      </p>
+
+      <button id="agregarComercio" class="btnAccion agregar">Agregar comercio</button>
+    </div>
+
+    <div id="listaComerciosAdmin"></div>
+  </main>
+</section>
+
+<section id="pantallaProductos" class="oculto">
+  <header>
+    <div class="logo">📦</div>
+    <div>
+      <h1>Marcas y Productos</h1>
+      <p>Administración</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <input id="buscarProducto" type="text" placeholder="Buscar marca o producto">
+
+      <div class="filaBotones">
+        <button id="agregarMarca" class="btnAccion agregar">Agregar marca</button>
+        <button id="agregarProducto" class="btnAccion agregar">Agregar producto</button>
+      </div>
+    </div>
+
+    <div id="listaProductosAdmin"></div>
+  </main>
+</section>
+
+<section id="pantallaRutas" class="oculto">
+  <header style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+    <div class="logo">🗺️</div>
+    <div>
+      <h1>Rutas y Mapa</h1>
+      <p>Reparto optimizado</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card" style="border-left: 5px solid #2563eb;">
+      <div class="encabezadoTarjetaRuta">
+        <div class="iconoTarjetaRuta">📍</div>
+        <div>
+          <h2>Ubicación del comercio</h2>
+          <p>Elegí un comercio para guardar o borrar su GPS.</p>
+        </div>
+      </div>
+
+      <label>Comercio:</label>
+
+      <select id="selectComercioGps" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px;"></select>
+
+      <p id="resumenRuta" class="resumenRuta" aria-live="polite">
+        Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
+      </p>
+
+      <button id="btnGuardarGps" class="btnAccion" style="width: 100%; background: #2563eb; color: white; justify-content: center; margin-bottom: 8px;">
+        📍 Guardar mi GPS actual en este comercio
+      </button>
+
+      <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
+        🗑️ Borrar GPS de este comercio
+      </button>
+    </div>
+
+    <div class="card tarjetaSeleccionRuta" style="border-left: 5px solid #8b5cf6;">
+      <div class="encabezadoTarjetaRuta">
+        <div class="iconoTarjetaRuta">🧭</div>
+        <div>
+          <h2>Comercios para esta ruta</h2>
+          <p>Elegí qué paradas querés incluir en la próxima ruta.</p>
+        </div>
+      </div>
+
+      <div class="accionesSeleccionRuta">
+        <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
+          Todos
+        </button>
+
+        <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
+          Pendientes
+        </button>
+
+        <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
+          Limpiar
+        </button>
+      </div>
+
+      <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
+
+      <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
+    </div>
+
+    <div class="card">
+      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: #eef0f2;"></div>
+
+      <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
+          ⚡ Optimizar Ruta
+        </button>
+
+        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
+          🚗 Google Maps
+        </button>
+      </div>
+
+      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
+    </div>
+  </main>
+</section>
+
+<section id="pantallaHistorial" class="oculto">
+  <header>
+    <div class="logo">🕒</div>
+    <div>
+      <h1>Historial</h1>
+      <p>Pedidos guardados</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card filtrosHistorial">
+      <input id="buscarHistorial" type="search" placeholder="Buscar por comercio o pedido..." aria-label="Buscar en el historial">
+
+      <select id="filtroFechaHistorial" aria-label="Filtrar historial por fecha">
+        <option value="todos">Todos los pedidos</option>
+        <option value="hoy">Solo los de hoy</option>
+        <option value="semana">Esta semana</option>
+      </select>
+
+      <p id="resumenHistorial" class="resumenHistorial" aria-live="polite">
+        Pedidos encontrados: 0 - Unidades: 0
+      </p>
+
+      <div id="filtroHistorialActivo" class="filtroHistorialActivo oculto">
+        <span id="textoFiltroHistorial"></span>
+
+        <button id="limpiarFiltroHistorial" type="button" class="btnAccion secundario">
+          Ver todos
+        </button>
+      </div>
+    </div>
+
+    <div id="contenedorHistorial">
+      <div class="card">
+        <h2>Cargando...</h2>
+        <p>Un momento por favor.</p>
+      </div>
+    </div>
+  </main>
+</section>
+
+<nav class="bottom-nav" aria-label="Navegación principal">
+  <button class="nav-item activo" data-pantalla="menu" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M3 10.8 12 3l9 7.8"></path>
+        <path d="M5.5 9.8V21h13V9.8"></path>
+        <path d="M9.5 21v-6h5v6"></path>
+      </svg>
+    </span>
+    Inicio
+  </button>
+
+  <button class="nav-item" data-pantalla="pedido" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M5 4.5h10l4 4V20H5z"></path>
+        <path d="M15 4.5V9h4"></path>
+        <path d="M8.5 13h7"></path>
+        <path d="M8.5 16.5h5"></path>
+      </svg>
+    </span>
+    Pedido
+  </button>
+
+  <button class="nav-item" data-pantalla="comercios" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M4 10h16v10H4z"></path>
+        <path d="M3 10 5 4h14l2 6"></path>
+        <path d="M8 10v2a2 2 0 0 0 4 0v-2a2 2 0 0 0 4 0v-2"></path>
+        <path d="M8 20v-5h8v5"></path>
+      </svg>
+    </span>
+    Comercios
+  </button>
+
+  <button class="nav-item" data-pantalla="rutas" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M5 4h14v16H5z"></path>
+        <path d="M8 8h8"></path>
+        <path d="M8 12h5"></path>
+        <path d="m8 16 2 2 5-5"></path>
+      </svg>
+    </span>
+    Rutas
+  </button>
+
+  <button class="nav-item" data-pantalla="productos" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"></path>
+        <path d="m4 7.5 8 4.5 8-4.5"></path>
+        <path d="M12 12v9"></path>
+      </svg>
+    </span>
+    Marcas
+  </button>
+
+  <button class="nav-item" data-pantalla="historial" type="button">
+    <span class="nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <circle cx="12" cy="12" r="8.5"></circle>
+        <path d="M12 7v5l3.5 2"></path>
+        <path d="M5 5.5 3.5 4"></path>
+      </svg>
+    </span>
+    Historial
+  </button>
+</nav>
+
+<div id="modalAviso" class="modal oculto">
+  <div class="modalContenido">
+    <h2 id="tituloAviso">Aviso</h2>
+    <p id="mensajeAviso" style="margin: 15px 0; color: #374151;"></p>
+
+    <div class="modalBotones">
+      <button id="cerrarAviso" class="btnModalConfirmar" style="width: 100%;">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="modal oculto">
+  <div class="modalContenido">
+    <h2 id="modalTitulo">Comercio</h2>
+
+    <label>Nombre</label>
+    <input id="modalNombre" type="text">
+
+    <label>Dirección</label>
+    <input id="modalDireccion" type="text" placeholder="Pegá la dirección de Google Maps">
+
+    <label>Enlace de Google Maps (opcional)</label>
+    <input id="modalEnlaceMaps" type="url" placeholder="Pegá el enlace de Google Maps">
+
+    <label>Teléfono</label>
+    <input id="modalTelefono" type="text">
+
+    <div class="modalBotones">
+      <button id="cancelarModal" class="btnModalCancelar">
+        Cancelar
+      </button>
+
+      <button id="guardarModal" class="btnModalConfirmar">
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="modalConfirmacion" class="modal oculto">
+  <div class="modalContenido">
+    <h2 id="tituloConfirmacion">Confirmar</h2>
+
+    <p id="mensajeConfirmacion">
+      ¿Estás seguro de realizar esta acción?
+    </p>
+
+    <div class="modalBotones">
+      <button id="cancelarConfirmacion" class="btnModalCancelar">
+        Cancelar
+      </button>
+
+      <button id="aceptarConfirmacion" class="btnModalPeligro">
+        Aceptar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="modalProducto" class="modal oculto">
+  <div class="modalContenido">
+    <h2 id="modalProductoTitulo">Producto</h2>
+
+    <label id="labelMarca">Marca</label>
+    <select id="productoMarca"></select>
+
+    <label>Nombre</label>
+    <input id="productoNombre" type="text" placeholder="Nombre">
+
+    <label id="labelPrecio">Precio</label>
+    <input id="productoPrecio" type="number" placeholder="0">
+
+    <div class="modalBotones">
+      <button id="cancelarProducto" class="btnModalCancelar">
+        Cancelar
+      </button>
+
+      <button id="guardarProducto" class="btnModalConfirmar">
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPedido" class="modal oculto">
+  <div class="modalContenido">
+    <h2>Pedido generado</h2>
+
+    <p>
+      <strong>Cliente:</strong>
+      <span id="pedidoCliente"></span>
+    </p>
+
+    <p>
+      <strong>Productos:</strong>
+      <span id="pedidoCantidad"></span>
+    </p>
+
+    <div id="pedidoDetalle" class="detallePedido"></div>
+
+    <div class="modalBotones">
+      <button id="whatsappPedido" class="btnModalWhatsapp">
+        Enviar por WhatsApp
+      </button>
+
+      <button id="copiarPedido" class="btnModalSecundario">
+        Copiar nuevamente
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="productos.js"></script>
+<script src="comercios.js"></script>
+<script src="database.js"></script>
+<script src="menu.js"></script>
+<script src="pedidos.js"></script>
+<script src="comerciosAdmin.js"></script>
+<script src="productosAdmin.js"></script>
+<script src="historial.js"></script>
+<script src="rutas.js"></script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js");
+    });
+  }
+</script>
+
+</body>
+</html>

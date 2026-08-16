@@ -1,0 +1,19 @@
+{
+  "name": "VendeFrío",
+  "short_name": "VendeFrío",
+  "description": "Administrador de pedidos para corredores y tomadores de pedido",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f5",
+  "theme_color": "#0f9d63",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

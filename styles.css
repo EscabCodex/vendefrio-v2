@@ -1,0 +1,1420 @@
+:root{
+  --verde: #0f9d63;
+  --verde-oscuro: #0b7a4d;
+  --verde-vibrante: #10b981;
+  --verde-claro: #e6f7ef;
+  --rojo: #e5483d;
+  --gris-texto: #6b7280;
+  --gris-claro: #eef0f2;
+  --fondo: #eef2f5;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body{
+  background:var(--fondo);
+  color:#222;
+  padding-bottom:100px;
+}
+
+/* ================= HEADER ================= */
+
+header{
+  background:linear-gradient(135deg, var(--verde), var(--verde-oscuro));
+  color:white;
+  padding:22px 20px;
+  display:flex;
+  align-items:center;
+  gap:15px;
+  border-bottom-left-radius:26px;
+  border-bottom-right-radius:26px;
+  box-shadow:0 4px 15px rgba(0,0,0,.18);
+}
+
+.logo{
+  width:56px;
+  height:56px;
+  background:rgba(255,255,255,.95);
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:26px;
+  flex-shrink:0;
+}
+
+header h1{
+  font-size:26px;
+  font-weight:700;
+}
+
+header p{
+  opacity:.85;
+  margin-top:3px;
+  font-size:14px;
+}
+
+/* ================= DASHBOARD ================= */
+
+#pantallaMenu > header{
+  display:block;
+  padding:16px !important;
+}
+
+#pantallaMenu > header > div:first-child{
+  margin-bottom:10px;
+}
+
+#pantallaMenu .container{
+  padding:12px 14px;
+}
+
+#pantallaMenu .container > h2{
+  margin-top:16px !important;
+  margin-bottom:7px !important;
+}
+
+#pantallaMenu .card{
+  padding:14px;
+  margin-bottom:10px;
+}
+
+.botonBorrarTodosDatos{
+  width:100%;
+  justify-content:center;
+  margin-top:10px;
+}
+
+.resumenDashboardGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  width:100%;
+  margin-top:0;
+}
+
+.tarjetaDashboard{
+  border-radius:12px;
+  padding:10px 11px;
+  box-shadow:0 3px 8px rgba(0,0,0,.1);
+  color:#1f2937;
+}
+
+.clickeableDashboard{
+  cursor:pointer;
+  user-select:none;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+
+.clickeableDashboard:hover,
+.clickeableDashboard:focus-visible{
+  transform:translateY(-2px);
+  box-shadow:0 6px 14px rgba(15,65,45,.18);
+  outline:2px solid rgba(15,157,99,.35);
+  outline-offset:2px;
+}
+
+.clickeableDashboard:active{
+  transform:scale(.98);
+}
+
+.tarjetaDashboard div{
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  color:#6b7280;
+}
+
+.tarjetaDashboard strong{
+  display:block;
+  margin-top:3px;
+  font-size:22px;
+  font-weight:900;
+}
+
+.tarjetaDashboardVerde{
+  background:#ffffff;
+}
+
+.tarjetaDashboardVerde strong{
+  color:#0f9d63;
+}
+
+.tarjetaDashboardCeleste{
+  background:#ecfeff;
+}
+
+.tarjetaDashboardCeleste strong{
+  color:#0891b2;
+}
+
+.tarjetaDashboardAzul{
+  background:#eff6ff;
+}
+
+.tarjetaDashboardAzul strong{
+  color:#2563eb;
+}
+
+.tarjetaDashboardVioleta{
+  background:#f5f3ff;
+}
+
+.tarjetaDashboardVioleta strong{
+  color:#7c3aed;
+}
+
+.tarjetaDashboardNaranja{
+  background:#fff7ed;
+}
+
+.tarjetaDashboardNaranja strong{
+  color:#ea580c;
+}
+
+.totalesDashboard{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:5px 12px;
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:rgba(0,0,0,.18);
+  font-size:12px;
+  font-weight:600;
+}
+
+.totalesDashboard strong{
+  color:#a7f3d0;
+}
+
+.ultimoPedidoDashboard h3{
+  margin-bottom:4px;
+  color:#1f2937;
+}
+
+.ultimoPedidoDashboard p{
+  margin:0;
+  color:#6b7280;
+}
+
+.ultimoPedidoDashboard.clickeable{
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+
+.ultimoPedidoDashboard.clickeable:hover,
+.ultimoPedidoDashboard.clickeable:focus-visible{
+  transform:translateY(-1px);
+  box-shadow:0 5px 14px rgba(15,157,99,.18);
+  outline:2px solid rgba(15,157,99,.35);
+  outline-offset:2px;
+}
+
+.ultimoPedidoDashboard.clickeable::after{
+  content:"Toc\e1  para ver este pedido en el historial \2192 ";
+  display:block;
+  margin-top:8px;
+  color:#0f9d63;
+  font-size:12px;
+  font-weight:700;
+}
+
+#dashProximaParada.clickeable{
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+
+#dashProximaParada.clickeable:hover,
+#dashProximaParada.clickeable:focus-visible{
+  transform:translateY(-1px);
+  box-shadow:0 5px 14px rgba(15,157,99,.18);
+  outline:2px solid rgba(15,157,99,.35);
+  outline-offset:2px;
+}
+
+#dashProximaParada.clickeable::after{
+  content:"Toc\e1  para ver este comercio";
+  display:block;
+  margin-top:8px;
+  color:#0f9d63;
+  font-size:12px;
+  font-weight:700;
+}
+
+.accionesDashboard{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.accionesDashboard .btnAccion{
+  width:96px;
+  min-height:40px;
+  padding:0 !important;
+  justify-content:center;
+  font-size:12px;
+}
+
+/* ================= LAYOUT ================= */
+
+.container{
+  padding:16px;
+  max-width:700px;
+  margin:auto;
+}
+
+.card{
+  background:white;
+  border-radius:var(--radius-lg);
+  padding:18px;
+  box-shadow:0 3px 10px rgba(0,0,0,.08);
+  margin-bottom:16px;
+}
+
+.card p{
+  font-size:14px;
+  color:#555;
+  margin-top:4px;
+}
+
+h2{
+  font-size:18px;
+}
+
+h3{
+  font-size:16px;
+}
+
+label{
+  display:block;
+  font-weight:600;
+  margin-top:15px;
+  margin-bottom:8px;
+  font-size:14px;
+  color:#444;
+}
+
+input,textarea{
+  width:100%;
+  border:none;
+  background:#f3f5f7;
+  padding:14px 15px;
+  border-radius:var(--radius-md);
+  font-size:16px;
+}
+
+textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+/* ================= BOTONES DE MEN\da  PRINCIPAL ================= */
+
+.menuBtn{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:14px;
+  padding:16px 18px;
+  border:none;
+  border-radius:var(--radius-lg);
+  color:white;
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 10px rgba(0,0,0,.15);
+  transition:transform .12s ease;
+  text-align:left;
+}
+
+.menuBtn:active{
+  transform:scale(.98);
+}
+
+.menuIcono{
+  width:42px;
+  height:42px;
+  background:rgba(255,255,255,.22);
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  flex-shrink:0;
+}
+
+#btnPedido{ background:var(--verde-vibrante); }
+#btnComercios{ background:var(--verde); }
+#btnProductos{ background:#0c7a4f; }
+#btnHistorial{ background:#134e4a; }
+
+/* ================= MARCAS (Nuevo Pedido) ================= */
+
+.marca{
+  background:white;
+  border-radius:var(--radius-lg);
+  margin-bottom:15px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.tituloMarca{
+  background:var(--acento, var(--verde));
+  color:white;
+  padding:16px;
+  font-size:19px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.listaProdutos{
+  padding:6px 14px 10px;
+}
+
+.fila{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid #f0f0f0;
+}
+
+.fila:last-child{
+  border:none;
+}
+
+.fila span{
+  flex:1;
+  width:auto;
+  min-width:0;
+  padding-right:4px;
+  font-size:15px;
+}
+
+select{
+  width:78px;
+  padding:9px;
+  border-radius:var(--radius-sm);
+  border:2px solid var(--verde);
+  font-size:16px;
+  background:white;
+  transition:.2s;
+}
+
+select.activo{
+  background:var(--verde);
+  color:white;
+  font-weight:700;
+}
+
+/* ================= MARCAS Y PRODUCTOS (Admin) ================= */
+
+.tarjetaMarca{
+  background:white;
+  border-radius:var(--radius-lg);
+  margin-bottom:15px;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.cabeceraMarca{
+  background:var(--acento, var(--verde));
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:white;
+  padding:16px;
+}
+
+.marca select{
+  border-color:var(--acento, var(--verde));
+}
+
+.marca select.activo{
+  background:var(--acento, var(--verde));
+}
+
+.cabeceraMarca h2{
+  font-size:17px;
+  font-weight:700;
+}
+
+.accionesMarca{
+  display:flex;
+  gap:5px;
+}
+
+.accionesMarca .btnIcono{
+  width:32px;
+  height:32px;
+  font-size:15px;
+}
+
+.cuerpoMarca{
+  padding:4px 14px 8px;
+}
+
+.filaProducto{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid #f0f0f0;
+  gap:10px;
+}
+
+.filaProducto:last-child{
+  border-bottom:none;
+}
+
+.filaProducto strong{
+  font-size:15px;
+}
+
+.filaProducto small{
+  color:var(--gris-texto);
+  font-size:13px;
+}
+
+.filaBotones{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+
+.filaProducto .filaBotones{
+  margin-top:0;
+}
+
+.filaBotones .btnAccion, .accionesComercio .btnAccion, .accionesHistorial .btnAccion{
+  flex:1;
+  justify-content:center;
+}
+
+#agregarComercio{
+  width:100%;
+  justify-content:center;
+  margin-top:12px;
+}
+
+/* ================= FILTROS DEL HISTORIAL Y COMERCIOS ================= */
+.filtrosHistorial,
+.filtrosComercios {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.filtrosHistorial input,
+.filtrosHistorial select,
+.filtrosComercios input,
+.filtrosComercios select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.resumenHistorial,
+.resumenComercios {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.resumenHistorial {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.resumenComercios {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.resumenRuta {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filtroHistorialActivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filtroHistorialActivo .btnAccion {
+  flex-shrink: 0;
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+.historialVacio {
+  text-align: center;
+}
+
+/* ================= TARJETAS: COMERCIOS / HISTORIAL ================= */
+
+.cabeceraCard{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+.avatar{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  color:white;
+  font-weight:700;
+  font-size:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+
+.infoCard{
+  flex:1;
+  min-width:0;
+}
+
+.infoCard h3{
+  font-size:17px;
+  margin-bottom:4px;
+}
+
+.datosComercioGrid{
+  display:block;
+  width:100%;
+  line-height:1.8;
+}
+
+.datoComercio{
+  display:inline-block;
+  max-width:100%;
+  margin-right:12px;
+  vertical-align:middle;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  font-size:13px;
+  line-height:1.25;
+  color:var(--gris-texto);
+}
+
+.datoComercio:empty{
+  display:none;
+}
+
+.subtitulo{
+  font-size:13px;
+  color:var(--gris-texto);
+}
+
+.accionesComercio, .accionesHistorial{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+
+.accionesComercio{
+  flex-wrap:wrap;
+}
+
+.accionesComercio .btnAccion{
+  min-width:120px;
+}
+
+.estadoRespaldo {
+  margin: 0 0 14px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.estadoRespaldo.respaldoActivo {
+  background: #ecfdf5;
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* ================= BOTONES DE ACCI\d3 N (pill, icono + texto) ================= */
+
+.btnAccion{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:none;
+  border-radius:999px;
+  padding:10px 16px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .12s ease;
+}
+
+.btnAccion:active{
+  transform:scale(.96);
+}
+
+.btnAccion.ver{
+  background:#e8f1fd;
+  color:#1d6fd6;
+}
+
+.btnAccion.secundario{
+  background:#dbeafe;
+  color:#1d4ed8;
+}
+
+.btnAccion.editar{
+  background:#fff4e0;
+  color:#b8720a;
+}
+
+.btnAccion.eliminar{
+  background:#fdeceb;
+  color:#d5372b;
+}
+
+.btnAccion.agregar{
+  background:var(--verde);
+  color:white;
+  padding:13px 18px;
+  font-size:15px;
+  box-shadow:0 3px 8px rgba(15,157,99,.3);
+}
+
+/* ================= BOTONES ICONO (compactos, solo emoji) ================= */
+
+.btnIcono{
+  width:38px;
+  height:38px;
+  border:none;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  cursor:pointer;
+  transition:transform .12s ease;
+  flex-shrink:0;
+}
+
+.btnIcono:active{
+  transform:scale(.9);
+}
+
+.btnIcono.ghost{
+  background:rgba(255,255,255,.24);
+  color:white;
+}
+
+.btnIcono.tinteAmbar{
+  background:#fff4e0;
+  color:#b8720a;
+}
+
+.btnIcono.tinteRojo{
+  background:#fdeceb;
+  color:#d5372b;
+}
+
+/* ================= FOOTER ================= */
+
+footer{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  background:white;
+  padding:12px 14px;
+  box-shadow:0 -3px 10px rgba(0,0,0,.15);
+  display:flex;
+  gap:10px;
+}
+
+footer button{
+  border:none;
+  border-radius:var(--radius-md);
+  padding:16px;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .12s ease;
+}
+
+footer button:active{
+  transform:scale(.98);
+}
+
+.volverMenu{
+  flex:1;
+  background:var(--gris-claro);
+  color:#444;
+}
+
+#reset{
+  flex:1;
+  background:var(--verde-claro);
+  color:var(--verde-oscuro);
+}
+
+#generar{
+  flex:2;
+  background:var(--verde);
+  color:white;
+  font-size:18px;
+}
+
+.oculto{
+  display:none;
+}
+
+/* ================= MODAL ================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  z-index:2000;
+}
+
+.modal.oculto{
+  display:none;
+}
+
+.modalContenido{
+  background:#fff;
+  width:100%;
+  max-width:420px;
+  border-radius:var(--radius-lg);
+  padding:22px;
+  box-shadow:0 15px 40px rgba(0,0,0,.25);
+  animation:aparecer .18s ease;
+  max-height:88vh;
+  overflow-y:auto;
+}
+
+.modalContenido h2{
+  margin-bottom:18px;
+  text-align:center;
+  font-size:19px;
+}
+
+.modalContenido label{
+  display:block;
+  margin-top:12px;
+  margin-bottom:6px;
+  font-weight:600;
+  font-size:14px;
+  color:#444;
+}
+
+.modalContenido input{
+  width:100%;
+  padding:13px;
+  border-radius:var(--radius-md);
+  border:none;
+  background:#f3f5f7;
+  font-size:15px;
+  box-sizing:border-box;
+}
+
+#mensajeConfirmacion{
+  font-size:15px;
+  color:#444;
+  text-align:center;
+  line-height:1.5;
+}
+
+#modalPedido .modalContenido p{
+  margin-top:8px;
+  font-size:15px;
+}
+
+.modalBotones{
+  display:flex;
+  gap:12px;
+  margin-top:22px;
+}
+
+.modalBotones button{
+  flex:1;
+  padding:14px;
+  font-size:15px;
+  font-weight:700;
+  border:none;
+  border-radius:var(--radius-md);
+  cursor:pointer;
+  transition:transform .12s ease;
+}
+
+.modalBotones button:active{
+  transform:scale(.97);
+}
+
+.btnModalCancelar{
+  background:var(--gris-claro);
+  color:#555;
+}
+
+.btnModalConfirmar{
+  background:var(--verde);
+  color:white;
+}
+
+.btnModalPeligro{
+  background:var(--rojo);
+  color:white;
+}
+
+.btnModalSecundario{
+  background:var(--gris-claro);
+  color:#333;
+}
+
+.btnModalWhatsapp{
+  background:#25d366;
+  color:white;
+}
+
+.detallePedido{
+  background:#f3f5f7;
+  border-radius:var(--radius-md);
+  padding:14px;
+  margin-top:14px;
+  max-height:240px;
+  overflow-y:auto;
+  white-space:normal;
+  font-size:14px;
+  line-height:1.55;
+  text-align:left;
+}
+
+.detallePedido strong{
+  color:#145c42;
+  font-weight:800;
+}
+
+@keyframes aparecer{
+  from{
+    opacity:0;
+    transform:scale(.92);
+  }
+  to{
+    opacity:1;
+    transform:scale(1);
+  }
+}
+/* Sube el footer para que no lo tape la barra de navegaci\f3 n inferior */
+footer {
+  bottom: 65px !important;
+  z-index: 900;
+}
+
+/* Da espacio extra al final de la pantalla para poder hacer scroll c\f3 modo */
+main.container {
+  padding-bottom: 150px !important;
+}
+/* ========================================================
+   CORRECCI\d3 N ENCABEZADO DE INICIO (DASHBOARD)
+======================================================== */
+#pantallaMenu header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 14px;
+}
+
+/* ========================================================
+   BARRA DE NAVEGACI\d3 N INFERIOR MODERNA
+======================================================== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+  border-top: 1px solid #e5e7eb;
+  z-index: 1000;
+}
+
+.nav-item {
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-item .nav-icon{
+  width:28px;
+  height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:3px;
+  border-radius:10px;
+  transition:background .2s ease, transform .2s ease;
+}
+
+.nav-item .nav-icon svg{
+  display:block !important;
+  width:20px !important;
+  height:20px !important;
+  min-width:20px;
+  min-height:20px;
+  fill:none !important;
+  stroke:currentColor !important;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  overflow:visible;
+  visibility:visible !important;
+  opacity:1 !important;
+  pointer-events:none;
+}
+
+.nav-item .nav-icon svg path,
+.nav-item .nav-icon svg circle,
+.nav-item .nav-icon svg line,
+.nav-item .nav-icon svg polyline{
+  fill:none !important;
+  stroke:currentColor !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+.nav-item.activo {
+  color: #0f9d63;
+  font-weight: 800;
+}
+
+.nav-item.activo .nav-icon{
+  background:#e6f7ef;
+  transform:translateY(-1px);
+}
+
+.nav-item:focus-visible{
+  outline:2px solid rgba(15,157,99,.35);
+  outline-offset:2px;
+  border-radius:10px;
+}
+
+/* Refuerzo para que la navegaci\f3 n permanezca visible en celulares y PWA */
+body > nav.bottom-nav {
+  display: flex !important;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+}
+
+/* Badge para "Pendiente esta semana" en la Pr\f3 xima Parada del dashboard */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-pendiente {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge-visitado {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.encabezadoTarjetaRuta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.iconoTarjetaRuta{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  background:#eef2ff;
+  font-size:20px;
+  flex:none;
+}
+
+.encabezadoTarjetaRuta h2{
+  margin:0;
+  color:#1f2937;
+  font-size:16px;
+}
+
+.encabezadoTarjetaRuta p{
+  margin:3px 0 0;
+  color:#64748b;
+  font-size:12px;
+}
+
+.selectorRuta{
+  margin:12px 0 14px;
+  padding:12px;
+  border-radius:12px;
+  background:#f6f8fb;
+  border:1px solid #e2e8f0;
+}
+
+.selectorRuta h3{
+  margin:0 0 9px;
+  font-size:14px;
+  color:#1f2937;
+}
+
+.accionesSeleccionRuta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-bottom:9px;
+}
+
+.accionesSeleccionRuta .btnAccion{
+  padding:7px 10px;
+  font-size:11px;
+}
+
+.listaSeleccionRuta{
+  display:grid;
+  gap:5px;
+  max-height:210px;
+  overflow-y:auto;
+}
+
+.opcionSeleccionRuta{
+  display:grid;
+  grid-template-columns:20px 1fr auto;
+  align-items:center;
+  gap:7px;
+  padding:8px;
+  border-radius:8px;
+  background:#fff;
+  border:1px solid #e5e7eb;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.opcionSeleccionRuta input{
+  width:16px;
+  height:16px;
+  accent-color:#2563eb;
+}
+
+.opcionSeleccionRuta small{
+  font-size:10px;
+  font-weight:700;
+}
+
+.seleccionRutaGps{
+  color:#15803d;
+}
+
+.seleccionRutaSinGps{
+  color:#b45309;
+}
+
+.estadoSeleccionRuta{
+  margin:8px 0 0;
+  color:#64748b;
+  font-size:11px;
+  font-weight:700;
+}
+
+.encabezadoRuta {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.encabezadoRuta h3 {
+  margin:0;
+}
+
+.encabezadoRuta .btnAccion {
+  padding:8px 12px;
+  font-size:12px;
+}
+
+.paradaRuta {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid #eef0f2;
+}
+
+.paradaRuta:last-child {
+  border-bottom:none;
+}
+
+.paradaRuta > div {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.paradaRuta span,
+.paradaRuta small {
+  color:var(--gris-texto);
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+
+.paradaRuta .btnAccion {
+  flex-shrink:0;
+  padding:8px 11px;
+  font-size:12px;
+}
+
+/* =====================================================
+   MODAL DE AVISOS POR ENCIMA DE OTROS MODALES
+===================================================== */
+#modalAviso {
+  z-index: 4000 !important;
+}
+
+/* =====================================================
+   ETAPA 4 - RESUMEN R\c1 PIDO DEL PEDIDO
+===================================================== */
+.resumenPedido {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  margin: 14px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 3px 12px rgba(22, 101, 52, 0.12);
+}
+
+.resumenPedido strong {
+  color: #0f9d63;
+  font-size: 17px;
+}
+
+@media (max-width: 420px) {
+  .resumenPedido {
+    font-size: 13px;
+    padding: 10px 8px;
+  }
+}
+
+.observacionesPedido {
+  margin-top: 16px;
+}
+
+.observacionesPedido textarea {
+  min-height: 90px;
+}
+
+/* =====================================================
+   ETAPA 4.2 - CONTROLES R\c1 PIDOS DE CANTIDAD
+===================================================== */
+.controlesCantidad {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.controlesCantidad select {
+  width: 58px;
+  min-width: 58px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.botonCantidad {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.botonCantidad:active {
+  transform: scale(.92);
+}
+
+.botonMenos {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.botonMas {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.botonBorrar {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 15px;
+}
+
+.accionesBusquedaPedido {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.buscadorPedido {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px solid #d1d5db;
+  border-radius: 12px;
+  background: white;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.botonRepetirPedido {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: #e8f1fd;
+  color: #1d6fd6;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.botonRepetirPedido:active {
+  transform: scale(.97);
+}
+
+.buscadorPedido:focus {
+  border-color: var(--verde);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 157, 99, .12);
+}
+
+.mensajeBusquedaPedido {
+  margin: 14px 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: #6b7280;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .accionesBusquedaPedido {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .botonRepetirPedido {
+    width: 100%;
+  }
+
+  .fila {
+    gap: 6px;
+  }
+
+  .fila > span {
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  .controlesCantidad {
+    gap: 3px;
+  }
+
+  .controlesCantidad select {
+    width: 48px;
+    min-width: 48px;
+  }
+
+  .botonCantidad {
+    width: 29px;
+    height: 29px;
+  }
+}
