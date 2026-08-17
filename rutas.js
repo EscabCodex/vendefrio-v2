@@ -15,6 +15,7 @@ let coordenadasPinPendientes = null;
 let marcadoresPorNombre = new Map();
 let coordenadasPinOriginales = null;
 let tipoEdicionPin = "nuevo";
+let rutaGuardadaEnEdicion = null;
 
 function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
@@ -183,6 +184,15 @@ function crearModalOpcionesRutaGuardada() {
     const mensaje = document.createElement("p");
     mensaje.id = "mensajeOpcionesRutaGuardada";
 
+    const etiquetaNombre = document.createElement("label");
+    etiquetaNombre.textContent = "Nombre de la ruta";
+    etiquetaNombre.htmlFor = "nombreRutaEnEdicion";
+
+    const entradaNombre = document.createElement("input");
+    entradaNombre.id = "nombreRutaEnEdicion";
+    entradaNombre.type = "text";
+    entradaNombre.placeholder = "Nombre de la ruta";
+
     const botones = document.createElement("div");
     botones.className = "modalBotones modalBotonesRuta";
 
@@ -204,7 +214,7 @@ function crearModalOpcionesRutaGuardada() {
     cancelar.textContent = "Cancelar";
 
     botones.append(cargar, editar, cancelar);
-    contenido.append(titulo, mensaje, botones);
+    contenido.append(titulo, mensaje, etiquetaNombre, entradaNombre, botones);
     modal.appendChild(contenido);
     document.body.appendChild(modal);
 
@@ -216,16 +226,28 @@ function crearModalOpcionesRutaGuardada() {
     cargar.addEventListener("click", () => {
         const nombre = modal.dataset.nombre || "";
         modal.classList.add("oculto");
+        rutaGuardadaEnEdicion = null;
         cargarRutaGuardada(nombre, false);
         window.setTimeout(optimizarRuta, 100);
     });
 
     editar.addEventListener("click", () => {
-        const nombre = modal.dataset.nombre || "";
+        const nombreOriginal = modal.dataset.nombre || "";
+        const entradaEdicion = document.getElementById("nombreRutaEnEdicion");
+        const nuevoNombre = entradaEdicion
+            ? entradaEdicion.value.trim()
+            : nombreOriginal;
+
+        if (!nuevoNombre) {
+            mostrarAviso("Falta el nombre", "Escrib\u00ed un nombre para la ruta.");
+            return;
+        }
+
         modal.classList.add("oculto");
-        cargarRutaGuardada(nombre, false);
+        rutaGuardadaEnEdicion = nombreOriginal;
+        cargarRutaGuardada(nombreOriginal, false);
         const entrada = document.getElementById("nombreRutaGuardada");
-        if (entrada) entrada.value = nombre;
+        if (entrada) entrada.value = nuevoNombre;
         const panel = document.getElementById("rutasGuardadasPanel");
         if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
     });
@@ -235,6 +257,7 @@ function abrirOpcionesRutaGuardada(nombre) {
     const modal = document.getElementById("modalOpcionesRutaGuardada");
     const titulo = document.getElementById("tituloOpcionesRutaGuardada");
     const mensaje = document.getElementById("mensajeOpcionesRutaGuardada");
+    const entradaNombre = document.getElementById("nombreRutaEnEdicion");
     const ruta = obtenerRutasGuardadas().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
@@ -246,6 +269,7 @@ function abrirOpcionesRutaGuardada(nombre) {
     mensaje.textContent =
         ruta.comercios.length +
         " comercio(s) guardado(s). Eleg\u00ed qu\u00e9 quer\u00e9s hacer.";
+    if (entradaNombre) entradaNombre.value = ruta.nombre;
     modal.classList.remove("oculto");
 }
 
@@ -308,6 +332,15 @@ function guardarRutaActual() {
         mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
         return;
     }
+
+    if (
+        rutaGuardadaEnEdicion &&
+        normalizarTexto(rutaGuardadaEnEdicion) !== normalizarTexto(nombre)
+    ) {
+        eliminarRutaGuardada(rutaGuardadaEnEdicion);
+    }
+
+    rutaGuardadaEnEdicion = null;
 
     if (entrada) entrada.value = "";
     renderizarRutasGuardadas();
