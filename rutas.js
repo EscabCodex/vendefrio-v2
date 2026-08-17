@@ -208,12 +208,18 @@ function crearModalOpcionesRutaGuardada() {
     editar.className = "btnModalSecundario";
     editar.textContent = "Editar selecci\u00f3n";
 
+    const guardarNombre = document.createElement("button");
+    guardarNombre.id = "guardarNombreRuta";
+    guardarNombre.type = "button";
+    guardarNombre.className = "btnModalConfirmar";
+    guardarNombre.textContent = "Guardar nombre";
+
     const cancelar = document.createElement("button");
     cancelar.type = "button";
     cancelar.className = "btnModalCancelar";
     cancelar.textContent = "Cancelar";
 
-    botones.append(cargar, editar, cancelar);
+    botones.append(cargar, editar, guardarNombre, cancelar);
     contenido.append(titulo, mensaje, etiquetaNombre, entradaNombre, botones);
     modal.appendChild(contenido);
     document.body.appendChild(modal);
@@ -229,6 +235,37 @@ function crearModalOpcionesRutaGuardada() {
         rutaGuardadaEnEdicion = null;
         cargarRutaGuardada(nombre, false);
         window.setTimeout(optimizarRuta, 100);
+    });
+
+    guardarNombre.addEventListener("click", () => {
+        const nombreOriginal = modal.dataset.nombre || "";
+        const entradaEdicion = document.getElementById("nombreRutaEnEdicion");
+        const nuevoNombre = entradaEdicion
+            ? entradaEdicion.value.trim()
+            : "";
+        const ruta = obtenerRutasGuardadas().find(item => {
+            return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
+        });
+
+        if (!nuevoNombre) {
+            mostrarAviso("Falta el nombre", "Escrib\u00ed un nombre para la ruta.");
+            return;
+        }
+
+        if (!ruta) return;
+
+        if (!agregarRutaGuardada(nuevoNombre, ruta.comercios)) {
+            mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
+            return;
+        }
+
+        if (normalizarTexto(nombreOriginal) !== normalizarTexto(nuevoNombre)) {
+            eliminarRutaGuardada(nombreOriginal);
+        }
+
+        modal.classList.add("oculto");
+        renderizarRutasGuardadas();
+        mostrarAviso("Nombre guardado", "La ruta ahora se llama \"" + nuevoNombre + "\".");
     });
 
     editar.addEventListener("click", () => {
