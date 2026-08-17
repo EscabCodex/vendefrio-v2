@@ -394,6 +394,23 @@ function guardarRutaActual() {
 
     if (entrada) entrada.value = "";
     renderizarRutasGuardadas();
+
+    const comerciosSinGps = obtenerComercios()
+        .filter(comercio => {
+            return comercios.includes(comercio.nombre) && !comercioTieneGps(comercio);
+        })
+        .map(comercio => comercio.nombre);
+
+    if (comerciosSinGps.length > 0) {
+        mostrarAviso(
+            "Ruta guardada con ubicaciones pendientes",
+            "La ruta \"" + nombre + "\" se guard\u00f3 correctamente.\n\n" +
+                "Sin GPS:\n" +
+                comerciosSinGps.map(nombreComercio => "- " + nombreComercio).join("\n")
+        );
+        return;
+    }
+
     mostrarAviso("Ruta guardada", "La selecci\u00f3n \"" + nombre + "\" qued\u00f3 guardada.");
 }
 
@@ -1230,14 +1247,19 @@ function optimizarRuta() {
             const nombresSinGps = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
                 .map(comercio => comercio.nombre);
+            const listaOrdenada = rutaOrdenada
+                .map((comercio, indice) => (indice + 1) + ". " + comercio.nombre)
+                .join("\n");
             const detalleSinGps = nombresSinGps.length > 0
-                ? " Se omitieron por no tener ubicaci\u00f3n: " + nombresSinGps.join(", ") + "."
+                ? "\n\nSe omitieron por no tener GPS:\n" +
+                    nombresSinGps.map(nombre => "- " + nombre).join("\n")
                 : "";
 
             mostrarAviso(
                 "Ruta m\u00ednima calculada",
-                "Se revisaron todas las combinaciones posibles. Primera parada: " +
-                    rutaOrdenada[0].nombre +
+                "Se revisaron todas las combinaciones posibles.\n\n" +
+                    "Orden de paradas:\n" +
+                    listaOrdenada +
                     detalleSinGps
             );
 

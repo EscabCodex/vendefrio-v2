@@ -1269,6 +1269,14 @@ body > nav.bottom-nav {
   font-size:10px;
 }
 
+.modalContenido #mensajeAviso{
+  white-space:pre-line;
+  text-align:left;
+  line-height:1.55;
+  max-height:45vh;
+  overflow-y:auto;
+}
+
 .modalBotonesRuta{
   display:grid;
   gap:8px;
