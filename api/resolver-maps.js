@@ -118,7 +118,7 @@ module.exports = async function handler(request, response) {
     );
     const enlace = String(urlSolicitud.searchParams.get("url") || "").trim();
 
-    if (!enlace || !/^https?:\\/\\//i.test(enlace)) {
+    if (!enlace || !/^https?:\/\//i.test(enlace)) {
         response.status(400).json({ ok: false, error: "Enlace inv\u00e1lido" });
         return;
     }
