@@ -1227,10 +1227,19 @@ body > nav.bottom-nav {
   align-items:center;
   justify-content:space-between;
   gap:8px;
-  padding:8px;
+  padding:10px;
   border:1px solid #e5e7eb;
   border-radius:9px;
   background:#fff;
+  cursor:pointer;
+  transition:background .18s ease, border-color .18s ease;
+}
+
+.filaRutaGuardadaItem:hover,
+.filaRutaGuardadaItem:focus{
+  background:#f5f7ff;
+  border-color:#818cf8;
+  outline:none;
 }
 
 .filaRutaGuardadaItem strong,
@@ -1258,6 +1267,16 @@ body > nav.bottom-nav {
   margin:0;
   padding:6px 8px;
   font-size:10px;
+}
+
+.modalBotonesRuta{
+  display:grid;
+  gap:8px;
+}
+
+.modalBotonesRuta button{
+  width:100%;
+  justify-content:center;
 }
 
 .sinRutasGuardadas{

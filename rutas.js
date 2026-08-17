@@ -111,6 +111,7 @@ function inicializarPantallaRutas() {
     iniciarMapa();
     crearControlesPinManual();
     crearControlesRutasGuardadas();
+    crearModalOpcionesRutaGuardada();
     renderizarPines();
 }
 
@@ -163,6 +164,89 @@ function mostrarControlesEdicionPin() {
 function ocultarControlesEdicionPin() {
     const controles = document.getElementById("controlesPinPendiente");
     if (controles) controles.classList.add("oculto");
+}
+
+function crearModalOpcionesRutaGuardada() {
+    if (document.getElementById("modalOpcionesRutaGuardada")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "modalOpcionesRutaGuardada";
+    modal.className = "modal oculto";
+
+    const contenido = document.createElement("div");
+    contenido.className = "modalContenido";
+
+    const titulo = document.createElement("h2");
+    titulo.id = "tituloOpcionesRutaGuardada";
+    titulo.textContent = "Ruta guardada";
+
+    const mensaje = document.createElement("p");
+    mensaje.id = "mensajeOpcionesRutaGuardada";
+
+    const botones = document.createElement("div");
+    botones.className = "modalBotones modalBotonesRuta";
+
+    const cargar = document.createElement("button");
+    cargar.id = "cargarYCalcularRuta";
+    cargar.type = "button";
+    cargar.className = "btnModalConfirmar";
+    cargar.textContent = "Cargar y calcular";
+
+    const editar = document.createElement("button");
+    editar.id = "editarRutaGuardada";
+    editar.type = "button";
+    editar.className = "btnModalSecundario";
+    editar.textContent = "Editar selecci\u00f3n";
+
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "btnModalCancelar";
+    cancelar.textContent = "Cancelar";
+
+    botones.append(cargar, editar, cancelar);
+    contenido.append(titulo, mensaje, botones);
+    modal.appendChild(contenido);
+    document.body.appendChild(modal);
+
+    cancelar.addEventListener("click", () => modal.classList.add("oculto"));
+    modal.addEventListener("click", evento => {
+        if (evento.target === modal) modal.classList.add("oculto");
+    });
+
+    cargar.addEventListener("click", () => {
+        const nombre = modal.dataset.nombre || "";
+        modal.classList.add("oculto");
+        cargarRutaGuardada(nombre, false);
+        window.setTimeout(optimizarRuta, 100);
+    });
+
+    editar.addEventListener("click", () => {
+        const nombre = modal.dataset.nombre || "";
+        modal.classList.add("oculto");
+        cargarRutaGuardada(nombre, false);
+        const entrada = document.getElementById("nombreRutaGuardada");
+        if (entrada) entrada.value = nombre;
+        const panel = document.getElementById("rutasGuardadasPanel");
+        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+}
+
+function abrirOpcionesRutaGuardada(nombre) {
+    const modal = document.getElementById("modalOpcionesRutaGuardada");
+    const titulo = document.getElementById("tituloOpcionesRutaGuardada");
+    const mensaje = document.getElementById("mensajeOpcionesRutaGuardada");
+    const ruta = obtenerRutasGuardadas().find(item => {
+        return normalizarTexto(item.nombre) === normalizarTexto(nombre);
+    });
+
+    if (!modal || !ruta) return;
+
+    modal.dataset.nombre = ruta.nombre;
+    titulo.textContent = ruta.nombre;
+    mensaje.textContent =
+        ruta.comercios.length +
+        " comercio(s) guardado(s). Eleg\u00ed qu\u00e9 quer\u00e9s hacer.";
+    modal.classList.remove("oculto");
 }
 
 function crearControlesRutasGuardadas() {
@@ -230,7 +314,7 @@ function guardarRutaActual() {
     mostrarAviso("Ruta guardada", "La selecci\u00f3n \"" + nombre + "\" qued\u00f3 guardada.");
 }
 
-function cargarRutaGuardada(nombre) {
+function cargarRutaGuardada(nombre, mostrarMensaje = true) {
     const ruta = obtenerRutasGuardadas().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
@@ -239,7 +323,10 @@ function cargarRutaGuardada(nombre) {
 
     comerciosSeleccionadosRuta = new Set(ruta.comercios);
     inicializarSeleccionRuta();
-    mostrarAviso("Ruta cargada", "Se seleccionaron los comercios de \"" + ruta.nombre + "\".");
+
+    if (mostrarMensaje) {
+        mostrarAviso("Ruta cargada", "Se seleccionaron los comercios de \"" + ruta.nombre + "\".");
+    }
 }
 
 function confirmarEliminarRutaGuardada(nombre) {
@@ -277,6 +364,19 @@ function renderizarRutasGuardadas() {
     rutas.forEach(ruta => {
         const fila = document.createElement("div");
         fila.className = "filaRutaGuardadaItem";
+        fila.dataset.nombre = ruta.nombre;
+        fila.setAttribute("role", "button");
+        fila.setAttribute("tabindex", "0");
+        fila.title = "Toc\u00e1 para ver las opciones de esta ruta";
+        fila.addEventListener("click", evento => {
+            if (evento.target.closest("button")) return;
+            abrirOpcionesRutaGuardada(ruta.nombre);
+        });
+        fila.addEventListener("keydown", evento => {
+            if (evento.key !== "Enter" && evento.key !== " ") return;
+            evento.preventDefault();
+            abrirOpcionesRutaGuardada(ruta.nombre);
+        });
 
         const datos = document.createElement("div");
         const nombre = document.createElement("strong");
