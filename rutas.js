@@ -37,6 +37,16 @@ function actualizarResumenRuta() {
 const LATITUD_POR_DEFECTO = -34.6185;
 const LONGITUD_POR_DEFECTO = -58.6382;
 
+function obtenerEtiquetaOrigenGps(comercio) {
+    if (!comercioTieneGps(comercio)) return "Sin ubicaci\u00f3n";
+
+    const origen = String(comercio.origenGps || "").toLowerCase();
+    if (origen === "manual") return "Pin manual";
+    if (origen === "gps") return "GPS del celular";
+    if (origen === "maps") return "Maps aproximado";
+    return "Coordenadas guardadas";
+}
+
 function comercioTieneGps(comercio) {
     if (!comercio) return false;
 
@@ -63,16 +73,19 @@ function crearPopupComercio(comercio) {
     const nombre = document.createElement("strong");
     const salto = document.createElement("br");
     const direccion = document.createElement("span");
+    const origen = document.createElement("small");
     const botonEditar = document.createElement("button");
 
     nombre.textContent = comercio.nombre || "Sin nombre";
     direccion.textContent = comercio.direccion || "Sin direcci\u00f3n";
+    origen.textContent = "Ubicaci\u00f3n: " + obtenerEtiquetaOrigenGps(comercio);
+    origen.className = "origenUbicacionMapa";
     botonEditar.type = "button";
     botonEditar.className = "btnEditarPinMapa";
     botonEditar.dataset.nombre = comercio.nombre || "";
     botonEditar.textContent = "Editar ubicaci\u00f3n";
 
-    contenido.append(nombre, salto, direccion, botonEditar);
+    contenido.append(nombre, salto, direccion, origen, botonEditar);
     return contenido;
 }
 
@@ -451,9 +464,26 @@ function renderizarRutasGuardadas() {
         const datos = document.createElement("div");
         const nombre = document.createElement("strong");
         nombre.textContent = ruta.nombre;
+        const comerciosRuta = obtenerComercios().filter(comercio => {
+            return ruta.comercios.includes(comercio.nombre);
+        });
+        const conUbicacion = comerciosRuta.filter(comercioTieneGps).length;
+        const faltantes = ruta.comercios.length - comerciosRuta.length;
+        const sinUbicacion = comerciosRuta.length - conUbicacion;
+
         const cantidad = document.createElement("small");
-        cantidad.textContent = ruta.comercios.length + " comercio(s)";
+        cantidad.textContent = ruta.comercios.length + " comercio(s) - " + conUbicacion + " ubicados";
         datos.append(nombre, cantidad);
+
+        if (faltantes > 0 || sinUbicacion > 0) {
+            const advertencia = document.createElement("small");
+            advertencia.className = "advertenciaRutaGuardada";
+            advertencia.textContent =
+                (faltantes > 0 ? faltantes + " eliminado(s)" : "") +
+                (faltantes > 0 && sinUbicacion > 0 ? " - " : "") +
+                (sinUbicacion > 0 ? sinUbicacion + " sin ubicaci\u00f3n" : "");
+            datos.appendChild(advertencia);
+        }
 
         const acciones = document.createElement("div");
         acciones.className = "accionesRutaGuardada";
@@ -525,14 +555,19 @@ function actualizarEstadoSeleccionRuta() {
     });
     const conGps = seleccionados.filter(comercioTieneGps).length;
     const sinGps = seleccionados.length - conGps;
+    const manuales = seleccionados.filter(comercio => {
+        return comercioTieneGps(comercio) && comercio.origenGps === "manual";
+    }).length;
 
     estado.textContent =
         seleccionados.length +
         " seleccionados - " +
         conGps +
-        " con GPS - " +
+        " ubicados - " +
+        manuales +
+        " manuales - " +
         sinGps +
-        " sin GPS";
+        " sin ubicaci\u00f3n";
 }
 
 function renderizarSeleccionRuta() {
@@ -563,9 +598,7 @@ function renderizarSeleccionRuta() {
         texto.textContent = comercio.nombre;
 
         const estado = document.createElement("small");
-        estado.textContent = comercioTieneGps(comercio)
-            ? "GPS listo"
-            : "Sin GPS";
+        estado.textContent = obtenerEtiquetaOrigenGps(comercio);
         estado.className = comercioTieneGps(comercio)
             ? "seleccionRutaGps"
             : "seleccionRutaSinGps";
@@ -1194,10 +1227,18 @@ function optimizarRuta() {
             rutaOrdenada = resultado.comercios;
             distanciasRuta = resultado.distancias;
 
+            const nombresSinGps = comerciosElegidos
+                .filter(comercio => !comercioTieneGps(comercio))
+                .map(comercio => comercio.nombre);
+            const detalleSinGps = nombresSinGps.length > 0
+                ? " Se omitieron por no tener ubicaci\u00f3n: " + nombresSinGps.join(", ") + "."
+                : "";
+
             mostrarAviso(
                 "Ruta m\u00ednima calculada",
                 "Se revisaron todas las combinaciones posibles. Primera parada: " +
-                    rutaOrdenada[0].nombre
+                    rutaOrdenada[0].nombre +
+                    detalleSinGps
             );
 
             mostrarRutaEnLista();
