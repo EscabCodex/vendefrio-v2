@@ -469,6 +469,7 @@ if (guardarModal) {
                 telefono,
                 lat: coordenadasMaps ? coordenadasMaps.lat : "",
                 lng: coordenadasMaps ? coordenadasMaps.lng : "",
+                origenGps: coordenadasMaps ? "maps" : "",
                 pedidosRealizados: 0,
                 ultimaVisita: ""
             });
@@ -491,6 +492,7 @@ if (guardarModal) {
             if (coordenadasMaps) {
                 datosActualizacion.lat = coordenadasMaps.lat;
                 datosActualizacion.lng = coordenadasMaps.lng;
+                datosActualizacion.origenGps = "maps";
             }
 
             guardado = actualizarComercio(

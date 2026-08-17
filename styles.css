@@ -1182,6 +1182,15 @@ body > nav.bottom-nav {
   font-weight:700;
 }
 
+.botonPinManual{
+  width:100%;
+  justify-content:center;
+  margin:0 0 8px;
+  background:#eef2ff;
+  color:#3730a3;
+  border:1px solid #818cf8;
+}
+
 .encabezadoRuta {
   display:flex;
   align-items:center;

@@ -9,6 +9,9 @@ let rutaOrdenada = [];
 let distanciasRuta = [];
 let comerciosSeleccionadosRuta = new Set();
 let seleccionRutaInicializada = false;
+let modoPinManual = false;
+let marcadorPinManual = null;
+let coordenadasPinPendientes = null;
 
 function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
@@ -98,7 +101,23 @@ function inicializarPantallaRutas() {
     cargarSelectComerciosRuta();
     inicializarSeleccionRuta();
     iniciarMapa();
+    crearControlesPinManual();
     renderizarPines();
+}
+
+function crearControlesPinManual() {
+    const botonGuardar = document.getElementById("btnGuardarGps");
+    if (!botonGuardar || document.getElementById("btnPinManual")) return;
+
+    const boton = document.createElement("button");
+    boton.id = "btnPinManual";
+    boton.type = "button";
+    boton.className = "btnAccion botonPinManual";
+    boton.textContent = "\ud83d\udccc Colocar pin manual en el mapa";
+    boton.title = "Elegir manualmente la ubicaci\u00f3n de este comercio";
+    boton.addEventListener("click", activarModoPinManual);
+
+    botonGuardar.insertAdjacentElement("afterend", boton);
 }
 
 function cargarSelectComerciosRuta() {
@@ -248,6 +267,128 @@ function obtenerComerciosElegidosParaRuta() {
     });
 }
 
+function activarModoPinManual() {
+    const select = document.getElementById("selectComercioGps");
+    const nombre = select ? select.value : "";
+
+    if (!nombre) {
+        mostrarAviso(
+            "Eleg\u00ed un comercio",
+            "Seleccion\u00e1 primero el comercio al que quer\u00e9s asignarle el pin."
+        );
+        return;
+    }
+
+    if (!mapaLeaflet) {
+        mostrarAviso(
+            "Mapa no disponible",
+            "Esper\u00e1 a que el mapa termine de cargar para colocar el pin."
+        );
+        return;
+    }
+
+    modoPinManual = true;
+    mapaLeaflet.getContainer().style.cursor = "crosshair";
+
+    const boton = document.getElementById("btnPinManual");
+    if (boton) boton.textContent = "\ud83d\udccd Toc\u00e1 el punto exacto en el mapa";
+
+    mostrarAviso(
+        "Colocar pin manual",
+        "Mov\u00e9 el mapa hasta el comercio y toc\u00e1 su ubicaci\u00f3n exacta."
+    );
+}
+
+function finalizarModoPinManual() {
+    modoPinManual = false;
+
+    if (mapaLeaflet) {
+        mapaLeaflet.getContainer().style.cursor = "";
+    }
+
+    const boton = document.getElementById("btnPinManual");
+    if (boton) boton.textContent = "\ud83d\udccc Colocar pin manual en el mapa";
+}
+
+function guardarPinManual() {
+    const select = document.getElementById("selectComercioGps");
+    const nombre = select ? select.value : "";
+
+    if (!nombre || !coordenadasPinPendientes) return;
+
+    const guardado = actualizarComercio(nombre, {
+        lat: coordenadasPinPendientes.lat,
+        lng: coordenadasPinPendientes.lng,
+        origenGps: "manual"
+    });
+
+    if (!guardado) {
+        mostrarAviso(
+            "No se pudo guardar",
+            "No se encontr\u00f3 el comercio seleccionado."
+        );
+        return;
+    }
+
+    if (marcadorPinManual && mapaLeaflet) {
+        mapaLeaflet.removeLayer(marcadorPinManual);
+    }
+
+    marcadorPinManual = null;
+    coordenadasPinPendientes = null;
+    finalizarModoPinManual();
+    actualizarResumenRuta();
+    cargarSelectComerciosRuta();
+    renderizarSeleccionRuta();
+    renderizarPines();
+
+    mostrarAviso(
+        "Pin guardado",
+        "La ubicaci\u00f3n manual de \"" + nombre + "\" qued\u00f3 guardada para mapas y rutas."
+    );
+
+    if (typeof actualizarDashboard === "function") {
+        actualizarDashboard();
+    }
+}
+
+function manejarClickMapaManual(evento) {
+    if (!modoPinManual || !mapaLeaflet) return;
+
+    const lat = Number(evento.latlng.lat.toFixed(7));
+    const lng = Number(evento.latlng.lng.toFixed(7));
+    coordenadasPinPendientes = { lat, lng };
+
+    if (marcadorPinManual) {
+        mapaLeaflet.removeLayer(marcadorPinManual);
+    }
+
+    marcadorPinManual = L.marker([lat, lng], {
+        draggable: true
+    }).addTo(mapaLeaflet);
+
+    marcadorPinManual.bindPopup("Pin manual pendiente de guardar").openPopup();
+    marcadorPinManual.on("dragend", eventoDrag => {
+        const posicion = eventoDrag.target.getLatLng();
+        coordenadasPinPendientes = {
+            lat: Number(posicion.lat.toFixed(7)),
+            lng: Number(posicion.lng.toFixed(7))
+        };
+    });
+
+    finalizarModoPinManual();
+
+    if (typeof abrirConfirmacion === "function") {
+        abrirConfirmacion(
+            "Guardar pin manual",
+            "\u00bfQuer\u00e9s guardar esta ubicaci\u00f3n para el comercio seleccionado?", 
+            guardarPinManual
+        );
+    } else {
+        guardarPinManual();
+    }
+}
+
 function iniciarMapa() {
     if (mapaLeaflet) {
         window.setTimeout(() => {
@@ -281,6 +422,7 @@ function iniciarMapa() {
     ).addTo(mapaLeaflet);
 
     capaMarcadores = L.layerGroup().addTo(mapaLeaflet);
+    mapaLeaflet.on("click", manejarClickMapaManual);
 }
 
 function renderizarPines() {
@@ -349,7 +491,8 @@ function guardarGpsActual(boton) {
                 nombre,
                 {
                     lat: posicion.coords.latitude,
-                    lng: posicion.coords.longitude
+                    lng: posicion.coords.longitude,
+                    origenGps: "gps"
                 }
             );
 
