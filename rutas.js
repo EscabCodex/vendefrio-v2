@@ -110,6 +110,7 @@ function inicializarPantallaRutas() {
     inicializarSeleccionRuta();
     iniciarMapa();
     crearControlesPinManual();
+    crearControlesRutasGuardadas();
     renderizarPines();
 }
 
@@ -162,6 +163,147 @@ function mostrarControlesEdicionPin() {
 function ocultarControlesEdicionPin() {
     const controles = document.getElementById("controlesPinPendiente");
     if (controles) controles.classList.add("oculto");
+}
+
+function crearControlesRutasGuardadas() {
+    const tarjeta = document.querySelector(".tarjetaSeleccionRuta");
+    if (!tarjeta || document.getElementById("rutasGuardadasPanel")) return;
+
+    const panel = document.createElement("div");
+    panel.id = "rutasGuardadasPanel";
+    panel.className = "rutasGuardadasPanel";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Rutas guardadas";
+
+    const ayuda = document.createElement("p");
+    ayuda.textContent = "Guard\u00e1 esta selecci\u00f3n para volver a usarla m\u00e1s adelante.";
+
+    const fila = document.createElement("div");
+    fila.className = "filaRutaGuardada";
+
+    const entrada = document.createElement("input");
+    entrada.id = "nombreRutaGuardada";
+    entrada.type = "text";
+    entrada.placeholder = "Ej.: Ruta lunes";
+
+    const botonGuardar = document.createElement("button");
+    botonGuardar.id = "guardarRutaActual";
+    botonGuardar.type = "button";
+    botonGuardar.className = "btnAccion agregar";
+    botonGuardar.textContent = "Guardar";
+    botonGuardar.addEventListener("click", guardarRutaActual);
+
+    fila.append(entrada, botonGuardar);
+
+    const lista = document.createElement("div");
+    lista.id = "listaRutasGuardadas";
+    lista.className = "listaRutasGuardadas";
+
+    panel.append(titulo, ayuda, fila, lista);
+    tarjeta.appendChild(panel);
+    renderizarRutasGuardadas();
+}
+
+function guardarRutaActual() {
+    const entrada = document.getElementById("nombreRutaGuardada");
+    const nombre = entrada ? entrada.value.trim() : "";
+    const comercios = Array.from(comerciosSeleccionadosRuta);
+
+    if (!nombre) {
+        mostrarAviso("Falta el nombre", "Escrib\u00ed un nombre para identificar esta ruta.");
+        return;
+    }
+
+    if (comercios.length === 0) {
+        mostrarAviso("Sin comercios seleccionados", "Seleccion\u00e1 al menos un comercio antes de guardar la ruta.");
+        return;
+    }
+
+    if (!agregarRutaGuardada(nombre, comercios)) {
+        mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
+        return;
+    }
+
+    if (entrada) entrada.value = "";
+    renderizarRutasGuardadas();
+    mostrarAviso("Ruta guardada", "La selecci\u00f3n \"" + nombre + "\" qued\u00f3 guardada.");
+}
+
+function cargarRutaGuardada(nombre) {
+    const ruta = obtenerRutasGuardadas().find(item => {
+        return normalizarTexto(item.nombre) === normalizarTexto(nombre);
+    });
+
+    if (!ruta) return;
+
+    comerciosSeleccionadosRuta = new Set(ruta.comercios);
+    inicializarSeleccionRuta();
+    mostrarAviso("Ruta cargada", "Se seleccionaron los comercios de \"" + ruta.nombre + "\".");
+}
+
+function confirmarEliminarRutaGuardada(nombre) {
+    const borrar = () => {
+        if (!eliminarRutaGuardada(nombre)) return;
+        renderizarRutasGuardadas();
+        mostrarAviso("Ruta eliminada", "Se elimin\u00f3 la ruta guardada.");
+    };
+
+    if (typeof abrirConfirmacion === "function") {
+        abrirConfirmacion(
+            "Eliminar ruta guardada",
+            "\u00bfQuer\u00e9s eliminar la ruta \"" + nombre + "\"?",
+            borrar
+        );
+    }
+}
+
+function renderizarRutasGuardadas() {
+    const lista = document.getElementById("listaRutasGuardadas");
+    if (!lista) return;
+
+    lista.innerHTML = "";
+    const rutas = obtenerRutasGuardadas();
+
+    if (rutas.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.className = "sinRutasGuardadas";
+        vacio.textContent = "Todav\u00eda no guardaste ninguna ruta.";
+        lista.appendChild(vacio);
+        return;
+    }
+
+    rutas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    rutas.forEach(ruta => {
+        const fila = document.createElement("div");
+        fila.className = "filaRutaGuardadaItem";
+
+        const datos = document.createElement("div");
+        const nombre = document.createElement("strong");
+        nombre.textContent = ruta.nombre;
+        const cantidad = document.createElement("small");
+        cantidad.textContent = ruta.comercios.length + " comercio(s)";
+        datos.append(nombre, cantidad);
+
+        const acciones = document.createElement("div");
+        acciones.className = "accionesRutaGuardada";
+
+        const cargar = document.createElement("button");
+        cargar.type = "button";
+        cargar.className = "btnAccion ver cargarRutaGuardadaBtn";
+        cargar.dataset.nombre = ruta.nombre;
+        cargar.textContent = "Cargar";
+
+        const eliminar = document.createElement("button");
+        eliminar.type = "button";
+        eliminar.className = "btnAccion eliminar eliminarRutaGuardadaBtn";
+        eliminar.dataset.nombre = ruta.nombre;
+        eliminar.textContent = "Borrar";
+
+        acciones.append(cargar, eliminar);
+        fila.append(datos, acciones);
+        lista.appendChild(fila);
+    });
 }
 
 function cargarSelectComerciosRuta() {
@@ -1057,6 +1199,16 @@ document.addEventListener("click", event => {
 
     if (boton.classList.contains("btnEditarPinMapa")) {
         editarPinGuardado(boton.dataset.nombre || "");
+        return;
+    }
+
+    if (boton.classList.contains("cargarRutaGuardadaBtn")) {
+        cargarRutaGuardada(boton.dataset.nombre || "");
+        return;
+    }
+
+    if (boton.classList.contains("eliminarRutaGuardadaBtn")) {
+        confirmarEliminarRutaGuardada(boton.dataset.nombre || "");
         return;
     }
 

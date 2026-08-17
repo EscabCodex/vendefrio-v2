@@ -1182,6 +1182,90 @@ body > nav.bottom-nav {
   font-weight:700;
 }
 
+.rutasGuardadasPanel{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid #e2e8f0;
+}
+
+.rutasGuardadasPanel h3{
+  margin:0;
+  color:#1f2937;
+  font-size:14px;
+}
+
+.rutasGuardadasPanel > p{
+  margin:4px 0 9px;
+  color:#64748b;
+  font-size:11px;
+}
+
+.filaRutaGuardada{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:7px;
+}
+
+.filaRutaGuardada input{
+  min-width:0;
+  margin:0;
+}
+
+.filaRutaGuardada .btnAccion{
+  margin:0;
+  justify-content:center;
+}
+
+.listaRutasGuardadas{
+  display:grid;
+  gap:7px;
+  margin-top:10px;
+}
+
+.filaRutaGuardadaItem{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px;
+  border:1px solid #e5e7eb;
+  border-radius:9px;
+  background:#fff;
+}
+
+.filaRutaGuardadaItem strong,
+.filaRutaGuardadaItem small{
+  display:block;
+}
+
+.filaRutaGuardadaItem strong{
+  color:#1f2937;
+  font-size:12px;
+}
+
+.filaRutaGuardadaItem small{
+  margin-top:2px;
+  color:#64748b;
+  font-size:10px;
+}
+
+.accionesRutaGuardada{
+  display:flex;
+  gap:5px;
+}
+
+.accionesRutaGuardada .btnAccion{
+  margin:0;
+  padding:6px 8px;
+  font-size:10px;
+}
+
+.sinRutasGuardadas{
+  margin:0;
+  color:#94a3b8;
+  font-size:11px;
+}
+
 .botonPinManual{
   width:100%;
   justify-content:center;

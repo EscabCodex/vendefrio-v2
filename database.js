@@ -700,7 +700,8 @@ function crearDatosRespaldo() {
             comercios: clonarDatos(obtenerComercios()),
             productos: clonarDatos(obtenerProductos()),
             ordenMarcas: clonarDatos(obtenerMarcasOrdenadas()),
-            historial: clonarDatos(obtenerHistorial())
+            historial: clonarDatos(obtenerHistorial()),
+            rutasGuardadas: clonarDatos(obtenerRutasGuardadas())
         }
     };
 }
@@ -800,7 +801,8 @@ function restaurarRespaldo(respaldo) {
         comercios: localStorage.getItem(DB_COMERCIOS),
         productos: localStorage.getItem(DB_PRODUCTOS),
         ordenMarcas: localStorage.getItem(DB_ORDEN_MARCAS),
-        historial: localStorage.getItem(DB_HISTORIAL)
+        historial: localStorage.getItem(DB_HISTORIAL),
+        rutasGuardadas: localStorage.getItem(DB_RUTAS_GUARDADAS)
     };
 
     const ordenMarcas = Array.isArray(datos.ordenMarcas)
@@ -811,7 +813,11 @@ function restaurarRespaldo(respaldo) {
         guardarJSON(DB_COMERCIOS, datos.comercios) &&
         guardarJSON(DB_PRODUCTOS, datos.productos) &&
         guardarJSON(DB_ORDEN_MARCAS, ordenMarcas) &&
-        guardarJSON(DB_HISTORIAL, datos.historial);
+        guardarJSON(DB_HISTORIAL, datos.historial) &&
+        guardarJSON(
+            DB_RUTAS_GUARDADAS,
+            Array.isArray(datos.rutasGuardadas) ? datos.rutasGuardadas : []
+        );
 
     if (!guardado) {
         try {
@@ -820,7 +826,8 @@ function restaurarRespaldo(respaldo) {
                     comercios: DB_COMERCIOS,
                     productos: DB_PRODUCTOS,
                     ordenMarcas: DB_ORDEN_MARCAS,
-                    historial: DB_HISTORIAL
+                    historial: DB_HISTORIAL,
+                    rutasGuardadas: DB_RUTAS_GUARDADAS
                 }[clave];
 
                 if (valor === null) {
@@ -981,6 +988,60 @@ function prepararControlesRespaldo() {
 
         botonBorrarTodos.dataset.configurado = "true";
     }
+}
+
+const DB_RUTAS_GUARDADAS = "vendefrio_rutas_guardadas";
+
+function obtenerRutasGuardadas() {
+    const rutas = leerJSON(DB_RUTAS_GUARDADAS, []);
+    return Array.isArray(rutas)
+        ? rutas.filter(ruta => ruta && ruta.nombre && Array.isArray(ruta.comercios))
+        : [];
+}
+
+function guardarRutasGuardadas(rutas) {
+    return guardarJSON(
+        DB_RUTAS_GUARDADAS,
+        Array.isArray(rutas) ? rutas : []
+    );
+}
+
+function agregarRutaGuardada(nombre, comercios) {
+    const nombreLimpio = String(nombre || "").trim();
+    const listaComercios = Array.isArray(comercios)
+        ? comercios.map(comercio => String(comercio || "").trim()).filter(Boolean)
+        : [];
+
+    if (!nombreLimpio || listaComercios.length === 0) return false;
+
+    const rutas = obtenerRutasGuardadas();
+    const existente = rutas.find(ruta => {
+        return normalizarTexto(ruta.nombre) === normalizarTexto(nombreLimpio);
+    });
+
+    const datos = {
+        nombre: nombreLimpio,
+        comercios: listaComercios,
+        actualizado: Date.now()
+    };
+
+    if (existente) {
+        Object.assign(existente, datos);
+    } else {
+        rutas.push(datos);
+    }
+
+    return guardarRutasGuardadas(rutas);
+}
+
+function eliminarRutaGuardada(nombre) {
+    const rutas = obtenerRutasGuardadas();
+    const nuevas = rutas.filter(ruta => {
+        return normalizarTexto(ruta.nombre) !== normalizarTexto(nombre);
+    });
+
+    if (nuevas.length === rutas.length) return false;
+    return guardarRutasGuardadas(nuevas);
 }
 
 asegurarReinicioSemanal();
