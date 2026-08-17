@@ -434,6 +434,7 @@ if (guardarModal) {
 
         let coordenadasMaps = extraerCoordenadasDeMaps(enlaceMaps);
         let datosMapsRemotos = null;
+        let errorResolverMaps = false;
 
         if (enlaceMaps && !coordenadasMaps) {
             try {
@@ -454,6 +455,7 @@ if (guardarModal) {
                 }
             } catch (error) {
                 datosMapsRemotos = null;
+                errorResolverMaps = true;
             }
         }
 
@@ -511,6 +513,11 @@ if (guardarModal) {
             mostrarAviso(
                 "Ubicaci\u00f3n detectada",
                 "Se guardaron autom\u00e1ticamente las coordenadas encontradas en el enlace de Maps."
+            );
+        } else if (errorResolverMaps) {
+            mostrarAviso(
+                "Comercio guardado sin GPS",
+                "El enlace se guard\u00f3, pero no se pudo obtener la ubicaci\u00f3n autom\u00e1ticamente."
             );
         }
 
