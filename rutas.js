@@ -502,6 +502,62 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
     return radioTierra * c;
 }
 
+const MAX_PARADAS_RUTA_EXACTA = 9;
+
+function calcularRutaExacta(comercios, latitudInicial, longitudInicial) {
+    let mejorDistanciaTotal = Infinity;
+    let mejorOrden = [];
+    let mejoresDistancias = [];
+    const usados = new Array(comercios.length).fill(false);
+    const ordenActual = [];
+    const distanciasActuales = [];
+
+    function explorar(latitudActual, longitudActual, distanciaTotal) {
+        if (distanciaTotal >= mejorDistanciaTotal) return;
+
+        if (ordenActual.length === comercios.length) {
+            mejorDistanciaTotal = distanciaTotal;
+            mejorOrden = [...ordenActual];
+            mejoresDistancias = [...distanciasActuales];
+            return;
+        }
+
+        for (let indice = 0; indice < comercios.length; indice += 1) {
+            if (usados[indice]) continue;
+
+            const comercio = comercios[indice];
+            const distancia = calcularDistancia(
+                latitudActual,
+                longitudActual,
+                comercio.lat,
+                comercio.lng
+            );
+
+            usados[indice] = true;
+            ordenActual.push(comercio);
+            distanciasActuales.push(distancia);
+
+            explorar(
+                Number(comercio.lat),
+                Number(comercio.lng),
+                distanciaTotal + distancia
+            );
+
+            distanciasActuales.pop();
+            ordenActual.pop();
+            usados[indice] = false;
+        }
+    }
+
+    explorar(latitudInicial, longitudInicial, 0);
+
+    return {
+        comercios: mejorOrden,
+        distancias: mejoresDistancias,
+        distanciaTotal: mejorDistanciaTotal
+    };
+}
+
 function optimizarRuta() {
     const comerciosElegidos = obtenerComerciosElegidosParaRuta();
 
@@ -510,7 +566,6 @@ function optimizarRuta() {
             "Sin comercios seleccionados",
             "Eleg\u00ed al menos un comercio para preparar la ruta."
         );
-
         return;
     }
 
@@ -527,7 +582,16 @@ function optimizarRuta() {
                 " tienen GPS. Guard\u00e1 al menos 2 ubicaciones para armar la ruta." +
                 (comerciosSinGps > 0 ? " Hay comercios seleccionados sin GPS." : "")
         );
+        return;
+    }
 
+    if (comerciosConGps.length > MAX_PARADAS_RUTA_EXACTA) {
+        mostrarAviso(
+            "Demasiadas paradas para c\u00e1lculo exacto",
+            "La ruta exacta est\u00e1 limitada a " +
+                MAX_PARADAS_RUTA_EXACTA +
+                " paradas para no bloquear el celular. Reduc\u00ed la selecci\u00f3n y no se usar\u00e1 una ruta aproximada."
+        );
         return;
     }
 
@@ -536,60 +600,31 @@ function optimizarRuta() {
             "GPS no disponible",
             "Activ\u00e1 el GPS del celular para calcular la ruta desde tu ubicaci\u00f3n."
         );
-
         return;
     }
 
     navigator.geolocation.getCurrentPosition(
         posicion => {
-            let latitudActual = posicion.coords.latitude;
-            let longitudActual = posicion.coords.longitude;
-            let pendientes = [...comerciosConGps];
+            const resultado = calcularRutaExacta(
+                comerciosConGps,
+                posicion.coords.latitude,
+                posicion.coords.longitude
+            );
 
-            rutaOrdenada = [];
-            distanciasRuta = [];
-
-            while (pendientes.length > 0) {
-                let masCercano = null;
-                let menorDistancia = Infinity;
-                let indiceCercano = -1;
-
-                pendientes.forEach((comercio, indice) => {
-                    const distancia = calcularDistancia(
-                        latitudActual,
-                        longitudActual,
-                        comercio.lat,
-                        comercio.lng
-                    );
-
-                    if (distancia < menorDistancia) {
-                        menorDistancia = distancia;
-                        masCercano = comercio;
-                        indiceCercano = indice;
-                    }
-                });
-
-                if (!masCercano) break;
-
-                rutaOrdenada.push(masCercano);
-                distanciasRuta.push(menorDistancia);
-                latitudActual = Number(masCercano.lat);
-                longitudActual = Number(masCercano.lng);
-                pendientes.splice(indiceCercano, 1);
-            }
-
-            if (rutaOrdenada.length === 0) {
+            if (resultado.comercios.length === 0) {
                 mostrarAviso(
                     "No se pudo calcular",
                     "No se encontraron comercios v\u00e1lidos para la ruta."
                 );
-
                 return;
             }
 
+            rutaOrdenada = resultado.comercios;
+            distanciasRuta = resultado.distancias;
+
             mostrarAviso(
-                "\u00a1Ruta calculada!",
-                "Primera parada sugerida: " +
+                "Ruta m\u00ednima calculada",
+                "Se revisaron todas las combinaciones posibles. Primera parada: " +
                     rutaOrdenada[0].nombre
             );
 
@@ -648,6 +683,16 @@ function abrirGoogleMaps() {
     );
 }
 
+function formatearDistanciaTotal(metros) {
+    const distancia = Number(metros) || 0;
+
+    if (distancia < 1000) {
+        return Math.round(distancia) + " m totales";
+    }
+
+    return (distancia / 1000).toFixed(1) + " km totales";
+}
+
 function formatearDistanciaRuta(metros, indice) {
     const distancia = Number(metros) || 0;
     const referencia = indice === 0
@@ -674,7 +719,13 @@ function mostrarRutaEnLista() {
     encabezado.className = "encabezadoRuta";
 
     const titulo = document.createElement("h3");
-    titulo.textContent = "Ruta sugerida:";
+    const distanciaTotal = distanciasRuta.reduce(
+        (total, distancia) => total + (Number(distancia) || 0),
+        0
+    );
+    titulo.textContent = rutaOrdenada.length > 0
+        ? "Ruta m\u00ednima exacta - " + formatearDistanciaTotal(distanciaTotal)
+        : "Ruta sugerida:";
     encabezado.appendChild(titulo);
 
     if (rutaOrdenada.length > 0) {

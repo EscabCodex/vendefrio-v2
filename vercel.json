@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/resolver-maps.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  }
+}
