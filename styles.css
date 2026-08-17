@@ -1203,6 +1203,19 @@ body > nav.bottom-nav {
   font-weight:700;
 }
 
+.controlesPinPendiente{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:0 0 8px;
+}
+
+.controlesPinPendiente .btnAccion{
+  justify-content:center;
+  margin:0;
+  font-size:12px;
+}
+
 .encabezadoRuta {
   display:flex;
   align-items:center;

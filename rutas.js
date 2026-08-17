@@ -13,6 +13,8 @@ let modoPinManual = false;
 let marcadorPinManual = null;
 let coordenadasPinPendientes = null;
 let marcadoresPorNombre = new Map();
+let coordenadasPinOriginales = null;
+let tipoEdicionPin = "nuevo";
 
 function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
@@ -124,6 +126,42 @@ function crearControlesPinManual() {
     boton.addEventListener("click", activarModoPinManual);
 
     botonGuardar.insertAdjacentElement("afterend", boton);
+    crearControlesEdicionPin(boton);
+}
+
+function crearControlesEdicionPin(botonReferencia) {
+    if (document.getElementById("controlesPinPendiente")) return;
+
+    const contenedor = document.createElement("div");
+    contenedor.id = "controlesPinPendiente";
+    contenedor.className = "controlesPinPendiente oculto";
+
+    const botonGuardar = document.createElement("button");
+    botonGuardar.id = "btnGuardarPinPendiente";
+    botonGuardar.type = "button";
+    botonGuardar.className = "btnAccion agregar";
+    botonGuardar.textContent = "Guardar ubicaci\u00f3n";
+    botonGuardar.addEventListener("click", guardarPinManual);
+
+    const botonCancelar = document.createElement("button");
+    botonCancelar.id = "btnCancelarPinPendiente";
+    botonCancelar.type = "button";
+    botonCancelar.className = "btnAccion secundario";
+    botonCancelar.textContent = "Cancelar edici\u00f3n";
+    botonCancelar.addEventListener("click", cancelarEdicionPin);
+
+    contenedor.append(botonGuardar, botonCancelar);
+    botonReferencia.insertAdjacentElement("afterend", contenedor);
+}
+
+function mostrarControlesEdicionPin() {
+    const controles = document.getElementById("controlesPinPendiente");
+    if (controles) controles.classList.remove("oculto");
+}
+
+function ocultarControlesEdicionPin() {
+    const controles = document.getElementById("controlesPinPendiente");
+    if (controles) controles.classList.add("oculto");
 }
 
 function cargarSelectComerciosRuta() {
@@ -316,6 +354,24 @@ function finalizarModoPinManual() {
     if (boton) boton.textContent = "\ud83d\udccc Colocar pin manual en el mapa";
 }
 
+function cancelarEdicionPin() {
+    if (tipoEdicionPin === "existente" && marcadorPinManual && coordenadasPinOriginales) {
+        marcadorPinManual.setLatLng([
+            coordenadasPinOriginales.lat,
+            coordenadasPinOriginales.lng
+        ]);
+    } else if (tipoEdicionPin === "nuevo" && marcadorPinManual && mapaLeaflet) {
+        mapaLeaflet.removeLayer(marcadorPinManual);
+        marcadorPinManual = null;
+    }
+
+    coordenadasPinPendientes = null;
+    coordenadasPinOriginales = null;
+    ocultarControlesEdicionPin();
+    finalizarModoPinManual();
+    renderizarPines();
+}
+
 function guardarPinManual() {
     const select = document.getElementById("selectComercioGps");
     const nombre = select ? select.value : "";
@@ -342,6 +398,9 @@ function guardarPinManual() {
 
     marcadorPinManual = null;
     coordenadasPinPendientes = null;
+    coordenadasPinOriginales = null;
+    tipoEdicionPin = "nuevo";
+    ocultarControlesEdicionPin();
     finalizarModoPinManual();
     actualizarResumenRuta();
     cargarSelectComerciosRuta();
@@ -364,6 +423,8 @@ function manejarClickMapaManual(evento) {
     const lat = Number(evento.latlng.lat.toFixed(7));
     const lng = Number(evento.latlng.lng.toFixed(7));
     coordenadasPinPendientes = { lat, lng };
+    coordenadasPinOriginales = null;
+    tipoEdicionPin = "nuevo";
 
     if (marcadorPinManual) {
         mapaLeaflet.removeLayer(marcadorPinManual);
@@ -380,19 +441,17 @@ function manejarClickMapaManual(evento) {
             lat: Number(posicion.lat.toFixed(7)),
             lng: Number(posicion.lng.toFixed(7))
         };
+        mostrarControlesEdicionPin();
     });
 
     finalizarModoPinManual();
+    mostrarControlesEdicionPin();
 
-    if (typeof abrirConfirmacion === "function") {
-        abrirConfirmacion(
-            "Guardar pin manual",
-            "\u00bfQuer\u00e9s guardar esta ubicaci\u00f3n para el comercio seleccionado?", 
-            guardarPinManual
-        );
-    } else {
-        guardarPinManual();
-    }
+    mostrarAviso(
+        "Pin colocado",
+        "Pod\u00e9s seguir moviendo el pin. Cuando est\u00e9 en el lugar correcto, toc\u00e1 Guardar ubicaci\u00f3n."
+    );
+
 }
 
 function manejarArrastrePinGuardado(evento) {
@@ -402,13 +461,7 @@ function manejarArrastrePinGuardado(evento) {
         lng: Number(posicion.lng.toFixed(7))
     };
 
-    if (typeof abrirConfirmacion === "function") {
-        abrirConfirmacion(
-            "Guardar ubicaci\u00f3n corregida",
-            "\u00bfQuer\u00e9s guardar esta nueva ubicaci\u00f3n para el comercio?",
-            guardarPinManual
-        );
-    }
+    mostrarControlesEdicionPin();
 }
 
 function editarPinGuardado(nombre) {
@@ -426,10 +479,15 @@ function editarPinGuardado(nombre) {
     const posicion = marcador.getLatLng();
     select.value = nombre;
     marcadorPinManual = marcador;
-    coordenadasPinPendientes = {
+    coordenadasPinOriginales = {
         lat: Number(posicion.lat.toFixed(7)),
         lng: Number(posicion.lng.toFixed(7))
     };
+    coordenadasPinPendientes = {
+        lat: coordenadasPinOriginales.lat,
+        lng: coordenadasPinOriginales.lng
+    };
+    tipoEdicionPin = "existente";
 
     if (marcador.dragging) {
         marcador.dragging.enable();
@@ -438,9 +496,11 @@ function editarPinGuardado(nombre) {
     marcador.off("dragend", manejarArrastrePinGuardado);
     marcador.on("dragend", manejarArrastrePinGuardado);
 
+    mostrarControlesEdicionPin();
+
     mostrarAviso(
         "Editar ubicaci\u00f3n",
-        "Arrastr\u00e1 el pin hasta el lugar exacto del comercio y soltalo."
+        "Arrastr\u00e1 el pin las veces que necesites. Despu\u00e9s eleg\u00ed Guardar o Cancelar."
     );
 }
 
