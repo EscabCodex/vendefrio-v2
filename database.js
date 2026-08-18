@@ -1006,7 +1006,7 @@ function guardarRutasGuardadas(rutas) {
     );
 }
 
-function agregarRutaGuardada(nombre, comercios) {
+function agregarRutaGuardada(nombre, comercios, dia = "") {
     const nombreLimpio = String(nombre || "").trim();
     const listaComercios = Array.isArray(comercios)
         ? comercios.map(comercio => String(comercio || "").trim()).filter(Boolean)
@@ -1022,6 +1022,7 @@ function agregarRutaGuardada(nombre, comercios) {
     const datos = {
         nombre: nombreLimpio,
         comercios: listaComercios,
+        dia: String(dia || "").trim(),
         actualizado: Date.now()
     };
 

@@ -37,6 +37,11 @@ function actualizarResumenRuta() {
 const LATITUD_POR_DEFECTO = -34.6185;
 const LONGITUD_POR_DEFECTO = -58.6382;
 
+function capitalizarTexto(texto) {
+    const valor = String(texto || "");
+    return valor.charAt(0).toUpperCase() + valor.slice(1);
+}
+
 function obtenerEtiquetaOrigenGps(comercio) {
     if (!comercioTieneGps(comercio)) return "Sin ubicaci\u00f3n";
 
@@ -267,7 +272,7 @@ function crearModalOpcionesRutaGuardada() {
 
         if (!ruta) return;
 
-        if (!agregarRutaGuardada(nuevoNombre, ruta.comercios)) {
+        if (!agregarRutaGuardada(nuevoNombre, ruta.comercios, ruta.dia || "")) {
             mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
             return;
         }
@@ -297,7 +302,12 @@ function crearModalOpcionesRutaGuardada() {
         rutaGuardadaEnEdicion = nombreOriginal;
         cargarRutaGuardada(nombreOriginal, false);
         const entrada = document.getElementById("nombreRutaGuardada");
+        const selectorDia = document.getElementById("diaRutaGuardada");
+        const ruta = obtenerRutasGuardadas().find(item => {
+            return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
+        });
         if (entrada) entrada.value = nuevoNombre;
+        if (selectorDia) selectorDia.value = ruta && ruta.dia ? ruta.dia : "";
         const panel = document.getElementById("rutasGuardadasPanel");
         if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
     });
@@ -345,6 +355,24 @@ function crearControlesRutasGuardadas() {
     entrada.type = "text";
     entrada.placeholder = "Ej.: Ruta lunes";
 
+    const selectorDia = document.createElement("select");
+    selectorDia.id = "diaRutaGuardada";
+    [
+        ["", "D\u00eda habitual (opcional)"],
+        ["lunes", "Lunes"],
+        ["martes", "Martes"],
+        ["miercoles", "Mi\u00e9rcoles"],
+        ["jueves", "Jueves"],
+        ["viernes", "Viernes"],
+        ["sabado", "S\u00e1bado"],
+        ["domingo", "Domingo"]
+    ].forEach(([valor, texto]) => {
+        const opcion = document.createElement("option");
+        opcion.value = valor;
+        opcion.textContent = texto;
+        selectorDia.appendChild(opcion);
+    });
+
     const botonGuardar = document.createElement("button");
     botonGuardar.id = "guardarRutaActual";
     botonGuardar.type = "button";
@@ -352,7 +380,7 @@ function crearControlesRutasGuardadas() {
     botonGuardar.textContent = "Guardar";
     botonGuardar.addEventListener("click", guardarRutaActual);
 
-    fila.append(entrada, botonGuardar);
+    fila.append(entrada, selectorDia, botonGuardar);
 
     const lista = document.createElement("div");
     lista.id = "listaRutasGuardadas";
@@ -365,7 +393,9 @@ function crearControlesRutasGuardadas() {
 
 function guardarRutaActual() {
     const entrada = document.getElementById("nombreRutaGuardada");
+    const selectorDia = document.getElementById("diaRutaGuardada");
     const nombre = entrada ? entrada.value.trim() : "";
+    const dia = selectorDia ? selectorDia.value : "";
     const comercios = Array.from(comerciosSeleccionadosRuta);
 
     if (!nombre) {
@@ -378,7 +408,7 @@ function guardarRutaActual() {
         return;
     }
 
-    if (!agregarRutaGuardada(nombre, comercios)) {
+    if (!agregarRutaGuardada(nombre, comercios, dia)) {
         mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
         return;
     }
@@ -393,6 +423,7 @@ function guardarRutaActual() {
     rutaGuardadaEnEdicion = null;
 
     if (entrada) entrada.value = "";
+    if (selectorDia) selectorDia.value = "";
     renderizarRutasGuardadas();
 
     const comerciosSinGps = obtenerComercios()
@@ -491,6 +522,13 @@ function renderizarRutasGuardadas() {
         const cantidad = document.createElement("small");
         cantidad.textContent = ruta.comercios.length + " comercio(s) - " + conUbicacion + " ubicados";
         datos.append(nombre, cantidad);
+
+        if (ruta.dia) {
+            const dia = document.createElement("small");
+            dia.className = "diaRutaGuardada";
+            dia.textContent = "D\u00eda habitual: " + capitalizarTexto(ruta.dia);
+            datos.appendChild(dia);
+        }
 
         if (faltantes > 0 || sinUbicacion > 0) {
             const advertencia = document.createElement("small");
@@ -608,6 +646,8 @@ function renderizarSeleccionRuta() {
             } else {
                 comerciosSeleccionadosRuta.delete(comercio.nombre);
             }
+            rutaOrdenada = [];
+            distanciasRuta = [];
             actualizarEstadoSeleccionRuta();
         });
 
@@ -651,6 +691,8 @@ function seleccionarTodosLosComerciosRuta() {
     obtenerComerciosSeleccionRuta().forEach(comercio => {
         comerciosSeleccionadosRuta.add(comercio.nombre);
     });
+    rutaOrdenada = [];
+    distanciasRuta = [];
     renderizarSeleccionRuta();
 }
 
@@ -659,11 +701,15 @@ function seleccionarPendientesRuta() {
     obtenerComerciosSeleccionRuta()
         .filter(comercio => !comercioEstaVisitadoEstaSemana(comercio))
         .forEach(comercio => comerciosSeleccionadosRuta.add(comercio.nombre));
+    rutaOrdenada = [];
+    distanciasRuta = [];
     renderizarSeleccionRuta();
 }
 
 function limpiarSeleccionRuta() {
     comerciosSeleccionadosRuta.clear();
+    rutaOrdenada = [];
+    distanciasRuta = [];
     renderizarSeleccionRuta();
 }
 
@@ -1283,7 +1329,7 @@ function abrirGoogleMaps() {
     const paradas =
         rutaOrdenada.length > 0
             ? rutaOrdenada
-            : obtenerComercios().filter(
+            : obtenerComerciosElegidosParaRuta().filter(
                   comercio =>
                       comercioTieneGps(comercio) ||
                       Boolean(
