@@ -212,6 +212,97 @@ function abrirHistorialDePedido(indice) {
 // RENDERIZAR HISTORIAL
 // -----------------------------------------------------
 
+function obtenerEstadisticasComerciales() {
+    const historial = obtenerHistorial();
+    const comercios = new Map();
+    const productos = new Map();
+    const marcas = new Map();
+
+    historial.forEach(registro => {
+        const comercio = String(registro.comercio || "Sin comercio");
+        comercios.set(comercio, (comercios.get(comercio) || 0) + 1);
+
+        if (!Array.isArray(registro.productos)) return;
+
+        registro.productos.forEach(item => {
+            const marca = String(item.marca || "Sin marca");
+            const producto = String(item.producto || "Sin producto");
+            const cantidad = Number(item.cantidad) || 0;
+            const claveProducto = marca + " - " + producto;
+
+            productos.set(
+                claveProducto,
+                (productos.get(claveProducto) || 0) + cantidad
+            );
+            marcas.set(marca, (marcas.get(marca) || 0) + cantidad);
+        });
+    });
+
+    const ordenar = mapa => Array.from(mapa.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    return {
+        comercios: ordenar(comercios),
+        productos: ordenar(productos),
+        marcas: ordenar(marcas)
+    };
+}
+
+function crearListaEstadistica(titulo, datos, sufijo) {
+    const bloque = document.createElement("div");
+    bloque.className = "bloqueEstadisticaComercial";
+
+    const encabezado = document.createElement("h3");
+    encabezado.textContent = titulo;
+    bloque.appendChild(encabezado);
+
+    if (datos.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.textContent = "Todav\u00eda no hay datos.";
+        bloque.appendChild(vacio);
+        return bloque;
+    }
+
+    const lista = document.createElement("ol");
+    datos.forEach(([nombre, cantidad]) => {
+        const item = document.createElement("li");
+        item.textContent = nombre + " — " + cantidad + " " + sufijo;
+        lista.appendChild(item);
+    });
+    bloque.appendChild(lista);
+    return bloque;
+}
+
+function crearPanelInteligenciaComercial() {
+    const estadisticas = obtenerEstadisticasComerciales();
+    const hayDatos = estadisticas.comercios.length > 0 ||
+        estadisticas.productos.length > 0 ||
+        estadisticas.marcas.length > 0;
+
+    if (!hayDatos) return null;
+
+    const panel = document.createElement("section");
+    panel.className = "card panelInteligenciaComercial";
+
+    const titulo = document.createElement("h2");
+    titulo.textContent = "Resumen comercial";
+
+    const ayuda = document.createElement("p");
+    ayuda.textContent = "Datos calculados a partir de tus pedidos guardados.";
+
+    const columnas = document.createElement("div");
+    columnas.className = "columnasEstadisticaComercial";
+    columnas.append(
+        crearListaEstadistica("Comercios con m\u00e1s pedidos", estadisticas.comercios, "pedido(s)"),
+        crearListaEstadistica("Productos m\u00e1s pedidos", estadisticas.productos, "unidad(es)"),
+        crearListaEstadistica("Marcas m\u00e1s pedidas", estadisticas.marcas, "unidad(es)")
+    );
+
+    panel.append(titulo, ayuda, columnas);
+    return panel;
+}
+
 function renderizarHistorial() {
     if (!pantallaHistorial) return;
 
@@ -220,6 +311,9 @@ function renderizarHistorial() {
 
     const pedidos = obtenerPedidosFiltrados();
     contenedor.innerHTML = "";
+
+    const panelInteligencia = crearPanelInteligenciaComercial();
+    if (panelInteligencia) contenedor.appendChild(panelInteligencia);
 
     actualizarResumenHistorial(pedidos);
     actualizarFiltroActivoHistorial();

@@ -1554,7 +1554,65 @@ body > nav.bottom-nav {
   text-align: center;
 }
 
+.panelInteligenciaComercial{
+  margin-bottom:14px;
+  border:1px solid #dbeafe;
+  background:linear-gradient(135deg,#f8fbff,#ffffff);
+}
+
+.panelInteligenciaComercial h2{
+  margin:0;
+  color:#1e3a8a;
+  font-size:17px;
+}
+
+.panelInteligenciaComercial > p{
+  margin:4px 0 12px;
+  color:#64748b;
+  font-size:11px;
+}
+
+.columnasEstadisticaComercial{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+
+.bloqueEstadisticaComercial{
+  padding:10px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:#fff;
+}
+
+.bloqueEstadisticaComercial h3{
+  margin:0 0 7px;
+  color:#334155;
+  font-size:12px;
+}
+
+.bloqueEstadisticaComercial ol{
+  margin:0;
+  padding-left:19px;
+  color:#475569;
+  font-size:11px;
+}
+
+.bloqueEstadisticaComercial li{
+  margin:5px 0;
+}
+
+.bloqueEstadisticaComercial p{
+  margin:0;
+  color:#94a3b8;
+  font-size:11px;
+}
+
 @media (max-width: 420px) {
+  .columnasEstadisticaComercial {
+    grid-template-columns:1fr;
+  }
+
   .filaRutaGuardada {
     grid-template-columns:1fr auto;
   }
