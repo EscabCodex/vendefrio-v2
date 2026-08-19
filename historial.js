@@ -79,6 +79,39 @@ function coincidePeriodoHistorial(pedido, periodo) {
     return true;
 }
 
+function obtenerProductosAnaliticosHistorial(registro) {
+    if (Array.isArray(registro && registro.productos)) {
+        return registro.productos
+            .map(item => ({
+                marca: String(item.marca || "Sin marca"),
+                producto: String(item.producto || "Sin producto"),
+                cantidad: Number(item.cantidad) || 0
+            }))
+            .filter(item => item.cantidad > 0);
+    }
+
+    const texto = String(registro && registro.pedido || "");
+    return texto.split(/\r?\n/)
+        .map(linea => linea.trim())
+        .map(linea => {
+            const coincidencia = linea.match(/^[-•]?\s*(.+?)\s+x(\d+)\s*$/i);
+            if (!coincidencia) return null;
+            return {
+                marca: "Sin marca",
+                producto: coincidencia[1].trim(),
+                cantidad: Number(coincidencia[2]) || 0
+            };
+        })
+        .filter(Boolean);
+}
+
+function obtenerUnidadesAnaliticasHistorial(registro) {
+    const cantidadGuardada = Number(registro && registro.cantidad);
+    if (Number.isFinite(cantidadGuardada) && cantidadGuardada > 0) return cantidadGuardada;
+    return obtenerProductosAnaliticosHistorial(registro)
+        .reduce((total, item) => total + item.cantidad, 0);
+}
+
 function obtenerPedidosFiltrados() {
     const texto = normalizarTexto(
         buscarHistorial ? buscarHistorial.value : ""
@@ -109,6 +142,14 @@ function obtenerPedidosFiltrados() {
                 registro.pedido,
                 periodo
             );
+        })
+        .sort((a, b) => {
+            const fechaA = obtenerFechaRegistro(a.pedido);
+            const fechaB = obtenerFechaRegistro(b.pedido);
+            if (fechaA && fechaB) return fechaB.getTime() - fechaA.getTime();
+            if (fechaB) return 1;
+            if (fechaA) return -1;
+            return b.indice - a.indice;
         });
 }
 
@@ -116,7 +157,7 @@ function actualizarResumenHistorial(pedidos) {
     if (!resumenHistorial) return;
 
     const unidades = pedidos.reduce((total, registro) => {
-        return total + (Number(registro.pedido.cantidad) || 0);
+        return total + obtenerUnidadesAnaliticasHistorial(registro.pedido);
     }, 0);
 
     resumenHistorial.textContent =
@@ -222,12 +263,13 @@ function obtenerEstadisticasComerciales() {
         const comercio = String(registro.comercio || "Sin comercio");
         comercios.set(comercio, (comercios.get(comercio) || 0) + 1);
 
-        if (!Array.isArray(registro.productos)) return;
+        const productosAnaliticos = obtenerProductosAnaliticosHistorial(registro);
+        if (productosAnaliticos.length === 0) return;
 
-        registro.productos.forEach(item => {
-            const marca = String(item.marca || "Sin marca");
-            const producto = String(item.producto || "Sin producto");
-            const cantidad = Number(item.cantidad) || 0;
+        productosAnaliticos.forEach(item => {
+            const marca = item.marca;
+            const producto = item.producto;
+            const cantidad = item.cantidad;
             const claveProducto = marca + " - " + producto;
 
             productos.set(
@@ -285,18 +327,16 @@ function obtenerPerfilesComerciales(historial) {
 
         const perfil = agrupados.get(nombre);
         perfil.fechas.push(fecha);
-        perfil.unidades += Number(registro.cantidad) || 0;
+        perfil.unidades += obtenerUnidadesAnaliticasHistorial(registro);
 
-        if (Array.isArray(registro.productos)) {
-            registro.productos.forEach(item => {
-                const producto = String(item.producto || "Sin producto");
-                const cantidad = Number(item.cantidad) || 0;
-                perfil.productos.set(
-                    producto,
-                    (perfil.productos.get(producto) || 0) + cantidad
-                );
-            });
-        }
+        obtenerProductosAnaliticosHistorial(registro).forEach(item => {
+            const producto = item.producto;
+            const cantidad = item.cantidad;
+            perfil.productos.set(
+                producto,
+                (perfil.productos.get(producto) || 0) + cantidad
+            );
+        });
     });
 
     return Array.from(agrupados.values()).map(perfil => {
@@ -439,7 +479,7 @@ function obtenerEstadisticasMensuales(historial) {
 
         const mes = meses.get(clave);
         mes.pedidos += 1;
-        mes.unidades += Number(registro.cantidad) || 0;
+        mes.unidades += obtenerUnidadesAnaliticasHistorial(registro);
         mes.comercios.add(String(registro.comercio || "Sin comercio"));
     });
 
