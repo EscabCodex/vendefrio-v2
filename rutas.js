@@ -16,6 +16,15 @@ let marcadoresPorNombre = new Map();
 let coordenadasPinOriginales = null;
 let tipoEdicionPin = "nuevo";
 let rutaGuardadaEnEdicion = null;
+let navegacionActiva = false;
+let indiceParadaNavegacion = 0;
+let vigilanciaNavegacion = null;
+let marcadorUbicacionNavegacion = null;
+let lineaNavegacion = null;
+let rutaCalleNavegacion = null;
+let ultimaPosicionNavegacion = null;
+let pasoNavegacionActual = "";
+let calculandoRutaCalle = false;
 
 function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
@@ -131,6 +140,7 @@ function inicializarPantallaRutas() {
     crearControlesPinManual();
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
+    crearControlesNavegacion();
     renderizarPines();
 }
 
@@ -331,6 +341,232 @@ function abrirOpcionesRutaGuardada(nombre) {
         " comercio(s) guardado(s). Eleg\u00ed qu\u00e9 quer\u00e9s hacer.";
     if (entradaNombre) entradaNombre.value = ruta.nombre;
     modal.classList.remove("oculto");
+}
+
+function crearControlesNavegacion() {
+    const botonMaps = document.getElementById("btnGoogleMaps");
+    if (!botonMaps || document.getElementById("panelNavegacionApp")) return;
+
+    const panel = document.createElement("div");
+    panel.id = "panelNavegacionApp";
+    panel.className = "panelNavegacionApp";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Navegaci\u00f3n en VendeFr\u00edo";
+
+    const estado = document.createElement("p");
+    estado.id = "estadoNavegacionApp";
+    estado.textContent = "Calcul\u00e1 una ruta para iniciar la navegaci\u00f3n dentro de la app.";
+
+    const acciones = document.createElement("div");
+    acciones.className = "accionesNavegacionApp";
+
+    const iniciar = document.createElement("button");
+    iniciar.id = "iniciarNavegacionApp";
+    iniciar.type = "button";
+    iniciar.className = "btnAccion agregar";
+    iniciar.textContent = "Iniciar navegaci\u00f3n";
+    iniciar.addEventListener("click", iniciarNavegacionApp);
+
+    const siguiente = document.createElement("button");
+    siguiente.id = "siguienteParadaNavegacion";
+    siguiente.type = "button";
+    siguiente.className = "btnAccion ver oculto";
+    siguiente.textContent = "Llegu\u00e9 / siguiente parada";
+    siguiente.addEventListener("click", avanzarParadaNavegacion);
+
+    const detener = document.createElement("button");
+    detener.id = "detenerNavegacionApp";
+    detener.type = "button";
+    detener.className = "btnAccion secundario oculto";
+    detener.textContent = "Detener navegaci\u00f3n";
+    detener.addEventListener("click", detenerNavegacionApp);
+
+    acciones.append(iniciar, siguiente, detener);
+    panel.append(titulo, estado, acciones);
+    botonMaps.insertAdjacentElement("afterend", panel);
+}
+
+function actualizarEstadoNavegacionApp(texto) {
+    const estado = document.getElementById("estadoNavegacionApp");
+    if (estado) estado.textContent = texto;
+}
+
+function formatearTiempoNavegacion(segundos) {
+    const minutos = Math.max(1, Math.round((Number(segundos) || 0) / 60));
+    if (minutos < 60) return minutos + " min";
+    return Math.floor(minutos / 60) + " h " + (minutos % 60) + " min";
+}
+
+function formatearInstruccionNavegacion(paso) {
+    if (!paso || !paso.maneuver) return "Seguí la ruta hasta la próxima parada.";
+    const maniobra = paso.maneuver;
+    const tipo = String(maniobra.type || "");
+    const modificador = String(maniobra.modifier || "").replace(/-/g, " ");
+    const texto = {
+        depart: "Sali",
+        arrive: "Llegaste al destino",
+        turn: "Gira",
+        'new name': "Continua",
+        merge: "Incorporate",
+        fork: "Toma la bifurcacion",
+        roundabout: "Entra a la rotonda",
+        rotary: "Entra a la rotonda"
+    }[tipo] || "Continua";
+    if (tipo === "arrive") return texto;
+    return texto + (modificador ? " " + modificador : "") + ".";
+}
+
+async function cargarRutaPorCallesNavegacion(posicion) {
+    if (calculandoRutaCalle || !posicion || !rutaOrdenada[indiceParadaNavegacion]) return;
+
+    calculandoRutaCalle = true;
+    const puntos = [
+        [posicion.coords.longitude, posicion.coords.latitude],
+        ...rutaOrdenada.slice(indiceParadaNavegacion).map(parada => [Number(parada.lng), Number(parada.lat)])
+    ];
+    const coordenadas = puntos.map(punto => punto.join(",")).join(";");
+    const url = "https://router.project-osrm.org/route/v1/driving/" +
+        coordenadas + "?overview=full&geometries=geojson&steps=true";
+
+    try {
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) throw new Error("No se pudo calcular la ruta por calles");
+        const datos = await respuesta.json();
+        const ruta = datos.routes && datos.routes[0];
+        if (!ruta) throw new Error("No hay recorrido disponible");
+
+        if (rutaCalleNavegacion) mapaLeaflet.removeLayer(rutaCalleNavegacion);
+        const geometria = ruta.geometry.coordinates.map(punto => [punto[1], punto[0]]);
+        rutaCalleNavegacion = L.polyline(geometria, {
+            color: "#2563eb",
+            weight: 6,
+            opacity: 0.85
+        }).addTo(mapaLeaflet);
+
+        const pasos = ruta.legs.flatMap(tramo => tramo.steps || []);
+        pasoNavegacionActual = pasos.length > 0
+            ? formatearInstruccionNavegacion(pasos[0])
+            : "Seguí el recorrido azul hasta la próxima parada.";
+
+        actualizarEstadoNavegacionApp(
+            "Proxima parada: " + rutaOrdenada[indiceParadaNavegacion].nombre +
+            " - " + formatearDistanciaNavegacion(ruta.distance) +
+            " - " + formatearTiempoNavegacion(ruta.duration) +
+            ".\n" + pasoNavegacionActual
+        );
+    } catch (error) {
+        pasoNavegacionActual = "No se pudo calcular el recorrido por calles. Se muestra una línea directa.";
+        actualizarEstadoNavegacionApp(pasoNavegacionActual);
+    } finally {
+        calculandoRutaCalle = false;
+    }
+}
+
+function actualizarVistaNavegacion(posicion) {
+    if (!mapaLeaflet || !posicion || !rutaOrdenada[indiceParadaNavegacion]) return;
+
+    ultimaPosicionNavegacion = posicion;
+    const actual = [posicion.coords.latitude, posicion.coords.longitude];
+    const parada = rutaOrdenada[indiceParadaNavegacion];
+    const destino = [Number(parada.lat), Number(parada.lng)];
+    const distancia = calcularDistancia(actual[0], actual[1], destino[0], destino[1]);
+
+    if (!marcadorUbicacionNavegacion) {
+        marcadorUbicacionNavegacion = L.circleMarker(actual, {
+            radius: 8,
+            color: "#2563eb",
+            fillColor: "#60a5fa",
+            fillOpacity: 0.9
+        }).addTo(mapaLeaflet);
+    } else {
+        marcadorUbicacionNavegacion.setLatLng(actual);
+    }
+
+    if (!rutaCalleNavegacion) {
+        if (lineaNavegacion) mapaLeaflet.removeLayer(lineaNavegacion);
+        lineaNavegacion = L.polyline([actual, destino], {
+            color: "#2563eb",
+            weight: 5,
+            dashArray: "10 8"
+        }).addTo(mapaLeaflet);
+        cargarRutaPorCallesNavegacion(posicion);
+    }
+
+    mapaLeaflet.setView(actual, Math.max(mapaLeaflet.getZoom(), 15));
+    if (!pasoNavegacionActual) {
+        actualizarEstadoNavegacionApp(
+            "Proxima parada: " + parada.nombre + " - " + formatearDistanciaNavegacion(distancia) + "."
+        );
+    }
+}
+
+function formatearDistanciaNavegacion(metros) {
+    const valor = Number(metros) || 0;
+    return valor < 1000 ? Math.round(valor) + " m" : (valor / 1000).toFixed(1) + " km";
+}
+
+function iniciarNavegacionApp() {
+    if (rutaOrdenada.length === 0) {
+        mostrarAviso("Ruta no calculada", "Calcul\u00e1 una ruta antes de iniciar la navegaci\u00f3n.");
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        mostrarAviso("GPS no disponible", "Activ\u00e1 el GPS para iniciar la navegaci\u00f3n.");
+        return;
+    }
+
+    navegacionActiva = true;
+    indiceParadaNavegacion = 0;
+    document.getElementById("iniciarNavegacionApp")?.classList.add("oculto");
+    document.getElementById("siguienteParadaNavegacion")?.classList.remove("oculto");
+    document.getElementById("detenerNavegacionApp")?.classList.remove("oculto");
+    actualizarEstadoNavegacionApp("Obteniendo tu ubicaci\u00f3n...");
+
+    vigilanciaNavegacion = navigator.geolocation.watchPosition(
+        actualizarVistaNavegacion,
+        () => actualizarEstadoNavegacionApp("No se pudo actualizar la ubicaci\u00f3n del celular."),
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
+}
+
+function avanzarParadaNavegacion() {
+    if (!navegacionActiva) return;
+    indiceParadaNavegacion += 1;
+
+    if (indiceParadaNavegacion >= rutaOrdenada.length) {
+        actualizarEstadoNavegacionApp("Llegaste al final de la ruta.");
+        detenerNavegacionApp(false);
+        mostrarAviso("Ruta finalizada", "Completaste todas las paradas de la ruta.");
+        return;
+    }
+
+    const parada = rutaOrdenada[indiceParadaNavegacion];
+    pasoNavegacionActual = "";
+    if (rutaCalleNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(rutaCalleNavegacion);
+    rutaCalleNavegacion = null;
+    if (ultimaPosicionNavegacion) cargarRutaPorCallesNavegacion(ultimaPosicionNavegacion);
+    actualizarEstadoNavegacionApp("Pr\u00f3xima parada: " + parada.nombre + ".");
+}
+
+function detenerNavegacionApp(mostrarMensaje = true) {
+    navegacionActiva = false;
+    if (vigilanciaNavegacion !== null) navigator.geolocation.clearWatch(vigilanciaNavegacion);
+    vigilanciaNavegacion = null;
+    if (marcadorUbicacionNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(marcadorUbicacionNavegacion);
+    if (lineaNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(lineaNavegacion);
+    if (rutaCalleNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(rutaCalleNavegacion);
+    marcadorUbicacionNavegacion = null;
+    lineaNavegacion = null;
+    rutaCalleNavegacion = null;
+    ultimaPosicionNavegacion = null;
+    pasoNavegacionActual = "";
+    document.getElementById("iniciarNavegacionApp")?.classList.remove("oculto");
+    document.getElementById("siguienteParadaNavegacion")?.classList.add("oculto");
+    document.getElementById("detenerNavegacionApp")?.classList.add("oculto");
+    actualizarEstadoNavegacionApp("Calcul\u00e1 una ruta para iniciar la navegaci\u00f3n dentro de la app.");
+    if (mostrarMensaje) mostrarAviso("Navegaci\u00f3n detenida", "La navegaci\u00f3n dentro de VendeFr\u00edo se detuvo.");
 }
 
 function crearControlesRutasGuardadas() {
