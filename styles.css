@@ -1608,6 +1608,38 @@ body > nav.bottom-nav {
   font-size:11px;
 }
 
+.comparativaSemanalComercial{
+  margin:10px 0 4px;
+  padding:10px;
+  border:1px solid #dcfce7;
+  border-radius:10px;
+  background:#f7fff9;
+}
+
+.comparativaSemanalComercial h3{
+  margin:0 0 7px;
+  color:#166534;
+  font-size:13px;
+}
+
+.filaComparativaSemanal{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:6px;
+  padding:5px 0;
+  border-bottom:1px solid #dcfce7;
+  color:#64748b;
+  font-size:11px;
+}
+
+.filaComparativaSemanal:last-child{
+  border-bottom:0;
+}
+
+.filaComparativaSemanal strong{
+  color:#166534;
+}
+
 .resumenMensualComercial{
   margin:10px 0 4px;
   padding:10px;
@@ -1690,6 +1722,11 @@ body > nav.bottom-nav {
 }
 
 @media (max-width: 420px) {
+  .filaComparativaSemanal {
+    grid-template-columns:1fr;
+    gap:2px;
+  }
+
   .columnasEstadisticaComercial {
     grid-template-columns:1fr;
   }

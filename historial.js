@@ -342,6 +342,56 @@ function crearListaEstadistica(titulo, datos, sufijo) {
     return bloque;
 }
 
+function obtenerResumenSemana(historial, desplazamientoSemanas) {
+    const inicio = obtenerInicioSemanaActual();
+    inicio.setDate(inicio.getDate() + desplazamientoSemanas * 7);
+    const fin = new Date(inicio);
+    fin.setDate(fin.getDate() + 7);
+
+    const comercios = new Set();
+    let pedidos = 0;
+    let unidades = 0;
+
+    historial.forEach(registro => {
+        const fecha = obtenerFechaRegistro(registro);
+        if (!fecha || fecha < inicio || fecha >= fin) return;
+        pedidos += 1;
+        unidades += Number(registro.cantidad) || 0;
+        comercios.add(String(registro.comercio || "Sin comercio"));
+    });
+
+    return { pedidos, unidades, comercios: comercios.size };
+}
+
+function crearComparativaSemanal(historial) {
+    const bloque = document.createElement("div");
+    bloque.className = "comparativaSemanalComercial";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Comparativa semanal";
+    bloque.appendChild(titulo);
+
+    const actual = obtenerResumenSemana(historial, 0);
+    const anterior = obtenerResumenSemana(historial, -1);
+    const filas = [
+        ["Pedidos", actual.pedidos, anterior.pedidos],
+        ["Unidades", actual.unidades, anterior.unidades],
+        ["Comercios activos", actual.comercios, anterior.comercios]
+    ];
+
+    filas.forEach(([nombre, valorActual, valorAnterior]) => {
+        const fila = document.createElement("div");
+        fila.className = "filaComparativaSemanal";
+        fila.innerHTML =
+            "<strong>" + nombre + "</strong>" +
+            "<span>Esta semana: " + valorActual + "</span>" +
+            "<span>Semana anterior: " + valorAnterior + "</span>";
+        bloque.appendChild(fila);
+    });
+
+    return bloque;
+}
+
 function obtenerEstadisticasMensuales(historial) {
     const meses = new Map();
 
@@ -488,8 +538,9 @@ function crearPanelInteligenciaComercial() {
     const perfiles = crearPanelPerfilesComerciales(estadisticas.perfiles);
     const alertas = crearAlertasComerciales(estadisticas.atrasados);
 
+    const comparativaSemanal = crearComparativaSemanal(historialCompleto);
     const actividadMensual = crearResumenMensual(historialCompleto);
-    panel.append(titulo, ayuda, actividadMensual, columnas, perfiles, alertas);
+    panel.append(titulo, ayuda, comparativaSemanal, actividadMensual, columnas, perfiles, alertas);
     return panel;
 }
 
