@@ -920,6 +920,181 @@ function importarRespaldoDesdeArchivo(archivo) {
     lector.readAsText(archivo);
 }
 
+function obtenerClavePedidoRespaldo(registro) {
+    return [
+        registro && registro.timestamp || "",
+        normalizarTexto(registro && registro.comercio),
+        registro && registro.pedido || "",
+        JSON.stringify(registro && registro.productos || [])
+    ].join("|");
+}
+
+function combinarProductosRespaldo(productosActuales, productosNuevos) {
+    const resultado = clonarDatos(productosActuales || {});
+
+    Object.entries(productosNuevos || {}).forEach(([marca, lista]) => {
+        const marcaActual = Object.keys(resultado).find(nombre => {
+            return normalizarTexto(nombre) === normalizarTexto(marca);
+        });
+        const nombreMarca = marcaActual || marca;
+        if (!Array.isArray(resultado[nombreMarca])) resultado[nombreMarca] = [];
+
+        (Array.isArray(lista) ? lista : []).forEach(producto => {
+            if (!resultado[nombreMarca].some(actual => {
+                return normalizarTexto(actual) === normalizarTexto(producto);
+            })) {
+                resultado[nombreMarca].push(producto);
+            }
+        });
+    });
+
+    return resultado;
+}
+
+function combinarRespaldoSinBorrar(respaldo) {
+    const datosNuevos = respaldo.datos;
+    const comerciosActuales = obtenerComercios();
+    const comerciosNuevos = Array.isArray(datosNuevos.comercios)
+        ? datosNuevos.comercios
+        : [];
+    const nombresActuales = new Set(
+        comerciosActuales.map(comercio => normalizarTexto(comercio.nombre))
+    );
+    const comerciosAgregados = comerciosNuevos.filter(comercio => {
+        return comercio && !nombresActuales.has(normalizarTexto(comercio.nombre));
+    });
+
+    const historialActual = obtenerHistorial();
+    const clavesHistorial = new Set(historialActual.map(obtenerClavePedidoRespaldo));
+    const pedidosNuevos = (Array.isArray(datosNuevos.historial) ? datosNuevos.historial : [])
+        .filter(registro => {
+            const clave = obtenerClavePedidoRespaldo(registro);
+            if (clavesHistorial.has(clave)) return false;
+            clavesHistorial.add(clave);
+            return true;
+        });
+
+    const productosCombinados = combinarProductosRespaldo(
+        obtenerProductos(),
+        datosNuevos.productos
+    );
+    const marcasActuales = obtenerMarcasOrdenadas();
+    const marcasNuevas = Array.isArray(datosNuevos.ordenMarcas)
+        ? datosNuevos.ordenMarcas
+        : Object.keys(datosNuevos.productos || {});
+    const ordenMarcas = [...marcasActuales];
+    marcasNuevas.forEach(marca => {
+        if (!ordenMarcas.some(actual => normalizarTexto(actual) === normalizarTexto(marca))) {
+            ordenMarcas.push(marca);
+        }
+    });
+
+    const rutasActuales = obtenerRutasGuardadas();
+    const nombresRutas = new Set(rutasActuales.map(ruta => normalizarTexto(ruta.nombre)));
+    const rutasNuevas = (Array.isArray(datosNuevos.rutasGuardadas) ? datosNuevos.rutasGuardadas : [])
+        .filter(ruta => {
+            const clave = normalizarTexto(ruta && ruta.nombre);
+            if (!clave || nombresRutas.has(clave)) return false;
+            nombresRutas.add(clave);
+            return true;
+        });
+
+    const guardado =
+        guardarJSON(DB_COMERCIOS, comerciosActuales.concat(comerciosAgregados)) &&
+        guardarJSON(DB_PRODUCTOS, productosCombinados) &&
+        guardarJSON(DB_ORDEN_MARCAS, ordenMarcas) &&
+        guardarJSON(DB_HISTORIAL, historialActual.concat(pedidosNuevos)) &&
+        guardarJSON(DB_RUTAS_GUARDADAS, rutasActuales.concat(rutasNuevas));
+
+    return {
+        guardado,
+        comerciosAgregados: comerciosAgregados.length,
+        pedidosAgregados: pedidosNuevos.length,
+        marcasAgregadas: Math.max(0, Object.keys(productosCombinados).length - Object.keys(obtenerProductos()).length),
+        rutasAgregadas: rutasNuevas.length
+    };
+}
+
+function importarYCombinarRespaldoDesdeArchivo(archivo) {
+    if (!archivo) return;
+
+    const lector = new FileReader();
+    lector.onload = () => {
+        let respaldo;
+        try {
+            respaldo = JSON.parse(lector.result);
+        } catch (error) {
+            mostrarAviso("Archivo inv\u00e1lido", "El archivo no tiene un formato JSON v\u00e1lido.");
+            return;
+        }
+
+        if (!validarRespaldo(respaldo)) {
+            mostrarAviso("Respaldo no reconocido", "Eleg\u00ed un archivo creado por VendeFr\u00edo.");
+            return;
+        }
+
+        const mensaje =
+            "Se combinar\u00e1 con los datos actuales sin borrar nada.\n\n" +
+            "Pedidos del archivo: " + respaldo.datos.historial.length + "\n" +
+            "Comercios del archivo: " + respaldo.datos.comercios.length + "\n\n" +
+            "Los datos actuales de VendeFr\u00edo tendr\u00e1n prioridad.";
+
+        const aplicar = () => {
+            guardarRespaldoAutomatico();
+            const resultado = combinarRespaldoSinBorrar(respaldo);
+            if (!resultado.guardado) {
+                mostrarAviso("No se pudo combinar", "Los datos no se pudieron guardar completos.");
+                return;
+            }
+
+            mostrarAviso(
+                "Datos combinados",
+                "Se agregaron:\n" +
+                    "- " + resultado.pedidosAgregados + " pedido(s)\n" +
+                    "- " + resultado.comerciosAgregados + " comercio(s)\n" +
+                    "- " + resultado.rutasAgregadas + " ruta(s)\n\n" +
+                    "Los datos actuales se conservaron."
+            );
+            window.setTimeout(() => window.location.reload(), 1500);
+        };
+
+        if (typeof abrirConfirmacion === "function") {
+            abrirConfirmacion("Combinar respaldo", mensaje, aplicar);
+        } else {
+            mostrarAviso("No se pudo confirmar", "El modal de confirmaci\u00f3n no est\u00e1 disponible.");
+        }
+    };
+    lector.onerror = () => mostrarAviso("No se pudo leer el archivo", "Prob\u00e1 nuevamente.");
+    lector.readAsText(archivo);
+}
+
+function crearControlCombinarRespaldo(botonImportar) {
+    if (!botonImportar || document.getElementById("combinarRespaldo")) return;
+
+    const boton = document.createElement("button");
+    boton.id = "combinarRespaldo";
+    boton.type = "button";
+    boton.className = "btnAccion ver";
+    boton.style.justifyContent = "center";
+    boton.style.margin = "0";
+    boton.textContent = "Importar y combinar respaldo";
+
+    const archivo = document.createElement("input");
+    archivo.id = "archivoRespaldoFusion";
+    archivo.type = "file";
+    archivo.accept = "application/json,.json";
+    archivo.style.display = "none";
+
+    boton.addEventListener("click", () => archivo.click());
+    archivo.addEventListener("change", () => {
+        importarYCombinarRespaldoDesdeArchivo(archivo.files[0]);
+        archivo.value = "";
+    });
+
+    botonImportar.insertAdjacentElement("afterend", boton);
+    boton.insertAdjacentElement("afterend", archivo);
+}
+
 function prepararControlesRespaldo() {
     actualizarEstadoRespaldo();
 
@@ -928,6 +1103,8 @@ function prepararControlesRespaldo() {
     const archivoRespaldo = document.getElementById("archivoRespaldo");
     const modalAviso = document.getElementById("modalAviso");
     const cerrarAviso = document.getElementById("cerrarAviso");
+
+    crearControlCombinarRespaldo(botonImportar);
 
     if (cerrarAviso && !cerrarAviso.dataset.configurado) {
         cerrarAviso.addEventListener("click", () => {
