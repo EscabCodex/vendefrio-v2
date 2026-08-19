@@ -342,6 +342,67 @@ function crearListaEstadistica(titulo, datos, sufijo) {
     return bloque;
 }
 
+function obtenerEstadisticasMensuales(historial) {
+    const meses = new Map();
+
+    historial.forEach(registro => {
+        const fecha = obtenerFechaRegistro(registro);
+        if (!fecha) return;
+
+        const clave = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
+        if (!meses.has(clave)) {
+            meses.set(clave, {
+                clave,
+                pedidos: 0,
+                unidades: 0,
+                comercios: new Set()
+            });
+        }
+
+        const mes = meses.get(clave);
+        mes.pedidos += 1;
+        mes.unidades += Number(registro.cantidad) || 0;
+        mes.comercios.add(String(registro.comercio || "Sin comercio"));
+    });
+
+    return Array.from(meses.values())
+        .sort((a, b) => b.clave.localeCompare(a.clave))
+        .slice(0, 6);
+}
+
+function crearResumenMensual(historial) {
+    const bloque = document.createElement("div");
+    bloque.className = "resumenMensualComercial";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Actividad mensual";
+    bloque.appendChild(titulo);
+
+    const meses = obtenerEstadisticasMensuales(historial);
+    if (meses.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.textContent = "Todav\u00eda no hay pedidos con fecha v\u00e1lida.";
+        bloque.appendChild(vacio);
+        return bloque;
+    }
+
+    meses.forEach(mes => {
+        const fila = document.createElement("div");
+        fila.className = "filaResumenMensual";
+
+        const nombre = document.createElement("strong");
+        nombre.textContent = mes.clave;
+
+        const detalle = document.createElement("span");
+        detalle.textContent = mes.pedidos + " pedido(s) - " + mes.unidades + " unidad(es) - " + mes.comercios.size + " comercio(s)";
+
+        fila.append(nombre, detalle);
+        bloque.appendChild(fila);
+    });
+
+    return bloque;
+}
+
 function crearPanelPerfilesComerciales(perfiles) {
     const bloque = document.createElement("div");
     bloque.className = "bloquePerfilesComerciales";
@@ -400,6 +461,7 @@ function crearAlertasComerciales(perfiles) {
 
 function crearPanelInteligenciaComercial() {
     const estadisticas = obtenerEstadisticasComerciales();
+    const historialCompleto = obtenerHistorial();
     const hayDatos = estadisticas.comercios.length > 0 ||
         estadisticas.productos.length > 0 ||
         estadisticas.marcas.length > 0;
@@ -426,7 +488,8 @@ function crearPanelInteligenciaComercial() {
     const perfiles = crearPanelPerfilesComerciales(estadisticas.perfiles);
     const alertas = crearAlertasComerciales(estadisticas.atrasados);
 
-    panel.append(titulo, ayuda, columnas, perfiles, alertas);
+    const actividadMensual = crearResumenMensual(historialCompleto);
+    panel.append(titulo, ayuda, actividadMensual, columnas, perfiles, alertas);
     return panel;
 }
 

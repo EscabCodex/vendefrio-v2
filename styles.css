@@ -1608,6 +1608,44 @@ body > nav.bottom-nav {
   font-size:11px;
 }
 
+.resumenMensualComercial{
+  margin:10px 0 4px;
+  padding:10px;
+  border:1px solid #dbeafe;
+  border-radius:10px;
+  background:#f8fbff;
+}
+
+.resumenMensualComercial h3{
+  margin:0 0 7px;
+  color:#334155;
+  font-size:13px;
+}
+
+.resumenMensualComercial p{
+  margin:0;
+  color:#94a3b8;
+  font-size:11px;
+}
+
+.filaResumenMensual{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:5px 0;
+  border-bottom:1px solid #e5eefb;
+  color:#64748b;
+  font-size:11px;
+}
+
+.filaResumenMensual:last-child{
+  border-bottom:0;
+}
+
+.filaResumenMensual strong{
+  color:#1e3a8a;
+}
+
 .bloquePerfilesComerciales,
 .bloqueAlertasComerciales{
   margin-top:12px;
