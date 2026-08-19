@@ -95,6 +95,31 @@ function obtenerMarcaPorProductoHistorial(nombreProducto) {
     return coincidencias.length === 1 ? coincidencias[0] : "Sin marca";
 }
 
+function obtenerMarcaDesdeLineaHistorial(lineaOriginal) {
+    let linea = String(lineaOriginal || "").trim();
+    linea = linea.replace(/^[🔴🟠🟡🟢🔵🟣🟤⚫⚪📦🏪🔎]\s*/, "");
+    linea = linea.replace(/^[-•]\s*/, "").replace(/^\*|\*$/g, "").trim();
+    linea = linea.replace(/[:：]\s*$/, "").trim();
+    if (!linea) return "";
+
+    const excluidos = [
+        "resumen del pedido",
+        "observaciones",
+        "unidades totales",
+        "productos diferentes",
+        "sin observaciones"
+    ];
+    if (excluidos.some(texto => normalizarTexto(linea).startsWith(texto))) return "";
+
+    const marcaCatalogo = Object.keys(obtenerProductos()).find(marca => {
+        return normalizarTexto(marca) === normalizarTexto(linea);
+    });
+    if (marcaCatalogo) return marcaCatalogo;
+
+    const esMayuscula = linea === linea.toLocaleUpperCase("es-AR");
+    return esMayuscula && linea.length <= 60 ? linea : "";
+}
+
 function obtenerMarcaDesdeMensajeHistorial(registro, producto) {
     const lineas = String(registro && registro.pedido || "").split(/\r?\n/);
     let marcaActual = "";
@@ -102,13 +127,12 @@ function obtenerMarcaDesdeMensajeHistorial(registro, producto) {
 
     for (const lineaOriginal of lineas) {
         const linea = lineaOriginal.trim();
-        const encabezado = linea.match(/^[🔴🟠🟡🟢🔵🟣🟤⚫⚪]\s*\*([^*]+)\*/);
-        if (encabezado) {
-            marcaActual = encabezado[1].trim();
+        const posibleMarca = obtenerMarcaDesdeLineaHistorial(linea);
+        const productoLinea = linea.match(/^[-•]?\s*(.+?)\s+x\s*\d+\s*$/i);
+        if (!productoLinea && posibleMarca) {
+            marcaActual = posibleMarca;
             continue;
         }
-
-        const productoLinea = linea.match(/^[-•]?\s*(.+?)\s+x\d+\s*$/i);
         if (productoLinea && normalizarTexto(productoLinea[1]) === buscado && marcaActual) {
             return marcaActual;
         }
@@ -146,13 +170,12 @@ function obtenerProductosAnaliticosHistorial(registro) {
     return texto.split(/\r?\n/)
         .map(linea => linea.trim())
         .map(linea => {
-            const encabezado = linea.match(/^[🔴🟠🟡🟢🔵🟣🟤⚫⚪]\s*\*([^*]+)\*/);
-            if (encabezado) {
-                marcaActual = encabezado[1].trim();
+            const coincidencia = linea.match(/^[-•]?\s*(.+?)\s+x\s*(\d+)\s*$/i);
+            const posibleMarca = obtenerMarcaDesdeLineaHistorial(linea);
+            if (!coincidencia && posibleMarca) {
+                marcaActual = posibleMarca;
                 return null;
             }
-
-            const coincidencia = linea.match(/^[-•]?\s*(.+?)\s+x(\d+)\s*$/i);
             if (!coincidencia) return null;
             const producto = coincidencia[1].trim();
             return {
