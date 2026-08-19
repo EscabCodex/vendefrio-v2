@@ -26,6 +26,7 @@ const aceptarConfirmacion = document.getElementById("aceptarConfirmacion");
 
 let comercioSeleccionado = null;
 let accionConfirmada = null;
+let comercioMostradoIndividual = "";
 
 function actualizarDatalist() {
     const lista = document.getElementById("listaComercios");
@@ -219,8 +220,10 @@ function renderizarComercios() {
 
     const comercios = todosLosComercios
         .filter(comercio => {
+            const coincideIndividual = !comercioMostradoIndividual ||
+                normalizarTexto(comercio.nombre) === normalizarTexto(comercioMostradoIndividual);
             const coincideTexto = normalizarTexto(comercio.nombre)
-                .includes(filtroNormalizado);
+                .includes(filtroNormalizado) && coincideIndividual;
             const visitado = estaVisitadoEstaSemana(comercio);
 
             const coincideEstado =
@@ -242,6 +245,15 @@ function renderizarComercios() {
         });
 
     listaComerciosAdmin.innerHTML = "";
+
+    if (comercioMostradoIndividual) {
+        const volver = document.createElement("button");
+        volver.type = "button";
+        volver.className = "btnAccion secundario volverTodosComerciosBtn";
+        volver.textContent = "Mostrar todos los comercios";
+        volver.addEventListener("click", limpiarComercioIndividual);
+        listaComerciosAdmin.appendChild(volver);
+    }
 
     if (comercios.length === 0) {
         const vacio = document.createElement("div");
@@ -527,6 +539,23 @@ if (guardarModal) {
         renderizarComercios();
         if (typeof actualizarDashboard === "function") actualizarDashboard();
     };
+}
+
+function mostrarComercioIndividual(nombre) {
+    comercioMostradoIndividual = String(nombre || "").trim();
+    if (buscarComercio) buscarComercio.value = "";
+    if (filtroEstadoComercios) filtroEstadoComercios.value = "todos";
+
+    if (typeof mostrarPantalla === "function") {
+        mostrarPantalla("comercios");
+    } else {
+        renderizarComercios();
+    }
+}
+
+function limpiarComercioIndividual() {
+    comercioMostradoIndividual = "";
+    renderizarComercios();
 }
 
 if (botonAgregar) botonAgregar.onclick = abrirModalNuevo;

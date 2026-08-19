@@ -526,12 +526,110 @@ function crearPanelPerfilesComerciales(perfiles) {
     return bloque;
 }
 
+function crearModalAccionesComercioSeguimiento() {
+    if (document.getElementById("modalAccionesSeguimiento")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "modalAccionesSeguimiento";
+    modal.className = "modal oculto";
+
+    const contenido = document.createElement("div");
+    contenido.className = "modalContenido";
+
+    const titulo = document.createElement("h2");
+    titulo.id = "tituloAccionesSeguimiento";
+
+    const mensaje = document.createElement("p");
+    mensaje.textContent = "Eleg\u00ed qu\u00e9 quer\u00e9s hacer con este comercio.";
+
+    const botones = document.createElement("div");
+    botones.className = "modalBotones modalBotonesSeguimiento";
+
+    const acciones = [
+        ["pedido", "Ir a pedido"],
+        ["comercio", "Ver este comercio"],
+        ["navegar", "Navegar a este comercio"],
+        ["historial", "Ir a historial"]
+    ];
+
+    acciones.forEach(([accion, texto]) => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = accion === "pedido" ? "btnModalConfirmar" : "btnModalSecundario";
+        boton.dataset.accion = accion;
+        boton.textContent = texto;
+        botones.appendChild(boton);
+    });
+
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "btnModalCancelar";
+    cancelar.textContent = "Cancelar";
+    botones.appendChild(cancelar);
+
+    contenido.append(titulo, mensaje, botones);
+    modal.appendChild(contenido);
+    document.body.appendChild(modal);
+
+    cancelar.addEventListener("click", () => modal.classList.add("oculto"));
+    modal.addEventListener("click", evento => {
+        if (evento.target === modal) modal.classList.add("oculto");
+    });
+
+    botones.addEventListener("click", evento => {
+        const boton = evento.target.closest("button[data-accion]");
+        if (!boton) return;
+
+        const nombre = modal.dataset.nombre || "";
+        const accion = boton.dataset.accion;
+        modal.classList.add("oculto");
+
+        if (accion === "pedido") {
+            if (typeof abrirPedidoNuevoParaComercio === "function") {
+                abrirPedidoNuevoParaComercio(nombre);
+            }
+            return;
+        }
+
+        if (accion === "comercio") {
+            if (typeof mostrarComercioIndividual === "function") {
+                mostrarComercioIndividual(nombre);
+            } else if (typeof mostrarPantalla === "function") {
+                mostrarPantalla("comercios");
+            }
+            return;
+        }
+
+        if (accion === "navegar") {
+            if (typeof abrirMapsComercio === "function") {
+                abrirMapsComercio(nombre);
+            }
+            return;
+        }
+
+        if (accion === "historial") {
+            abrirHistorialDeComercio(nombre);
+        }
+    });
+}
+
+function abrirAccionesComercioSeguimiento(nombre) {
+    crearModalAccionesComercioSeguimiento();
+    const modal = document.getElementById("modalAccionesSeguimiento");
+    const titulo = document.getElementById("tituloAccionesSeguimiento");
+    if (!modal || !titulo) return;
+
+    modal.dataset.nombre = nombre;
+    titulo.textContent = nombre;
+    modal.classList.remove("oculto");
+}
+
 function crearSeguimientoSemanal(perfiles, historial) {
     const bloque = document.createElement("div");
     bloque.className = "bloqueSeguimientoSemanal";
 
     const titulo = document.createElement("h3");
-    titulo.textContent = "Seguimiento de esta semana";
+    titulo.textContent = "Comercios sin pedido esta semana";
     bloque.appendChild(titulo);
 
     const inicio = obtenerInicioSemanaActual();
@@ -558,6 +656,16 @@ function crearSeguimientoSemanal(perfiles, historial) {
         const fila = document.createElement("div");
         fila.className = "filaSeguimientoSemanal";
         fila.textContent = perfil.nombre + " - " + perfil.cantidadPedidos + " pedido(s) hist\u00f3rico(s).";
+        fila.setAttribute("role", "button");
+        fila.tabIndex = 0;
+        fila.title = "Toc\u00e1 para ver las acciones disponibles";
+        fila.addEventListener("click", () => abrirAccionesComercioSeguimiento(perfil.nombre));
+        fila.addEventListener("keydown", evento => {
+            if (evento.key === "Enter" || evento.key === " ") {
+                evento.preventDefault();
+                abrirAccionesComercioSeguimiento(perfil.nombre);
+            }
+        });
         bloque.appendChild(fila);
     });
 

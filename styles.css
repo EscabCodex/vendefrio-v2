@@ -1767,6 +1767,29 @@ body > nav.bottom-nav {
 
 .filaSeguimientoSemanal{
   border-bottom:1px solid #fde68a;
+  cursor:pointer;
+}
+
+.filaSeguimientoSemanal:hover,
+.filaSeguimientoSemanal:focus{
+  background:#fef3c7;
+  outline:none;
+}
+
+.modalBotonesSeguimiento{
+  display:grid;
+  gap:8px;
+}
+
+.modalBotonesSeguimiento button{
+  width:100%;
+  justify-content:center;
+}
+
+.volverTodosComerciosBtn{
+  width:100%;
+  justify-content:center;
+  margin-bottom:10px;
 }
 
 @media (max-width: 420px) {
