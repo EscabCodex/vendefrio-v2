@@ -1608,6 +1608,49 @@ body > nav.bottom-nav {
   font-size:11px;
 }
 
+.bloquePerfilesComerciales,
+.bloqueAlertasComerciales{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid #e2e8f0;
+}
+
+.bloquePerfilesComerciales h3,
+.bloqueAlertasComerciales h3{
+  margin:0 0 8px;
+  color:#334155;
+  font-size:13px;
+}
+
+.filaPerfilComercial,
+.filaAlertaComercial{
+  padding:7px 0;
+  border-bottom:1px solid #f1f5f9;
+}
+
+.filaPerfilComercial:last-child,
+.filaAlertaComercial:last-child{
+  border-bottom:0;
+}
+
+.filaPerfilComercial strong{
+  display:block;
+  color:#1e293b;
+  font-size:12px;
+}
+
+.filaPerfilComercial small,
+.filaAlertaComercial,
+.bloqueAlertasComerciales p{
+  color:#64748b;
+  font-size:11px;
+  line-height:1.4;
+}
+
+.filaAlertaComercial{
+  color:#b45309;
+}
+
 @media (max-width: 420px) {
   .columnasEstadisticaComercial {
     grid-template-columns:1fr;

@@ -242,11 +242,79 @@ function obtenerEstadisticasComerciales() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
+    const perfiles = obtenerPerfilesComerciales(historial);
+
     return {
         comercios: ordenar(comercios),
         productos: ordenar(productos),
-        marcas: ordenar(marcas)
+        marcas: ordenar(marcas),
+        perfiles,
+        atrasados: perfiles.filter(perfil => perfil.atrasado)
     };
+}
+
+function obtenerPerfilesComerciales(historial) {
+    const agrupados = new Map();
+
+    historial.forEach(registro => {
+        const nombre = String(registro.comercio || "Sin comercio");
+        const fecha = obtenerFechaRegistro(registro);
+        if (!fecha) return;
+
+        if (!agrupados.has(nombre)) {
+            agrupados.set(nombre, {
+                nombre,
+                fechas: [],
+                productos: new Map()
+            });
+        }
+
+        const perfil = agrupados.get(nombre);
+        perfil.fechas.push(fecha);
+
+        if (Array.isArray(registro.productos)) {
+            registro.productos.forEach(item => {
+                const producto = String(item.producto || "Sin producto");
+                const cantidad = Number(item.cantidad) || 0;
+                perfil.productos.set(
+                    producto,
+                    (perfil.productos.get(producto) || 0) + cantidad
+                );
+            });
+        }
+    });
+
+    return Array.from(agrupados.values()).map(perfil => {
+        const fechas = perfil.fechas.sort((a, b) => a - b);
+        const intervalos = [];
+
+        for (let indice = 1; indice < fechas.length; indice += 1) {
+            intervalos.push(
+                Math.round((fechas[indice] - fechas[indice - 1]) / 86400000)
+            );
+        }
+
+        const promedio = intervalos.length > 0
+            ? Math.round(intervalos.reduce((total, dias) => total + dias, 0) / intervalos.length)
+            : 0;
+        const ultima = fechas[fechas.length - 1];
+        const diasDesdeUltimo = Math.max(
+            0,
+            Math.floor((Date.now() - ultima.getTime()) / 86400000)
+        );
+        const productosHabituales = Array.from(perfil.productos.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
+
+        return {
+            nombre: perfil.nombre,
+            cantidadPedidos: fechas.length,
+            promedioDias: promedio,
+            diasDesdeUltimo,
+            productosHabituales,
+            atrasado: fechas.length >= 3 && promedio > 0 && diasDesdeUltimo > promedio * 1.5
+        };
+    }).sort((a, b) => b.cantidadPedidos - a.cantidadPedidos);
 }
 
 function crearListaEstadistica(titulo, datos, sufijo) {
@@ -271,6 +339,62 @@ function crearListaEstadistica(titulo, datos, sufijo) {
         lista.appendChild(item);
     });
     bloque.appendChild(lista);
+    return bloque;
+}
+
+function crearPanelPerfilesComerciales(perfiles) {
+    const bloque = document.createElement("div");
+    bloque.className = "bloquePerfilesComerciales";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Pedido habitual por comercio";
+    bloque.appendChild(titulo);
+
+    perfiles.slice(0, 8).forEach(perfil => {
+        const fila = document.createElement("div");
+        fila.className = "filaPerfilComercial";
+
+        const nombre = document.createElement("strong");
+        nombre.textContent = perfil.nombre;
+
+        const detalle = document.createElement("small");
+        const frecuencia = perfil.promedioDias > 0
+            ? "cada " + perfil.promedioDias + " d\u00eda(s)"
+            : "frecuencia en formaci\u00f3n";
+        const habituales = perfil.productosHabituales.length > 0
+            ? "Productos: " + perfil.productosHabituales.map(item => item[0]).join(", ")
+            : "Sin productos estructurados";
+        detalle.textContent = perfil.cantidadPedidos + " pedido(s) - " + frecuencia + ". " + habituales;
+
+        fila.append(nombre, detalle);
+        bloque.appendChild(fila);
+    });
+
+    return bloque;
+}
+
+function crearAlertasComerciales(perfiles) {
+    const bloque = document.createElement("div");
+    bloque.className = "bloqueAlertasComerciales";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Comercios posiblemente atrasados";
+    bloque.appendChild(titulo);
+
+    if (perfiles.length === 0) {
+        const mensaje = document.createElement("p");
+        mensaje.textContent = "No hay alertas con los datos actuales.";
+        bloque.appendChild(mensaje);
+        return bloque;
+    }
+
+    perfiles.slice(0, 8).forEach(perfil => {
+        const fila = document.createElement("div");
+        fila.className = "filaAlertaComercial";
+        fila.textContent = perfil.nombre + " - hace " + perfil.diasDesdeUltimo + " d\u00eda(s); suele pedir cada " + perfil.promedioDias + " d\u00eda(s).";
+        bloque.appendChild(fila);
+    });
+
     return bloque;
 }
 
@@ -299,7 +423,10 @@ function crearPanelInteligenciaComercial() {
         crearListaEstadistica("Marcas m\u00e1s pedidas", estadisticas.marcas, "unidad(es)")
     );
 
-    panel.append(titulo, ayuda, columnas);
+    const perfiles = crearPanelPerfilesComerciales(estadisticas.perfiles);
+    const alertas = crearAlertasComerciales(estadisticas.atrasados);
+
+    panel.append(titulo, ayuda, columnas, perfiles, alertas);
     return panel;
 }
 
