@@ -79,26 +79,85 @@ function coincidePeriodoHistorial(pedido, periodo) {
     return true;
 }
 
+function obtenerMarcaPorProductoHistorial(nombreProducto) {
+    const buscado = normalizarTexto(nombreProducto);
+    if (!buscado || buscado === "sin producto") return "Sin marca";
+
+    const productosDisponibles = obtenerProductos();
+    const coincidencias = Object.entries(productosDisponibles)
+        .filter(([, productos]) => {
+            return Array.isArray(productos) && productos.some(producto => {
+                return normalizarTexto(producto) === buscado;
+            });
+        })
+        .map(([marca]) => marca);
+
+    return coincidencias.length === 1 ? coincidencias[0] : "Sin marca";
+}
+
+function obtenerMarcaDesdeMensajeHistorial(registro, producto) {
+    const lineas = String(registro && registro.pedido || "").split(/\r?\n/);
+    let marcaActual = "";
+    const buscado = normalizarTexto(producto);
+
+    for (const lineaOriginal of lineas) {
+        const linea = lineaOriginal.trim();
+        const encabezado = linea.match(/^[🔴🟠🟡🟢🔵🟣🟤⚫⚪]\s*\*([^*]+)\*/);
+        if (encabezado) {
+            marcaActual = encabezado[1].trim();
+            continue;
+        }
+
+        const productoLinea = linea.match(/^[-•]?\s*(.+?)\s+x\d+\s*$/i);
+        if (productoLinea && normalizarTexto(productoLinea[1]) === buscado && marcaActual) {
+            return marcaActual;
+        }
+    }
+
+    return "";
+}
+
+function normalizarMarcaHistorial(marca, producto, registro) {
+    const texto = String(marca || "").trim();
+    if (!texto || normalizarTexto(texto) === "sin marca") {
+        return obtenerMarcaDesdeMensajeHistorial(registro, producto) ||
+            obtenerMarcaPorProductoHistorial(producto);
+    }
+    return texto;
+}
+
 function obtenerProductosAnaliticosHistorial(registro) {
     if (Array.isArray(registro && registro.productos)) {
         return registro.productos
-            .map(item => ({
-                marca: String(item.marca || "Sin marca"),
-                producto: String(item.producto || "Sin producto"),
+            .map(item => {
+                const producto = String(item.producto || "Sin producto");
+                return {
+                marca: normalizarMarcaHistorial(item.marca, producto, registro),
+                producto,
                 cantidad: Number(item.cantidad) || 0
-            }))
+            };
+            })
             .filter(item => item.cantidad > 0);
     }
 
     const texto = String(registro && registro.pedido || "");
+    let marcaActual = "";
+
     return texto.split(/\r?\n/)
         .map(linea => linea.trim())
         .map(linea => {
+            const encabezado = linea.match(/^[🔴🟠🟡🟢🔵🟣🟤⚫⚪]\s*\*([^*]+)\*/);
+            if (encabezado) {
+                marcaActual = encabezado[1].trim();
+                return null;
+            }
+
             const coincidencia = linea.match(/^[-•]?\s*(.+?)\s+x(\d+)\s*$/i);
             if (!coincidencia) return null;
+            const producto = coincidencia[1].trim();
             return {
-                marca: "Sin marca",
-                producto: coincidencia[1].trim(),
+                marca: marcaActual || obtenerMarcaPorProductoHistorial(producto),
+                producto,
                 cantidad: Number(coincidencia[2]) || 0
             };
         })
