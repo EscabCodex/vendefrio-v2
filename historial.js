@@ -253,6 +253,19 @@ function obtenerEstadisticasComerciales() {
     };
 }
 
+function formatearFechaCortaHistorial(fecha) {
+    if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return "sin fecha";
+    return String(fecha.getDate()).padStart(2, "0") + "/" +
+        String(fecha.getMonth() + 1).padStart(2, "0");
+}
+
+function obtenerVariacionSemanal(actual, anterior) {
+    if (anterior === 0 && actual === 0) return "sin cambios";
+    if (anterior === 0) return "+100%";
+    const variacion = Math.round(((actual - anterior) / anterior) * 100);
+    return (variacion > 0 ? "+" : "") + variacion + "%";
+}
+
 function obtenerPerfilesComerciales(historial) {
     const agrupados = new Map();
 
@@ -265,12 +278,14 @@ function obtenerPerfilesComerciales(historial) {
             agrupados.set(nombre, {
                 nombre,
                 fechas: [],
+                unidades: 0,
                 productos: new Map()
             });
         }
 
         const perfil = agrupados.get(nombre);
         perfil.fechas.push(fecha);
+        perfil.unidades += Number(registro.cantidad) || 0;
 
         if (Array.isArray(registro.productos)) {
             registro.productos.forEach(item => {
@@ -309,6 +324,9 @@ function obtenerPerfilesComerciales(historial) {
         return {
             nombre: perfil.nombre,
             cantidadPedidos: fechas.length,
+            unidades: perfil.unidades,
+            promedioUnidades: fechas.length > 0 ? Math.round(perfil.unidades / fechas.length) : 0,
+            ultimaFecha: ultima,
             promedioDias: promedio,
             diasDesdeUltimo,
             productosHabituales,
@@ -382,10 +400,20 @@ function crearComparativaSemanal(historial) {
     filas.forEach(([nombre, valorActual, valorAnterior]) => {
         const fila = document.createElement("div");
         fila.className = "filaComparativaSemanal";
-        fila.innerHTML =
-            "<strong>" + nombre + "</strong>" +
-            "<span>Esta semana: " + valorActual + "</span>" +
-            "<span>Semana anterior: " + valorAnterior + "</span>";
+
+        const etiqueta = document.createElement("strong");
+        etiqueta.textContent = nombre;
+        const actualTexto = document.createElement("span");
+        actualTexto.textContent = "Esta semana: " + valorActual;
+        const anteriorTexto = document.createElement("span");
+        anteriorTexto.textContent = "Semana anterior: " + valorAnterior;
+        const variacion = document.createElement("small");
+        variacion.textContent = obtenerVariacionSemanal(valorActual, valorAnterior);
+        variacion.className = valorActual >= valorAnterior
+            ? "variacionSemanal positiva"
+            : "variacionSemanal negativa";
+
+        fila.append(etiqueta, actualTexto, anteriorTexto, variacion);
         bloque.appendChild(fila);
     });
 
@@ -475,9 +503,61 @@ function crearPanelPerfilesComerciales(perfiles) {
         const habituales = perfil.productosHabituales.length > 0
             ? "Productos: " + perfil.productosHabituales.map(item => item[0]).join(", ")
             : "Sin productos estructurados";
-        detalle.textContent = perfil.cantidadPedidos + " pedido(s) - " + frecuencia + ". " + habituales;
+        detalle.textContent = perfil.cantidadPedidos + " pedido(s) - " +
+            perfil.promedioUnidades + " unidad(es) promedio - " +
+            frecuencia + ". \u00daltimo: " + formatearFechaCortaHistorial(perfil.ultimaFecha) +
+            ". " + habituales;
+
+        fila.title = "Toc\u00e1 para ver el historial de este comercio";
+        fila.setAttribute("role", "button");
+        fila.tabIndex = 0;
+        fila.addEventListener("click", () => abrirHistorialDeComercio(perfil.nombre));
+        fila.addEventListener("keydown", evento => {
+            if (evento.key === "Enter" || evento.key === " ") {
+                evento.preventDefault();
+                abrirHistorialDeComercio(perfil.nombre);
+            }
+        });
 
         fila.append(nombre, detalle);
+        bloque.appendChild(fila);
+    });
+
+    return bloque;
+}
+
+function crearSeguimientoSemanal(perfiles, historial) {
+    const bloque = document.createElement("div");
+    bloque.className = "bloqueSeguimientoSemanal";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Seguimiento de esta semana";
+    bloque.appendChild(titulo);
+
+    const inicio = obtenerInicioSemanaActual();
+    const pedidosEstaSemana = new Set();
+    historial.forEach(registro => {
+        const fecha = obtenerFechaRegistro(registro);
+        if (fecha && fecha >= inicio) {
+            pedidosEstaSemana.add(String(registro.comercio || ""));
+        }
+    });
+
+    const pendientes = perfiles.filter(perfil => {
+        return perfil.nombre !== "Sin comercio" && !pedidosEstaSemana.has(perfil.nombre);
+    }).slice(0, 8);
+
+    if (pendientes.length === 0) {
+        const mensaje = document.createElement("p");
+        mensaje.textContent = "No hay comercios pendientes de seguimiento con los datos actuales.";
+        bloque.appendChild(mensaje);
+        return bloque;
+    }
+
+    pendientes.forEach(perfil => {
+        const fila = document.createElement("div");
+        fila.className = "filaSeguimientoSemanal";
+        fila.textContent = perfil.nombre + " - " + perfil.cantidadPedidos + " pedido(s) hist\u00f3rico(s).";
         bloque.appendChild(fila);
     });
 
@@ -537,10 +617,11 @@ function crearPanelInteligenciaComercial() {
 
     const perfiles = crearPanelPerfilesComerciales(estadisticas.perfiles);
     const alertas = crearAlertasComerciales(estadisticas.atrasados);
+    const seguimiento = crearSeguimientoSemanal(estadisticas.perfiles, historialCompleto);
 
     const comparativaSemanal = crearComparativaSemanal(historialCompleto);
     const actividadMensual = crearResumenMensual(historialCompleto);
-    panel.append(titulo, ayuda, comparativaSemanal, actividadMensual, columnas, perfiles, alertas);
+    panel.append(titulo, ayuda, comparativaSemanal, actividadMensual, columnas, perfiles, seguimiento, alertas);
     return panel;
 }
 

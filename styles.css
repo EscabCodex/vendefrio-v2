@@ -1624,7 +1624,7 @@ body > nav.bottom-nav {
 
 .filaComparativaSemanal{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:1fr 1fr 1fr auto;
   gap:6px;
   padding:5px 0;
   border-bottom:1px solid #dcfce7;
@@ -1638,6 +1638,18 @@ body > nav.bottom-nav {
 
 .filaComparativaSemanal strong{
   color:#166534;
+}
+
+.variacionSemanal{
+  font-weight:700;
+}
+
+.variacionSemanal.positiva{
+  color:#15803d;
+}
+
+.variacionSemanal.negativa{
+  color:#b91c1c;
 }
 
 .resumenMensualComercial{
@@ -1703,6 +1715,17 @@ body > nav.bottom-nav {
   border-bottom:0;
 }
 
+.filaPerfilComercial{
+  cursor:pointer;
+  border-radius:7px;
+}
+
+.filaPerfilComercial:hover,
+.filaPerfilComercial:focus{
+  background:#f8fafc;
+  outline:none;
+}
+
 .filaPerfilComercial strong{
   display:block;
   color:#1e293b;
@@ -1719,6 +1742,31 @@ body > nav.bottom-nav {
 
 .filaAlertaComercial{
   color:#b45309;
+}
+
+.bloqueSeguimientoSemanal{
+  margin-top:12px;
+  padding:10px;
+  border:1px solid #fef3c7;
+  border-radius:10px;
+  background:#fffbeb;
+}
+
+.bloqueSeguimientoSemanal h3{
+  margin:0 0 7px;
+  color:#92400e;
+  font-size:13px;
+}
+
+.filaSeguimientoSemanal,
+.bloqueSeguimientoSemanal p{
+  padding:5px 0;
+  color:#92400e;
+  font-size:11px;
+}
+
+.filaSeguimientoSemanal{
+  border-bottom:1px solid #fde68a;
 }
 
 @media (max-width: 420px) {
