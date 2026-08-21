@@ -282,8 +282,9 @@ async function iniciarVistaNavegacion3D(ruta) {
             <div class="navegacion3DBarraSuperior">
                 <div><strong>Navegación VendeFrío</strong><small id="destinoNavegacion3D"></small></div>
                 <div class="navegacion3DAccionesSuperior">
+                    <button class="navegacion3DBotonMinimizar" id="minimizarNavegacion3D" type="button" aria-label="Minimizar navegación">−</button>
+                    <button class="navegacion3DBotonCerrar" id="cerrarNavegacion3D" type="button" aria-label="Cerrar navegación">×</button>
                     <button class="navegacion3DBotonCentrar oculto" id="centrarNavegacion3D" type="button">CENTRAR</button>
-                    <button class="navegacion3DBotonCerrar" id="cerrarNavegacion3D" type="button">×</button>
                 </div>
             </div>
             <div class="navegacion3DError" id="errorNavegacion3D"></div>
@@ -295,6 +296,7 @@ async function iniciarVistaNavegacion3D(ruta) {
         document.getElementById("errorNavegacion3D").textContent = "";
         document.getElementById("destinoNavegacion3D").textContent = "Próxima parada: " + ruta[0].nombre;
         document.getElementById("cerrarNavegacion3D").addEventListener("click", cerrarNavegacion3D);
+        document.getElementById("minimizarNavegacion3D").addEventListener("click", minimizarNavegacion3D);
         document.getElementById("centrarNavegacion3D").addEventListener("click", centrarNavegacion3D);
         document.getElementById("pedidoNavegacion3D").addEventListener("click", abrirPedidoDesdeNavegacion3D);
         document.getElementById("recentrarNavegacion3D").addEventListener("click", centrarNavegacion3D);
