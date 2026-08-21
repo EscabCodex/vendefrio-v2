@@ -47,7 +47,7 @@ async function cargarMapLibreNavegacion3D() {
 function crearVehiculoNavegacion3D() {
     const elemento = document.createElement("div");
     elemento.className = "vehiculoNavegacion3D";
-    elemento.textContent = "🏍️";
+    elemento.textContent = "🚲";
     elemento.style.cssText = "font-size:34px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translate(-50%,-50%);";
     return elemento;
 }
@@ -193,6 +193,40 @@ function liberarVistaNavegacion3D() {
     mostrarBotonCentrarNavegacion3D(true);
 }
 
+function minimizarNavegacion3D() {
+    const pantalla = document.getElementById("pantallaNavegacion3D");
+    if (!pantalla) return;
+    pantalla.classList.add("navegacion3DMinimizada");
+
+    let burbuja = document.getElementById("burbujaNavegacion3D");
+    if (!burbuja) {
+        burbuja = document.createElement("button");
+        burbuja.id = "burbujaNavegacion3D";
+        burbuja.type = "button";
+        burbuja.className = "burbujaNavegacion3D";
+        burbuja.innerHTML = "<span>🚲</span><small>Navegación activa</small>";
+        burbuja.addEventListener("click", restaurarNavegacion3D);
+        document.body.appendChild(burbuja);
+    }
+}
+
+function restaurarNavegacion3D() {
+    const pantalla = document.getElementById("pantallaNavegacion3D");
+    if (pantalla) pantalla.classList.remove("navegacion3DMinimizada");
+    document.getElementById("burbujaNavegacion3D")?.remove();
+}
+
+function abrirPedidoDesdeNavegacion3D() {
+    const parada = rutaNavegacion3D[paradaNavegacion3D];
+    if (!parada) return;
+    minimizarNavegacion3D();
+    if (typeof irAPedidoRapido === "function") {
+        irAPedidoRapido(parada.nombre || "");
+    } else if (typeof mostrarAviso === "function") {
+        mostrarAviso("Pedido", "No se encontró la pantalla de pedidos.");
+    }
+}
+
 function cerrarNavegacion3D() {
     navegacion3DActiva = false;
     vistaFijaNavegacion3D = true;
@@ -204,6 +238,7 @@ function cerrarNavegacion3D() {
     marcadorVehiculo3D = null;
     lineaRuta3D = null;
     document.getElementById("pantallaNavegacion3D")?.remove();
+    document.getElementById("burbujaNavegacion3D")?.remove();
 }
 
 function avanzarNavegacion3D() {
@@ -254,13 +289,15 @@ async function iniciarVistaNavegacion3D(ruta) {
             <div class="navegacion3DError" id="errorNavegacion3D"></div>
             <div class="navegacion3DPanelInferior">
                 <div class="navegacion3DIndicacion"><div class="navegacion3DIconoManiobra">➜</div><div><strong id="indicacionNavegacion3D">Preparando recorrido...</strong><small id="detalleNavegacion3D"></small></div></div>
-                <div class="navegacion3DAcciones"><button class="navegacion3DBotonSiguiente" id="siguienteNavegacion3D" type="button">Llegué / siguiente</button><button class="navegacion3DBotonRecentrar" id="recentrarNavegacion3D" type="button">Recentrar</button></div>
+                <div class="navegacion3DAcciones"><button class="navegacion3DBotonPedido" id="pedidoNavegacion3D" type="button">📝 Hacer pedido</button><button class="navegacion3DBotonSiguiente" id="siguienteNavegacion3D" type="button">Llegué / siguiente</button><button class="navegacion3DBotonRecentrar" id="recentrarNavegacion3D" type="button">Recentrar</button></div>
             </div>`;
         document.body.appendChild(pantalla);
         document.getElementById("errorNavegacion3D").textContent = "";
         document.getElementById("destinoNavegacion3D").textContent = "Próxima parada: " + ruta[0].nombre;
         document.getElementById("cerrarNavegacion3D").addEventListener("click", cerrarNavegacion3D);
         document.getElementById("centrarNavegacion3D").addEventListener("click", centrarNavegacion3D);
+        document.getElementById("pedidoNavegacion3D").addEventListener("click", abrirPedidoDesdeNavegacion3D);
+        document.getElementById("recentrarNavegacion3D").addEventListener("click", centrarNavegacion3D);
         document.getElementById("siguienteNavegacion3D").addEventListener("click", avanzarNavegacion3D);
 
         navigator.geolocation.getCurrentPosition(async posicion => {
