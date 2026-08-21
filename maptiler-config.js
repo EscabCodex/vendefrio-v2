@@ -1,4 +1,4 @@
-export default function handler(request, response) {
+module.exports = function handler(request, response) {
     const key = process.env.MAPTILER_KEY || "";
 
     if (!key) {
@@ -13,4 +13,4 @@ export default function handler(request, response) {
         ok: true,
         key
     });
-}
+};
