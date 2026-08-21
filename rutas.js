@@ -140,7 +140,8 @@ function inicializarPantallaRutas() {
     crearControlesPinManual();
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
-    crearControlesNavegacion();
+    cargarModuloNavegacion3D();
+    crearBotonNavegacion3D();
     renderizarPines();
 }
 
@@ -341,6 +342,42 @@ function abrirOpcionesRutaGuardada(nombre) {
         " comercio(s) guardado(s). Eleg\u00ed qu\u00e9 quer\u00e9s hacer.";
     if (entradaNombre) entradaNombre.value = ruta.nombre;
     modal.classList.remove("oculto");
+}
+
+function cargarModuloNavegacion3D() {
+    if (!document.querySelector('link[data-navegacion-3d="true"]')) {
+        const estilo = document.createElement("link");
+        estilo.rel = "stylesheet";
+        estilo.href = "navegacion3d.css";
+        estilo.dataset.navegacion3d = "true";
+        document.head.appendChild(estilo);
+    }
+
+    if (document.querySelector('script[data-navegacion-3d="true"]')) return;
+    const script = document.createElement("script");
+    script.src = "navegacion3d.js";
+    script.dataset.navegacion3d = "true";
+    script.defer = true;
+    document.body.appendChild(script);
+}
+
+function crearBotonNavegacion3D() {
+    const botonMaps = document.getElementById("btnGoogleMaps");
+    if (!botonMaps || document.getElementById("btnAbrirNavegacion3D")) return;
+
+    const boton = document.createElement("button");
+    boton.id = "btnAbrirNavegacion3D";
+    boton.type = "button";
+    boton.className = "btnAccion botonNavegacion3D";
+    boton.textContent = "Abrir navegaci\u00f3n 3D";
+    boton.addEventListener("click", () => {
+        if (typeof window.iniciarVistaNavegacion3D !== "function") {
+            mostrarAviso("Navegaci\u00f3n no lista", "Esper\u00e1 unos segundos y prob\u00e1 nuevamente.");
+            return;
+        }
+        window.iniciarVistaNavegacion3D(rutaOrdenada);
+    });
+    botonMaps.insertAdjacentElement("afterend", boton);
 }
 
 function crearControlesNavegacion() {

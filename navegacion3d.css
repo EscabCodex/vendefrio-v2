@@ -1,0 +1,137 @@
+#pantallaNavegacion3D{
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  background:#0f172a;
+}
+
+#mapaNavegacion3D{
+  position:absolute;
+  inset:0;
+}
+
+.navegacion3DBarraSuperior{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  color:#fff;
+  background:linear-gradient(180deg,rgba(15,23,42,.88),rgba(15,23,42,0));
+}
+
+.navegacion3DBarraSuperior strong{
+  display:block;
+  font-size:15px;
+}
+
+.navegacion3DBarraSuperior small{
+  display:block;
+  margin-top:3px;
+  color:#cbd5e1;
+  font-size:11px;
+}
+
+.navegacion3DBotonCerrar{
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:50%;
+  color:#fff;
+  background:rgba(15,23,42,.76);
+  font-size:22px;
+}
+
+.navegacion3DPanelInferior{
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  left:12px;
+  z-index:3;
+  padding:15px;
+  border-radius:18px;
+  color:#fff;
+  background:rgba(15,23,42,.92);
+  box-shadow:0 8px 30px rgba(15,23,42,.3);
+}
+
+.navegacion3DIndicacion{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.navegacion3DIconoManiobra{
+  display:grid;
+  width:42px;
+  height:42px;
+  flex:none;
+  place-items:center;
+  border-radius:12px;
+  color:#0f172a;
+  background:#facc15;
+  font-size:22px;
+}
+
+.navegacion3DIndicacion strong{
+  display:block;
+  font-size:17px;
+}
+
+.navegacion3DIndicacion small{
+  display:block;
+  margin-top:4px;
+  color:#cbd5e1;
+  font-size:12px;
+}
+
+.navegacion3DAcciones{
+  display:flex;
+  gap:8px;
+  margin-top:14px;
+}
+
+.navegacion3DAcciones button{
+  flex:1;
+  min-height:42px;
+  border:0;
+  border-radius:11px;
+  font-weight:700;
+}
+
+.navegacion3DBotonSiguiente{
+  color:#0f172a;
+  background:#facc15;
+}
+
+.navegacion3DBotonRecentrar{
+  color:#e2e8f0;
+  background:#334155;
+}
+
+.navegacion3DError{
+  position:absolute;
+  top:70px;
+  right:16px;
+  left:16px;
+  z-index:4;
+  padding:10px 12px;
+  border-radius:10px;
+  color:#fff;
+  background:#b91c1c;
+  font-size:12px;
+}
+
+@media (min-width:700px){
+  .navegacion3DPanelInferior{
+    right:24px;
+    bottom:24px;
+    left:auto;
+    width:390px;
+  }
+}

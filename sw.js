@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFr\u00edo - Service Worker (v62)
+// VendeFr\u00edo - Service Worker (v63)
 // =====================================================
-const CACHE_NAME = "vendefrio-v62";
+const CACHE_NAME = "vendefrio-v63";
 const ARCHIVOS = [
   "./",
   "./index.html",
