@@ -192,8 +192,13 @@ async function iniciarVistaNavegacion3D(ruta) {
     }
 
     try {
-        const configuracion = await fetch("api/maptiler-config").then(respuesta => respuesta.json());
-        if (!configuracion.ok || !configuracion.key) throw new Error("MapTiler no está configurado");
+        const respuestaConfiguracion = await fetch("/api/maptiler-config", {
+            cache: "no-store"
+        });
+        const configuracion = await respuestaConfiguracion.json();
+        if (!respuestaConfiguracion.ok || !configuracion.ok || !configuracion.key) {
+            throw new Error(configuracion.message || "MapTiler no está configurado");
+        }
         await cargarMapLibreNavegacion3D();
 
         rutaNavegacion3D = ruta;
@@ -244,7 +249,13 @@ async function iniciarVistaNavegacion3D(ruta) {
             document.getElementById("errorNavegacion3D").textContent = "Activá el GPS para ver tu ubicación en el mapa.";
         }, {enableHighAccuracy: true, maximumAge: 0, timeout: 15000});
     } catch (error) {
-        mostrarAviso("No se pudo abrir la navegación 3D", "Revisá la configuración de MapTiler en Vercel.");
+        console.error("Error al abrir la navegación 3D:", error);
+        mostrarAviso(
+            "No se pudo abrir la navegación 3D",
+            error && error.message
+                ? error.message
+                : "Revisá la configuración de MapTiler en Vercel."
+        );
     }
 }
 
