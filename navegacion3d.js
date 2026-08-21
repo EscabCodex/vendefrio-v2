@@ -6,6 +6,8 @@ let lineaRuta3D = null;
 let posicionNavegacion3D = null;
 let paradaNavegacion3D = 0;
 let rutaNavegacion3D = [];
+let vistaFijaNavegacion3D = true;
+let ajustandoVistaNavegacion3D = false;
 
 function cargarRecursoNavegacion3D(tipo, url) {
     return new Promise((resolver, rechazar) => {
@@ -144,15 +146,18 @@ function actualizarPosicionNavegacion3D(posicion) {
 
     const lngLat = [posicion.coords.longitude, posicion.coords.latitude];
     marcadorVehiculo3D.setLngLat(lngLat);
-    mapaNavegacion3D.easeTo({
-        center: lngLat,
-        zoom: 17,
-        pitch: 60,
-        bearing: Number.isFinite(posicion.coords.heading) && posicion.coords.heading >= 0
-            ? posicion.coords.heading
-            : mapaNavegacion3D.getBearing(),
-        duration: 700
-    });
+    if (vistaFijaNavegacion3D) {
+        ajustandoVistaNavegacion3D = true;
+        mapaNavegacion3D.easeTo({
+            center: lngLat,
+            zoom: 17,
+            pitch: 60,
+            bearing: Number.isFinite(posicion.coords.heading) && posicion.coords.heading >= 0
+                ? posicion.coords.heading
+                : mapaNavegacion3D.getBearing(),
+            duration: 700
+        });
+    }
 
     calcularRutaCalles3D().catch(() => {
         const error = document.getElementById("errorNavegacion3D");
@@ -160,8 +165,38 @@ function actualizarPosicionNavegacion3D(posicion) {
     });
 }
 
+function mostrarBotonCentrarNavegacion3D(mostrar) {
+    const boton = document.getElementById("centrarNavegacion3D");
+    if (boton) boton.classList.toggle("oculto", !mostrar);
+}
+
+function centrarNavegacion3D() {
+    if (!mapaNavegacion3D || !posicionNavegacion3D) return;
+    const centro = [posicionNavegacion3D.coords.longitude, posicionNavegacion3D.coords.latitude];
+    vistaFijaNavegacion3D = true;
+    mostrarBotonCentrarNavegacion3D(false);
+    ajustandoVistaNavegacion3D = true;
+    mapaNavegacion3D.easeTo({
+        center: centro,
+        zoom: 17,
+        pitch: 60,
+        bearing: Number.isFinite(posicionNavegacion3D.coords.heading) && posicionNavegacion3D.coords.heading >= 0
+            ? posicionNavegacion3D.coords.heading
+            : mapaNavegacion3D.getBearing(),
+        duration: 800
+    });
+}
+
+function liberarVistaNavegacion3D() {
+    if (ajustandoVistaNavegacion3D) return;
+    vistaFijaNavegacion3D = false;
+    mostrarBotonCentrarNavegacion3D(true);
+}
+
 function cerrarNavegacion3D() {
     navegacion3DActiva = false;
+    vistaFijaNavegacion3D = true;
+    ajustandoVistaNavegacion3D = false;
     if (vigilanciaNavegacion3D !== null) navigator.geolocation.clearWatch(vigilanciaNavegacion3D);
     vigilanciaNavegacion3D = null;
     if (mapaNavegacion3D) mapaNavegacion3D.remove();
@@ -211,7 +246,10 @@ async function iniciarVistaNavegacion3D(ruta) {
             <div id="mapaNavegacion3D"></div>
             <div class="navegacion3DBarraSuperior">
                 <div><strong>Navegación VendeFrío</strong><small id="destinoNavegacion3D"></small></div>
-                <button class="navegacion3DBotonCerrar" id="cerrarNavegacion3D" type="button">×</button>
+                <div class="navegacion3DAccionesSuperior">
+                    <button class="navegacion3DBotonCentrar oculto" id="centrarNavegacion3D" type="button">CENTRAR</button>
+                    <button class="navegacion3DBotonCerrar" id="cerrarNavegacion3D" type="button">×</button>
+                </div>
             </div>
             <div class="navegacion3DError" id="errorNavegacion3D"></div>
             <div class="navegacion3DPanelInferior">
@@ -222,6 +260,7 @@ async function iniciarVistaNavegacion3D(ruta) {
         document.getElementById("errorNavegacion3D").textContent = "";
         document.getElementById("destinoNavegacion3D").textContent = "Próxima parada: " + ruta[0].nombre;
         document.getElementById("cerrarNavegacion3D").addEventListener("click", cerrarNavegacion3D);
+        document.getElementById("centrarNavegacion3D").addEventListener("click", centrarNavegacion3D);
         document.getElementById("siguienteNavegacion3D").addEventListener("click", avanzarNavegacion3D);
 
         navigator.geolocation.getCurrentPosition(async posicion => {
@@ -236,6 +275,13 @@ async function iniciarVistaNavegacion3D(ruta) {
                 attributionControl: true
             });
             mapaNavegacion3D.addControl(new maplibregl.NavigationControl({showCompass: true}), "top-right");
+            mapaNavegacion3D.on("dragstart", liberarVistaNavegacion3D);
+            mapaNavegacion3D.on("zoomstart", liberarVistaNavegacion3D);
+            mapaNavegacion3D.on("rotatestart", liberarVistaNavegacion3D);
+            mapaNavegacion3D.on("pitchstart", liberarVistaNavegacion3D);
+            mapaNavegacion3D.on("moveend", () => {
+                ajustandoVistaNavegacion3D = false;
+            });
             mapaNavegacion3D.on("load", () => {
                 marcadorVehiculo3D = new maplibregl.Marker({element: crearVehiculoNavegacion3D(), rotationAlignment: "map"})
                     .setLngLat([posicion.coords.longitude, posicion.coords.latitude])
