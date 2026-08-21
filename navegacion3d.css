@@ -1,13 +1,25 @@
 #pantallaNavegacion3D{
   position:fixed;
-  inset:0;
+  top:0;
+  right:0;
+  bottom:0;
+  left:0;
   z-index:3000;
+  width:100%;
+  height:100dvh;
+  min-height:100dvh;
+  overflow:hidden;
   background:#0f172a;
 }
 
 #mapaNavegacion3D{
   position:absolute;
-  inset:0;
+  top:0;
+  right:0;
+  bottom:0;
+  left:0;
+  width:100%;
+  height:100%;
 }
 
 .navegacion3DBarraSuperior{
@@ -73,14 +85,15 @@
 
 .navegacion3DPanelInferior{
   position:absolute;
-  right:12px;
-  bottom:max(12px, env(safe-area-inset-bottom));
-  left:12px;
+  right:8px;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  left:8px;
   z-index:3;
-  max-height:42vh;
+  box-sizing:border-box;
+  max-height:min(46dvh, 360px);
   overflow-y:auto;
-  padding:15px;
-  border-radius:18px;
+  padding:12px;
+  border-radius:16px;
   color:#fff;
   background:rgba(15,23,42,.92);
   box-shadow:0 8px 30px rgba(15,23,42,.3);
@@ -118,13 +131,15 @@
 
 .navegacion3DAcciones{
   display:flex;
-  gap:8px;
-  margin-top:14px;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:12px;
 }
 
 .navegacion3DAcciones button{
-  flex:1;
-  min-height:42px;
+  flex:1 1 30%;
+  min-width:105px;
+  min-height:40px;
   border:0;
   border-radius:11px;
   font-weight:700;
@@ -143,7 +158,7 @@
 .burbujaNavegacion3D{
   position:fixed;
   right:16px;
-  bottom:calc(18px + env(safe-area-inset-bottom));
+  bottom:calc(78px + env(safe-area-inset-bottom));
   z-index:3100;
   display:flex;
   align-items:center;
