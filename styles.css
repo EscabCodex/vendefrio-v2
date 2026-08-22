@@ -2728,3 +2728,8 @@ html[data-tema="oscuro"] .fotoCatalogo{background:#064e3b;color:#bbf7d0;}
 .informeEstadisticas .bloqueSeguimientoSemanal,
 .informeEstadisticas .bloqueAlertasComerciales{margin:0!important;}
 html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:#374151;}
+
+.filtroPeriodoEstadisticas{display:grid;gap:5px;margin-bottom:8px;color:#4b5563;font-size:12px;font-weight:700;}
+.filtroPeriodoEstadisticas select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#374151;font-size:14px;}
+html[data-tema="oscuro"] .filtroPeriodoEstadisticas{color:#e5e7eb;}
+html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:#111827;color:#f9fafb;border-color:#4b5563;}

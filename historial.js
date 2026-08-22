@@ -864,9 +864,6 @@ function renderizarHistorial() {
     const pedidos = obtenerPedidosFiltrados();
     contenedor.innerHTML = "";
 
-    const panelInteligencia = crearPanelInteligenciaComercial();
-    if (panelInteligencia) contenedor.appendChild(panelInteligencia);
-
     actualizarResumenHistorial(pedidos);
     actualizarFiltroActivoHistorial();
 
