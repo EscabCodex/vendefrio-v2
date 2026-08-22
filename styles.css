@@ -2678,3 +2678,10 @@ html[data-tema="oscuro"] .configFila:first-child{
   background:#1f2937;
   box-shadow:none;
 }
+
+/* Eliminar fondo sobrante detrás de las filas de Configuración */
+.configMenuPrincipal,
+html[data-tema="oscuro"] .configMenuPrincipal{
+  background:transparent !important;
+  box-shadow:none !important;
+}
