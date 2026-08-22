@@ -2719,3 +2719,12 @@ html[data-tema="oscuro"] .listaEstadistica{border-color:#374151;}
 html[data-tema="oscuro"] .estadisticaResumen small,html[data-tema="oscuro"] .listaEstadistica p,html[data-tema="oscuro"] .itemCatalogo small{color:#cbd5e1;}
 html[data-tema="oscuro"] .buscadorCatalogo{background:#111827;color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .fotoCatalogo{background:#064e3b;color:#bbf7d0;}
+
+/* Estadísticas: informe completo visible en una sola pantalla */
+.informeEstadisticas{display:grid;gap:8px;}
+.informeEstadisticas .listaEstadistica{margin:0;padding:11px;border-bottom:1px solid #e5e7eb;}
+.informeEstadisticas .listaEstadistica h2{margin:0 0 2px;}
+.informeEstadisticas .bloquePerfilesComerciales,
+.informeEstadisticas .bloqueSeguimientoSemanal,
+.informeEstadisticas .bloqueAlertasComerciales{margin:0!important;}
+html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:#374151;}
