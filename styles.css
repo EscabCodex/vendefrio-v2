@@ -2504,3 +2504,41 @@ html[data-tema="oscuro"] .filaRutaGuardadaItem:focus{
 html[data-tema="oscuro"] .opcionSeleccionRuta input{
   accent-color:#60a5fa;
 }
+
+/* Inteligencia comercial completa en modo oscuro */
+html[data-tema="oscuro"] .panelInteligenciaComercial,
+html[data-tema="oscuro"] .bloqueEstadisticaComercial,
+html[data-tema="oscuro"] .comparativaSemanalComercial,
+html[data-tema="oscuro"] .resumenMensualComercial,
+html[data-tema="oscuro"] .bloquePerfilesComerciales,
+html[data-tema="oscuro"] .bloqueSeguimientoSemanal,
+html[data-tema="oscuro"] .bloqueAlertasComerciales{
+  background:#1f2937 !important;
+  border-color:#374151 !important;
+  color:#f3f4f6 !important;
+}
+
+html[data-tema="oscuro"] .bloqueEstadisticaComercial h3,
+html[data-tema="oscuro"] .bloqueEstadisticaComercial ol,
+html[data-tema="oscuro"] .bloqueEstadisticaComercial p,
+html[data-tema="oscuro"] .comparativaSemanalComercial h3,
+html[data-tema="oscuro"] .resumenMensualComercial h3,
+html[data-tema="oscuro"] .filaComparativaSemanal,
+html[data-tema="oscuro"] .filaPerfilComercial,
+html[data-tema="oscuro"] .filaSeguimientoSemanal,
+html[data-tema="oscuro"] .filaAlertaComercial{
+  color:#e5e7eb !important;
+}
+
+html[data-tema="oscuro"] .filaComparativaSemanal,
+html[data-tema="oscuro"] .filaPerfilComercial,
+html[data-tema="oscuro"] .filaSeguimientoSemanal,
+html[data-tema="oscuro"] .filaAlertaComercial{
+  border-color:#374151 !important;
+}
+
+html[data-tema="oscuro"] .bloqueEstadisticaComercial li,
+html[data-tema="oscuro"] .panelInteligenciaComercial > p,
+html[data-tema="oscuro"] .resumenMensualComercial p{
+  color:#cbd5e1 !important;
+}
