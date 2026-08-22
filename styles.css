@@ -2100,3 +2100,159 @@ header h1{
     justify-content:center;
   }
 }
+
+/* =====================================================
+   ETAPA 2 - FICHA COMPACTA E INTERACTIVA DE COMERCIOS
+===================================================== */
+.comercioCard{
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+
+.comercioCard:active{
+  transform:scale(.99);
+}
+
+.comercioCard:focus-visible{
+  outline:2px solid var(--verde);
+  outline-offset:2px;
+}
+
+.comercioCard > .accionesComercio{
+  display:none;
+}
+
+.modalFichaComercio{
+  z-index:2500;
+}
+
+.fichaContenido{
+  position:relative;
+  padding:16px;
+}
+
+.fichaCerrar{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:50%;
+  color:#374151;
+  background:#f3f4f6;
+  font-size:25px;
+  line-height:1;
+}
+
+.fichaEncabezado{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-right:40px;
+  margin-bottom:12px;
+}
+
+.fichaAvatar{
+  display:grid;
+  width:52px;
+  height:52px;
+  flex:none;
+  place-items:center;
+  border-radius:16px;
+  color:#fff;
+  background:var(--verde);
+  font-size:17px;
+  font-weight:800;
+}
+
+.fichaEncabezado h2{
+  margin:0;
+  font-size:19px;
+  overflow-wrap:anywhere;
+}
+
+.fichaEstado{
+  margin-top:4px;
+  color:var(--gris-texto);
+  font-size:12px;
+}
+
+.fichaDatos,
+.fichaUltimo,
+.fichaProductos,
+.fichaEstadistica{
+  display:grid;
+  gap:5px;
+  padding:10px;
+  margin-top:8px;
+  border-radius:12px;
+  background:#f7f9fa;
+  font-size:13px;
+}
+
+.fichaDatos p{
+  margin:0;
+  overflow-wrap:anywhere;
+}
+
+.fichaEstadisticaTitulo{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:13px;
+}
+
+.fichaEstadisticaTitulo b{
+  color:var(--verde-oscuro);
+}
+
+.fichaBarra{
+  height:8px;
+  overflow:hidden;
+  border-radius:99px;
+  background:#dce7e1;
+}
+
+.fichaBarra span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:var(--verde-vibrante);
+}
+
+.fichaEstadistica small,
+.fichaUltimo span,
+.fichaProductos span{
+  color:var(--gris-texto);
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+
+.fichaUltimo strong,
+.fichaProductos strong{
+  color:#374151;
+}
+
+.fichaAcciones{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  margin-top:12px;
+}
+
+.fichaBoton{
+  min-height:44px;
+  justify-content:center;
+  padding:9px 8px;
+}
+
+@media (max-width:420px){
+  .fichaContenido{
+    padding:14px;
+  }
+
+  .fichaAcciones{
+    grid-template-columns:1fr 1fr;
+  }
+}

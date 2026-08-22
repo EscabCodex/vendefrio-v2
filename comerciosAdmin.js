@@ -266,6 +266,9 @@ function renderizarComercios() {
     comercios.forEach(comercio => {
         const card = document.createElement("div");
         card.className = "card comercioCard";
+        card.tabIndex = 0;
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-label", "Abrir ficha de " + comercio.nombre);
 
         const cabecera = document.createElement("div");
         cabecera.className = "cabeceraCard";
@@ -669,3 +672,12 @@ document.addEventListener("keydown", event => {
 
 actualizarDatalist();
 renderizarComercios();
+
+// Carga la ficha interactiva sin modificar la estructura de index.html.
+if (!document.querySelector('script[data-ficha-comercio="true"]')) {
+    const scriptFichaComercio = document.createElement("script");
+    scriptFichaComercio.src = "comercioFicha.js";
+    scriptFichaComercio.dataset.fichaComercio = "true";
+    scriptFichaComercio.defer = true;
+    document.body.appendChild(scriptFichaComercio);
+}
