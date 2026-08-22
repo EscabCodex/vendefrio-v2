@@ -2542,3 +2542,42 @@ html[data-tema="oscuro"] .panelInteligenciaComercial > p,
 html[data-tema="oscuro"] .resumenMensualComercial p{
   color:#cbd5e1 !important;
 }
+
+/* Estados y botones de comercios en modo oscuro */
+html[data-tema="oscuro"] .btnAccion.agregar,
+html[data-tema="oscuro"] .menuBtn[style*="ecfdf5"]{
+  color:#a7f3d0 !important;
+  background:#064e3b !important;
+  border-color:#10b981 !important;
+}
+
+html[data-tema="oscuro"] .btnAccion.ver,
+html[data-tema="oscuro"] .menuBtn[style*="eff6ff"]{
+  color:#bfdbfe !important;
+  background:#1e3a8a !important;
+  border-color:#3b82f6 !important;
+}
+
+html[data-tema="oscuro"] .btnAccion.secundario,
+html[data-tema="oscuro"] .btnModalCancelar{
+  color:#e5e7eb !important;
+  background:#374151 !important;
+  border-color:#4b5563 !important;
+}
+
+html[data-tema="oscuro"] .btnAccion.eliminar,
+html[data-tema="oscuro"] .btnModalPeligro{
+  color:#fecaca !important;
+  background:#450a0a !important;
+  border-color:#991b1b !important;
+}
+
+html[data-tema="oscuro"] .badge-pendiente{
+  color:#fecaca !important;
+  background:#450a0a !important;
+}
+
+html[data-tema="oscuro"] .badge-visitado{
+  color:#bbf7d0 !important;
+  background:#064e3b !important;
+}
