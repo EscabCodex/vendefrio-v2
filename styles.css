@@ -2469,3 +2469,38 @@ html[data-tema="oscuro"] .mensajeBusquedaPedido{
   color:#f3f4f6;
   background:#111827;
 }
+
+/* Corrección de Rutas y Resumen Comercial en modo oscuro */
+html[data-tema="oscuro"] .selectorRuta,
+html[data-tema="oscuro"] .opcionSeleccionRuta,
+html[data-tema="oscuro"] .filaRutaGuardadaItem,
+html[data-tema="oscuro"] .rutasGuardadasPanel,
+html[data-tema="oscuro"] .resumenComercios,
+html[data-tema="oscuro"] .resumenHistorial,
+html[data-tema="oscuro"] .resumenRuta,
+html[data-tema="oscuro"] .filtroHistorialActivo{
+  color:#f3f4f6 !important;
+  background:#1f2937 !important;
+  border-color:#374151 !important;
+}
+
+html[data-tema="oscuro"] .selectorRuta h3,
+html[data-tema="oscuro"] .rutasGuardadasPanel h3,
+html[data-tema="oscuro"] .rutasGuardadasPanel > p,
+html[data-tema="oscuro"] .estadoSeleccionRuta,
+html[data-tema="oscuro"] .filaRutaGuardadaItem strong,
+html[data-tema="oscuro"] .filaRutaGuardadaItem small,
+html[data-tema="oscuro"] .seleccionRutaGps,
+html[data-tema="oscuro"] .seleccionRutaSinGps{
+  color:#e5e7eb !important;
+}
+
+html[data-tema="oscuro"] .filaRutaGuardadaItem:hover,
+html[data-tema="oscuro"] .filaRutaGuardadaItem:focus{
+  background:#273449 !important;
+  border-color:#818cf8 !important;
+}
+
+html[data-tema="oscuro"] .opcionSeleccionRuta input{
+  accent-color:#60a5fa;
+}
