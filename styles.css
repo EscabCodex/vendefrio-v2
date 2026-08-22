@@ -2685,3 +2685,10 @@ html[data-tema="oscuro"] .configMenuPrincipal{
   background:transparent !important;
   box-shadow:none !important;
 }
+
+/* El estado oculto debe ganar a los estilos de los submenús */
+.configMenuPrincipal.oculto,
+.configDetalle.oculto,
+#pantallaConfiguracion.oculto{
+  display:none !important;
+}
