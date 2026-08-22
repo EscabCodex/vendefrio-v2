@@ -2634,3 +2634,24 @@ html[data-tema="oscuro"] .configSubVolver{color:#93c5fd;}
 html[data-tema="oscuro"] .configEstado{background:#111827;color:#e5e7eb;}
 html[data-tema="oscuro"] .configDetalle select,html[data-tema="oscuro"] .configDetalle button{background:#111827;color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .configRestaurar{background:#064e3b!important;color:#bbf7d0!important;border-color:#10b981!important;}
+
+/* Menú de Configuración suelto, tipo lista de aplicación */
+.configMenuPrincipal{
+  gap:0;
+  overflow:visible;
+  border-radius:0;
+  background:transparent;
+}
+.configFila{
+  min-height:74px;
+  padding:12px 4px;
+  border-bottom:1px solid #e5e7eb;
+  background:transparent;
+}
+.configFila:first-child{border-top:1px solid #e5e7eb;}
+.configFila:active{background:rgba(156,163,175,.12);}
+.configDetalle{width:100%;padding:0 2px;}
+.configDetalle label{padding:10px 0;border-bottom:1px solid #e5e7eb;}
+.configDetalle label:last-of-type{border-bottom:0;}
+html[data-tema="oscuro"] .configFila{background:transparent;border-color:#374151;}
+html[data-tema="oscuro"] .configDetalle label{border-color:#374151;}
