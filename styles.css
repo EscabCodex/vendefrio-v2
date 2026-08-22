@@ -2399,3 +2399,73 @@ html[data-tema="oscuro"] .configPeligro{
 html[data-tema="oscuro"] option{color:#f9fafb;background:#111827;}
 .configSwitch{display:flex!important;grid-template-columns:none!important;align-items:center;gap:9px!important;min-height:44px;}
 .configSwitch input{width:20px;height:20px;min-height:20px;accent-color:var(--verde);}
+
+/* Modo oscuro global: tarjetas, estadísticas, productos y textos */
+html[data-tema="oscuro"] .card,
+html[data-tema="oscuro"] .filaProducto,
+html[data-tema="oscuro"] [class*="tarjeta"],
+html[data-tema="oscuro"] [class*="estadistica"],
+html[data-tema="oscuro"] [class*="Estadistica"],
+html[data-tema="oscuro"] [class*="producto"],
+html[data-tema="oscuro"] [class*="Producto"],
+html[data-tema="oscuro"] table,
+html[data-tema="oscuro"] tr,
+html[data-tema="oscuro"] td,
+html[data-tema="oscuro"] th{
+  color:#f3f4f6;
+  background:#1f2937;
+  border-color:#374151;
+}
+
+html[data-tema="oscuro"] h1,
+html[data-tema="oscuro"] h2,
+html[data-tema="oscuro"] h3,
+html[data-tema="oscuro"] h4,
+html[data-tema="oscuro"] h5,
+html[data-tema="oscuro"] h6,
+html[data-tema="oscuro"] p,
+html[data-tema="oscuro"] span,
+html[data-tema="oscuro"] label,
+html[data-tema="oscuro"] small,
+html[data-tema="oscuro"] strong,
+html[data-tema="oscuro"] li,
+html[data-tema="oscuro"] td,
+html[data-tema="oscuro"] th{
+  color:#f3f4f6 !important;
+}
+
+html[data-tema="oscuro"] .subtitulo,
+html[data-tema="oscuro"] .datoComercio,
+html[data-tema="oscuro"] small,
+html[data-tema="oscuro"] .estadoRespaldo{
+  color:#cbd5e1 !important;
+}
+
+html[data-tema="oscuro"] input,
+html[data-tema="oscuro"] select,
+html[data-tema="oscuro"] textarea,
+html[data-tema="oscuro"] option{
+  color:#f9fafb !important;
+  background:#111827 !important;
+  border-color:#4b5563 !important;
+}
+
+html[data-tema="oscuro"] .menuBtn,
+html[data-tema="oscuro"] .btnAccion,
+html[data-tema="oscuro"] .btnModalCancelar,
+html[data-tema="oscuro"] .btnModalConfirmar,
+html[data-tema="oscuro"] .btnModalPeligro{
+  border-color:#4b5563;
+}
+
+html[data-tema="oscuro"] .modalContenido{
+  color:#f3f4f6;
+  background:#1f2937;
+}
+
+html[data-tema="oscuro"] .detallePedido,
+html[data-tema="oscuro"] .resumenPedido,
+html[data-tema="oscuro"] .mensajeBusquedaPedido{
+  color:#f3f4f6;
+  background:#111827;
+}

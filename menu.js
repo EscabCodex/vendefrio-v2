@@ -13,8 +13,8 @@ const pantallas = {
 };
 
 function mostrarPantalla(nombre) {
-    Object.values(pantallas).forEach(pantalla => {
-        if (pantalla) pantalla.classList.add("oculto");
+    document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
+        pantalla.classList.add("oculto");
     });
 
     if (pantallas[nombre]) {
