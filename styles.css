@@ -2604,3 +2604,33 @@ html[data-tema="oscuro"] .botonRepetirPedido{
   background:#1e3a8a !important;
   border:1px solid #3b82f6 !important;
 }
+
+/* Configuración tipo menú móvil */
+.configHeader{display:flex;align-items:center;gap:10px;}
+.configHeader .configVolver{width:40px;min-height:40px;margin:0;padding:0;background:transparent;border:0;color:#fff;font-size:32px;}
+.configMenuPrincipal{display:grid;gap:2px;border-radius:14px;overflow:hidden;background:#e5e7eb;}
+.configFila{display:grid;grid-template-columns:42px minmax(0,1fr) 20px;align-items:center;gap:9px;width:100%;min-height:70px;padding:10px;border:0;border-bottom:1px solid #e5e7eb;background:#fff;text-align:left;}
+.configFila:active{background:#f3f4f6;}
+.configFila > span:nth-child(2){display:grid;gap:3px;min-width:0;}
+.configFila strong{color:#1f2937;font-size:14px;}
+.configFila small{color:#6b7280;font-size:11px;overflow-wrap:anywhere;}
+.configFila b{color:#9ca3af;font-size:25px;font-weight:400;}
+.configIcono{display:grid;width:38px;height:38px;place-items:center;border-radius:12px;background:#eef2ff;font-size:20px;}
+.configDetalle{display:grid;gap:10px;}
+.configSubVolver{width:100%;min-height:44px;padding:8px 0;border:0;background:transparent;color:#2563eb;text-align:left;font-size:16px;font-weight:800;}
+.configDescripcion{margin:0 0 2px;color:#6b7280;font-size:12px;}
+.configDetalle label{display:grid;gap:5px;color:#4b5563;font-size:13px;font-weight:700;}
+.configDetalle select,.configDetalle button{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#374151;font-weight:600;}
+.configEstado{padding:10px;border-radius:10px;background:#f3f4f6;color:#4b5563;font-size:12px;line-height:1.4;}
+.configAcciones{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.configRestaurar{background:#ecfdf5!important;color:#047857!important;border-color:#86efac!important;}
+html[data-tema="oscuro"] .configMenuPrincipal{background:#374151;}
+html[data-tema="oscuro"] .configFila{background:#1f2937;border-color:#374151;}
+html[data-tema="oscuro"] .configFila:active{background:#273449;}
+html[data-tema="oscuro"] .configFila strong{color:#f9fafb!important;}
+html[data-tema="oscuro"] .configFila small,.configDescripcion{color:#cbd5e1!important;}
+html[data-tema="oscuro"] .configIcono{background:#312e81;}
+html[data-tema="oscuro"] .configSubVolver{color:#93c5fd;}
+html[data-tema="oscuro"] .configEstado{background:#111827;color:#e5e7eb;}
+html[data-tema="oscuro"] .configDetalle select,html[data-tema="oscuro"] .configDetalle button{background:#111827;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .configRestaurar{background:#064e3b!important;color:#bbf7d0!important;border-color:#10b981!important;}
