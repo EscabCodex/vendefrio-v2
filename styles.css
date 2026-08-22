@@ -2733,3 +2733,11 @@ html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:#37
 .filtroPeriodoEstadisticas select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#374151;font-size:14px;}
 html[data-tema="oscuro"] .filtroPeriodoEstadisticas{color:#e5e7eb;}
 html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:#111827;color:#f9fafb;border-color:#4b5563;}
+
+.selectorPeriodoEstadisticas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 10px;padding:4px;border-radius:12px;background:#e5e7eb;}
+.selectorPeriodoEstadisticas button{min-height:42px;padding:7px 4px;border:0;border-radius:9px;background:transparent;color:#4b5563;font-size:12px;font-weight:800;}
+.selectorPeriodoEstadisticas button.activo{background:#fff;color:var(--verde-oscuro);box-shadow:0 1px 4px rgba(15,23,42,.12);}
+.selectorPeriodoOculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:#111827;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas button{color:#cbd5e1;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:#374151;color:#bbf7d0;}
