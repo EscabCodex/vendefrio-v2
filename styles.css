@@ -2058,6 +2058,15 @@ header h1{
   padding:16px;
 }
 
+#pantallaPedido main.container{
+  padding-bottom:calc(150px + env(safe-area-inset-bottom)) !important;
+}
+
+#pantallaPedido footer{
+  bottom:calc(64px + env(safe-area-inset-bottom)) !important;
+  padding-bottom:8px;
+}
+
 @media (max-width:600px){
   .resumenDashboardGrid{
     gap:6px;
