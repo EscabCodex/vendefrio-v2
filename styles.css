@@ -2581,3 +2581,26 @@ html[data-tema="oscuro"] .badge-visitado{
   color:#bbf7d0 !important;
   background:#064e3b !important;
 }
+
+/* Footer de pedidos y repetir pedido en modo oscuro */
+html[data-tema="oscuro"] footer{
+  background:#111827 !important;
+  border-top:1px solid #374151;
+  box-shadow:0 -4px 14px rgba(0,0,0,.35);
+}
+
+html[data-tema="oscuro"] footer button#reset{
+  color:#bbf7d0 !important;
+  background:#064e3b !important;
+}
+
+html[data-tema="oscuro"] footer button#generar{
+  color:#ecfdf5 !important;
+  background:#047857 !important;
+}
+
+html[data-tema="oscuro"] .botonRepetirPedido{
+  color:#bfdbfe !important;
+  background:#1e3a8a !important;
+  border:1px solid #3b82f6 !important;
+}
