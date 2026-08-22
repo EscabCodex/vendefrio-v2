@@ -2755,3 +2755,13 @@ html[data-tema="oscuro"] .menuMasEncabezado,html[data-tema="oscuro"] .menuMasCon
 html[data-tema="oscuro"] .menuMasCerrar{background:#374151;color:#f9fafb;}
 html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
 html[data-tema="oscuro"] .menuMasContenido>button small{color:#cbd5e1;}
+
+/* Menú Más compacto: icono, nombre y flecha */
+.menuMasContenido{gap:0;padding:8px 10px 10px;}
+.menuMasContenido>button{display:grid;grid-template-columns:30px minmax(0,1fr) 20px;align-items:center;gap:8px;min-height:46px;padding:6px 4px;border-bottom:1px solid #e5e7eb;font-size:13px;}
+.menuMasContenido>button span{font-size:18px;text-align:center;}
+.menuMasContenido>button strong{font-size:13px;font-weight:700;}
+.menuMasContenido>button b{color:#9ca3af;font-size:23px;font-weight:400;text-align:right;}
+.menuMasContenido>button small{display:none!important;}
+html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
+html[data-tema="oscuro"] .menuMasContenido>button b{color:#94a3b8;}
