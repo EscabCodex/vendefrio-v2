@@ -2364,3 +2364,38 @@ html[data-tema="oscuro"] .card,html[data-tema="oscuro"] .configGrupo,html[data-t
 html[data-tema="oscuro"] .configGrupo h2,html[data-tema="oscuro"] .infoCard h3{color:#f9fafb;}
 html[data-tema="oscuro"] input,html[data-tema="oscuro"] select,html[data-tema="oscuro"] textarea,html[data-tema="oscuro"] .configGrupo select{background:#111827;color:#f9fafb;border-color:#4b5563;}
 @media (prefers-color-scheme:dark){html[data-tema="sistema"] body{background:#111827;color:#f9fafb;}html[data-tema="sistema"] .card,html[data-tema="sistema"] .configGrupo,html[data-tema="sistema"] .bottom-nav{background:#1f2937;color:#f9fafb;}}
+
+/* Refuerzo tema oscuro para todos los controles de Configuración */
+html[data-tema="oscuro"] .configVolver,
+html[data-tema="oscuro"] .configGrupo button,
+html[data-tema="oscuro"] .configGrupo select{
+  color:#f9fafb;
+  background:#111827;
+  border-color:#4b5563;
+}
+html[data-tema="oscuro"] .configGrupo,
+html[data-tema="oscuro"] .configInfo,
+html[data-tema="oscuro"] .fichaDatos,
+html[data-tema="oscuro"] .fichaEstadistica,
+html[data-tema="oscuro"] .fichaUltimo,
+html[data-tema="oscuro"] .fichaProductos{
+  background:#1f2937;
+  border-color:#374151;
+}
+html[data-tema="oscuro"] .configGrupo h2,
+html[data-tema="oscuro"] .configGrupo label,
+html[data-tema="oscuro"] .configGrupo p,
+html[data-tema="oscuro"] .configGrupo span,
+html[data-tema="oscuro"] .fichaDatos p,
+html[data-tema="oscuro"] .fichaProductos strong,
+html[data-tema="oscuro"] .fichaUltimo strong{
+  color:#f9fafb;
+}
+html[data-tema="oscuro"] .configPeligro{
+  color:#fecaca !important;
+  background:#450a0a !important;
+  border-color:#991b1b !important;
+}
+html[data-tema="oscuro"] option{color:#f9fafb;background:#111827;}
+.configSwitch{display:flex!important;grid-template-columns:none!important;align-items:center;gap:9px!important;min-height:44px;}
+.configSwitch input{width:20px;height:20px;min-height:20px;accent-color:var(--verde);}
