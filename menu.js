@@ -377,3 +377,12 @@ if (!document.querySelector('script[data-configuracion="true"]')) {
     scriptConfiguracion.defer = true;
     document.body.appendChild(scriptConfiguracion);
 }
+
+["estadisticas.js", "catalogo.js"].forEach(nombreArchivo => {
+    if (document.querySelector(`script[data-rework="${nombreArchivo}"]`)) return;
+    const script = document.createElement("script");
+    script.src = nombreArchivo;
+    script.dataset.rework = nombreArchivo;
+    script.defer = true;
+    document.body.appendChild(script);
+});
