@@ -1899,7 +1899,7 @@ body{
   min-width:0;
   max-width:100%;
   overflow-x:hidden;
-  padding-bottom:0 !important;
+  padding-bottom:calc(68px + env(safe-area-inset-bottom)) !important;
   -webkit-text-size-adjust:100%;
 }
 
