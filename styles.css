@@ -2256,3 +2256,90 @@ header h1{
     grid-template-columns:1fr 1fr;
   }
 }
+
+/* Barras de participación de productos habituales */
+.fichaListaProductos{
+  display:grid;
+  gap:9px;
+  margin-top:3px;
+}
+
+.fichaProductoBarraFila{
+  display:grid;
+  gap:4px;
+}
+
+.fichaProductoBarraTitulo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.fichaProductoBarraTitulo span{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+.fichaProductoBarraTitulo b{
+  flex:none;
+  color:var(--verde-oscuro);
+  font-size:12px;
+}
+
+.fichaBarraProducto{
+  height:7px;
+}
+
+.fichaBarraProducto i{
+  display:block;
+  width:0;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--verde),var(--verde-vibrante));
+}
+
+/* Formato compacto solicitado para la ficha de comercio */
+.fichaFrecuencia{
+  display:grid;
+  gap:5px;
+  padding:10px;
+  margin-top:8px;
+  border-radius:12px;
+  background:#f7f9fa;
+  font-size:13px;
+}
+
+.fichaFrecuenciaTexto{
+  color:var(--gris-texto);
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+
+.fichaProductoBarraFila{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+
+.fichaProductoNombre{
+  min-width:0;
+  overflow-wrap:anywhere;
+  font-size:12px;
+}
+
+.fichaProductoBloques{
+  color:var(--verde-vibrante);
+  font-family:monospace;
+  font-size:12px;
+  letter-spacing:-1px;
+  white-space:nowrap;
+}
+
+.fichaProductoPorcentaje{
+  color:var(--verde-oscuro);
+  font-size:11px;
+  white-space:nowrap;
+}

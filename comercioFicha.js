@@ -22,15 +22,24 @@
         });
 
         const productosOrdenados = Object.entries(productos).sort((a, b) => b[1] - a[1]);
+        const totalUnidades = productosOrdenados.reduce((total, item) => total + item[1], 0);
         const pedidosRegistrados = pedidos.length || Number(comercio?.pedidosRealizados || 0);
-        const actividad = Math.min(100, Math.round((pedidosRegistrados / 12) * 100));
+        const visitadoEstaSemana = estaVisitadoEstaSemana(comercio);
+        const frecuenciaVisita = visitadoEstaSemana ? 100 : (comercio?.ultimaVisita ? 45 : 0);
 
         return {
             comercio,
             pedidos: pedidosRegistrados,
-            actividad,
+            frecuenciaVisita,
+            visitadoEstaSemana,
+            ultimaVisita: comercio?.ultimaVisita || "Nunca",
+            totalUnidades,
             ultimo,
-            productos: productosOrdenados.slice(0, 3)
+            productos: productosOrdenados.slice(0, 5).map(([nombre, cantidad]) => ({
+                nombre,
+                cantidad,
+                porcentaje: totalUnidades ? Math.round((cantidad / totalUnidades) * 100) : 0
+            }))
         };
     }
 
@@ -63,9 +72,9 @@
                     <div><h2 id="tituloFichaComercio"></h2><p class="fichaEstado"></p></div>
                 </div>
                 <div class="fichaDatos"></div>
-                <div class="fichaEstadistica"><div class="fichaEstadisticaTitulo"><strong>Actividad de pedidos</strong><b></b></div><div class="fichaBarra"><span></span></div><small></small></div>
+                <div class="fichaFrecuencia"><strong>Frecuencia de visita</strong><div class="fichaFrecuenciaTexto"></div></div>
                 <div class="fichaUltimo"></div>
-                <div class="fichaProductos"></div>
+                <div class="fichaProductos"><strong>Productos habituales</strong><div class="fichaListaProductos"></div></div>
                 <div class="fichaAcciones"></div>
             </div>`;
         document.body.appendChild(modalFicha);
@@ -75,19 +84,23 @@
         modalFicha.querySelector("#tituloFichaComercio").textContent = comercio.nombre;
         modalFicha.querySelector(".fichaEstado").textContent = estaVisitadoEstaSemana(comercio) ? "Visitado esta semana" : "Pendiente esta semana";
         modalFicha.querySelector(".fichaDatos").innerHTML = `<p>📍 ${comercio.direccion || "Sin dirección cargada"}</p><p>📞 ${comercio.telefono || "Sin teléfono cargado"}</p><p>📦 ${datos.pedidos} pedidos registrados</p>`;
-        modalFicha.querySelector(".fichaEstadistica b").textContent = datos.actividad + "%";
-        modalFicha.querySelector(".fichaEstadistica span").style.width = datos.actividad + "%";
-        modalFicha.querySelector(".fichaEstadistica small").textContent = datos.pedidos ? "Frecuencia calculada sobre el historial guardado." : "Todavía no hay pedidos suficientes para calcular la frecuencia.";
+        modalFicha.querySelector(".fichaFrecuenciaTexto").textContent = datos.visitadoEstaSemana
+            ? "Visitado esta semana · Última visita: " + datos.ultimaVisita
+            : "Última visita: " + datos.ultimaVisita;
 
         const ultimo = modalFicha.querySelector(".fichaUltimo");
         ultimo.innerHTML = datos.ultimo ? `<strong>Último pedido</strong><span>${datos.ultimo.fecha || "Fecha no disponible"}</span>` : `<strong>Último pedido</strong><span>Todavía no hay pedidos registrados.</span>`;
 
-        const listaProductos = modalFicha.querySelector(".fichaProductos");
-        listaProductos.innerHTML = `<strong>Productos habituales</strong>`;
+        const listaProductos = modalFicha.querySelector(".fichaListaProductos");
         if (datos.productos.length) {
-            datos.productos.forEach(([producto, cantidad]) => {
-                const fila = document.createElement("span");
-                fila.textContent = producto + " · " + cantidad + " unidades";
+            datos.productos.forEach(producto => {
+                const fila = document.createElement("div");
+                fila.className = "fichaProductoBarraFila";
+                const bloques = "█".repeat(Math.max(1, Math.round(producto.porcentaje / 10)));
+                fila.innerHTML = `<span class="fichaProductoNombre"></span><span class="fichaProductoBloques"></span><b class="fichaProductoPorcentaje"></b>`;
+                fila.querySelector(".fichaProductoNombre").textContent = producto.nombre;
+                fila.querySelector(".fichaProductoBloques").textContent = bloques;
+                fila.querySelector(".fichaProductoPorcentaje").textContent = producto.porcentaje + "% / " + producto.cantidad + "u";
                 listaProductos.appendChild(fila);
             });
         } else {
