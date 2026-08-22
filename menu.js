@@ -369,3 +369,11 @@ document.querySelectorAll(".volverMenu").forEach(boton => {
 window.actualizarDashboard = actualizarDashboard;
 window.addEventListener("DOMContentLoaded", actualizarDashboard);
 window.addEventListener("load", actualizarDashboard);
+// Carga la pantalla de Configuración del rework sin inflar index.html.
+if (!document.querySelector('script[data-configuracion="true"]')) {
+    const scriptConfiguracion = document.createElement("script");
+    scriptConfiguracion.src = "configuracion.js";
+    scriptConfiguracion.dataset.configuracion = "true";
+    scriptConfiguracion.defer = true;
+    document.body.appendChild(scriptConfiguracion);
+}

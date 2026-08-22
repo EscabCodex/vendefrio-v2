@@ -2343,3 +2343,24 @@ header h1{
   font-size:11px;
   white-space:nowrap;
 }
+
+/* =====================================================
+   ETAPA 3 - CONFIGURACION MOVIL
+===================================================== */
+.botonConfiguracionInicio{width:100%;margin-top:8px;justify-content:center;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;}
+.configVolver{width:100%;min-height:44px;margin-bottom:8px;border:0;border-radius:12px;background:#e5e7eb;color:#374151;font-weight:700;}
+.configGrupo{display:grid;gap:9px;padding:12px;margin-bottom:8px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;}
+.configGrupo h2{font-size:15px;color:#1f2937;}
+.configGrupo label{display:grid;gap:5px;color:#4b5563;font-size:13px;font-weight:700;}
+.configGrupo select,.configGrupo button{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;background:#f9fafb;color:#374151;font-weight:600;}
+.configAcciones{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.configPeligro{color:#b91c1c!important;background:#fef2f2!important;border-color:#fecaca!important;}
+.configInfo p{color:var(--gris-texto);font-size:12px;}
+html[data-texto="grande"]{font-size:17px;}
+html[data-densidad="comodo"] .card,html[data-densidad="comodo"] .configGrupo{padding:16px;margin-bottom:14px;}
+html[data-tema="oscuro"]{--fondo:#111827;--gris-claro:#1f2937;--gris-texto:#cbd5e1;}
+html[data-tema="oscuro"] body{background:#111827;color:#f9fafb;}
+html[data-tema="oscuro"] .card,html[data-tema="oscuro"] .configGrupo,html[data-tema="oscuro"] .bottom-nav{background:#1f2937;color:#f9fafb;border-color:#374151;}
+html[data-tema="oscuro"] .configGrupo h2,html[data-tema="oscuro"] .infoCard h3{color:#f9fafb;}
+html[data-tema="oscuro"] input,html[data-tema="oscuro"] select,html[data-tema="oscuro"] textarea,html[data-tema="oscuro"] .configGrupo select{background:#111827;color:#f9fafb;border-color:#4b5563;}
+@media (prefers-color-scheme:dark){html[data-tema="sistema"] body{background:#111827;color:#f9fafb;}html[data-tema="sistema"] .card,html[data-tema="sistema"] .configGrupo,html[data-tema="sistema"] .bottom-nav{background:#1f2937;color:#f9fafb;}}
