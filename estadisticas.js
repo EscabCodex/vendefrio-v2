@@ -57,5 +57,6 @@
         if (typeof crearAlertasComerciales === "function") destino.appendChild(crearAlertasComerciales(estadisticas.atrasados));
     }
     function abrir() { const s = document.getElementById("pantallaEstadisticas") || crearPantalla(); ocultarPantallas(); s.classList.remove("oculto"); renderizar(); const filtro = document.getElementById("filtroPeriodoEstadisticas"); if (filtro && !filtro.dataset.conectado) { filtro.addEventListener("change", renderizar); filtro.dataset.conectado = "true"; const botones = s.querySelectorAll("[data-periodo]"); botones.forEach(botonPeriodo => botonPeriodo.addEventListener("click", () => { filtro.value = botonPeriodo.dataset.periodo; botones.forEach(item => item.classList.remove("activo")); botonPeriodo.classList.add("activo"); renderizar(); })); } }
+    window.abrirEstadisticas = abrir;
     const boton = document.querySelector(".botonEstadisticasInicio") || document.createElement("button"); boton.type = "button"; boton.className = "menuBtn botonEstadisticasInicio"; boton.textContent = "📊 Estadísticas"; boton.addEventListener("click", abrir); const accesos = document.querySelector("#pantallaMenu .container > div[style*='grid-template-columns']"); if (accesos && !document.querySelector(".botonEstadisticasInicio")) accesos.appendChild(boton);
 }());

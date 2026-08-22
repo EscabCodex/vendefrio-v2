@@ -42,6 +42,8 @@ function mostrarPantalla(nombre) {
     if (nombre === "rutas" && typeof inicializarPantallaRutas === "function") {
         inicializarPantallaRutas();
     }
+    if (nombre === "catalogo" && typeof window.abrirCatalogo === "function") window.abrirCatalogo();
+    if (nombre === "mas") abrirMenuMas();
 
     window.scrollTo(0, 0);
 }
@@ -353,6 +355,18 @@ prepararTarjetasDashboard();
 // -----------------------------------------------------
 // NAVEGACI\u00d3N
 // -----------------------------------------------------
+
+function abrirMenuMas() {
+    let panel = document.getElementById("menuMasMovil");
+    if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "menuMasMovil";
+        panel.className = "menuMasMovil";
+        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas">🗺️ Rutas<small>Planificá y seguí tu recorrido</small></button><button data-mas="estadisticas">📊 Estadísticas<small>Analizá tus pedidos y comercios</small></button><button data-mas="historial">🕒 Historial<small>Consultá pedidos anteriores</small></button><button data-mas="configuracion">⚙️ Configuración<small>Preferencias y respaldos</small></button><button data-mas="productos">🏷️ Productos y marcas<small>Administrá tu catálogo base</small></button></div>`;
+        document.body.appendChild(panel);
+        panel.addEventListener("click", event => { if (event.target === panel || event.target.closest(".menuMasCerrar")) { panel.remove(); return; } const boton = event.target.closest("[data-mas]"); if (!boton) return; panel.remove(); const destino = boton.dataset.mas; if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas(); else if (destino === "configuracion" && typeof window.abrirConfiguracion === "function") window.abrirConfiguracion(); else mostrarPantalla(destino); });
+    }
+}
 
 document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", event => {

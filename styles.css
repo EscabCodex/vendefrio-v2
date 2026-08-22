@@ -2741,3 +2741,17 @@ html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:#111827;co
 html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:#111827;}
 html[data-tema="oscuro"] .selectorPeriodoEstadisticas button{color:#cbd5e1;}
 html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:#374151;color:#bbf7d0;}
+
+/* Navegación principal compacta y menú Más */
+.menuMasMovil{position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-end;background:rgba(15,23,42,.45);padding:12px;}
+.menuMasContenido{display:grid;gap:2px;width:100%;max-height:80dvh;overflow:auto;padding:10px;border-radius:18px 18px 8px 8px;background:#fff;box-shadow:0 -8px 30px rgba(15,23,42,.25);}
+.menuMasEncabezado{display:flex;align-items:center;justify-content:space-between;padding:6px 4px 10px;color:#1f2937;font-size:16px;}
+.menuMasCerrar{width:36px;height:36px;border:0;border-radius:50%;background:#f3f4f6;color:#374151;font-size:22px;}
+.menuMasContenido>button{display:grid;grid-template-columns:32px 1fr;gap:2px 8px;width:100%;min-height:56px;padding:9px;border:0;border-bottom:1px solid #e5e7eb;background:transparent;color:#1f2937;text-align:left;font-size:14px;font-weight:800;}
+.menuMasContenido>button::first-letter{font-size:20px;}
+.menuMasContenido>button small{grid-column:2;color:#6b7280;font-size:11px;font-weight:500;}
+html[data-tema="oscuro"] .menuMasContenido{background:#1f2937;}
+html[data-tema="oscuro"] .menuMasEncabezado,html[data-tema="oscuro"] .menuMasContenido>button{color:#f9fafb;}
+html[data-tema="oscuro"] .menuMasCerrar{background:#374151;color:#f9fafb;}
+html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
+html[data-tema="oscuro"] .menuMasContenido>button small{color:#cbd5e1;}
