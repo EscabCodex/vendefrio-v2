@@ -13,6 +13,10 @@ const pantallas = {
 };
 
 function mostrarPantalla(nombre) {
+    if (nombre === "mas") {
+        abrirMenuMas();
+        return;
+    }
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
         pantalla.classList.add("oculto");
     });
