@@ -195,7 +195,21 @@ function actualizarUltimoPedidoDashboard(historial) {
     };
 }
 
+let ubicacionDashboard = null;
+let solicitandoUbicacionDashboard = false;
+
+function distanciaDashboard(lat1, lng1, lat2, lng2) {
+    const radio = 6371; const rad = valor => valor * Math.PI / 180; const dLat = rad(lat2 - lat1); const dLng = rad(lng2 - lng1); const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2; return radio * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function actualizarUbicacionDashboard() {
+    if (ubicacionDashboard || solicitandoUbicacionDashboard || !navigator.geolocation) return;
+    solicitandoUbicacionDashboard = true;
+    navigator.geolocation.getCurrentPosition(posicion => { ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude }; solicitandoUbicacionDashboard = false; actualizarDashboard(); }, () => { solicitandoUbicacionDashboard = false; }, { enableHighAccuracy: true, maximumAge: 120000, timeout: 8000 });
+}
+
 function actualizarDashboard() {
+    actualizarUbicacionDashboard();
     const comercios = obtenerComercios();
     const historial = obtenerHistorial();
     const resumenProductos = obtenerResumenProductos();
@@ -249,7 +263,10 @@ function actualizarDashboard() {
         return;
     }
 
-    const sugerido = pendientes.find(comercio => comercio.lat && comercio.lng) || pendientes[0];
+    const conUbicacion = pendientes.filter(tieneGpsValidoDashboard);
+    const sugerido = ubicacionDashboard && conUbicacion.length
+        ? conUbicacion.slice().sort((a, b) => distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(a.lat), Number(a.lng)) - distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(b.lat), Number(b.lng)))[0]
+        : conUbicacion[0] || pendientes[0];
     const envoltorio = document.createElement("div");
     envoltorio.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:12px;";
 
