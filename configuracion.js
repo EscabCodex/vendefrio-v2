@@ -40,6 +40,5 @@
     const respaldoEnInicio = document.getElementById("exportarRespaldo")?.closest("section");
     if (respaldoEnInicio) respaldoEnInicio.classList.add("respaldoDashboardOculto");
     window.abrirConfiguracion = abrir;
-    const boton = document.createElement("button"); boton.type = "button"; boton.className = "menuBtn botonConfiguracionInicio"; boton.textContent = "⚙️ Configuración"; boton.addEventListener("click", abrir); const accesos = document.querySelector("#pantallaMenu .container > div[style*='grid-template-columns']"); if (accesos && !document.querySelector(".botonConfiguracionInicio")) accesos.appendChild(boton);
     aplicar(); crear();
 }());
