@@ -251,6 +251,8 @@ function actualizarDashboard() {
     const pendientes = comercios.filter(comercio => !comercioVisitadoRecientemente(comercio));
 
     contenedor.innerHTML = "";
+    const botonUbicacion = document.createElement("button"); botonUbicacion.type = "button"; botonUbicacion.className = "btnUbicacionDashboard"; botonUbicacion.textContent = ubicacionDashboard ? "📍 Actualizar mi ubicación" : "📍 Usar mi ubicación"; botonUbicacion.onclick = () => { actualizarUbicacionDashboard(true); };
+    contenedor.appendChild(botonUbicacion);
 
     if (pendientes.length === 0) {
         const mensaje = document.createElement("div");
@@ -305,10 +307,6 @@ function actualizarDashboard() {
     botonRuta.addEventListener("click", () => mostrarPantalla("rutas"));
 
     acciones.append(boton, botonRuta);
-    if (!ubicacionDashboard) {
-        const botonUbicacion = document.createElement("button"); botonUbicacion.type = "button"; botonUbicacion.className = "btnUbicacionDashboard"; botonUbicacion.textContent = "📍 Usar mi ubicación"; botonUbicacion.onclick = () => { actualizarUbicacionDashboard(true); };
-        informacion.appendChild(botonUbicacion);
-    }
     envoltorio.append(informacion, acciones);
     contenedor.appendChild(envoltorio);
 }
