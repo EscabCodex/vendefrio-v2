@@ -347,7 +347,8 @@ function obtenerProductos() {
                 .filter(producto => producto && typeof producto === "object")
                 .map(producto => ({
                     nombre: String(producto.nombre || "").trim(),
-                    precio: Number(producto.precio) || 0
+                    precio: Number(producto.precio) || 0,
+                    imagen: String(producto.imagen || producto.foto || "")
                 }))
                 .filter(producto => producto.nombre !== "")
             : [];
@@ -537,7 +538,8 @@ function agregarProducto(marca, producto) {
 
     productos[marcaReal].push({
         nombre,
-        precio: Number(producto.precio) || 0
+        precio: Number(producto.precio) || 0,
+        imagen: String(producto.imagen || producto.foto || "")
     });
 
     return guardarProductos(productos);
@@ -556,7 +558,8 @@ function editarProducto(marca, indice, producto) {
 
     productos[marcaReal][indice] = {
         nombre,
-        precio: Number(producto.precio) || 0
+        precio: Number(producto.precio) || 0,
+        imagen: String(producto.imagen || producto.foto || productos[marcaReal][indice].imagen || "")
     };
 
     return guardarProductos(productos);

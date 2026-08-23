@@ -2784,3 +2784,12 @@ html[data-tema="oscuro"] .itemCatalogo{background:#1f2937;border-color:#374151;}
 html[data-tema="oscuro"] .catalogoFiltros select{background:#111827;color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .btnCatalogoPedido{background:#064e3b;color:#bbf7d0;}
 @media(max-width:380px){.grillaCatalogo{grid-template-columns:1fr;}}
+
+/* Edición rápida desde Catálogo */
+.btnCatalogoEditar{width:100%;min-height:34px;padding:5px;border:1px solid #d1d5db;border-radius:8px;background:transparent;color:#4b5563;font-size:10px;font-weight:700;}
+.modalCatalogo{position:fixed;inset:0;z-index:10005;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.5);}
+.modalCatalogoContenido{width:min(100%,360px);display:grid;gap:12px;padding:16px;border-radius:16px;background:#fff;box-shadow:0 12px 35px rgba(0,0,0,.25);}
+.modalCatalogoTitulo{display:flex;align-items:center;justify-content:space-between;font-size:16px;}.cerrarModalCatalogo{border:0;background:transparent;font-size:24px;color:#6b7280;}
+.modalCatalogoContenido label{display:grid;gap:5px;color:#374151;font-size:12px;font-weight:700;}.modalCatalogoContenido input{width:100%;min-height:42px;padding:8px;border:1px solid #d1d5db;border-radius:9px;background:#fff;}
+.accionesModalCatalogo{display:flex;justify-content:flex-end;gap:8px;}.accionesModalCatalogo button{min-height:40px;padding:8px 14px;border:0;border-radius:9px;font-weight:700;}.cancelarEdicionCatalogo{background:#f3f4f6;color:#374151;}.guardarEdicionCatalogo{background:#059669;color:#fff;}
+html[data-tema="oscuro"] .btnCatalogoEditar{border-color:#4b5563;color:#d1d5db;}html[data-tema="oscuro"] .modalCatalogoContenido{background:#1f2937;color:#f9fafb;}html[data-tema="oscuro"] .modalCatalogoContenido label{color:#e5e7eb;}html[data-tema="oscuro"] .modalCatalogoContenido input{background:#111827;color:#f9fafb;border-color:#4b5563;}html[data-tema="oscuro"] .cancelarEdicionCatalogo{background:#374151;color:#f9fafb;}
