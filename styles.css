@@ -2765,3 +2765,6 @@ html[data-tema="oscuro"] .menuMasContenido>button small{color:#cbd5e1;}
 .menuMasContenido>button small{display:none!important;}
 html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
 html[data-tema="oscuro"] .menuMasContenido>button b{color:#94a3b8;}
+
+/* El respaldo deja de mostrarse en el Dashboard; se usa desde Configuración */
+.respaldoDashboardOculto{display:none!important;}
