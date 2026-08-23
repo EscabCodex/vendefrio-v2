@@ -2793,3 +2793,10 @@ html[data-tema="oscuro"] .btnCatalogoPedido{background:#064e3b;color:#bbf7d0;}
 .modalCatalogoContenido label{display:grid;gap:5px;color:#374151;font-size:12px;font-weight:700;}.modalCatalogoContenido input{width:100%;min-height:42px;padding:8px;border:1px solid #d1d5db;border-radius:9px;background:#fff;}
 .accionesModalCatalogo{display:flex;justify-content:flex-end;gap:8px;}.accionesModalCatalogo button{min-height:40px;padding:8px 14px;border:0;border-radius:9px;font-weight:700;}.cancelarEdicionCatalogo{background:#f3f4f6;color:#374151;}.guardarEdicionCatalogo{background:#059669;color:#fff;}
 html[data-tema="oscuro"] .btnCatalogoEditar{border-color:#4b5563;color:#d1d5db;}html[data-tema="oscuro"] .modalCatalogoContenido{background:#1f2937;color:#f9fafb;}html[data-tema="oscuro"] .modalCatalogoContenido label{color:#e5e7eb;}html[data-tema="oscuro"] .modalCatalogoContenido input{background:#111827;color:#f9fafb;border-color:#4b5563;}html[data-tema="oscuro"] .cancelarEdicionCatalogo{background:#374151;color:#f9fafb;}
+
+/* Editor cuadrado de fotos del Catálogo */
+.editorFotoContenido{justify-items:stretch;}
+.canvasEditorFoto{display:block;width:min(100%,300px);height:auto;aspect-ratio:1;margin:0 auto;border-radius:12px;touch-action:none;cursor:grab;background:#111827;}
+.canvasEditorFoto:active{cursor:grabbing;}
+.zoomEditorFoto{width:100%;accent-color:#059669;}
+html[data-tema="oscuro"] .canvasEditorFoto{border:1px solid #4b5563;}
