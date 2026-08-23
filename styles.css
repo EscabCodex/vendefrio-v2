@@ -2819,3 +2819,434 @@ html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-colu
 
 .btnUbicacionDashboard{display:inline-flex;align-items:center;width:max-content;min-height:34px;margin-top:5px;padding:6px 9px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:11px;font-weight:700;}
 html[data-tema="oscuro"] .btnUbicacionDashboard{background:#064e3b;border-color:#166534;color:#bbf7d0;}
+
+
+/* =====================================================
+   VENDEFRÍO — THEME COMPATIBILITY / FINAL OVERRIDES
+   =====================================================
+
+   This layer is intentionally appended to the existing stylesheet.
+   It preserves the current layout and component classes while making
+   the three appearance modes consistent:
+   - light
+   - dark
+   - system (prefers-color-scheme)
+
+   The application can activate a theme with:
+       html[data-theme="light"]
+       html[data-theme="dark"]
+       html[data-theme="system"]
+
+   It also works when the data-theme attribute is placed on body.
+*/
+
+/* ---------- Central design tokens ---------- */
+
+:root {
+    --vf-bg: #f5f7f8;
+    --vf-surface: #ffffff;
+    --vf-surface-2: #f0f3f4;
+    --vf-surface-3: #e7ecee;
+
+    --vf-text: #172126;
+    --vf-text-soft: #526169;
+    --vf-text-muted: #748188;
+
+    --vf-border: #d7dfe2;
+    --vf-border-strong: #c4cfd3;
+
+    --vf-primary: #0f9d63;
+    --vf-primary-strong: #087a4c;
+    --vf-primary-soft: #e4f5ed;
+
+    --vf-info: #2563eb;
+    --vf-info-soft: #e8efff;
+
+    --vf-warning: #d97706;
+    --vf-warning-soft: #fff4df;
+
+    --vf-danger: #dc2626;
+    --vf-danger-soft: #fde8e8;
+
+    --vf-success: #15803d;
+    --vf-success-soft: #e7f6ec;
+
+    --vf-overlay: rgba(15, 23, 42, .48);
+
+    --vf-shadow-sm: 0 1px 3px rgba(15, 23, 42, .08);
+    --vf-shadow-md: 0 8px 24px rgba(15, 23, 42, .12);
+    --vf-shadow-lg: 0 18px 50px rgba(15, 23, 42, .18);
+
+    --vf-focus: 0 0 0 3px rgba(15, 157, 99, .20);
+}
+
+/* ---------- Explicit dark ---------- */
+
+html[data-theme="dark"],
+body[data-theme="dark"] {
+    color-scheme: dark;
+
+    --vf-bg: #0d1417;
+    --vf-surface: #151e22;
+    --vf-surface-2: #1c282d;
+    --vf-surface-3: #243238;
+
+    --vf-text: #edf4f2;
+    --vf-text-soft: #c0cfcc;
+    --vf-text-muted: #91a19e;
+
+    --vf-border: #304047;
+    --vf-border-strong: #405158;
+
+    --vf-primary: #39c98a;
+    --vf-primary-strong: #67dda8;
+    --vf-primary-soft: rgba(57, 201, 138, .15);
+
+    --vf-info: #79a7ff;
+    --vf-info-soft: rgba(121, 167, 255, .15);
+
+    --vf-warning: #f5b74d;
+    --vf-warning-soft: rgba(245, 183, 77, .15);
+
+    --vf-danger: #ff7777;
+    --vf-danger-soft: rgba(255, 119, 119, .15);
+
+    --vf-success: #6fdaa0;
+    --vf-success-soft: rgba(111, 218, 160, .15);
+
+    --vf-overlay: rgba(0, 0, 0, .70);
+
+    --vf-shadow-sm: 0 1px 3px rgba(0, 0, 0, .30);
+    --vf-shadow-md: 0 8px 24px rgba(0, 0, 0, .36);
+    --vf-shadow-lg: 0 18px 50px rgba(0, 0, 0, .50);
+
+    --vf-focus: 0 0 0 3px rgba(57, 201, 138, .25);
+}
+
+/* ---------- System / phone ---------- */
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"],
+    body[data-theme="system"] {
+        color-scheme: dark;
+
+        --vf-bg: #0d1417;
+        --vf-surface: #151e22;
+        --vf-surface-2: #1c282d;
+        --vf-surface-3: #243238;
+
+        --vf-text: #edf4f2;
+        --vf-text-soft: #c0cfcc;
+        --vf-text-muted: #91a19e;
+
+        --vf-border: #304047;
+        --vf-border-strong: #405158;
+
+        --vf-primary: #39c98a;
+        --vf-primary-strong: #67dda8;
+        --vf-primary-soft: rgba(57, 201, 138, .15);
+
+        --vf-info: #79a7ff;
+        --vf-info-soft: rgba(121, 167, 255, .15);
+
+        --vf-warning: #f5b74d;
+        --vf-warning-soft: rgba(245, 183, 77, .15);
+
+        --vf-danger: #ff7777;
+        --vf-danger-soft: rgba(255, 119, 119, .15);
+
+        --vf-success: #6fdaa0;
+        --vf-success-soft: rgba(111, 218, 160, .15);
+
+        --vf-overlay: rgba(0, 0, 0, .70);
+
+        --vf-shadow-sm: 0 1px 3px rgba(0, 0, 0, .30);
+        --vf-shadow-md: 0 8px 24px rgba(0, 0, 0, .36);
+        --vf-shadow-lg: 0 18px 50px rgba(0, 0, 0, .50);
+
+        --vf-focus: 0 0 0 3px rgba(57, 201, 138, .25);
+    }
+}
+
+/* ---------- Global surfaces ---------- */
+
+html,
+body {
+    background-color: var(--vf-bg);
+    color: var(--vf-text);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    color: var(--vf-text);
+}
+
+input,
+select,
+textarea {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--vf-text-muted);
+    opacity: 1;
+}
+
+option {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+    outline: none;
+    box-shadow: var(--vf-focus);
+}
+
+/* ---------- Common cards ---------- */
+
+.card,
+.cardComercio,
+.cardProducto,
+.cardEstadistica,
+.cardRuta,
+.cardHistorial,
+.stat-card,
+.stats-card,
+.route-card,
+.product-card,
+.comercio-card,
+.config-card {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+}
+
+/* ---------- Text ---------- */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+label,
+strong {
+    color: var(--vf-text);
+}
+
+small,
+.muted,
+.text-muted,
+.descripcion,
+.subtitulo,
+.card-subtitle {
+    color: var(--vf-text-muted);
+}
+
+/* ---------- Form controls ---------- */
+
+input,
+select,
+textarea {
+    box-shadow: none;
+}
+
+select {
+    color: var(--vf-text);
+    background-color: var(--vf-surface);
+}
+
+select option {
+    color: var(--vf-text);
+    background-color: var(--vf-surface);
+}
+
+.fila,
+.filaProducto,
+.producto,
+.product-row,
+.item-producto {
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+}
+
+/* ---------- Modals ---------- */
+
+.modal {
+    background-color: var(--vf-overlay);
+}
+
+.modalContenido,
+.modal-content,
+.modal-card {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+    box-shadow: var(--vf-shadow-lg);
+}
+
+.modalContenido input,
+.modalContenido select,
+.modalContenido textarea,
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+    background-color: var(--vf-surface-2);
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+}
+
+/* ---------- Active quantity selectors ---------- */
+
+.activo {
+    background-color: var(--vf-primary-soft) !important;
+    color: var(--vf-primary-strong) !important;
+    border-color: var(--vf-primary) !important;
+}
+
+/* ---------- Semantic surfaces ---------- */
+
+.success,
+.exito,
+.estado-exito {
+    color: var(--vf-success);
+    background-color: var(--vf-success-soft);
+    border-color: var(--vf-success);
+}
+
+.warning,
+.advertencia,
+.estado-advertencia {
+    color: var(--vf-warning);
+    background-color: var(--vf-warning-soft);
+    border-color: var(--vf-warning);
+}
+
+.error,
+.estado-error {
+    color: var(--vf-danger);
+    background-color: var(--vf-danger-soft);
+    border-color: var(--vf-danger);
+}
+
+.info,
+.estado-info {
+    color: var(--vf-info);
+    background-color: var(--vf-info-soft);
+    border-color: var(--vf-info);
+}
+
+/* ---------- Primary controls ---------- */
+
+.btn-primary,
+.primary,
+.btnGuardar,
+#guardarModal,
+#guardarProducto,
+#aceptarConfirmacion,
+#generar {
+    background-color: var(--vf-primary);
+    color: #ffffff;
+    border-color: var(--vf-primary);
+}
+
+.btn-primary:hover,
+.primary:hover,
+.btnGuardar:hover,
+#guardarModal:hover,
+#guardarProducto:hover,
+#aceptarConfirmacion:hover,
+#generar:hover {
+    background-color: var(--vf-primary-strong);
+    border-color: var(--vf-primary-strong);
+}
+
+/* ---------- Danger controls ---------- */
+
+.btn-danger,
+.danger,
+.eliminar,
+.delete {
+    background-color: var(--vf-danger);
+    color: #ffffff;
+    border-color: var(--vf-danger);
+}
+
+/* ---------- Links ---------- */
+
+a {
+    color: var(--vf-primary-strong);
+}
+
+a:hover {
+    color: var(--vf-primary);
+}
+
+/* ---------- Scrollbars ---------- */
+
+* {
+    scrollbar-color: var(--vf-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--vf-border-strong);
+    border-radius: 999px;
+}
+
+/* ---------- System dark: force legacy form surfaces ---------- */
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] input,
+    html[data-theme="system"] select,
+    html[data-theme="system"] textarea,
+    body[data-theme="system"] input,
+    body[data-theme="system"] select,
+    body[data-theme="system"] textarea {
+        background-color: var(--vf-surface);
+        color: var(--vf-text);
+        border-color: var(--vf-border);
+    }
+
+    html[data-theme="system"] option,
+    body[data-theme="system"] option {
+        background-color: var(--vf-surface);
+        color: var(--vf-text);
+    }
+}
+
+/* ---------- Explicit dark: force legacy form surfaces ---------- */
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+body[data-theme="dark"] input,
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+    border-color: var(--vf-border);
+}
+
+html[data-theme="dark"] option,
+body[data-theme="dark"] option {
+    background-color: var(--vf-surface);
+    color: var(--vf-text);
+}
