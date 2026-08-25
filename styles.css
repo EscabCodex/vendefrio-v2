@@ -2918,3 +2918,65 @@ section:not(.oculto){animation:vfEntrada 180ms ease both;}
 #pantallaHistorial .accionesHistorial{display:flex;gap:5px;margin-top:7px;}
 #pantallaHistorial .accionesHistorial button{min-height:32px;padding:5px 8px;border-radius:8px;font-size:10px;}
 html[data-tema="oscuro"] #pantallaHistorial .historialCard::after{border-color:var(--vf-bg);}
+
+
+/* =====================================================
+   REWORK VISUAL — ESTADÍSTICAS
+   ===================================================== */
+.pantallaEstadisticas .container{padding-top:8px;padding-bottom:118px;}
+.pantallaEstadisticas header{background:transparent;color:var(--vf-text,#172126);padding:18px 20px 8px;border-radius:0;box-shadow:none;}
+.pantallaEstadisticas header .logo{width:44px;height:44px;background:var(--verde-claro,#e6f7ef);color:var(--verde-oscuro,#0b7a4d);font-size:21px;box-shadow:none;}
+.pantallaEstadisticas header h1{font-size:24px;color:var(--vf-text,#172126);}
+.pantallaEstadisticas header p{color:var(--gris-texto,#6b7280);opacity:1;}
+.pantallaEstadisticas .extraVolver{width:auto;display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:7px 12px;min-height:38px;background:transparent;color:var(--verde-oscuro,#0b7a4d);border:1px solid var(--border-color,#dbe3e6);border-radius:10px;}
+.selectorPeriodoEstadisticas{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:4px;margin-bottom:14px;background:var(--vf-surface-2,#f0f3f4);border:1px solid var(--vf-border,#d7dfe2);border-radius:14px;}
+.selectorPeriodoEstadisticas button{min-height:38px;border:0;border-radius:10px;background:transparent;color:var(--vf-text-soft,#526169);font-weight:700;font-size:12px;cursor:pointer;}
+.selectorPeriodoEstadisticas button.activo{background:var(--vf-surface,#fff);color:var(--verde-oscuro,#0b7a4d);box-shadow:0 2px 8px rgba(15,23,42,.08);}
+.informeEstadisticas{display:grid;gap:12px;}
+.statsHero{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;padding:18px;border-radius:20px;background:linear-gradient(145deg,var(--verde),var(--verde-oscuro));color:#fff;box-shadow:0 10px 28px rgba(15,157,99,.18);overflow:hidden;position:relative;}
+.statsHero:after{content:"";position:absolute;width:170px;height:170px;border-radius:50%;right:-70px;top:-85px;background:rgba(255,255,255,.10);}
+.statsHero small{display:block;font-size:11px;opacity:.78;margin-bottom:4px;}
+.statsHero strong{display:block;font-size:34px;line-height:1;font-weight:800;letter-spacing:-1px;}
+.statsHero p{margin:6px 0 0;font-size:12px;opacity:.82;}
+.statsHeroKpi{position:relative;z-index:1;text-align:right;}
+.statsHeroKpi strong{font-size:22px;}
+.statsHeroKpi span{font-size:10px;opacity:.78;}
+.statsKpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.statsKpi{padding:13px 12px;border:1px solid var(--vf-border,#d7dfe2);border-radius:15px;background:var(--vf-surface,#fff);}
+.statsKpi small{display:block;color:var(--vf-text-muted,#748188);font-size:10px;margin-bottom:4px;}
+.statsKpi strong{font-size:22px;line-height:1;color:var(--vf-text,#172126);}
+.statsKpi span{display:block;margin-top:5px;color:var(--vf-text-muted,#748188);font-size:9px;}
+.statsChartCard,.statsListCard{padding:15px;border:1px solid var(--vf-border,#d7dfe2);border-radius:18px;background:var(--vf-surface,#fff);box-shadow:var(--vf-shadow-sm,0 1px 3px rgba(15,23,42,.08));}
+.statsCardHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px;}
+.statsCardHead h2{font-size:14px;color:var(--vf-text,#172126);margin:0;}
+.statsCardHead p{font-size:10px;color:var(--vf-text-muted,#748188);margin:3px 0 0;}
+.statsCardBadge{padding:5px 8px;border-radius:999px;background:var(--verde-claro,#e6f7ef);color:var(--verde-oscuro,#0b7a4d);font-size:9px;font-weight:800;white-space:nowrap;}
+.statsLineChart{width:100%;height:175px;display:block;overflow:visible;}
+.statsLineChart .grid{stroke:var(--vf-border,#d7dfe2);stroke-width:1;stroke-dasharray:3 4;}
+.statsLineChart .area{fill:rgba(15,157,99,.10);}
+.statsLineChart .line{fill:none;stroke:var(--verde,#0f9d63);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+.statsLineChart .dot{fill:var(--vf-surface,#fff);stroke:var(--verde,#0f9d63);stroke-width:3;}
+.statsLineChart text{fill:var(--vf-text-muted,#748188);font-size:9px;font-family:inherit;}
+.statsBarList{display:grid;gap:12px;}
+.statsBarItem{display:grid;gap:6px;}
+.statsBarTop{display:flex;justify-content:space-between;gap:10px;font-size:11px;}
+.statsBarTop span{color:var(--vf-text,#172126);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.statsBarTop strong{color:var(--verde-oscuro,#0b7a4d);white-space:nowrap;}
+.statsBarTrack{height:7px;border-radius:999px;background:var(--vf-surface-3,#e7ecee);overflow:hidden;}
+.statsBarFill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--verde-vibrante,#10b981),var(--verde,#0f9d63));}
+.statsEmpty{padding:20px 10px;text-align:center;color:var(--vf-text-muted,#748188);font-size:11px;}
+/* Los bloques de inteligencia conservan sus funciones, pero adoptan la nueva superficie. */
+.pantallaEstadisticas .panelInteligenciaComercial,.pantallaEstadisticas .comparativaSemanalComercial,.pantallaEstadisticas .resumenMensualComercial,.pantallaEstadisticas .bloqueSeguimientoSemanal{margin:0;padding:15px;border:1px solid var(--vf-border,#d7dfe2);border-radius:18px;background:var(--vf-surface,#fff);}
+.pantallaEstadisticas .panelInteligenciaComercial{background:var(--vf-surface,#fff);}
+.pantallaEstadisticas .columnasEstadisticaComercial{grid-template-columns:1fr;gap:8px;}
+.pantallaEstadisticas .bloqueEstadisticaComercial{padding:12px;border-radius:13px;background:var(--vf-surface-2,#f0f3f4);border-color:var(--vf-border,#d7dfe2);}
+@media (min-width:700px){.pantallaEstadisticas .container{max-width:760px;margin:auto}.statsKpis{gap:10px}.statsLineChart{height:210px}.pantallaEstadisticas .columnasEstadisticaComercial{grid-template-columns:repeat(3,1fr);}}
+html[data-tema="oscuro"] .pantallaEstadisticas header h1,html[data-tema="oscuro"] .pantallaEstadisticas header p{color:var(--vf-text)!important;}
+html[data-tema="oscuro"] .pantallaEstadisticas .extraVolver{color:var(--vf-primary)!important;border-color:var(--vf-border)!important;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:var(--vf-surface-2);border-color:var(--vf-border);}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:var(--vf-surface-3);color:var(--vf-primary);}
+html[data-tema="oscuro"] .statsLineChart .area{fill:rgba(57,201,138,.13);}
+html[data-tema="oscuro"] .statsLineChart .line{stroke:var(--vf-primary);}
+html[data-tema="oscuro"] .statsLineChart .dot{fill:var(--vf-surface);stroke:var(--vf-primary);}
+html[data-tema="oscuro"] .statsLineChart .grid{stroke:var(--vf-border);}
+html[data-tema="oscuro"] .statsLineChart text{fill:var(--vf-text-muted);}
