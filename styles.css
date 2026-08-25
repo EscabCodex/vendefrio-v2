@@ -2858,3 +2858,7 @@ html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937
 #pantallaComercios .comercioCard:active{transform:scale(.99);}
 #pantallaComercios .accionesComercio{cursor:default;}
 #pantallaComercios .accionesComercio button{font-size:10px;min-height:34px;padding:5px 8px;}
+
+/* Comercios: sin botones visibles en la lista; las acciones viven en la ficha */
+#pantallaComercios .comercioCard .accionesComercio{display:none!important;}
+#pantallaComercios .comercioCard{cursor:pointer;}

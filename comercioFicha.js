@@ -109,10 +109,15 @@
             listaProductos.appendChild(vacio);
         }
 
+        const botonEstado = visitadoEstaSemana
+            ? crearBoton("🔴 Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
+            : crearBoton("✅ Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); });
+        const botonEliminar = crearBoton("🗑️ Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); }); });
         modalFicha.querySelector(".fichaAcciones").append(
             crearBoton("📝 Hacer pedido", "agregar", () => { cerrarFicha(); irAPedidoRapido(comercio.nombre); }),
             crearBoton("🗺️ Navegar", "ver", () => { cerrarFicha(); mostrarPantalla("rutas"); }),
             crearBoton("✏️ Editar", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
+            botonEstado, botonEliminar,
             crearBoton("Cerrar", "secundario", cerrarFicha)
         );
 
