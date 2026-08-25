@@ -2888,3 +2888,19 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"
 
 html[data-tema="oscuro"] .modalFichaComercio .fichaFrecuencia{background:#111827!important;color:#f3f4f6;}
 @media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaFrecuencia{background:#111827!important;color:#f3f4f6;}}
+
+/* VendeFrío Design System — base visual para el rework */
+:root{--vf-primary:#0f9d63;--vf-primary-strong:#087a4d;--vf-action:#2563eb;--vf-warning:#f59e0b;--vf-danger:#dc2626;--vf-bg:#f4f7f6;--vf-surface:#fff;--vf-surface-soft:#f7faf8;--vf-text:#17221d;--vf-muted:#6b7a72;--vf-border:#dce7e1;--vf-radius:14px;--vf-shadow:0 4px 16px rgba(15,45,31,.08);--vf-speed:180ms;}
+html[data-tema="oscuro"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-surface-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.22);}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-surface-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.22);}}
+body{background:var(--vf-bg);color:var(--vf-text);}
+.card,.tarjetaDashboard,.comercioCard,.marca,.itemCatalogo{border-color:var(--vf-border);background:var(--vf-surface);box-shadow:var(--vf-shadow);transition:transform var(--vf-speed) ease,box-shadow var(--vf-speed) ease,border-color var(--vf-speed) ease;}
+.card:active,.comercioCard:active,.itemCatalogo:active{transform:translateY(1px);}
+input,select,textarea{border-color:var(--vf-border);background:var(--vf-surface);color:var(--vf-text);}
+button{font-family:inherit;transition:transform var(--vf-speed) ease,filter var(--vf-speed) ease,background var(--vf-speed) ease;}
+button:active{transform:scale(.97);}
+.subtitulo,.datoComercio,.fichaEstado{color:var(--vf-muted);}
+@keyframes vfEntrada{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes vfPulso{0%,100%{box-shadow:0 0 0 0 rgba(15,157,99,.18)}50%{box-shadow:0 0 0 7px rgba(15,157,99,0)}}
+section:not(.oculto){animation:vfEntrada 180ms ease both;}
+.badge-pendiente{border-color:#fbbf24;}.badge-visitado{border-color:#34d399;}
