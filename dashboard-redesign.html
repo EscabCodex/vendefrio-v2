@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VendeFrío - Dashboard Nuevo</title>
+    <link rel="stylesheet" href="dashboard-redesign.css">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR/HEADER SUPERIOR -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">❄️</div>
+                    <div class="logo-text">
+                        <h1>VendeFrío</h1>
+                        <p>Sistema de Reparto</p>
+                    </div>
+                </div>
+                <div class="theme-toggle">
+                    <button class="toggle-btn" id="toggleTheme" title="Cambiar tema">🌙</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="dashboard-main">
+            <!-- SECCIÓN 1: TARJETAS KPI CON ANIMACIÓN -->
+            <section class="kpi-section">
+                <h2 class="section-title">Resumen de Hoy</h2>
+                <div class="kpi-grid">
+                    <!-- KPI 1: Pedidos Hoy -->
+                    <div class="kpi-card pedidos-hoy" data-animation="slide-in">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">📦</span>
+                            <h3>Pedidos Hoy</h3>
+                        </div>
+                        <div class="kpi-value" id="kpiPedidosHoy">0</div>
+                        <div class="kpi-meta">
+                            <span class="trend up">↑ 12% vs ayer</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Comercios Visitados -->
+                    <div class="kpi-card comercios-visitados" data-animation="slide-in">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">🏪</span>
+                            <h3>Visitados Hoy</h3>
+                        </div>
+                        <div class="kpi-value" id="kpiVisitados">0</div>
+                        <div class="kpi-meta">
+                            <span class="trend neutral">→ Meta: 8</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3: Unidades Vendidas -->
+                    <div class="kpi-card unidades-vendidas" data-animation="slide-in">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">📊</span>
+                            <h3>Unidades</h3>
+                        </div>
+                        <div class="kpi-value" id="kpiUnidades">0</div>
+                        <div class="kpi-meta">
+                            <span class="trend up">↑ 8% vs ayer</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4: Próxima Parada -->
+                    <div class="kpi-card proxima-parada" data-animation="slide-in">
+                        <div class="kpi-header">
+                            <span class="kpi-icon">📍</span>
+                            <h3>Distancia</h3>
+                        </div>
+                        <div class="kpi-value" id="kpiDistancia">2.3 km</div>
+                        <div class="kpi-meta">
+                            <span class="trend">⏱️ 8 min</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 2: GRÁFICOS -->
+            <section class="charts-section">
+                <div class="charts-grid">
+                    <!-- Gráfico 1: Ventas por Día -->
+                    <div class="chart-card" data-animation="fade-in">
+                        <div class="chart-header">
+                            <h3>Ventas esta Semana</h3>
+                            <span class="chart-meta">últimos 7 días</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartVentasSemana"></canvas>
+                        </div>
+                        <div class="chart-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-value">$2,450</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Promedio:</span>
+                                <span class="stat-value">$350/día</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico 2: Comercios por Estado -->
+                    <div class="chart-card" data-animation="fade-in">
+                        <div class="chart-header">
+                            <h3>Estado Comercios</h3>
+                            <span class="chart-meta">esta semana</span>
+                        </div>
+                        <div class="chart-container small">
+                            <canvas id="chartEstadoComercios"></canvas>
+                        </div>
+                        <div class="chart-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Visitados:</span>
+                                <span class="stat-value green">18</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Pendientes:</span>
+                                <span class="stat-value orange">7</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 3: PRÓXIMA PARADA (CARD DESTACADA) -->
+            <section class="next-stop-section">
+                <h2 class="section-title">Próxima Parada Sugerida</h2>
+                <div class="next-stop-card" data-animation="slide-up">
+                    <div class="stop-status">
+                        <span class="status-badge">🔴 PENDIENTE</span>
+                    </div>
+                    <div class="stop-header">
+                        <div class="stop-number">1</div>
+                        <div class="stop-info">
+                            <h3 id="stopName">Comercio Ejemplo</h3>
+                            <p id="stopAddress">📍 Calle Principal 123</p>
+                        </div>
+                    </div>
+                    <div class="stop-details">
+                        <div class="detail-item">
+                            <span class="detail-icon">📞</span>
+                            <span id="stopPhone">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-icon">📏</span>
+                            <span id="stopDistance">2.3 km</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-icon">⏱️</span>
+                            <span id="stopTime">8 min</span>
+                        </div>
+                    </div>
+                    <div class="stop-actions">
+                        <button class="btn btn-primary">
+                            <span class="btn-icon">📝</span>
+                            <span class="btn-text">Nuevo Pedido</span>
+                        </button>
+                        <button class="btn btn-secondary">
+                            <span class="btn-icon">🗺️</span>
+                            <span class="btn-text">Ver Ruta</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 4: ACCIONES RÁPIDAS -->
+            <section class="quick-actions-section">
+                <h2 class="section-title">Acciones Rápidas</h2>
+                <div class="actions-grid">
+                    <button class="action-btn" data-action="pedido">
+                        <span class="action-icon">✍️</span>
+                        <span class="action-label">Nuevo<br>Pedido</span>
+                    </button>
+                    <button class="action-btn" data-action="rutas">
+                        <span class="action-icon">🗺️</span>
+                        <span class="action-label">Planificar<br>Ruta</span>
+                    </button>
+                    <button class="action-btn" data-action="comercios">
+                        <span class="action-icon">🏪</span>
+                        <span class="action-label">Gestionar<br>Comercios</span>
+                    </button>
+                    <button class="action-btn" data-action="historial">
+                        <span class="action-icon">📋</span>
+                        <span class="action-label">Ver<br>Historial</span>
+                    </button>
+                    <button class="action-btn" data-action="productos">
+                        <span class="action-icon">📦</span>
+                        <span class="action-label">Productos<br>y Marcas</span>
+                    </button>
+                    <button class="action-btn" data-action="config">
+                        <span class="action-icon">⚙️</span>
+                        <span class="action-label">Configuración<br>y Datos</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 5: ÚLTIMO PEDIDO -->
+            <section class="last-order-section">
+                <h2 class="section-title">Último Pedido Registrado</h2>
+                <div class="last-order-card" data-animation="fade-in">
+                    <div class="order-header">
+                        <div class="order-avatar" id="orderAvatar">-</div>
+                        <div class="order-title-block">
+                            <h3 id="orderName">Sin pedidos</h3>
+                            <p id="orderDate">-</p>
+                        </div>
+                    </div>
+                    <div class="order-stats">
+                        <div class="order-stat">
+                            <span class="stat-icon">📦</span>
+                            <div>
+                                <span class="stat-label">Unidades</span>
+                                <span class="stat-value" id="orderUnits">0</span>
+                            </div>
+                        </div>
+                        <div class="order-stat">
+                            <span class="stat-icon">🏷️</span>
+                            <div>
+                                <span class="stat-label">Tipos</span>
+                                <span class="stat-value" id="orderTypes">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary full-width">
+                        Ver en Historial →
+                    </button>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 6: RESPALDO DE DATOS -->
+            <section class="backup-section">
+                <h2 class="section-title">Respaldo y Datos</h2>
+                <div class="backup-card">
+                    <div class="backup-icon">💾</div>
+                    <div class="backup-info">
+                        <h3>Copias de Seguridad</h3>
+                        <p id="backupStatus">Último respaldo: nunca</p>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-small btn-primary">⬇️ Exportar</button>
+                        <button class="btn btn-small btn-secondary">⬆️ Importar</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="dashboard-redesign.js"></script>
+</body>
+</html>
