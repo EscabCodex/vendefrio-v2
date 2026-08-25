@@ -2876,3 +2876,12 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:#
  html[data-tema="sistema"] .modalFichaComercio .fichaCerrar{background:#374151;color:#f9fafb;}
  html[data-tema="sistema"] .modalFichaComercio .fichaBoton.secundario{background:#374151;color:#f9fafb;border-color:#4b5563;}
 }
+
+/* Corrección definitiva de ficha: acciones siempre visibles y cierre funcional */
+.modalFichaComercio{display:flex!important;align-items:center;justify-content:center;overflow-y:auto;}
+.modalFichaComercio .fichaContenido{display:block!important;width:min(100%,430px);max-height:calc(100dvh - 24px);overflow-y:auto;}
+.modalFichaComercio .fichaAcciones{display:grid!important;visibility:visible!important;position:sticky;bottom:-16px;z-index:3;padding:10px 0 4px;margin-top:10px;background:#fff;}
+.modalFichaComercio .fichaAcciones button{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;align-items:center;justify-content:center;min-height:44px!important;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaContenido,html[data-tema="oscuro"] .modalFichaComercio .fichaAcciones{background:#1f2937!important;color:#f9fafb;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:#111827!important;color:#f3f4f6;}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaContenido,html[data-tema="sistema"] .modalFichaComercio .fichaAcciones{background:#1f2937!important;color:#f9fafb;}html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:#111827!important;color:#f3f4f6;}}

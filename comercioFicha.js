@@ -121,8 +121,8 @@
             crearBoton("Cerrar", "secundario", cerrarFicha)
         );
 
-        modalFicha.querySelector(".fichaCerrar").addEventListener("click", cerrarFicha);
-        modalFicha.addEventListener("click", event => { if (event.target === modalFicha) cerrarFicha(); });
+        modalFicha.querySelector(".fichaCerrar").onclick = event => { event.preventDefault(); event.stopPropagation(); cerrarFicha(); };
+        modalFicha.addEventListener("click", event => { if (event.target === modalFicha || event.target.closest(".fichaCerrar")) cerrarFicha(); });
     }
 
     document.addEventListener("click", event => {
