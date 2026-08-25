@@ -2839,3 +2839,16 @@ html[data-tema="oscuro"] .btnUbicacionDashboard{background:#064e3b;border-color:
 #pantallaPedido footer button{min-height:45px;border-radius:10px;font-size:13px;font-weight:800;}
 html[data-tema="oscuro"] #pantallaPedido .resumenPedido{background:#064e3b;border-color:#166534;color:#d1fae5;}
 html[data-tema="oscuro"] #pantallaPedido .fila{border-color:#374151;}
+
+/* Rework visual de Comercios: lista compacta y táctil */
+#pantallaComercios>.container{padding-top:8px;}
+#pantallaComercios .filtrosComercios{display:grid;gap:7px;margin-bottom:8px;padding:10px;border-radius:11px;}
+#pantallaComercios .filtrosComercios input,#pantallaComercios .filtrosComercios select{min-height:42px;margin:0;}
+#pantallaComercios #resumenComercios{margin:1px 0;font-size:11px;}
+#pantallaComercios .tarjetaComercio,#pantallaComercios .comercioCard{margin:7px 0!important;padding:10px!important;border-radius:11px!important;box-shadow:none!important;}
+#pantallaComercios .datoComercio{font-size:12px;line-height:1.35;overflow-wrap:anywhere;white-space:normal;}
+#pantallaComercios .accionesComercio{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+#pantallaComercios .accionesComercio button{min-height:36px;padding:6px 9px;border-radius:8px;font-size:11px;}
+#pantallaComercios .badge{padding:4px 7px;border-radius:999px;font-size:10px;}
+#pantallaComercios .pedidoComercioBtn,#pantallaComercios .marcarVisitaBtn,#pantallaComercios .marcarPendienteBtn{min-height:36px;}
+html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937;border-color:#374151;}
