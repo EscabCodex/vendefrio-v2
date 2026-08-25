@@ -206,9 +206,15 @@ function marcarPendienteManual(nombre) {
     );
 }
 
+function nombresComercioCompatibles(nombreGuardado, nombreHistorial) {
+    const comercio = normalizarTexto(nombreGuardado);
+    const historial = normalizarTexto(nombreHistorial);
+    if (!comercio || !historial) return false;
+    return historial === comercio || historial.startsWith(comercio + " ") || comercio.startsWith(historial + " ");
+}
+
 function contarPedidosDelComercio(nombre, historial) {
-    const buscado = normalizarTexto(nombre);
-    return historial.filter(pedido => normalizarTexto(pedido.comercio || pedido.cliente) === buscado).length;
+    return historial.filter(pedido => nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)).length;
 }
 
 function renderizarComercios() {

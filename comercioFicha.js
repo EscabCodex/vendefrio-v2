@@ -9,7 +9,9 @@
     function obtenerDatosFicha(nombre) {
         const comercio = obtenerComercios().find(item => normalizarFicha(item.nombre) === normalizarFicha(nombre));
         const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
-        const pedidos = historial.filter(item => normalizarFicha(item.comercio) === normalizarFicha(nombre));
+        const pedidos = historial.filter(item => typeof nombresComercioCompatibles === "function"
+            ? nombresComercioCompatibles(nombre, item.comercio || item.cliente)
+            : normalizarFicha(item.comercio || item.cliente) === normalizarFicha(nombre));
         const ultimo = pedidos.slice().sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))[0];
         const productos = {};
 
