@@ -125,6 +125,8 @@
         modalFicha.addEventListener("click", event => { if (event.target === modalFicha || event.target.closest(".fichaCerrar")) cerrarFicha(); });
     }
 
+    window.cerrarFichaComercio = cerrarFicha;
+
     document.addEventListener("click", event => {
         const tarjeta = event.target.closest(".comercioCard");
         if (!tarjeta || event.target.closest("button")) return;

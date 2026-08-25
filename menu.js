@@ -13,6 +13,7 @@ const pantallas = {
 };
 
 function mostrarPantalla(nombre) {
+    if (typeof window.cerrarFichaComercio === "function" && nombre !== "comercios") window.cerrarFichaComercio();
     if (nombre === "mas") {
         abrirMenuMas();
         return;
