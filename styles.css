@@ -2862,3 +2862,17 @@ html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937
 /* Comercios: sin botones visibles en la lista; las acciones viven en la ficha */
 #pantallaComercios .comercioCard .accionesComercio{display:none!important;}
 #pantallaComercios .comercioCard{cursor:pointer;}
+
+/* Ficha de comercio: acciones visibles y modo oscuro completo */
+.modalFichaComercio .fichaAcciones{display:grid!important;visibility:visible!important;min-height:44px;}
+.modalFichaComercio .fichaAcciones .fichaBoton{display:flex!important;visibility:visible!important;align-items:center;border:1px solid #d1d5db;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:#111827;color:#f3f4f6;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo strong,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos strong{color:#f9fafb;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaCerrar{background:#374151;color:#f9fafb;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:#374151;color:#f9fafb;border-color:#4b5563;}
+@media (prefers-color-scheme: dark){
+ html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:#111827;color:#f3f4f6;}
+ html[data-tema="sistema"] .modalFichaComercio .fichaUltimo strong,html[data-tema="sistema"] .modalFichaComercio .fichaProductos strong{color:#f9fafb;}
+ html[data-tema="sistema"] .modalFichaComercio .fichaCerrar{background:#374151;color:#f9fafb;}
+ html[data-tema="sistema"] .modalFichaComercio .fichaBoton.secundario{background:#374151;color:#f9fafb;border-color:#4b5563;}
+}
