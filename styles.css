@@ -2852,3 +2852,9 @@ html[data-tema="oscuro"] #pantallaPedido .fila{border-color:#374151;}
 #pantallaComercios .badge{padding:4px 7px;border-radius:999px;font-size:10px;}
 #pantallaComercios .pedidoComercioBtn,#pantallaComercios .marcarVisitaBtn,#pantallaComercios .marcarPendienteBtn{min-height:36px;}
 html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937;border-color:#374151;}
+
+/* Comercios: la tarjeta abre la ficha; las acciones quedan dentro */
+#pantallaComercios .comercioCard{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;}
+#pantallaComercios .comercioCard:active{transform:scale(.99);}
+#pantallaComercios .accionesComercio{cursor:default;}
+#pantallaComercios .accionesComercio button{font-size:10px;min-height:34px;padding:5px 8px;}

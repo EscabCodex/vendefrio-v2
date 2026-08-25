@@ -269,6 +269,8 @@ function renderizarComercios() {
         card.tabIndex = 0;
         card.setAttribute("role", "button");
         card.setAttribute("aria-label", "Abrir ficha de " + comercio.nombre);
+        card.addEventListener("click", () => mostrarComercioIndividual(comercio.nombre));
+        card.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); mostrarComercioIndividual(comercio.nombre); } });
 
         const cabecera = document.createElement("div");
         cabecera.className = "cabeceraCard";
@@ -334,6 +336,7 @@ function renderizarComercios() {
 
         const acciones = document.createElement("div");
         acciones.className = "accionesComercio";
+        acciones.addEventListener("click", event => event.stopPropagation());
         acciones.append(
             crearBotonComercio(
                 "agregar pedidoComercioBtn",
