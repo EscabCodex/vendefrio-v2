@@ -206,10 +206,16 @@ function marcarPendienteManual(nombre) {
     );
 }
 
+function contarPedidosDelComercio(nombre, historial) {
+    const buscado = normalizarTexto(nombre);
+    return historial.filter(pedido => normalizarTexto(pedido.comercio || pedido.cliente) === buscado).length;
+}
+
 function renderizarComercios() {
     if (!listaComerciosAdmin) return;
 
     const todosLosComercios = obtenerComercios();
+    const historialComercios = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
     actualizarResumenComercios(todosLosComercios);
 
     const texto = buscarComercio ? buscarComercio.value : "";
@@ -290,7 +296,7 @@ function renderizarComercios() {
         pedidos.className = "datoComercio";
         pedidos.textContent =
             "\ud83d\udce6 " +
-            (comercio.pedidosRealizados || 0) +
+            contarPedidosDelComercio(comercio.nombre, historialComercios) +
             " pedidos";
 
         const ultimaVisita = document.createElement("span");
