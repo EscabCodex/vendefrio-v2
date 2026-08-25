@@ -109,7 +109,7 @@
             listaProductos.appendChild(vacio);
         }
 
-        const botonEstado = visitadoEstaSemana
+        const botonEstado = datos.visitadoEstaSemana
             ? crearBoton("🔴 Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
             : crearBoton("✅ Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); });
         const botonEliminar = crearBoton("🗑️ Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); }); });
