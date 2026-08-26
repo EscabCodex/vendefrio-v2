@@ -2925,3 +2925,11 @@ html[data-tema="oscuro"] #pantallaHistorial .historialCard::after{border-color:v
 #pantallaHistorial .marcadorFechaHistorial::after{content:"";position:absolute;left:-18px;top:22px;bottom:-13px;width:2px;background:var(--vf-primary);opacity:.55;}
 #pantallaHistorial .historialCard{margin-left:17px!important;}
 #pantallaHistorial .historialCard::before,#pantallaHistorial .historialCard::after{display:none!important;}
+
+/* Línea continua del Historial hasta el siguiente punto */
+#contenedorHistorial{position:relative;margin-left:6px;}
+#contenedorHistorial::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:2px;background:var(--vf-primary);opacity:.55;pointer-events:none;}
+#pantallaHistorial .marcadorFechaHistorial{margin-left:24px;}
+#pantallaHistorial .marcadorFechaHistorial::after{display:none!important;}
+#pantallaHistorial .indicadorFechaHistorial{margin-left:-24px;}
+#pantallaHistorial .historialCard{margin-left:24px!important;}
