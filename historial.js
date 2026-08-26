@@ -898,7 +898,20 @@ function renderizarHistorial() {
         return;
     }
 
+    const gruposPorFecha = [];
     pedidos.forEach(registro => {
+        const fechaGrupo = String(registro.pedido.fecha || "Sin fecha");
+        let grupo = gruposPorFecha.find(item => item.fecha === fechaGrupo);
+        if (!grupo) { grupo = { fecha: fechaGrupo, pedidos: [] }; gruposPorFecha.push(grupo); }
+        grupo.pedidos.push(registro);
+    });
+
+    gruposPorFecha.forEach(grupo => {
+        const marcador = document.createElement("div"); marcador.className = "marcadorFechaHistorial";
+        marcador.innerHTML = `<span class="indicadorFechaHistorial"></span><strong></strong>`;
+        marcador.querySelector("strong").textContent = grupo.fecha;
+        contenedor.appendChild(marcador);
+        grupo.pedidos.forEach(registro => {
         const pedido = registro.pedido;
         const indice = registro.indice;
         const comercio = String(pedido.comercio || "SIN NOMBRE").trim();
@@ -956,6 +969,7 @@ function renderizarHistorial() {
         acciones.append(botonVer, botonEliminar);
         tarjeta.append(cabecera, acciones);
         contenedor.appendChild(tarjeta);
+        });
     });
 }
 
