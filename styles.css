@@ -2933,3 +2933,8 @@ html[data-tema="oscuro"] #pantallaHistorial .historialCard::after{border-color:v
 #pantallaHistorial .marcadorFechaHistorial::after{display:none!important;}
 #pantallaHistorial .indicadorFechaHistorial{margin-left:-24px;}
 #pantallaHistorial .historialCard{margin-left:24px!important;}
+
+/* Ajuste final de la línea de tiempo */
+#contenedorHistorial::after{content:"";position:absolute;left:-5px;bottom:12px;width:12px;height:12px;border:3px solid var(--vf-bg);border-radius:50%;background:var(--vf-primary);box-shadow:0 0 0 2px var(--vf-primary);pointer-events:none;}
+#pantallaHistorial .marcadorFechaHistorial{position:relative;}
+#pantallaHistorial .indicadorFechaHistorial{position:absolute;left:-29px;top:5px;margin:0!important;}
