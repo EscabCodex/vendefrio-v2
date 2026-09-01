@@ -2997,3 +2997,10 @@ html[data-tema="oscuro"] .selectorPeriodoEstadisticas,html[data-tema="oscuro"] .
 #contenidoEstadisticas .bloqueEstadisticaComercial,#contenidoEstadisticas .comparativaSemanalComercial,#contenidoEstadisticas .resumenMensualComercial,#contenidoEstadisticas .bloquePerfilesComerciales,#contenidoEstadisticas .bloqueSeguimientoSemanal,#contenidoEstadisticas .bloqueAlertasComerciales{padding:12px!important}
 #contenidoEstadisticas .bloqueEstadisticaComercial>*,#contenidoEstadisticas .comparativaSemanalComercial>*,#contenidoEstadisticas .resumenMensualComercial>*,#contenidoEstadisticas .bloquePerfilesComerciales>*,#contenidoEstadisticas .bloqueSeguimientoSemanal>*,#contenidoEstadisticas .bloqueAlertasComerciales>*{max-width:100%;box-sizing:border-box}
 @media(max-width:420px){#contenidoEstadisticas .columnasEstadisticaComercial{grid-template-columns:1fr}}
+
+/* Estadísticas en oscuro: todas las tarjetas comparten el verde profundo del encabezado */
+html[data-tema="oscuro"] #contenidoEstadisticas>section,
+html[data-tema="oscuro"] #contenidoEstadisticas .columnasEstadisticaComercial>*{background:#1c382d!important;border-color:#315644!important;color:#f0fdf4!important;}
+html[data-tema="oscuro"] #contenidoEstadisticas .statsBarTrack{background:#294d3d!important;}
+html[data-tema="oscuro"] #contenidoEstadisticas .statsCardBadge{background:#28513e!important;color:#bbf7d0!important;}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] #contenidoEstadisticas>section,html[data-tema="sistema"] #contenidoEstadisticas .columnasEstadisticaComercial>*{background:#1c382d!important;border-color:#315644!important;color:#f0fdf4!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsBarTrack{background:#294d3d!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsCardBadge{background:#28513e!important;color:#bbf7d0!important;}}
