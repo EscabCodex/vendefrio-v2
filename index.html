@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="claro">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -497,6 +497,14 @@
       navigator.serviceWorker.register("sw.js");
     });
   }
+</script>
+
+  <script>
+  // Cargar tema guardado
+  (function() {
+    const temaGuardado = localStorage.getItem("vendefrio_tema") || "claro";
+    document.documentElement.setAttribute("data-tema", temaGuardado);
+  })();
 </script>
 
 </body>
