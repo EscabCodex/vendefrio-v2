@@ -1,59 +1,263 @@
-/* VendeFrío 2.0 — sistema visual base */
-:root{--vf-primary:#0f9d63;--vf-primary-strong:#087a4d;--vf-action:#2563eb;--vf-warning:#f59e0b;--vf-danger:#dc2626;--vf-bg:#f4f7f6;--vf-surface:#fff;--vf-soft:#f7faf8;--vf-text:#17221d;--vf-muted:#6b7a72;--vf-border:#dce7e1;--vf-radius:14px;--vf-shadow:0 4px 16px rgba(15,45,31,.08);--vf-fast:180ms}
-html[data-tema="oscuro"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.24)}
-@media(prefers-color-scheme:dark){html[data-tema="sistema"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.24)}}
-body{background:var(--vf-bg);color:var(--vf-text)}
-.card,.comercioCard,.historialCard,.itemCatalogo,.marca,.fichaDatos,.fichaUltimo,.fichaProductos,.fichaFrecuencia{border-color:var(--vf-border);background:var(--vf-surface);color:var(--vf-text);box-shadow:var(--vf-shadow);border-radius:var(--vf-radius)}
-input,select,textarea{border-color:var(--vf-border);background:var(--vf-surface);color:var(--vf-text)}
-button{font-family:inherit;transition:transform var(--vf-fast) ease,filter var(--vf-fast) ease,background var(--vf-fast) ease}button:active{transform:scale(.97)}
-/* Inicio más limpio */
-#pantallaMenu>header{padding:16px 15px 14px!important;border-radius:0 0 18px 18px!important}
-#pantallaMenu .resumenDashboardGrid{gap:7px!important;margin-top:13px}
-#pantallaMenu .tarjetaDashboard{min-height:58px!important;padding:9px 8px!important;border-radius:12px!important;box-shadow:none!important}
-#pantallaMenu .tarjetaDashboard strong{font-size:21px!important}
-#pantallaMenu .totalesDashboard{gap:6px!important;margin-top:9px!important;font-size:10px!important}
-#pantallaMenu .container>h2{margin:11px 0 6px!important;font-size:11px!important;letter-spacing:.35px!important}
-#pantallaMenu #dashProximaParada,#pantallaMenu #dashUltimoPedido{margin-bottom:7px!important;padding:11px!important;border-radius:12px!important;box-shadow:var(--vf-shadow)!important}
-#pantallaMenu .container>div[style*="grid-template-columns"]{gap:7px!important}
-#pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{min-height:46px!important;padding:9px 6px!important;border-radius:10px!important;font-size:12px!important;box-shadow:none!important}
-/* Pedido: filas y acciones táctiles */
-#pantallaPedido .resumenPedido{border-color:#b7ead2;background:var(--vf-soft);color:var(--vf-primary-strong);border-radius:12px}
-#pantallaPedido .marca{box-shadow:none;border-radius:12px}
-#pantallaPedido .tituloMarca{min-height:44px;padding:10px 12px;font-size:13px}
-#pantallaPedido .fila{min-height:48px;padding:5px 3px;border-color:var(--vf-border)}
-#pantallaPedido .botonCantidad{width:32px;height:32px;min-width:32px;border-radius:9px}
-#pantallaPedido footer button{min-height:46px;border-radius:11px}
-/* Historial */
-#pantallaHistorial .historialCard{box-shadow:none;border-radius:12px}
-/* Animación corta y sobria */
-@keyframes vfEntrada{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-section:not(.oculto){animation:vfEntrada var(--vf-fast) ease both}
-/* Oscuro: superficies internas */
-html[data-tema="oscuro"] .fichaDatos,html[data-tema="oscuro"] .fichaUltimo,html[data-tema="oscuro"] .fichaProductos,html[data-tema="oscuro"] .fichaFrecuencia{background:var(--vf-soft)!important;color:var(--vf-text)}
-html[data-tema="oscuro"] .fichaUltimo strong,html[data-tema="oscuro"] .fichaProductos strong{color:var(--vf-text)}
-@media(prefers-color-scheme:dark){html[data-tema="sistema"] .fichaDatos,html[data-tema="sistema"] .fichaUltimo,html[data-tema="sistema"] .fichaProductos,html[data-tema="sistema"] .fichaFrecuencia{background:var(--vf-soft)!important;color:var(--vf-text)}}
+/* =====================================================
+   VendeFrío — Rework Visual v3 (Entrega 1)
+   Estilo: Profesional + Energético
+   Soporte: Modo Claro + Modo Oscuro desde el inicio
+   ===================================================== */
 
-/* Estadísticas visuales */
-.informeEstadisticas{display:grid;gap:10px}.statsHero,.statsKpi,.statsChartCard,.statsListCard{border:1px solid var(--vf-border);border-radius:14px;background:var(--vf-surface);box-shadow:var(--vf-shadow)}
-.statsHero{display:flex;justify-content:space-between;align-items:center;padding:14px}.statsHero small,.statsKpi small{display:block;color:var(--vf-muted);font-size:10px;font-weight:800;letter-spacing:.5px}.statsHero strong{display:block;margin-top:4px;color:var(--vf-primary);font-size:31px;line-height:1}.statsHero p,.statsHeroKpi span,.statsKpi span{margin:3px 0 0;color:var(--vf-muted);font-size:11px}.statsHeroKpi{text-align:right}.statsHeroKpi strong{font-size:21px}
-.statsKpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.statsKpi{padding:10px 8px}.statsKpi strong{display:block;margin-top:5px;font-size:20px;color:var(--vf-text)}
-.statsChartCard,.statsListCard{padding:11px}.statsCardHead{display:flex;justify-content:space-between;align-items:center;gap:8px}.statsCardHead h2{margin:0;font-size:14px;color:var(--vf-text)}.statsCardHead p{margin:3px 0 0;color:var(--vf-muted);font-size:11px}.statsCardBadge{padding:4px 7px;border-radius:99px;background:var(--vf-soft);color:var(--vf-primary);font-size:10px;font-weight:800}.statsLineChart{display:block;width:100%;height:175px;margin-top:7px;overflow:visible}.statsLineChart .grid{stroke:var(--vf-border);stroke-width:1}.statsLineChart .area{fill:rgba(15,157,99,.16);stroke:none}.statsLineChart .line{fill:none;stroke:var(--vf-primary);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.statsLineChart .dot{fill:var(--vf-surface);stroke:var(--vf-primary);stroke-width:3}.statsLineChart text{fill:var(--vf-muted);font-size:10px}
-.statsBarList{display:grid;gap:9px;margin-top:10px}.statsBarTop{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--vf-text)}.statsBarTop span{overflow-wrap:anywhere}.statsBarTop strong{color:var(--vf-primary);white-space:nowrap}.statsBarTrack{height:7px;margin-top:4px;overflow:hidden;border-radius:99px;background:var(--vf-soft)}.statsBarFill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--vf-primary),#36c98b)}.statsEmpty{padding:12px 0;color:var(--vf-muted);font-size:12px}
-/* Historial: la tarjeta no se corta al desplazarla */
-#pantallaHistorial .historialCard{width:calc(100% - 24px)!important;box-sizing:border-box}
-@media(max-width:380px){.statsKpi strong{font-size:17px}.statsHero{padding:11px}}
+:root {
+  /* Colores principales */
+  --vf-primary: #0f9d63;
+  --vf-primary-strong: #0b7a4d;
+  --vf-primary-soft: #e6f7ef;
+  --vf-primary-glow: rgba(15, 157, 99, 0.18);
 
-/* Estadísticas: misma estética en toda la pantalla */
-#pantallaEstadisticas>.container{padding-top:8px}.selectorPeriodoEstadisticas{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 2px;padding:4px;border:1px solid var(--vf-border);border-radius:12px;background:var(--vf-surface)}.selectorPeriodoEstadisticas button{min-height:35px;padding:5px 3px;border:0;border-radius:9px;background:transparent;color:var(--vf-muted);font-size:11px;font-weight:800}.selectorPeriodoEstadisticas button.activo{background:var(--vf-primary);color:#fff;box-shadow:0 2px 7px rgba(15,157,99,.22)}
-.estadisticaResumen{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.estadisticaResumen>div{padding:10px 8px;border:1px solid var(--vf-border);border-radius:12px;background:var(--vf-surface);box-shadow:var(--vf-shadow)}.estadisticaResumen small{display:block;color:var(--vf-muted);font-size:10px;font-weight:800}.estadisticaResumen strong{display:block;margin-top:4px;color:var(--vf-primary);font-size:21px}
-.panelInteligenciaComercial,.bloqueEstadisticaComercial,.comparativaSemanalComercial,.resumenMensualComercial,.bloquePerfilesComerciales,.bloqueSeguimientoSemanal,.bloqueAlertasComerciales{border:1px solid var(--vf-border)!important;border-radius:14px!important;background:var(--vf-surface)!important;color:var(--vf-text)!important;box-shadow:var(--vf-shadow)!important}.panelInteligenciaComercial h2,.bloqueEstadisticaComercial h2,.comparativaSemanalComercial h2,.resumenMensualComercial h2,.bloquePerfilesComerciales h2,.bloqueSeguimientoSemanal h2,.bloqueAlertasComerciales h2{color:var(--vf-text)!important}.panelInteligenciaComercial p,.bloqueEstadisticaComercial p,.comparativaSemanalComercial p,.resumenMensualComercial p,.bloquePerfilesComerciales p,.bloqueSeguimientoSemanal p,.bloqueAlertasComerciales p{color:var(--vf-muted)!important}.filaComparativaSemanal,.filaResumenMensual,.filaPerfilComercial,.filaSeguimientoSemanal,.filaAlertaComercial{border-color:var(--vf-border)!important;background:var(--vf-soft)!important;color:var(--vf-text)!important;border-radius:10px}.bloqueAlertasComerciales{border-left-color:var(--vf-warning)!important}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas,html[data-tema="oscuro"] .estadisticaResumen>div{background:var(--vf-surface)}
+  /* Acentos energéticos */
+  --vf-blue: #2563eb;
+  --vf-violet: #7c3aed;
+  --vf-orange: #ea580c;
+  --vf-amber: #f59e0b;
+  --vf-cyan: #0891b2;
+  --vf-danger: #dc2626;
 
-/* Unificación final: todos los bloques de Estadísticas comparten superficie */
-#contenidoEstadisticas>section{box-sizing:border-box;width:100%;margin:0!important;padding:12px!important;border:1px solid var(--vf-border)!important;border-radius:14px!important;background:var(--vf-surface)!important;color:var(--vf-text)!important;box-shadow:var(--vf-shadow)!important}
-#contenidoEstadisticas>section+section{margin-top:10px!important}
-#contenidoEstadisticas>section h2,#contenidoEstadisticas>section h3{margin:0 0 5px!important;color:var(--vf-text)!important;font-size:14px!important}#contenidoEstadisticas>section p{color:var(--vf-muted)!important;font-size:11px!important}
-#contenidoEstadisticas .columnasEstadisticaComercial{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}#contenidoEstadisticas .columnasEstadisticaComercial>*{margin:0!important;padding:10px!important;border:1px solid var(--vf-border)!important;border-radius:11px!important;background:var(--vf-soft)!important;color:var(--vf-text)!important}
-#contenidoEstadisticas .bloqueEstadisticaComercial,#contenidoEstadisticas .comparativaSemanalComercial,#contenidoEstadisticas .resumenMensualComercial,#contenidoEstadisticas .bloquePerfilesComerciales,#contenidoEstadisticas .bloqueSeguimientoSemanal,#contenidoEstadisticas .bloqueAlertasComerciales{padding:12px!important}
-#contenidoEstadisticas .bloqueEstadisticaComercial>*,#contenidoEstadisticas .comparativaSemanalComercial>*,#contenidoEstadisticas .resumenMensualComercial>*,#contenidoEstadisticas .bloquePerfilesComerciales>*,#contenidoEstadisticas .bloqueSeguimientoSemanal>*,#contenidoEstadisticas .bloqueAlertasComerciales>*{max-width:100%;box-sizing:border-box}
-@media(max-width:420px){#contenidoEstadisticas .columnasEstadisticaComercial{grid-template-columns:1fr}}
+  /* Superficies y textos (Claro) */
+  --vf-bg: #f0f4f2;
+  --vf-surface: #ffffff;
+  --vf-soft: #f7faf8;
+  --vf-text: #15201b;
+  --vf-muted: #5f6f67;
+  --vf-border: #d5e3dc;
+
+  /* Otros */
+  --vf-radius: 16px;
+  --vf-radius-sm: 12px;
+  --vf-shadow: 0 4px 18px rgba(15, 45, 31, 0.08);
+  --vf-shadow-strong: 0 8px 28px rgba(15, 45, 31, 0.12);
+  --vf-fast: 180ms;
+}
+
+/* ========== MODO OSCURO ========== */
+html[data-tema="oscuro"] {
+  --vf-bg: #0f1412;
+  --vf-surface: #1a221e;
+  --vf-soft: #232e29;
+  --vf-text: #eef7f2;
+  --vf-muted: #a8b8b0;
+  --vf-border: #2f4038;
+  --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --vf-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --vf-primary-soft: rgba(15, 157, 99, 0.15);
+  --vf-primary-glow: rgba(15, 157, 99, 0.25);
+}
+
+/* Respeta el sistema del celular si se elige "sistema" */
+@media (prefers-color-scheme: dark) {
+  html[data-tema="sistema"] {
+    --vf-bg: #0f1412;
+    --vf-surface: #1a221e;
+    --vf-soft: #232e29;
+    --vf-text: #eef7f2;
+    --vf-muted: #a8b8b0;
+    --vf-border: #2f4038;
+    --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --vf-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.45);
+    --vf-primary-soft: rgba(15, 157, 99, 0.15);
+    --vf-primary-glow: rgba(15, 157, 99, 0.25);
+  }
+}
+
+/* ========== BASE ========== */
+body {
+  background: var(--vf-bg);
+  color: var(--vf-text);
+  transition: background var(--vf-fast) ease, color var(--vf-fast) ease;
+}
+
+.card,
+.comercioCard,
+.historialCard,
+.itemCatalogo,
+.marca,
+.fichaDatos,
+.fichaUltimo,
+.fichaProductos,
+.fichaFrecuencia {
+  background: var(--vf-surface);
+  color: var(--vf-text);
+  border: 1px solid var(--vf-border);
+  border-radius: var(--vf-radius);
+  box-shadow: var(--vf-shadow);
+}
+
+input,
+select,
+textarea {
+  background: var(--vf-soft);
+  color: var(--vf-text);
+  border: 1px solid var(--vf-border);
+  border-radius: var(--vf-radius-sm);
+}
+
+button {
+  font-family: inherit;
+  transition: transform var(--vf-fast) ease, filter var(--vf-fast) ease, background var(--vf-fast) ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* ========== DASHBOARD ========== */
+#pantallaMenu > header {
+  background: linear-gradient(135deg, var(--vf-primary), var(--vf-primary-strong)) !important;
+  border-radius: 0 0 22px 22px !important;
+  padding: 18px 16px 16px !important;
+}
+
+#pantallaMenu .resumenDashboardGrid {
+  gap: 8px !important;
+  margin-top: 14px;
+}
+
+#pantallaMenu .tarjetaDashboard {
+  background: var(--vf-surface) !important;
+  border: 1px solid var(--vf-border);
+  border-radius: 14px !important;
+  min-height: 64px;
+  padding: 12px 10px !important;
+  box-shadow: var(--vf-shadow) !important;
+}
+
+#pantallaMenu .tarjetaDashboard strong {
+  font-size: 22px !important;
+  font-weight: 800;
+}
+
+/* Toques energéticos en las métricas */
+#pantallaMenu .tarjetaDashboardVerde strong { color: var(--vf-primary); }
+#pantallaMenu .tarjetaDashboardAzul strong { color: var(--vf-blue); }
+#pantallaMenu .tarjetaDashboardVioleta strong { color: var(--vf-violet); }
+#pantallaMenu .tarjetaDashboardNaranja strong { color: var(--vf-orange); }
+
+#pantallaMenu .totalesDashboard {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+#pantallaMenu .container > h2 {
+  margin: 18px 0 8px !important;
+  font-size: 12px !important;
+  letter-spacing: 0.4px;
+  color: var(--vf-muted) !important;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+/* Cards importantes con borde lateral energético */
+#pantallaMenu #dashProximaParada {
+  border-left: 5px solid var(--vf-primary) !important;
+  box-shadow: var(--vf-shadow-strong) !important;
+}
+
+#pantallaMenu #dashUltimoPedido {
+  border-left: 5px solid var(--vf-violet) !important;
+}
+
+/* Accesos rápidos más vivos */
+#pantallaMenu .menuBtn {
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  box-shadow: var(--vf-shadow) !important;
+  min-height: 52px;
+}
+
+/* ========== PEDIDO ========== */
+#pantallaPedido .resumenPedido {
+  background: var(--vf-primary-soft);
+  border: 1px solid rgba(15, 157, 99, 0.25);
+  border-radius: 14px;
+  color: var(--vf-primary-strong);
+}
+
+#pantallaPedido .marca {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--vf-shadow);
+}
+
+#pantallaPedido .tituloMarca {
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+#pantallaPedido .fila {
+  min-height: 52px;
+  border-color: var(--vf-border);
+}
+
+#pantallaPedido footer button {
+  min-height: 50px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+/* ========== COMERCIOS / HISTORIAL ========== */
+.resumenComercios {
+  background: var(--vf-primary-soft);
+  color: var(--vf-primary-strong);
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.resumenHistorial {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--vf-violet);
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.resumenRuta {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--vf-blue);
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* ========== NAVEGACIÓN INFERIOR ========== */
+.bottom-nav {
+  background: var(--vf-surface);
+  border-top: 1px solid var(--vf-border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.nav-item.activo {
+  color: var(--vf-primary);
+}
+
+/* ========== ANIMACIÓN SUAVE ========== */
+@keyframes vfEntrada {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+section:not(.oculto) {
+  animation: vfEntrada var(--vf-fast) ease both;
+}
+
+/* ========== AJUSTES OSCURO ESPECÍFICOS ========== */
+html[data-tema="oscuro"] .tarjetaDashboard,
+html[data-tema="oscuro"] .card {
+  background: var(--vf-surface);
+  border-color: var(--vf-border);
+}
+
+html[data-tema="oscuro"] #pantallaMenu .totalesDashboard {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-tema="oscuro"] .resumenPedido {
+  background: var(--vf-primary-soft);
+  color: #6ee7b7;
+}
