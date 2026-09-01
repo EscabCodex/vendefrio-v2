@@ -3036,3 +3036,13 @@ html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .fil
 #pantallaRutas .encabezadoRuta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
 #pantallaRutas .encabezadoRuta h3{font-size:13px;color:var(--vf-text)}
 @media(max-width:380px){#pantallaRutas .paradaRuta .btnAccion{font-size:9px;padding:4px 6px}}
+
+/* Configuración: grupos de ajustes limpios */
+#pantallaConfiguracion>.container{padding-top:8px}
+#pantallaConfiguracion .configBuscador{min-height:42px;margin-bottom:9px}
+#pantallaConfiguracion .configMenuPrincipal{display:grid;gap:6px}
+#pantallaConfiguracion .configFila{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:8px;min-height:56px;padding:9px 10px;border:1px solid var(--vf-border);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);text-align:left;box-shadow:none}
+#pantallaConfiguracion .configIcono{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--vf-soft);font-size:17px}
+#pantallaConfiguracion .configFila strong{display:block;font-size:13px}#pantallaConfiguracion .configFila small{display:block;margin-top:2px;color:var(--vf-muted);font-size:10px;overflow-wrap:anywhere}#pantallaConfiguracion .configFila b{color:var(--vf-muted);font-size:22px;font-weight:400;text-align:right}
+#pantallaConfiguracion .configDetalle{display:grid;gap:9px}#pantallaConfiguracion .configDetalle label{display:grid;gap:5px;padding:9px 0;color:var(--vf-text);font-size:12px;font-weight:700}#pantallaConfiguracion .configDetalle select,#pantallaConfiguracion .configDetalle button{min-height:42px}
+html[data-tema="oscuro"] #pantallaConfiguracion .configFila{background:var(--vf-surface);border-color:var(--vf-border)}
