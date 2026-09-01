@@ -3004,3 +3004,10 @@ html[data-tema="oscuro"] #contenidoEstadisticas .columnasEstadisticaComercial>*{
 html[data-tema="oscuro"] #contenidoEstadisticas .statsBarTrack{background:#294d3d!important;}
 html[data-tema="oscuro"] #contenidoEstadisticas .statsCardBadge{background:#28513e!important;color:#bbf7d0!important;}
 @media(prefers-color-scheme:dark){html[data-tema="sistema"] #contenidoEstadisticas>section,html[data-tema="sistema"] #contenidoEstadisticas .columnasEstadisticaComercial>*{background:#1c382d!important;border-color:#315644!important;color:#f0fdf4!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsBarTrack{background:#294d3d!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsCardBadge{background:#28513e!important;color:#bbf7d0!important;}}
+
+/* Reversión: restaurar colores anteriores de Estadísticas */
+html[data-tema="oscuro"] #contenidoEstadisticas>section{background:var(--vf-surface)!important;border-color:var(--vf-border)!important;color:var(--vf-text)!important;}
+html[data-tema="oscuro"] #contenidoEstadisticas .columnasEstadisticaComercial>*{background:var(--vf-soft)!important;border-color:var(--vf-border)!important;color:var(--vf-text)!important;}
+html[data-tema="oscuro"] #contenidoEstadisticas .statsBarTrack{background:var(--vf-soft)!important;}
+html[data-tema="oscuro"] #contenidoEstadisticas .statsCardBadge{background:var(--vf-soft)!important;color:var(--vf-primary)!important;}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] #contenidoEstadisticas>section{background:var(--vf-surface)!important;border-color:var(--vf-border)!important;color:var(--vf-text)!important;}html[data-tema="sistema"] #contenidoEstadisticas .columnasEstadisticaComercial>*{background:var(--vf-soft)!important;border-color:var(--vf-border)!important;color:var(--vf-text)!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsBarTrack{background:var(--vf-soft)!important;}html[data-tema="sistema"] #contenidoEstadisticas .statsCardBadge{background:var(--vf-soft)!important;color:var(--vf-primary)!important;}}
