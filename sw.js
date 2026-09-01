@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFr\u00edo - Service Worker (v123)
+// VendeFrío - Service Worker (v124 - Rework Visual)
 // =====================================================
-const CACHE_NAME = "vendefrio-v123";
+const CACHE_NAME = "vendefrio-v124";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -76,7 +76,6 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (!esSolicitudGETMismaApp(event.request)) return;
 
-  // Network First: busca actualizaciones antes de usar el cache.
-  // Si no hay internet, conserva la posibilidad de trabajar offline.
+  // Network First
   event.respondWith(respuestaDesdeRedOCache(event.request));
 });
