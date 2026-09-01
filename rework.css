@@ -1,17 +1,15 @@
 /* =====================================================
-   VendeFrío — Rework Visual v3 (Entrega 1)
-   Estilo: Profesional + Energético
-   Soporte: Modo Claro + Modo Oscuro desde el inicio
+   VendeFrío — Rework Visual v3.1 (Entrega 2)
+   Estilo: Profesional + Energético (más visible)
+   Compatible con el selector de tema existente
    ===================================================== */
 
 :root {
-  /* Colores principales */
   --vf-primary: #0f9d63;
   --vf-primary-strong: #0b7a4d;
   --vf-primary-soft: #e6f7ef;
-  --vf-primary-glow: rgba(15, 157, 99, 0.18);
+  --vf-primary-glow: rgba(15, 157, 99, 0.20);
 
-  /* Acentos energéticos */
   --vf-blue: #2563eb;
   --vf-violet: #7c3aed;
   --vf-orange: #ea580c;
@@ -19,245 +17,280 @@
   --vf-cyan: #0891b2;
   --vf-danger: #dc2626;
 
-  /* Superficies y textos (Claro) */
-  --vf-bg: #f0f4f2;
+  --vf-bg: #eef3f0;
   --vf-surface: #ffffff;
-  --vf-soft: #f7faf8;
+  --vf-soft: #f6faf8;
   --vf-text: #15201b;
-  --vf-muted: #5f6f67;
-  --vf-border: #d5e3dc;
+  --vf-muted: #5c6b64;
+  --vf-border: #d0dfd7;
 
-  /* Otros */
   --vf-radius: 16px;
   --vf-radius-sm: 12px;
-  --vf-shadow: 0 4px 18px rgba(15, 45, 31, 0.08);
-  --vf-shadow-strong: 0 8px 28px rgba(15, 45, 31, 0.12);
+  --vf-shadow: 0 4px 16px rgba(15, 45, 31, 0.09);
+  --vf-shadow-strong: 0 8px 28px rgba(15, 45, 31, 0.14);
   --vf-fast: 180ms;
 }
 
-/* ========== MODO OSCURO ========== */
+/* ===== Modo Oscuro (respeta data-tema del sistema actual) ===== */
 html[data-tema="oscuro"] {
-  --vf-bg: #0f1412;
+  --vf-bg: #0e1311;
   --vf-surface: #1a221e;
   --vf-soft: #232e29;
   --vf-text: #eef7f2;
-  --vf-muted: #a8b8b0;
-  --vf-border: #2f4038;
-  --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  --vf-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --vf-primary-soft: rgba(15, 157, 99, 0.15);
-  --vf-primary-glow: rgba(15, 157, 99, 0.25);
+  --vf-muted: #a3b5ac;
+  --vf-border: #2c3c34;
+  --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.38);
+  --vf-shadow-strong: 0 10px 32px rgba(0, 0, 0, 0.50);
+  --vf-primary-soft: rgba(15, 157, 99, 0.18);
+  --vf-primary-glow: rgba(15, 157, 99, 0.28);
 }
 
-/* Respeta el sistema del celular si se elige "sistema" */
 @media (prefers-color-scheme: dark) {
   html[data-tema="sistema"] {
-    --vf-bg: #0f1412;
+    --vf-bg: #0e1311;
     --vf-surface: #1a221e;
     --vf-soft: #232e29;
     --vf-text: #eef7f2;
-    --vf-muted: #a8b8b0;
-    --vf-border: #2f4038;
-    --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-    --vf-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.45);
-    --vf-primary-soft: rgba(15, 157, 99, 0.15);
-    --vf-primary-glow: rgba(15, 157, 99, 0.25);
+    --vf-muted: #a3b5ac;
+    --vf-border: #2c3c34;
+    --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.38);
+    --vf-shadow-strong: 0 10px 32px rgba(0, 0, 0, 0.50);
+    --vf-primary-soft: rgba(15, 157, 99, 0.18);
+    --vf-primary-glow: rgba(15, 157, 99, 0.28);
   }
 }
 
-/* ========== BASE ========== */
+/* ===== Base ===== */
 body {
-  background: var(--vf-bg);
+  background: var(--vf-bg) !important;
   color: var(--vf-text);
-  transition: background var(--vf-fast) ease, color var(--vf-fast) ease;
 }
 
 .card,
 .comercioCard,
 .historialCard,
-.itemCatalogo,
 .marca,
 .fichaDatos,
 .fichaUltimo,
 .fichaProductos,
 .fichaFrecuencia {
-  background: var(--vf-surface);
-  color: var(--vf-text);
-  border: 1px solid var(--vf-border);
-  border-radius: var(--vf-radius);
-  box-shadow: var(--vf-shadow);
+  background: var(--vf-surface) !important;
+  color: var(--vf-text) !important;
+  border: 1px solid var(--vf-border) !important;
+  border-radius: var(--vf-radius) !important;
+  box-shadow: var(--vf-shadow) !important;
 }
 
-input,
-select,
-textarea {
-  background: var(--vf-soft);
-  color: var(--vf-text);
-  border: 1px solid var(--vf-border);
-  border-radius: var(--vf-radius-sm);
+input, select, textarea {
+  background: var(--vf-soft) !important;
+  color: var(--vf-text) !important;
+  border: 1px solid var(--vf-border) !important;
+  border-radius: var(--vf-radius-sm) !important;
 }
 
-button {
-  font-family: inherit;
-  transition: transform var(--vf-fast) ease, filter var(--vf-fast) ease, background var(--vf-fast) ease;
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-/* ========== DASHBOARD ========== */
+/* ===== DASHBOARD – cambios más visibles ===== */
 #pantallaMenu > header {
   background: linear-gradient(135deg, var(--vf-primary), var(--vf-primary-strong)) !important;
-  border-radius: 0 0 22px 22px !important;
-  padding: 18px 16px 16px !important;
+  border-radius: 0 0 24px 24px !important;
+  padding: 18px 16px 18px !important;
+  box-shadow: 0 6px 20px rgba(11, 122, 77, 0.35) !important;
 }
 
 #pantallaMenu .resumenDashboardGrid {
-  gap: 8px !important;
-  margin-top: 14px;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
 }
 
 #pantallaMenu .tarjetaDashboard {
   background: var(--vf-surface) !important;
-  border: 1px solid var(--vf-border);
+  border: 1px solid var(--vf-border) !important;
   border-radius: 14px !important;
-  min-height: 64px;
-  padding: 12px 10px !important;
+  padding: 13px 12px !important;
+  min-height: 72px !important;
   box-shadow: var(--vf-shadow) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Barra de color energética a la izquierda de cada métrica */
+#pantallaMenu .tarjetaDashboard::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  border-radius: 14px 0 0 14px;
+}
+
+#pantallaMenu .tarjetaDashboardVerde::before { background: var(--vf-primary); }
+#pantallaMenu .tarjetaDashboardAzul::before { background: var(--vf-blue); }
+#pantallaMenu .tarjetaDashboardVioleta::before { background: var(--vf-violet); }
+#pantallaMenu .tarjetaDashboardNaranja::before { background: var(--vf-orange); }
+
+#pantallaMenu .tarjetaDashboard div {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  color: var(--vf-muted) !important;
+  letter-spacing: 0.3px;
 }
 
 #pantallaMenu .tarjetaDashboard strong {
-  font-size: 22px !important;
-  font-weight: 800;
+  display: block;
+  margin-top: 4px;
+  font-size: 24px !important;
+  font-weight: 800 !important;
 }
 
-/* Toques energéticos en las métricas */
-#pantallaMenu .tarjetaDashboardVerde strong { color: var(--vf-primary); }
-#pantallaMenu .tarjetaDashboardAzul strong { color: var(--vf-blue); }
-#pantallaMenu .tarjetaDashboardVioleta strong { color: var(--vf-violet); }
-#pantallaMenu .tarjetaDashboardNaranja strong { color: var(--vf-orange); }
+#pantallaMenu .tarjetaDashboardVerde strong { color: var(--vf-primary) !important; }
+#pantallaMenu .tarjetaDashboardAzul strong { color: var(--vf-blue) !important; }
+#pantallaMenu .tarjetaDashboardVioleta strong { color: var(--vf-violet) !important; }
+#pantallaMenu .tarjetaDashboardNaranja strong { color: var(--vf-orange) !important; }
 
 #pantallaMenu .totalesDashboard {
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 12px;
-  font-size: 12px;
+  margin-top: 12px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+  font-size: 12px !important;
+  font-weight: 600;
 }
 
+#pantallaMenu .totalesDashboard strong {
+  color: #a7f3d0 !important;
+}
+
+/* Títulos de sección */
 #pantallaMenu .container > h2 {
-  margin: 18px 0 8px !important;
+  margin: 22px 0 10px !important;
   font-size: 12px !important;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px !important;
   color: var(--vf-muted) !important;
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: 800 !important;
 }
 
-/* Cards importantes con borde lateral energético */
+/* Próxima Parada – más protagonismo */
 #pantallaMenu #dashProximaParada {
-  border-left: 5px solid var(--vf-primary) !important;
+  border-left: 6px solid var(--vf-primary) !important;
   box-shadow: var(--vf-shadow-strong) !important;
+  padding: 16px !important;
+  background: var(--vf-surface) !important;
 }
 
+/* Último pedido */
 #pantallaMenu #dashUltimoPedido {
-  border-left: 5px solid var(--vf-violet) !important;
+  border-left: 6px solid var(--vf-violet) !important;
+  box-shadow: var(--vf-shadow) !important;
 }
 
 /* Accesos rápidos más vivos */
 #pantallaMenu .menuBtn {
   border-radius: 14px !important;
   font-weight: 700 !important;
+  min-height: 54px !important;
   box-shadow: var(--vf-shadow) !important;
-  min-height: 52px;
+  border-width: 1.5px !important;
 }
 
-/* ========== PEDIDO ========== */
+/* ===== PEDIDO ===== */
 #pantallaPedido .resumenPedido {
-  background: var(--vf-primary-soft);
-  border: 1px solid rgba(15, 157, 99, 0.25);
-  border-radius: 14px;
-  color: var(--vf-primary-strong);
+  background: var(--vf-primary-soft) !important;
+  border: 1px solid rgba(15, 157, 99, 0.28) !important;
+  border-radius: 14px !important;
+  color: var(--vf-primary-strong) !important;
+  font-weight: 600;
 }
 
 #pantallaPedido .marca {
-  border-radius: 14px;
+  border-radius: 14px !important;
   overflow: hidden;
-  box-shadow: var(--vf-shadow);
+  box-shadow: var(--vf-shadow) !important;
+  border: 1px solid var(--vf-border) !important;
 }
 
 #pantallaPedido .tituloMarca {
   min-height: 48px;
-  padding: 12px 14px;
-  font-size: 15px;
+  padding: 12px 14px !important;
+  font-size: 15px !important;
   font-weight: 700;
 }
 
 #pantallaPedido .fila {
   min-height: 52px;
-  border-color: var(--vf-border);
+  border-color: var(--vf-border) !important;
 }
 
 #pantallaPedido footer button {
-  min-height: 50px;
-  border-radius: 14px;
+  min-height: 52px !important;
+  border-radius: 14px !important;
   font-weight: 700;
 }
 
-/* ========== COMERCIOS / HISTORIAL ========== */
+/* ===== RESÚMENES DE OTRAS PANTALLAS ===== */
 .resumenComercios {
-  background: var(--vf-primary-soft);
-  color: var(--vf-primary-strong);
-  border-radius: 12px;
-  font-weight: 700;
+  background: var(--vf-primary-soft) !important;
+  color: var(--vf-primary-strong) !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
 }
 
 .resumenHistorial {
-  background: rgba(124, 58, 237, 0.12);
-  color: var(--vf-violet);
-  border-radius: 12px;
-  font-weight: 700;
+  background: rgba(124, 58, 237, 0.12) !important;
+  color: var(--vf-violet) !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
 }
 
 .resumenRuta {
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--vf-blue);
-  border-radius: 12px;
-  font-weight: 700;
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: var(--vf-blue) !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
 }
 
-/* ========== NAVEGACIÓN INFERIOR ========== */
+/* ===== NAVEGACIÓN INFERIOR ===== */
 .bottom-nav {
-  background: var(--vf-surface);
-  border-top: 1px solid var(--vf-border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  background: var(--vf-surface) !important;
+  border-top: 1px solid var(--vf-border) !important;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08) !important;
 }
 
 .nav-item.activo {
-  color: var(--vf-primary);
+  color: var(--vf-primary) !important;
+  font-weight: 700;
 }
 
-/* ========== ANIMACIÓN SUAVE ========== */
+/* ===== ANIMACIÓN ===== */
 @keyframes vfEntrada {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 section:not(.oculto) {
-  animation: vfEntrada var(--vf-fast) ease both;
+  animation: vfEntrada 200ms ease both;
 }
 
-/* ========== AJUSTES OSCURO ESPECÍFICOS ========== */
-html[data-tema="oscuro"] .tarjetaDashboard,
+/* ===== AJUSTES EXTRA MODO OSCURO ===== */
+html[data-tema="oscuro"] #pantallaMenu .tarjetaDashboard,
 html[data-tema="oscuro"] .card {
-  background: var(--vf-surface);
-  border-color: var(--vf-border);
+  background: var(--vf-surface) !important;
+  border-color: var(--vf-border) !important;
 }
 
 html[data-tema="oscuro"] #pantallaMenu .totalesDashboard {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-html[data-tema="oscuro"] .resumenPedido {
-  background: var(--vf-primary-soft);
-  color: #6ee7b7;
+html[data-tema="oscuro"] #pantallaPedido .resumenPedido {
+  background: var(--vf-primary-soft) !important;
+  color: #6ee7b7 !important;
+}
+
+html[data-tema="oscuro"] .bottom-nav {
+  background: var(--vf-surface) !important;
+  border-top-color: var(--vf-border) !important;
 }
