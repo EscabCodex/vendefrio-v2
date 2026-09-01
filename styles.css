@@ -3016,3 +3016,23 @@ html[data-tema="oscuro"] #contenidoEstadisticas .statsCardBadge{background:var(-
 html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial,html[data-tema="oscuro"] #contenidoEstadisticas .bloqueEstadisticaComercial,html[data-tema="oscuro"] #contenidoEstadisticas .comparativaSemanalComercial,html[data-tema="oscuro"] #contenidoEstadisticas .resumenMensualComercial,html[data-tema="oscuro"] #contenidoEstadisticas .bloquePerfilesComerciales,html[data-tema="oscuro"] #contenidoEstadisticas .bloqueSeguimientoSemanal,html[data-tema="oscuro"] #contenidoEstadisticas .bloqueAlertasComerciales{background:#1c382d!important;border-color:#315644!important;color:#f0fdf4!important;}
 html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .filaComparativaSemanal,html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .filaResumenMensual,html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .filaPerfilComercial,html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .filaSeguimientoSemanal,html[data-tema="oscuro"] #contenidoEstadisticas .panelInteligenciaComercial .filaAlertaComercial{background:#254b39!important;color:#f0fdf4!important;border-color:#39694f!important;}
 @media(prefers-color-scheme:dark){html[data-tema="sistema"] #contenidoEstadisticas .panelInteligenciaComercial,html[data-tema="sistema"] #contenidoEstadisticas .bloqueEstadisticaComercial,html[data-tema="sistema"] #contenidoEstadisticas .comparativaSemanalComercial,html[data-tema="sistema"] #contenidoEstadisticas .resumenMensualComercial,html[data-tema="sistema"] #contenidoEstadisticas .bloquePerfilesComerciales,html[data-tema="sistema"] #contenidoEstadisticas .bloqueSeguimientoSemanal,html[data-tema="sistema"] #contenidoEstadisticas .bloqueAlertasComerciales{background:#1c382d!important;border-color:#315644!important;color:#f0fdf4!important;}}
+
+/* Rutas: mapa protagonista y paradas compactas, sin tocar funciones */
+#pantallaRutas>.container{display:flex;flex-direction:column;gap:10px;padding-top:8px}
+#pantallaRutas>.container>.card{margin:0!important;padding:11px!important;border-radius:14px!important;box-shadow:var(--vf-shadow)!important}
+#pantallaRutas>.container>.card:nth-child(3){order:1}
+#pantallaRutas>.container>.tarjetaSeleccionRuta{order:2}
+#pantallaRutas>.container>.card:first-child{order:3}
+#pantallaRutas #mapaRuta{height:clamp(280px,45vh,430px)!important;border-radius:12px!important}
+#pantallaRutas .encabezadoTarjetaRuta{gap:9px;margin-bottom:8px}
+#pantallaRutas .encabezadoTarjetaRuta h2{font-size:14px}
+#pantallaRutas .encabezadoTarjetaRuta p{font-size:11px}
+#pantallaRutas .accionesSeleccionRuta{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+#pantallaRutas .accionesSeleccionRuta button{min-height:36px;padding:5px 4px;border-radius:8px;font-size:11px}
+#pantallaRutas .paradaRuta{display:flex;align-items:center;gap:8px;padding:9px 3px;border-bottom:1px solid var(--vf-border)}
+#pantallaRutas .paradaRuta strong{display:block;font-size:12px;color:var(--vf-text)}
+#pantallaRutas .paradaRuta span,#pantallaRutas .paradaRuta small{display:block;margin-top:2px;color:var(--vf-muted);font-size:11px;overflow-wrap:anywhere}
+#pantallaRutas .paradaRuta .btnAccion{margin-left:auto;min-height:34px;padding:5px 8px;border-radius:8px;font-size:10px;white-space:nowrap}
+#pantallaRutas .encabezadoRuta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+#pantallaRutas .encabezadoRuta h3{font-size:13px;color:var(--vf-text)}
+@media(max-width:380px){#pantallaRutas .paradaRuta .btnAccion{font-size:9px;padding:4px 6px}}
