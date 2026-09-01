@@ -1,0 +1,34 @@
+/* VendeFrío 2.0 — sistema visual base */
+:root{--vf-primary:#0f9d63;--vf-primary-strong:#087a4d;--vf-action:#2563eb;--vf-warning:#f59e0b;--vf-danger:#dc2626;--vf-bg:#f4f7f6;--vf-surface:#fff;--vf-soft:#f7faf8;--vf-text:#17221d;--vf-muted:#6b7a72;--vf-border:#dce7e1;--vf-radius:14px;--vf-shadow:0 4px 16px rgba(15,45,31,.08);--vf-fast:180ms}
+html[data-tema="oscuro"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.24)}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"]{--vf-bg:#111917;--vf-surface:#1a2521;--vf-soft:#202e29;--vf-text:#edf7f1;--vf-muted:#aec0b6;--vf-border:#33463d;--vf-shadow:0 4px 18px rgba(0,0,0,.24)}}
+body{background:var(--vf-bg);color:var(--vf-text)}
+.card,.comercioCard,.historialCard,.itemCatalogo,.marca,.fichaDatos,.fichaUltimo,.fichaProductos,.fichaFrecuencia{border-color:var(--vf-border);background:var(--vf-surface);color:var(--vf-text);box-shadow:var(--vf-shadow);border-radius:var(--vf-radius)}
+input,select,textarea{border-color:var(--vf-border);background:var(--vf-surface);color:var(--vf-text)}
+button{font-family:inherit;transition:transform var(--vf-fast) ease,filter var(--vf-fast) ease,background var(--vf-fast) ease}button:active{transform:scale(.97)}
+/* Inicio más limpio */
+#pantallaMenu>header{padding:16px 15px 14px!important;border-radius:0 0 18px 18px!important}
+#pantallaMenu .resumenDashboardGrid{gap:7px!important;margin-top:13px}
+#pantallaMenu .tarjetaDashboard{min-height:58px!important;padding:9px 8px!important;border-radius:12px!important;box-shadow:none!important}
+#pantallaMenu .tarjetaDashboard strong{font-size:21px!important}
+#pantallaMenu .totalesDashboard{gap:6px!important;margin-top:9px!important;font-size:10px!important}
+#pantallaMenu .container>h2{margin:11px 0 6px!important;font-size:11px!important;letter-spacing:.35px!important}
+#pantallaMenu #dashProximaParada,#pantallaMenu #dashUltimoPedido{margin-bottom:7px!important;padding:11px!important;border-radius:12px!important;box-shadow:var(--vf-shadow)!important}
+#pantallaMenu .container>div[style*="grid-template-columns"]{gap:7px!important}
+#pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{min-height:46px!important;padding:9px 6px!important;border-radius:10px!important;font-size:12px!important;box-shadow:none!important}
+/* Pedido: filas y acciones táctiles */
+#pantallaPedido .resumenPedido{border-color:#b7ead2;background:var(--vf-soft);color:var(--vf-primary-strong);border-radius:12px}
+#pantallaPedido .marca{box-shadow:none;border-radius:12px}
+#pantallaPedido .tituloMarca{min-height:44px;padding:10px 12px;font-size:13px}
+#pantallaPedido .fila{min-height:48px;padding:5px 3px;border-color:var(--vf-border)}
+#pantallaPedido .botonCantidad{width:32px;height:32px;min-width:32px;border-radius:9px}
+#pantallaPedido footer button{min-height:46px;border-radius:11px}
+/* Historial */
+#pantallaHistorial .historialCard{box-shadow:none;border-radius:12px}
+/* Animación corta y sobria */
+@keyframes vfEntrada{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+section:not(.oculto){animation:vfEntrada var(--vf-fast) ease both}
+/* Oscuro: superficies internas */
+html[data-tema="oscuro"] .fichaDatos,html[data-tema="oscuro"] .fichaUltimo,html[data-tema="oscuro"] .fichaProductos,html[data-tema="oscuro"] .fichaFrecuencia{background:var(--vf-soft)!important;color:var(--vf-text)}
+html[data-tema="oscuro"] .fichaUltimo strong,html[data-tema="oscuro"] .fichaProductos strong{color:var(--vf-text)}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] .fichaDatos,html[data-tema="sistema"] .fichaUltimo,html[data-tema="sistema"] .fichaProductos,html[data-tema="sistema"] .fichaFrecuencia{background:var(--vf-soft)!important;color:var(--vf-text)}}
