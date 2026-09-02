@@ -20,84 +20,100 @@
 <body>
 
 <section id="pantallaMenu">
-  <header style="background: linear-gradient(135deg, #0f9d63, #0b7a4d); color: white; padding: 22px 20px 24px 20px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <h1 style="font-size: 22px; font-weight: 800; margin: 0;">📱 VendeFrío</h1>
-      <span style="background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">Reparto Activo</span>
+  <header class="dashboardHeader">
+    <div class="dashboardHeaderTop">
+      <h1>VendeFrío</h1>
+      <span class="badgeActivo">Reparto Activo</span>
     </div>
 
     <div class="resumenDashboardGrid">
       <div class="tarjetaDashboard tarjetaDashboardVerde clickeableDashboard" data-dashboard-accion="pedidosHoy" role="button" tabindex="0" title="Abrir pedidos de hoy">
-        <div>Pedidos de hoy</div>
-        <strong id="dashPedidosHoy">0</strong>
+        <div class="tarjetaIcono">📦</div>
+        <div class="tarjetaInfo">
+          <span>Pedidos hoy</span>
+          <strong id="dashPedidosHoy">0</strong>
+        </div>
       </div>
 
       <div class="tarjetaDashboard tarjetaDashboardAzul clickeableDashboard" data-dashboard-accion="visitadosSemana" role="button" tabindex="0" title="Abrir comercios visitados esta semana">
-        <div>Visitados semana</div>
-        <strong id="dashVisitadosSemana">0</strong>
+        <div class="tarjetaIcono">📍</div>
+        <div class="tarjetaInfo">
+          <span>Visitados</span>
+          <strong id="dashVisitadosSemana">0</strong>
+        </div>
       </div>
 
       <div class="tarjetaDashboard tarjetaDashboardVioleta clickeableDashboard" data-dashboard-accion="pedidosSemana" role="button" tabindex="0" title="Abrir pedidos de esta semana">
-        <div>Pedidos semana</div>
-        <strong id="dashPedidosSemana">0</strong>
+        <div class="tarjetaIcono">📅</div>
+        <div class="tarjetaInfo">
+          <span>Pedidos semana</span>
+          <strong id="dashPedidosSemana">0</strong>
+        </div>
       </div>
 
       <div class="tarjetaDashboard tarjetaDashboardNaranja clickeableDashboard" data-dashboard-accion="pendientesSemana" role="button" tabindex="0" title="Abrir comercios pendientes esta semana">
-        <div>Pendientes semana</div>
-        <strong id="dashPendientesSemana">0</strong>
+        <div class="tarjetaIcono">⏰</div>
+        <div class="tarjetaInfo">
+          <span>Pendientes</span>
+          <strong id="dashPendientesSemana">0</strong>
+        </div>
       </div>
     </div>
 
     <div class="totalesDashboard">
-      <span>Comercios: <strong id="dashTotalComercios">0</strong></span>
-      <span>Marcas: <strong id="dashTotalMarcas">0</strong></span>
-      <span>Productos: <strong id="dashTotalProductos">0</strong></span>
-      <span>📍 GPS: <strong id="dashConGps">0</strong></span>
+      <div class="totalItem">
+        <span>Comercios</span>
+        <strong id="dashTotalComercios">0</strong>
+      </div>
+      <div class="totalItem">
+        <span>Marcas</span>
+        <strong id="dashTotalMarcas">0</strong>
+      </div>
+      <div class="totalItem">
+        <span>Productos</span>
+        <strong id="dashTotalProductos">0</strong>
+      </div>
+      <div class="totalItem">
+        <span>GPS</span>
+        <strong id="dashConGps">0</strong>
+      </div>
     </div>
   </header>
 
   <main class="container">
-    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 20px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">⚡ Próxima Parada Sugerida</h2>
+    <h2 class="seccionTitulo">⚡ Próxima Parada Sugerida</h2>
 
-    <div id="dashProximaParada" class="card" style="border-left: 5px solid #0f9d63; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-      <p style="color: #6b7280; font-size: 13px;">Buscando próximo comercio pendiente...</p>
+    <div id="dashProximaParada" class="card cardProximaParada">
+      <p>Buscando próximo comercio pendiente...</p>
     </div>
 
-    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 24px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">🧾 Último pedido</h2>
+    <h2 class="seccionTitulo">🧾 Último pedido</h2>
 
     <div id="dashUltimoPedido" class="card ultimoPedidoDashboard">
       <p>Buscando último pedido...</p>
     </div>
 
-    <h2 style="font-size: 13px; text-transform: uppercase; color: #6b7280; margin: 24px 0 10px 0; font-weight: 800; letter-spacing: 0.5px;">🛠️ Accesos Rápidos</h2>
+    <h2 class="seccionTitulo">🛠️ Accesos Rápidos</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-      <button class="menuBtn" onclick="mostrarPantalla('rutas')" style="margin: 0; font-size: 14px; padding: 16px; background: #eff6ff; color: #1e40af; border: 1px solid #3b82f6; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">🗺️ Rutas</button>
-      <button class="menuBtn" onclick="abrirEstadisticas()" style="margin: 0; font-size: 14px; padding: 16px; background: #f5f3ff; color: #5b21b6; border: 1px solid #8b5cf6; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">📊 Estadísticas</button>
-      <button class="menuBtn" onclick="mostrarPantalla('historial')" style="margin: 0; font-size: 14px; padding: 16px; background: #f3e8ff; color: #581c87; border: 1px solid #a855f7; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">🕒 Historial</button>
-      <button class="menuBtn" onclick="abrirConfiguracion()" style="margin: 0; font-size: 14px; padding: 16px; background: #f0fdf4; color: #166534; border: 1px solid #22c55e; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">⚙️ Configuración</button>
-      <button class="menuBtn" onclick="mostrarPantalla('productos')" style="margin: 0; font-size: 14px; padding: 16px; background: #fff7ed; color: #9a3412; border: 1px solid #f97316; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">🏷️ Productos y marcas</button>
+    <div class="accesosRapidosGrid">
+      <button class="menuBtn accesoRutas" onclick="mostrarPantalla('rutas')">🗺️ Rutas</button>
+      <button class="menuBtn accesoEstadisticas" onclick="abrirEstadisticas()">📊 Estadísticas</button>
+      <button class="menuBtn accesoHistorial" onclick="mostrarPantalla('historial')">🕒 Historial</button>
+      <button class="menuBtn accesoConfig" onclick="abrirConfiguracion()">⚙️ Configuración</button>
+      <button class="menuBtn accesoProductos" onclick="mostrarPantalla('productos')">🏷️ Productos</button>
     </div>
 
-    <section class="card" style="margin-top: 24px; border-left: 5px solid #8b5cf6;">
-      <h2 style="font-size: 15px; margin: 0 0 8px 0; color: #581c87;">💾 Respaldo de datos</h2>
-
-      <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px 0;">
-        Guardá una copia de tus comercios, productos, pedidos y rutas para no perderlos.
-      </p>
+    <section class="card cardRespaldo">
+      <h2>💾 Respaldo de datos</h2>
+      <p>Guardá una copia de tus comercios, productos, pedidos y rutas para no perderlos.</p>
 
       <p id="estadoRespaldo" class="estadoRespaldo" aria-live="polite">
         Último respaldo: todavía no se creó ninguno.
       </p>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <button id="exportarRespaldo" class="btnAccion agregar" type="button" style="justify-content: center; margin: 0;">
-          ⬇️ Exportar
-        </button>
-
-        <button id="importarRespaldo" class="btnAccion ver" type="button" style="justify-content: center; margin: 0;">
-          ⬆️ Importar
-        </button>
+      <div class="respaldoBotones">
+        <button id="exportarRespaldo" class="btnAccion agregar" type="button">⬇️ Exportar</button>
+        <button id="importarRespaldo" class="btnAccion ver" type="button">⬆️ Importar</button>
       </div>
 
       <button id="borrarTodosDatos" class="btnAccion eliminar botonBorrarTodosDatos" type="button">
