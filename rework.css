@@ -1,20 +1,16 @@
 /* =====================================================
-   VendeFrío — Rework Visual v3.1 (Entrega 2)
-   Estilo: Profesional + Energético (más visible)
-   Compatible con el selector de tema existente
+   VendeFrío — Rework Visual v3.2 (Entrega 3)
+   Dashboard reestructurado + estilo Profesional + Energético
    ===================================================== */
 
 :root {
   --vf-primary: #0f9d63;
   --vf-primary-strong: #0b7a4d;
   --vf-primary-soft: #e6f7ef;
-  --vf-primary-glow: rgba(15, 157, 99, 0.20);
-
   --vf-blue: #2563eb;
   --vf-violet: #7c3aed;
   --vf-orange: #ea580c;
   --vf-amber: #f59e0b;
-  --vf-cyan: #0891b2;
   --vf-danger: #dc2626;
 
   --vf-bg: #eef3f0;
@@ -31,7 +27,6 @@
   --vf-fast: 180ms;
 }
 
-/* ===== Modo Oscuro (respeta data-tema del sistema actual) ===== */
 html[data-tema="oscuro"] {
   --vf-bg: #0e1311;
   --vf-surface: #1a221e;
@@ -42,7 +37,6 @@ html[data-tema="oscuro"] {
   --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.38);
   --vf-shadow-strong: 0 10px 32px rgba(0, 0, 0, 0.50);
   --vf-primary-soft: rgba(15, 157, 99, 0.18);
-  --vf-primary-glow: rgba(15, 157, 99, 0.28);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -56,7 +50,6 @@ html[data-tema="oscuro"] {
     --vf-shadow: 0 4px 20px rgba(0, 0, 0, 0.38);
     --vf-shadow-strong: 0 10px 32px rgba(0, 0, 0, 0.50);
     --vf-primary-soft: rgba(15, 157, 99, 0.18);
-    --vf-primary-glow: rgba(15, 157, 99, 0.28);
   }
 }
 
@@ -66,14 +59,7 @@ body {
   color: var(--vf-text);
 }
 
-.card,
-.comercioCard,
-.historialCard,
-.marca,
-.fichaDatos,
-.fichaUltimo,
-.fichaProductos,
-.fichaFrecuencia {
+.card {
   background: var(--vf-surface) !important;
   color: var(--vf-text) !important;
   border: 1px solid var(--vf-border) !important;
@@ -81,216 +67,65 @@ body {
   box-shadow: var(--vf-shadow) !important;
 }
 
-input, select, textarea {
-  background: var(--vf-soft) !important;
-  color: var(--vf-text) !important;
-  border: 1px solid var(--vf-border) !important;
-  border-radius: var(--vf-radius-sm) !important;
-}
-
-/* ===== DASHBOARD – cambios más visibles ===== */
-#pantallaMenu > header {
+/* ===== DASHBOARD HEADER ===== */
+.dashboardHeader {
   background: linear-gradient(135deg, var(--vf-primary), var(--vf-primary-strong)) !important;
+  color: white;
+  padding: 18px 16px 20px !important;
   border-radius: 0 0 24px 24px !important;
-  padding: 18px 16px 18px !important;
-  box-shadow: 0 6px 20px rgba(11, 122, 77, 0.35) !important;
+  box-shadow: 0 6px 24px rgba(11, 122, 77, 0.35);
 }
 
-#pantallaMenu .resumenDashboardGrid {
+.dashboardHeaderTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dashboardHeaderTop h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.badgeActivo {
+  background: rgba(0,0,0,0.22);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ===== MÉTRICAS ===== */
+.resumenDashboardGrid {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   gap: 10px !important;
-  margin-top: 14px !important;
 }
 
-#pantallaMenu .tarjetaDashboard {
+.tarjetaDashboard {
   background: var(--vf-surface) !important;
-  border: 1px solid var(--vf-border) !important;
   border-radius: 14px !important;
-  padding: 13px 12px !important;
-  min-height: 72px !important;
+  padding: 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   box-shadow: var(--vf-shadow) !important;
+  border: none !important;
   position: relative;
   overflow: hidden;
+  min-height: 70px;
 }
 
-/* Barra de color energética a la izquierda de cada métrica */
-#pantallaMenu .tarjetaDashboard::before {
+.tarjetaDashboard::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
   width: 5px;
-  border-radius: 14px 0 0 14px;
 }
 
-#pantallaMenu .tarjetaDashboardVerde::before { background: var(--vf-primary); }
-#pantallaMenu .tarjetaDashboardAzul::before { background: var(--vf-blue); }
-#pantallaMenu .tarjetaDashboardVioleta::before { background: var(--vf-violet); }
-#pantallaMenu .tarjetaDashboardNaranja::before { background: var(--vf-orange); }
-
-#pantallaMenu .tarjetaDashboard div {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase;
-  color: var(--vf-muted) !important;
-  letter-spacing: 0.3px;
-}
-
-#pantallaMenu .tarjetaDashboard strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 24px !important;
-  font-weight: 800 !important;
-}
-
-#pantallaMenu .tarjetaDashboardVerde strong { color: var(--vf-primary) !important; }
-#pantallaMenu .tarjetaDashboardAzul strong { color: var(--vf-blue) !important; }
-#pantallaMenu .tarjetaDashboardVioleta strong { color: var(--vf-violet) !important; }
-#pantallaMenu .tarjetaDashboardNaranja strong { color: var(--vf-orange) !important; }
-
-#pantallaMenu .totalesDashboard {
-  margin-top: 12px !important;
-  padding: 10px 12px !important;
-  border-radius: 12px !important;
-  background: rgba(0, 0, 0, 0.18) !important;
-  font-size: 12px !important;
-  font-weight: 600;
-}
-
-#pantallaMenu .totalesDashboard strong {
-  color: #a7f3d0 !important;
-}
-
-/* Títulos de sección */
-#pantallaMenu .container > h2 {
-  margin: 22px 0 10px !important;
-  font-size: 12px !important;
-  letter-spacing: 0.5px !important;
-  color: var(--vf-muted) !important;
-  text-transform: uppercase;
-  font-weight: 800 !important;
-}
-
-/* Próxima Parada – más protagonismo */
-#pantallaMenu #dashProximaParada {
-  border-left: 6px solid var(--vf-primary) !important;
-  box-shadow: var(--vf-shadow-strong) !important;
-  padding: 16px !important;
-  background: var(--vf-surface) !important;
-}
-
-/* Último pedido */
-#pantallaMenu #dashUltimoPedido {
-  border-left: 6px solid var(--vf-violet) !important;
-  box-shadow: var(--vf-shadow) !important;
-}
-
-/* Accesos rápidos más vivos */
-#pantallaMenu .menuBtn {
-  border-radius: 14px !important;
-  font-weight: 700 !important;
-  min-height: 54px !important;
-  box-shadow: var(--vf-shadow) !important;
-  border-width: 1.5px !important;
-}
-
-/* ===== PEDIDO ===== */
-#pantallaPedido .resumenPedido {
-  background: var(--vf-primary-soft) !important;
-  border: 1px solid rgba(15, 157, 99, 0.28) !important;
-  border-radius: 14px !important;
-  color: var(--vf-primary-strong) !important;
-  font-weight: 600;
-}
-
-#pantallaPedido .marca {
-  border-radius: 14px !important;
-  overflow: hidden;
-  box-shadow: var(--vf-shadow) !important;
-  border: 1px solid var(--vf-border) !important;
-}
-
-#pantallaPedido .tituloMarca {
-  min-height: 48px;
-  padding: 12px 14px !important;
-  font-size: 15px !important;
-  font-weight: 700;
-}
-
-#pantallaPedido .fila {
-  min-height: 52px;
-  border-color: var(--vf-border) !important;
-}
-
-#pantallaPedido footer button {
-  min-height: 52px !important;
-  border-radius: 14px !important;
-  font-weight: 700;
-}
-
-/* ===== RESÚMENES DE OTRAS PANTALLAS ===== */
-.resumenComercios {
-  background: var(--vf-primary-soft) !important;
-  color: var(--vf-primary-strong) !important;
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-}
-
-.resumenHistorial {
-  background: rgba(124, 58, 237, 0.12) !important;
-  color: var(--vf-violet) !important;
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-}
-
-.resumenRuta {
-  background: rgba(37, 99, 235, 0.12) !important;
-  color: var(--vf-blue) !important;
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-}
-
-/* ===== NAVEGACIÓN INFERIOR ===== */
-.bottom-nav {
-  background: var(--vf-surface) !important;
-  border-top: 1px solid var(--vf-border) !important;
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08) !important;
-}
-
-.nav-item.activo {
-  color: var(--vf-primary) !important;
-  font-weight: 700;
-}
-
-/* ===== ANIMACIÓN ===== */
-@keyframes vfEntrada {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-section:not(.oculto) {
-  animation: vfEntrada 200ms ease both;
-}
-
-/* ===== AJUSTES EXTRA MODO OSCURO ===== */
-html[data-tema="oscuro"] #pantallaMenu .tarjetaDashboard,
-html[data-tema="oscuro"] .card {
-  background: var(--vf-surface) !important;
-  border-color: var(--vf-border) !important;
-}
-
-html[data-tema="oscuro"] #pantallaMenu .totalesDashboard {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-html[data-tema="oscuro"] #pantallaPedido .resumenPedido {
-  background: var(--vf-primary-soft) !important;
-  color: #6ee7b7 !important;
-}
-
-html[data-tema="oscuro"] .bottom-nav {
-  background: var(--vf-surface) !important;
-  border-top-color: var(--vf-border) !important;
-}
+.tarjetaDashboardVerde::before { background: var(--vf-primary); }
+.tarjetaDashboardAzul::before { background:
