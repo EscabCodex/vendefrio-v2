@@ -283,6 +283,7 @@
 
             const defecto =
                 campo === "tema" ? "sistema" :
+                campo === "texto" ? "normal" :
                 campo === "densidad" ? "compacto" :
                 campo === "frecuenciaRespaldo" ? "semanal" :
                 campo === "zoom" ? "17" :

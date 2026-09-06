@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-tema="claro">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12,7 +12,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VendeFrío">
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="rework.css">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -516,10 +515,18 @@
 </script>
 
   <script>
-  // Cargar tema guardado
+  // Aplica el tema guardado (mismo mecanismo que configuracion.js) antes de pintar la pantalla
   (function() {
-    const temaGuardado = localStorage.getItem("vendefrio_tema") || "claro";
-    document.documentElement.setAttribute("data-tema", temaGuardado);
+    try {
+      const d = JSON.parse(localStorage.getItem("vendefrio_preferencias")) || {};
+      const preferencia = d.tema || "sistema";
+      const sistemaOscuro = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const temaVisual = preferencia === "sistema" ? (sistemaOscuro ? "oscuro" : "claro") : preferencia;
+      document.documentElement.dataset.tema = temaVisual;
+      document.documentElement.dataset.temaPreferido = preferencia;
+      document.documentElement.dataset.texto = d.texto || "normal";
+      document.documentElement.dataset.densidad = d.densidad || "compacto";
+    } catch (e) {}
   })();
 </script>
 
