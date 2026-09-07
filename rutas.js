@@ -1699,11 +1699,7 @@ function mostrarRutaEnLista() {
 
         const informacion = document.createElement("div");
         const nombre = document.createElement("strong");
-        nombre.textContent =
-            "#" +
-            (indice + 1) +
-            " - " +
-            comercio.nombre;
+        nombre.textContent = comercio.nombre;
 
         const direccion = document.createElement("span");
         direccion.textContent = comercio.direccion || "Sin direcci\u00f3n";

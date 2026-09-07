@@ -213,7 +213,7 @@
 </section>
 
 <section id="pantallaRutas" class="oculto">
-  <header style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+  <header>
     <div class="logo">🗺️</div>
     <div>
       <h1>Rutas y Mapa</h1>
@@ -222,7 +222,7 @@
   </header>
 
   <main class="container">
-    <div class="card" style="border-left: 5px solid #2563eb;">
+    <div class="card">
       <div class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta">📍</div>
         <div>
@@ -239,7 +239,7 @@
         Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
       </p>
 
-      <button id="btnGuardarGps" class="btnAccion" style="width: 100%; background: #2563eb; color: white; justify-content: center; margin-bottom: 8px;">
+      <button id="btnGuardarGps" class="btnAccion agregar" style="width: 100%; justify-content: center; margin-bottom: 8px;">
         📍 Guardar mi GPS actual en este comercio
       </button>
 
@@ -248,7 +248,7 @@
       </button>
     </div>
 
-    <div class="card tarjetaSeleccionRuta" style="border-left: 5px solid #8b5cf6;">
+    <div class="card tarjetaSeleccionRuta">
       <div class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta">🧭</div>
         <div>
@@ -277,7 +277,7 @@
     </div>
 
     <div class="card">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: #eef0f2;"></div>
+      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
 
       <div style="display: flex; gap: 10px; margin-top: 12px;">
         <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
