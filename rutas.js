@@ -631,7 +631,7 @@ function crearControlesRutasGuardadas() {
     const selectorDia = document.createElement("select");
     selectorDia.id = "diaRutaGuardada";
     [
-        ["", "D\u00eda habitual (opcional)"],
+        ["", "D\u00eda (opcional)"],
         ["lunes", "Lunes"],
         ["martes", "Martes"],
         ["miercoles", "Mi\u00e9rcoles"],

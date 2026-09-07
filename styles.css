@@ -1427,7 +1427,7 @@ body > nav.bottom-nav {
   content:"";
   position:absolute;
   left:11px;
-  top:24px;
+  top:22px;
   bottom:0;
   width:2px;
   background:var(--borde);
