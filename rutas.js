@@ -153,7 +153,7 @@ function crearControlesPinManual() {
     boton.id = "btnPinManual";
     boton.type = "button";
     boton.className = "btnAccion botonPinManual";
-    boton.textContent = "\ud83d\udccc Colocar pin manual en el mapa";
+    boton.innerHTML = window.icono("ubicacion", 14) + " Colocar pin manual en el mapa";
     boton.title = "Elegir manualmente la ubicaci\u00f3n de este comercio";
     boton.addEventListener("click", activarModoPinManual);
 
@@ -856,8 +856,8 @@ function cargarSelectComerciosRuta() {
                 " " +
                 (
                     comercioTieneGps(comercio)
-                        ? "\ud83d\udccd (GPS listo)"
-                        : "\u26a0\ufe0f (Sin GPS)"
+                        ? "(GPS listo)"
+                        : "(Sin GPS)"
                 );
 
             select.appendChild(opcion);
@@ -1016,7 +1016,7 @@ function activarModoPinManual() {
     mapaLeaflet.getContainer().style.cursor = "crosshair";
 
     const boton = document.getElementById("btnPinManual");
-    if (boton) boton.textContent = "\ud83d\udccd Toc\u00e1 el punto exacto en el mapa";
+    if (boton) boton.innerHTML = window.icono("ubicacion", 14) + " Tocá el punto exacto en el mapa";
 
     mostrarAviso(
         "Colocar pin manual",
@@ -1032,7 +1032,7 @@ function finalizarModoPinManual() {
     }
 
     const boton = document.getElementById("btnPinManual");
-    if (boton) boton.textContent = "\ud83d\udccc Colocar pin manual en el mapa";
+    if (boton) boton.innerHTML = window.icono("ubicacion", 14) + " Colocar pin manual en el mapa";
 }
 
 function cancelarEdicionPin() {
@@ -1278,10 +1278,10 @@ function guardarGpsActual(boton) {
     }
 
     const textoOriginal =
-        "\ud83d\udccd Guardar mi GPS actual en este comercio";
+        window.icono("ubicacion", 14) + " Guardar mi GPS actual en este comercio";
 
     boton.disabled = true;
-    boton.textContent = "\ud83d\udccd Obteniendo GPS...";
+    boton.innerHTML = window.icono("ubicacion", 14) + " Obteniendo GPS...";
 
     navigator.geolocation.getCurrentPosition(
         posicion => {
@@ -1295,7 +1295,7 @@ function guardarGpsActual(boton) {
             );
 
             boton.disabled = false;
-            boton.textContent = textoOriginal;
+            boton.innerHTML = textoOriginal;
 
             if (!guardado) {
                 mostrarAviso(
@@ -1324,7 +1324,7 @@ function guardarGpsActual(boton) {
         },
         () => {
             boton.disabled = false;
-            boton.textContent = textoOriginal;
+            boton.innerHTML = textoOriginal;
 
             mostrarAviso(
                 "Error de GPS",
@@ -1687,7 +1687,7 @@ function mostrarRutaEnLista() {
         botonSiguiente.type = "button";
         botonSiguiente.className = "btnAccion agregar pedidoParadaRuta";
         botonSiguiente.dataset.nombre = rutaOrdenada[0].nombre;
-        botonSiguiente.textContent = "\ud83d\udcdd Pedido siguiente";
+        botonSiguiente.innerHTML = window.icono("documento", 14) + " Pedido siguiente";
         encabezado.appendChild(botonSiguiente);
     }
 
@@ -1716,7 +1716,7 @@ function mostrarRutaEnLista() {
         botonPedido.type = "button";
         botonPedido.className = "btnAccion ver pedidoParadaRuta";
         botonPedido.dataset.nombre = comercio.nombre;
-        botonPedido.textContent = "\ud83d\udcdd Pedido";
+        botonPedido.innerHTML = window.icono("documento", 14) + " Pedido";
 
         elemento.append(informacion, botonPedido);
         contenedor.appendChild(elemento);

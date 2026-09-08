@@ -37,31 +37,31 @@
 
                 <div class="configMenuPrincipal">
                     <button class="configFila" data-config-seccion="apariencia">
-                        <span class="configIcono">🎨</span>
+                        <span class="configIcono">${window.icono("paleta",20)}</span>
                         <span><strong>Apariencia</strong>
                         <small>Elegí tema, texto y densidad</small></span><b>›</b>
                     </button>
 
                     <button class="configFila" data-config-seccion="respaldo">
-                        <span class="configIcono">💾</span>
+                        <span class="configIcono">${window.icono("disquete",20)}</span>
                         <span><strong>Datos y respaldo</strong>
                         <small>Copias, restauración y frecuencia automática</small></span><b>›</b>
                     </button>
 
                     <button class="configFila" data-config-seccion="trabajo">
-                        <span class="configIcono">🧑‍💼</span>
+                        <span class="configIcono">${window.icono("maletin",20)}</span>
                         <span><strong>Preferencias de trabajo</strong>
                         <small>Ordená comercios, productos y pedidos</small></span><b>›</b>
                     </button>
 
                     <button class="configFila" data-config-seccion="navegacion">
-                        <span class="configIcono">🚲</span>
+                        <span class="configIcono">${window.icono("bicicleta",20)}</span>
                         <span><strong>Navegación</strong>
                         <small>Bicicleta, mapa y seguimiento GPS</small></span><b>›</b>
                     </button>
 
                     <button class="configFila" data-config-seccion="seguridad">
-                        <span class="configIcono">🛡️</span>
+                        <span class="configIcono">${window.icono("escudo",20)}</span>
                         <span><strong>Seguridad y aplicación</strong>
                         <small>Permisos, ayuda e información de VendeFrío</small></span><b>›</b>
                     </button>
@@ -152,7 +152,7 @@
 
         if (seccion === "apariencia") {
             caja.innerHTML += `
-                <label>🎨 Tema
+                <label>${window.icono("paleta",15)} Tema
                     <select data-campo="tema">
                         <option value="sistema">Usar tema del teléfono</option>
                         <option value="claro">Modo claro</option>
@@ -160,14 +160,14 @@
                     </select>
                 </label>
 
-                <label>🔤 Tamaño de texto
+                <label>${window.icono("texto",15)} Tamaño de texto
                     <select data-campo="texto">
                         <option value="normal">Estándar</option>
                         <option value="grande">Grande</option>
                     </select>
                 </label>
 
-                <label>📐 Espaciado
+                <label>${window.icono("espaciado",15)} Espaciado
                     <select data-campo="densidad">
                         <option value="compacto">Compacto</option>
                         <option value="comodo">Cómodo</option>
@@ -191,7 +191,7 @@
                     </strong>
                 </p>
 
-                <label>🔄 Respaldo automático
+                <label>${window.icono("refrescar",15)} Respaldo automático
                     <select data-campo="frecuenciaRespaldo">
                         <option value="desactivado">Desactivado</option>
                         <option value="diario">Todos los días</option>
@@ -207,14 +207,14 @@
 
                 <button type="button" data-accion="restaurar"
                     class="configRestaurar">
-                    ♻️ Restaurar última copia interna
+                    ${window.icono("restaurarNube",14)} Restaurar última copia interna
                 </button>
             `;
         }
 
         if (seccion === "trabajo") {
             caja.innerHTML += `
-                <label>🏪 Mostrar primero
+                <label>${window.icono("tienda",15)} Mostrar primero
                     <select data-campo="orden">
                         <option value="pendientes">Comercios pendientes</option>
                         <option value="frecuentes">Más visitados</option>
@@ -222,7 +222,7 @@
                     </select>
                 </label>
 
-                <label>📦 Orden de productos
+                <label>${window.icono("paquete",15)} Orden de productos
                     <select data-campo="ordenProductos">
                         <option value="marca">Por marca</option>
                         <option value="alfabetico">Alfabético</option>
@@ -234,9 +234,9 @@
 
         if (seccion === "navegacion") {
             caja.innerHTML += `
-                <p class="configEstado">🚲 Vehículo: bicicleta</p>
+                <p class="configEstado">${window.icono("bicicleta",14)} Vehículo: bicicleta</p>
 
-                <label>🔍 Nivel de zoom
+                <label>${window.icono("buscar",15)} Nivel de zoom
                     <select data-campo="zoom">
                         <option value="15">Amplio</option>
                         <option value="17">Normal</option>

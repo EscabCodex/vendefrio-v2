@@ -168,10 +168,10 @@ function actualizarUltimoPedidoDashboard(historial) {
     titulo.textContent = ultimo.comercio || "Comercio sin nombre";
 
     const detalle = document.createElement("p");
-    detalle.textContent =
-        "\ud83d\udcc5 " +
+    detalle.innerHTML =
+        window.icono("calendario", 13) + " " +
         (ultimo.fecha || "Sin fecha") +
-        "  \u00b7  \ud83d\udce6 " +
+        "  \u00b7  " + window.icono("paquete", 13) + " " +
         (Number(ultimo.cantidad) || 0) +
         " unidades";
 
@@ -252,12 +252,12 @@ function actualizarDashboard() {
     const pendientes = comercios.filter(comercio => !comercioVisitadoRecientemente(comercio));
 
     contenedor.innerHTML = "";
-    const botonUbicacion = document.createElement("button"); botonUbicacion.type = "button"; botonUbicacion.className = "btnUbicacionDashboard"; botonUbicacion.textContent = ubicacionDashboard ? "📍 Actualizar mi ubicación" : "📍 Usar mi ubicación"; botonUbicacion.onclick = () => { actualizarUbicacionDashboard(true); };
+    const botonUbicacion = document.createElement("button"); botonUbicacion.type = "button"; botonUbicacion.className = "btnUbicacionDashboard"; botonUbicacion.innerHTML = window.icono("ubicacion", 14) + (ubicacionDashboard ? " Actualizar mi ubicación" : " Usar mi ubicación"); botonUbicacion.onclick = () => { actualizarUbicacionDashboard(true); };
     contenedor.appendChild(botonUbicacion);
 
     if (pendientes.length === 0) {
         const mensaje = document.createElement("div");
-        mensaje.style.cssText = "display:flex; align-items:center; gap:10px; color:#15803d; font-weight:600;";
+        mensaje.style.cssText = "display:flex; align-items:center; gap:10px; color:var(--visitado); font-weight:600;";
         mensaje.innerHTML = "<span style=\"font-size:24px;\">\ud83c\udf89</span>";
         const texto = document.createElement("div");
         texto.textContent = "\u00a1Excelente trabajo! Ya visitaste todos tus comercios esta semana.";
@@ -275,20 +275,18 @@ function actualizarDashboard() {
 
     const informacion = document.createElement("div");
     const titulo = document.createElement("h3");
-    titulo.style.cssText = "font-size:16px; color:#1f2937; margin-bottom:4px;";
-    titulo.textContent =
-        "\ud83c\udfea " +
-        sugerido.nombre;
+    titulo.style.cssText = "font-size:16px; margin-bottom:4px;";
+    titulo.innerHTML = window.icono("tienda", 15) + " " + sugerido.nombre;
 
     const direccion = document.createElement("p");
-    direccion.style.cssText = "font-size:13px; color:#6b7280; margin-bottom:6px;";
-    direccion.textContent =
-        "\ud83d\udccd " +
+    direccion.style.cssText = "font-size:13px; color:var(--texto-sec); margin-bottom:6px;";
+    direccion.innerHTML =
+        window.icono("ubicacion", 13) + " " +
         (sugerido.direccion || "Direcci\u00f3n pendiente");
 
     const estado = document.createElement("span");
     estado.className = "badge badge-pendiente";
-    estado.textContent = "\ud83d\udd34 Pendiente esta semana";
+    estado.textContent = "Pendiente esta semana";
 
     informacion.append(titulo, direccion, estado);
 
@@ -297,14 +295,14 @@ function actualizarDashboard() {
 
     const boton = document.createElement("button");
     boton.className = "btnAccion agregar";
-    boton.style.cssText = "padding:10px 16px; font-weight:bold; background:#0f9d63; color:white; border:none; border-radius:10px;";
-    boton.textContent = "\ud83d\udcdd Pedido";
+    boton.style.cssText = "padding:10px 16px; font-weight:bold; border-radius:10px;";
+    boton.innerHTML = window.icono("documento", 14) + " Pedido";
     boton.addEventListener("click", () => irAPedidoRapido(sugerido.nombre));
 
     const botonRuta = document.createElement("button");
     botonRuta.className = "btnAccion ver";
     botonRuta.style.cssText = "padding:10px 16px; font-weight:bold; border-radius:10px;";
-    botonRuta.textContent = "\ud83d\uddfa\ufe0f Ruta";
+    botonRuta.innerHTML = window.icono("mapa", 14) + " Ruta";
     botonRuta.addEventListener("click", () => mostrarPantalla("rutas"));
 
     acciones.append(boton, botonRuta);
@@ -386,7 +384,7 @@ function abrirMenuMas() {
         panel = document.createElement("div");
         panel.id = "menuMasMovil";
         panel.className = "menuMasMovil";
-        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas"><span>🗺️</span><strong>Rutas</strong><b>›</b></button><button data-mas="estadisticas"><span>📊</span><strong>Estadísticas</strong><b>›</b></button><button data-mas="historial"><span>🕒</span><strong>Historial</strong><b>›</b></button><button data-mas="configuracion"><span>⚙️</span><strong>Configuración</strong><b>›</b></button><button data-mas="productos"><span>🏷️</span><strong>Productos y marcas</strong><b>›</b></button></div>`;
+        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas"><span>${window.icono("mapa", 18)}</span><strong>Rutas</strong><b>›</b></button><button data-mas="estadisticas"><span>${window.icono("grafico", 18)}</span><strong>Estadísticas</strong><b>›</b></button><button data-mas="historial"><span>${window.icono("historial", 18)}</span><strong>Historial</strong><b>›</b></button><button data-mas="configuracion"><span>${window.icono("engranaje", 18)}</span><strong>Configuración</strong><b>›</b></button><button data-mas="productos"><span>${window.icono("etiqueta", 18)}</span><strong>Productos y marcas</strong><b>›</b></button></div>`;
         document.body.appendChild(panel);
         panel.addEventListener("click", event => { if (event.target === panel || event.target.closest(".menuMasCerrar")) { panel.remove(); return; } const boton = event.target.closest("[data-mas]"); if (!boton) return; panel.remove(); const destino = boton.dataset.mas; if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas(); else if (destino === "configuracion" && typeof window.abrirConfiguracion === "function") window.abrirConfiguracion(); else mostrarPantalla(destino); });
     }

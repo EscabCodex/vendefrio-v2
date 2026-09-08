@@ -54,7 +54,7 @@
         const boton = document.createElement("button");
         boton.type = "button";
         boton.className = "btnAccion fichaBoton " + clase;
-        boton.textContent = texto;
+        boton.innerHTML = texto;
         boton.addEventListener("click", accion);
         return boton;
     }
@@ -85,7 +85,7 @@
         modalFicha.querySelector(".fichaAvatar").textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
         modalFicha.querySelector("#tituloFichaComercio").textContent = comercio.nombre;
         modalFicha.querySelector(".fichaEstado").textContent = estaVisitadoEstaSemana(comercio) ? "Visitado esta semana" : "Pendiente esta semana";
-        modalFicha.querySelector(".fichaDatos").innerHTML = `<p>📍 ${comercio.direccion || "Sin dirección cargada"}</p><p>📞 ${comercio.telefono || "Sin teléfono cargado"}</p><p>📦 ${datos.pedidos} pedidos registrados</p>`;
+        modalFicha.querySelector(".fichaDatos").innerHTML = `<p>${window.icono("ubicacion",14)} ${comercio.direccion || "Sin dirección cargada"}</p><p>${window.icono("telefono",14)} ${comercio.telefono || "Sin teléfono cargado"}</p><p>${window.icono("paquete",14)} ${datos.pedidos} pedidos registrados</p>`;
         modalFicha.querySelector(".fichaFrecuenciaTexto").textContent = datos.visitadoEstaSemana
             ? "Visitado esta semana · Última visita: " + datos.ultimaVisita
             : "Última visita: " + datos.ultimaVisita;
@@ -112,13 +112,13 @@
         }
 
         const botonEstado = datos.visitadoEstaSemana
-            ? crearBoton("🔴 Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
-            : crearBoton("✅ Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); });
-        const botonEliminar = crearBoton("🗑️ Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); }); });
+            ? crearBoton(window.icono("puntoRojo",14) + " Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
+            : crearBoton(window.icono("check",14) + " Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); });
+        const botonEliminar = crearBoton(window.icono("tacho",14) + " Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); }); });
         modalFicha.querySelector(".fichaAcciones").append(
-            crearBoton("📝 Hacer pedido", "agregar", () => { cerrarFicha(); irAPedidoRapido(comercio.nombre); }),
-            crearBoton("🗺️ Navegar", "ver", () => { cerrarFicha(); mostrarPantalla("rutas"); }),
-            crearBoton("✏️ Editar", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
+            crearBoton(window.icono("documento",14) + " Hacer pedido", "agregar", () => { cerrarFicha(); irAPedidoRapido(comercio.nombre); }),
+            crearBoton(window.icono("mapa",14) + " Navegar", "ver", () => { cerrarFicha(); mostrarPantalla("rutas"); }),
+            crearBoton(window.icono("lapiz",14) + " Editar", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
             botonEstado, botonEliminar,
             crearBoton("Cerrar", "secundario", cerrarFicha)
         );

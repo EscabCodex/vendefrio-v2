@@ -41,7 +41,7 @@ function crearBoton(clase, texto, titulo, datos = {}) {
     const boton = document.createElement("button");
     boton.type = "button";
     boton.className = `btnIcono ${clase}`;
-    boton.textContent = texto;
+    boton.innerHTML = texto;
     boton.title = titulo;
 
     Object.keys(datos).forEach(nombre => {
@@ -83,10 +83,10 @@ function renderizarProductosAdmin(filtro = "") {
             const accionesMarca = document.createElement("div");
             accionesMarca.className = "accionesMarca";
             accionesMarca.append(
-                crearBoton("ghost subirMarca", "\u2191", "Subir marca", { marca: nombreMarca }),
-                crearBoton("ghost bajarMarca", "\u2193", "Bajar marca", { marca: nombreMarca }),
-                crearBoton("ghost editarMarca", "\u270f\ufe0f", "Editar marca", { marca: nombreMarca }),
-                crearBoton("ghost eliminarMarca", "\ud83d\uddd1\ufe0f", "Eliminar marca", { marca: nombreMarca })
+                crearBoton("ghost subirMarca", window.icono("chevArriba",15), "Subir marca", { marca: nombreMarca }),
+                crearBoton("ghost bajarMarca", window.icono("chevAbajo",15), "Bajar marca", { marca: nombreMarca }),
+                crearBoton("ghost editarMarca", window.icono("lapiz",15), "Editar marca", { marca: nombreMarca }),
+                crearBoton("ghost eliminarMarca", window.icono("tacho",15), "Eliminar marca", { marca: nombreMarca })
             );
             cabecera.append(titulo, accionesMarca);
 
@@ -115,11 +115,11 @@ function renderizarProductosAdmin(filtro = "") {
                 const botones = document.createElement("div");
                 botones.className = "filaBotones";
                 botones.append(
-                    crearBoton("tinteAmbar editarProducto", "\u270f\ufe0f", "Editar producto", {
+                    crearBoton("tinteAmbar editarProducto", window.icono("lapiz",14), "Editar producto", {
                         marca: nombreMarca,
                         indice: indiceReal
                     }),
-                    crearBoton("tinteRojo eliminarProducto", "\ud83d\uddd1\ufe0f", "Eliminar producto", {
+                    crearBoton("tinteRojo eliminarProducto", window.icono("tacho",14), "Eliminar producto", {
                         marca: nombreMarca,
                         indice: indiceReal
                     })

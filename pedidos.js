@@ -140,9 +140,10 @@ function crearControlesProducto(marca, producto) {
 
     const botonBorrar = crearBotonCantidad(
         "botonCantidad botonBorrar",
-        String.fromCodePoint(0x1F5D1, 0xFE0F),
+        "",
         "Volver a cero"
     );
+    botonBorrar.innerHTML = window.icono("tacho", 14);
 
     botonMenos.addEventListener("click", () => {
         cambiarCantidad(select, -1);
@@ -272,8 +273,8 @@ function prepararBuscadorProductosPedido() {
     botonRepetirPedido = document.createElement("button");
     botonRepetirPedido.type = "button";
     botonRepetirPedido.className = "botonRepetirPedido";
-    botonRepetirPedido.textContent =
-        String.fromCodePoint(0x21BB) +
+    botonRepetirPedido.innerHTML =
+        window.icono("refrescar", 15) +
         " Repetir " +
         String.fromCodePoint(0xFA) +
         "ltimo pedido";

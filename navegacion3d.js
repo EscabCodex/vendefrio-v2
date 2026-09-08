@@ -47,7 +47,7 @@ async function cargarMapLibreNavegacion3D() {
 function crearVehiculoNavegacion3D() {
     const elemento = document.createElement("div");
     elemento.className = "vehiculoNavegacion3D";
-    elemento.textContent = "🚲";
+    elemento.innerHTML = window.icono("bicicleta", 22, "white");
     elemento.style.cssText = "font-size:34px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translate(-50%,-50%);";
     return elemento;
 }
@@ -204,7 +204,7 @@ function minimizarNavegacion3D() {
         burbuja.id = "burbujaNavegacion3D";
         burbuja.type = "button";
         burbuja.className = "burbujaNavegacion3D";
-        burbuja.innerHTML = "<span>🚲</span><small>Navegación activa</small>";
+        burbuja.innerHTML = "<span>" + window.icono("bicicleta", 16) + "</span><small>Navegación activa</small>";
         burbuja.addEventListener("click", restaurarNavegacion3D);
         document.body.appendChild(burbuja);
     }
@@ -289,8 +289,8 @@ async function iniciarVistaNavegacion3D(ruta) {
             </div>
             <div class="navegacion3DError" id="errorNavegacion3D"></div>
             <div class="navegacion3DPanelInferior">
-                <div class="navegacion3DIndicacion"><div class="navegacion3DIconoManiobra">➜</div><div><strong id="indicacionNavegacion3D">Preparando recorrido...</strong><small id="detalleNavegacion3D"></small></div></div>
-                <div class="navegacion3DAcciones"><button class="navegacion3DBotonPedido" id="pedidoNavegacion3D" type="button">📝 Hacer pedido</button><button class="navegacion3DBotonSiguiente" id="siguienteNavegacion3D" type="button">Llegué / siguiente</button><button class="navegacion3DBotonRecentrar" id="recentrarNavegacion3D" type="button">Recentrar</button></div>
+                <div class="navegacion3DIndicacion"><div class="navegacion3DIconoManiobra">${window.icono("flechaDerecha",18)}</div><div><strong id="indicacionNavegacion3D">Preparando recorrido...</strong><small id="detalleNavegacion3D"></small></div></div>
+                <div class="navegacion3DAcciones"><button class="navegacion3DBotonPedido" id="pedidoNavegacion3D" type="button">${window.icono("documento",14)} Hacer pedido</button><button class="navegacion3DBotonSiguiente" id="siguienteNavegacion3D" type="button">Llegué / siguiente</button><button class="navegacion3DBotonRecentrar" id="recentrarNavegacion3D" type="button">Recentrar</button></div>
             </div>`;
         document.body.appendChild(pantalla);
         document.getElementById("errorNavegacion3D").textContent = "";

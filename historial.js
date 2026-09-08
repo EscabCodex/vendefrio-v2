@@ -934,19 +934,18 @@ function renderizarHistorial() {
         informacion.className = "infoCard";
 
         const titulo = crearTextoHistorial("h3", comercio);
-        const resumen = crearTextoHistorial(
-            "p",
-            "\ud83d\udcc5 " +
+        const resumen = document.createElement("p");
+        resumen.className = "subtitulo";
+        resumen.innerHTML =
+            window.icono("calendario", 13) + " " +
                 fecha +
-                "  \u00b7  \ud83d\udce6 " +
+                "  \u00b7  " + window.icono("paquete", 13) + " " +
                 cantidad +
                 " unidades  \u00b7  " +
-                String.fromCodePoint(0x1F9FE) +
+                window.icono("recibo", 13) +
                 " " +
                 tipos +
-                " productos diferentes",
-            "subtitulo"
-        );
+                " productos diferentes";
 
         informacion.append(titulo, resumen);
         cabecera.append(avatar, informacion);
@@ -958,13 +957,13 @@ function renderizarHistorial() {
         botonVer.type = "button";
         botonVer.className = "btnAccion ver verPedido";
         botonVer.dataset.indice = String(indice);
-        botonVer.textContent = "\ud83d\udc41\ufe0f Ver pedido";
+        botonVer.innerHTML = window.icono("ojo", 14) + " Ver pedido";
 
         const botonEliminar = document.createElement("button");
         botonEliminar.type = "button";
         botonEliminar.className = "btnAccion eliminar eliminarPedidoHistorial";
         botonEliminar.dataset.indice = String(indice);
-        botonEliminar.textContent = "\ud83d\uddd1\ufe0f Eliminar";
+        botonEliminar.innerHTML = window.icono("tacho", 14) + " Eliminar";
 
         acciones.append(botonVer, botonEliminar);
         tarjeta.append(cabecera, acciones);

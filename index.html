@@ -27,7 +27,7 @@
 
     <div class="resumenDashboardGrid">
       <div class="tarjetaDashboard tarjetaDashboardVerde clickeableDashboard" data-dashboard-accion="pedidosHoy" role="button" tabindex="0" title="Abrir pedidos de hoy">
-        <div class="tarjetaIcono">📦</div>
+        <div class="tarjetaIcono" data-ico="paquete" data-ico-tam="16"></div>
         <div class="tarjetaInfo">
           <span>Pedidos hoy</span>
           <strong id="dashPedidosHoy">0</strong>
@@ -35,7 +35,7 @@
       </div>
 
       <div class="tarjetaDashboard tarjetaDashboardAzul clickeableDashboard" data-dashboard-accion="visitadosSemana" role="button" tabindex="0" title="Abrir comercios visitados esta semana">
-        <div class="tarjetaIcono">📍</div>
+        <div class="tarjetaIcono" data-ico="ubicacion" data-ico-tam="16"></div>
         <div class="tarjetaInfo">
           <span>Visitados</span>
           <strong id="dashVisitadosSemana">0</strong>
@@ -43,7 +43,7 @@
       </div>
 
       <div class="tarjetaDashboard tarjetaDashboardVioleta clickeableDashboard" data-dashboard-accion="pedidosSemana" role="button" tabindex="0" title="Abrir pedidos de esta semana">
-        <div class="tarjetaIcono">📅</div>
+        <div class="tarjetaIcono" data-ico="calendario" data-ico-tam="16"></div>
         <div class="tarjetaInfo">
           <span>Pedidos semana</span>
           <strong id="dashPedidosSemana">0</strong>
@@ -80,30 +80,30 @@
   </header>
 
   <main class="container">
-    <h2 class="seccionTitulo">⚡ Próxima Parada Sugerida</h2>
+    <h2 class="seccionTitulo"><i data-ico="rayo" data-ico-tam="14"></i> Próxima Parada Sugerida</h2>
 
     <div id="dashProximaParada" class="card cardProximaParada">
       <p>Buscando próximo comercio pendiente...</p>
     </div>
 
-    <h2 class="seccionTitulo">🧾 Último pedido</h2>
+    <h2 class="seccionTitulo"><i data-ico="recibo" data-ico-tam="14"></i> Último pedido</h2>
 
     <div id="dashUltimoPedido" class="card ultimoPedidoDashboard">
       <p>Buscando último pedido...</p>
     </div>
 
-    <h2 class="seccionTitulo">🛠️ Accesos Rápidos</h2>
+    <h2 class="seccionTitulo"><i data-ico="herramientas" data-ico-tam="14"></i> Accesos Rápidos</h2>
 
     <div class="accesosRapidosGrid">
-      <button class="menuBtn accesoRutas" onclick="mostrarPantalla('rutas')">🗺️ Rutas</button>
-      <button class="menuBtn accesoEstadisticas" onclick="abrirEstadisticas()">📊 Estadísticas</button>
-      <button class="menuBtn accesoHistorial" onclick="mostrarPantalla('historial')">🕒 Historial</button>
-      <button class="menuBtn accesoConfig" onclick="abrirConfiguracion()">⚙️ Configuración</button>
-      <button class="menuBtn accesoProductos" onclick="mostrarPantalla('productos')">🏷️ Productos</button>
+      <button class="menuBtn accesoRutas" onclick="mostrarPantalla('rutas')"><i data-ico="mapa" data-ico-tam="15"></i> Rutas</button>
+      <button class="menuBtn accesoEstadisticas" onclick="abrirEstadisticas()"><i data-ico="grafico" data-ico-tam="15"></i> Estadísticas</button>
+      <button class="menuBtn accesoHistorial" onclick="mostrarPantalla('historial')"><i data-ico="historial" data-ico-tam="15"></i> Historial</button>
+      <button class="menuBtn accesoConfig" onclick="abrirConfiguracion()"><i data-ico="engranaje" data-ico-tam="15"></i> Configuración</button>
+      <button class="menuBtn accesoProductos" onclick="mostrarPantalla('productos')"><i data-ico="etiqueta" data-ico-tam="15"></i> Productos</button>
     </div>
 
     <section class="card cardRespaldo">
-      <h2>💾 Respaldo de datos</h2>
+      <h2><i data-ico="disquete" data-ico-tam="15"></i> Respaldo de datos</h2>
       <p>Guardá una copia de tus comercios, productos, pedidos y rutas para no perderlos.</p>
 
       <p id="estadoRespaldo" class="estadoRespaldo" aria-live="polite">
@@ -111,12 +111,12 @@
       </p>
 
       <div class="respaldoBotones">
-        <button id="exportarRespaldo" class="btnAccion agregar" type="button">⬇️ Exportar</button>
-        <button id="importarRespaldo" class="btnAccion ver" type="button">⬆️ Importar</button>
+        <button id="exportarRespaldo" class="btnAccion agregar" type="button"><i data-ico="guardarNube" data-ico-tam="14"></i> Exportar</button>
+        <button id="importarRespaldo" class="btnAccion ver" type="button"><i data-ico="restaurarNube" data-ico-tam="14"></i> Importar</button>
       </div>
 
       <button id="borrarTodosDatos" class="btnAccion eliminar botonBorrarTodosDatos" type="button">
-        🗑️ Borrar todos los datos de la app
+        <i data-ico="tacho" data-ico-tam="14"></i> Borrar todos los datos de la app
       </button>
 
       <input id="archivoRespaldo" type="file" accept="application/json,.json" style="display: none;">
@@ -126,7 +126,7 @@
 
 <section id="pantallaPedido" class="oculto">
   <header>
-    <div class="logo">📝</div>
+    <div class="logo" data-ico="documento" data-ico-tam="22"></div>
     <div>
       <h1>Nuevo Pedido</h1>
       <p>VendeFrío</p>
@@ -161,7 +161,7 @@
 
 <section id="pantallaComercios" class="oculto">
   <header>
-    <div class="logo">🏪</div>
+    <div class="logo" data-ico="tienda" data-ico-tam="22"></div>
     <div>
       <h1>Comercios</h1>
       <p>Etiquetas automáticas de visita</p>
@@ -191,7 +191,7 @@
 
 <section id="pantallaProductos" class="oculto">
   <header>
-    <div class="logo">📦</div>
+    <div class="logo" data-ico="paquete" data-ico-tam="22"></div>
     <div>
       <h1>Marcas y Productos</h1>
       <p>Administración</p>
@@ -214,7 +214,7 @@
 
 <section id="pantallaRutas" class="oculto">
   <header>
-    <div class="logo">🗺️</div>
+    <div class="logo" data-ico="mapa" data-ico-tam="22"></div>
     <div>
       <h1>Rutas y Mapa</h1>
       <p>Reparto optimizado</p>
@@ -224,7 +224,7 @@
   <main class="container">
     <div class="card">
       <div class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta">📍</div>
+        <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
         <div>
           <h2>Ubicación del comercio</h2>
           <p>Elegí un comercio para guardar o borrar su GPS.</p>
@@ -240,17 +240,17 @@
       </p>
 
       <button id="btnGuardarGps" class="btnAccion agregar" style="width: 100%; justify-content: center; margin-bottom: 8px;">
-        📍 Guardar mi GPS actual en este comercio
+        <i data-ico="ubicacion" data-ico-tam="14"></i> Guardar mi GPS actual en este comercio
       </button>
 
       <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
-        🗑️ Borrar GPS de este comercio
+        <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
       </button>
     </div>
 
     <div class="card tarjetaSeleccionRuta">
       <div class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta">🧭</div>
+        <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
         <div>
           <h2>Comercios para esta ruta</h2>
           <p>Elegí qué paradas querés incluir en la próxima ruta.</p>
@@ -281,11 +281,11 @@
 
       <div style="display: flex; gap: 10px; margin-top: 12px;">
         <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          ⚡ Optimizar Ruta
+          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
         </button>
 
         <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          🚗 Google Maps
+          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
         </button>
       </div>
 
@@ -296,7 +296,7 @@
 
 <section id="pantallaHistorial" class="oculto">
   <header>
-    <div class="logo">🕒</div>
+    <div class="logo" data-ico="historial" data-ico-tam="22"></div>
     <div>
       <h1>Historial</h1>
       <p>Pedidos guardados</p>
@@ -372,12 +372,12 @@
   </button>
 
   <button class="nav-item" data-pantalla="catalogo" type="button">
-    <span class="nav-icon" aria-hidden="true">🛍️</span>
+    <span class="nav-icon" aria-hidden="true" data-ico="bolsa" data-ico-tam="19"></span>
     Catálogo
   </button>
 
   <button class="nav-item" data-pantalla="mas" type="button">
-    <span class="nav-icon" aria-hidden="true">☰</span>
+    <span class="nav-icon" aria-hidden="true" data-ico="menu" data-ico-tam="19"></span>
     Más
   </button>
 </nav>
@@ -496,6 +496,7 @@
   </div>
 </div>
 
+<script src="iconos.js"></script>
 <script src="productos.js"></script>
 <script src="comercios.js"></script>
 <script src="database.js"></script>
@@ -505,6 +506,22 @@
 <script src="productosAdmin.js"></script>
 <script src="historial.js"></script>
 <script src="rutas.js"></script>
+
+<script>
+  // Hidrata todos los placeholders de íconos (data-ico) presentes en el HTML estático.
+  // Cualquier contenido nuevo agregado dinámicamente puede llamar a window.hidratarIconos()
+  // de nuevo, o directamente a window.icono(nombre, tamaño) para insertarlos al vuelo.
+  function hidratarIconos(raiz) {
+    if (typeof window.icono !== "function") return;
+    (raiz || document).querySelectorAll("[data-ico]").forEach(function (el) {
+      var nombre = el.dataset.ico;
+      var tam = el.dataset.icoTam || 18;
+      el.innerHTML = window.icono(nombre, tam);
+    });
+  }
+  window.hidratarIconos = hidratarIconos;
+  hidratarIconos();
+</script>
 
 <script>
   if ("serviceWorker" in navigator) {

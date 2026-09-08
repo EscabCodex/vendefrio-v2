@@ -67,7 +67,7 @@ function crearBotonComercio(clase, texto, nombre) {
     boton.type = "button";
     boton.className = "btnAccion " + clase;
     boton.dataset.nombre = nombre;
-    boton.textContent = texto;
+    boton.innerHTML = texto;
     return boton;
 }
 
@@ -300,27 +300,27 @@ function renderizarComercios() {
 
         const pedidos = document.createElement("span");
         pedidos.className = "datoComercio";
-        pedidos.textContent =
-            "\ud83d\udce6 " +
+        pedidos.innerHTML =
+            window.icono("paquete", 12) + " " +
             contarPedidosDelComercio(comercio.nombre, historialComercios) +
             " pedidos";
 
         const ultimaVisita = document.createElement("span");
         ultimaVisita.className = "datoComercio";
-        ultimaVisita.textContent =
-            "\ud83d\udcc5 " +
+        ultimaVisita.innerHTML =
+            window.icono("calendario", 12) + " " +
             (comercio.ultimaVisita || "Nunca");
 
         const direccion = document.createElement("span");
         direccion.className = "datoComercio";
-        direccion.textContent = comercio.direccion
-            ? "\ud83d\udccd " + comercio.direccion
+        direccion.innerHTML = comercio.direccion
+            ? window.icono("ubicacion", 12) + " " + comercio.direccion
             : "";
 
         const telefono = document.createElement("span");
         telefono.className = "datoComercio";
-        telefono.textContent = comercio.telefono
-            ? "\ud83d\udcde " + comercio.telefono
+        telefono.innerHTML = comercio.telefono
+            ? window.icono("telefono", 12) + " " + comercio.telefono
             : "";
 
         datosComercio.append(
@@ -336,8 +336,8 @@ function renderizarComercios() {
             ? "badge badge-visitado"
             : "badge badge-pendiente";
         estado.textContent = visitado
-            ? "\u2705 Visitado esta semana"
-            : "\ud83d\udd34 Pendiente esta semana";
+            ? "Visitado esta semana"
+            : "Pendiente esta semana";
 
         informacion.append(titulo, datosComercio, estado);
         cabecera.append(avatar, informacion);
@@ -349,22 +349,22 @@ function renderizarComercios() {
         acciones.append(
             crearBotonComercio(
                 "agregar pedidoComercioBtn",
-                "\ud83d\udcdd Pedido",
+                window.icono("documento",13) + " Pedido",
                 comercio.nombre
             ),
             crearBotonComercio(
                 "ver historialComercioBtn",
-                "\ud83e\uddfE Historial",
+                window.icono("historial",13) + " Historial",
                 comercio.nombre
             ),
             crearBotonComercio(
                 "editar editarBtn",
-                "\u270f\ufe0f Editar",
+                window.icono("lapiz",13) + " Editar",
                 comercio.nombre
             ),
             crearBotonComercio(
                 "eliminar eliminarBtn",
-                "\ud83d\uddd1\ufe0f Eliminar",
+                window.icono("tacho",13) + " Eliminar",
                 comercio.nombre
             )
         );
@@ -373,7 +373,7 @@ function renderizarComercios() {
             acciones.insertBefore(
                 crearBotonComercio(
                     "ver abrirMapsBtn",
-                    "\ud83d\udccd Maps",
+                    window.icono("ubicacion",13) + " Maps",
                     comercio.nombre
                 ),
                 acciones.children[2]
@@ -384,7 +384,7 @@ function renderizarComercios() {
             acciones.insertBefore(
                 crearBotonComercio(
                     "ver marcarVisitaBtn",
-                    "\u2705 Marcar visitado",
+                    window.icono("check",13) + " Marcar visitado",
                     comercio.nombre
                 ),
                 acciones.children[2]
@@ -393,7 +393,7 @@ function renderizarComercios() {
             acciones.insertBefore(
                 crearBotonComercio(
                     "secundario marcarPendienteBtn",
-                    "\ud83d\udd34 Marcar pendiente",
+                    window.icono("puntoRojo",13) + " Marcar pendiente",
                     comercio.nombre
                 ),
                 acciones.children[2]
