@@ -14,11 +14,17 @@
 
 - [ ] Aprobar la visión completa.
 - [ ] Revisar y aprobar `STRATEGIC_BRIEF.md`.
-- [ ] Elegir el primer segmento comercial concreto.
+- [x] Elegir el primer segmento comercial concreto: distribuidoras pequeñas, medianas y mayoristas de barrio.
 - [ ] Definir los tres problemas de mayor valor.
-- [ ] Definir la propuesta de valor en una frase.
-- [ ] Definir el flujo mínimo vendedor → depósito.
-- [ ] Definir los tres estados imprescindibles del primer prototipo compartido.
+- [x] Definir la propuesta de valor en una frase.
+- [x] Definir el flujo mínimo vendedor → depósito.
+- [x] Definir los estados imprescindibles del flujo inicial.
+- [x] Definir checklist de preparación y manejo de faltantes.
+- [x] Definir sincronización pendiente cuando vuelve internet.
+- [x] Definir entrega con confirmación manual y foto opcional de transferencia.
+- [x] Definir comprobante simple futuro, no necesariamente factura fiscal.
+- [x] Registrar visión futura de stock visible y comprometido al tomar pedidos.
+- [ ] Definir diferencia entre stock físico, reservado y disponible.
 - [ ] Definir qué funciones son esenciales y cuáles son secundarias.
 - [ ] Definir qué podría justificar un pago.
 - [ ] Aprobar el equipo final.

@@ -18,17 +18,26 @@ VendeFrío debe reemplazar ese circuito fragmentado por un flujo digital compart
 
 ## 3. Usuario y comprador
 
-### Usuario inicial prioritario
+### Segmento inicial
 
-La persona que toma pedidos y visita comercios durante la jornada.
+Distribuidoras pequeñas y medianas, mayoristas de barrio y negocios minoristas con reparto propio. No se apunta inicialmente a grandes empresas nacionales: requieren una escala, ciberseguridad, soporte e infraestructura fuera del alcance de esta primera versión.
 
-### Segundo usuario prioritario
+### Usuarios de una misma cuenta
 
-La persona del depósito que recibe y prepara los pedidos.
+Todos los integrantes autorizados trabajan sobre el mismo centro de información y ven los mismos datos:
 
-### Comprador futuro
+- Preventista o corredor.
+- Dueño o encargado.
+- Personal que arma pedidos.
+- Chofer y ayudante.
+- Repartidor.
+- Persona que prepara boletas.
 
-El dueño o responsable de una distribuidora que necesita coordinar vendedores, depósito, reparto y administración.
+La primera versión no separa radicalmente la información por rol. La prioridad es que el equipo comparta el mismo estado real de los pedidos.
+
+### Comprador
+
+El dueño o responsable de una distribuidora pequeña o mediana que hoy depende de papeles, mensajes y memoria para coordinar ventas, depósito y reparto.
 
 ## 4. Propuesta de valor inicial
 
@@ -36,17 +45,25 @@ El dueño o responsable de una distribuidora que necesita coordinar vendedores, 
 
 ## 5. Flujo principal
 
+La operación real no requiere que haya alguien preparando pedidos mientras el vendedor está en la calle. El pedido se sincroniza cuando exista conexión y queda disponible para armarlo cuando el vendedor, el dueño o el personal del camión llegan al depósito.
+
 ```text
 Vendedor visita comercio
+→ repone, ordena y controla la mercadería
 → selecciona comercio y productos
 → carga cantidades y observaciones
-→ confirma pedido
-→ el pedido queda disponible para la empresa
-→ depósito lo recibe
-→ lo prepara
-→ lo marca como preparado
-→ reparto lo retira
-→ lo entrega
+→ confirma pedido ingresado
+→ se guarda localmente si no hay conexión
+→ se sincroniza automáticamente al recuperar internet
+→ alguien del equipo abre el pedido en el depósito
+→ marca productos en una checklist mientras los coloca en cajones
+→ registra faltantes y ajusta cantidades con observación
+→ avisa al dueño o responsable económico
+→ marca pedido preparado
+→ se carga al vehículo
+→ sale a reparto
+→ se marca entregado
+→ se adjunta foto del comprobante de transferencia si corresponde
 → queda el historial completo
 ```
 
@@ -65,7 +82,25 @@ Cada pedido debe tener una línea de tiempo visible:
 
 La interfaz debe comunicar rápidamente dónde está el pedido, quién lo tiene y qué falta para completarlo.
 
-## 7. Pilares del producto
+## 7. Stock conectado con la venta
+
+En una etapa futura, quien toma pedidos podrá consultar desde la calle el stock disponible del depósito antes de ofrecer productos.
+
+Cuando confirme un pedido, la cantidad deberá reservarse o descontarse de forma controlada para que los pedidos posteriores no ofrezcan unidades que ya fueron comprometidas.
+
+Esto permitirá:
+
+- Tomar pedidos con información real.
+- Evitar faltantes descubiertos al preparar.
+- Saber qué productos quedan disponibles.
+- Agrupar pedidos de forma más inteligente.
+- Decidir cuándo conviene viajar a fábrica.
+- Evitar viajes innecesarios y gastos de combustible.
+- Planificar la carga según los pedidos ya tomados.
+
+Este punto requiere definir más adelante la diferencia entre stock físico, stock reservado y stock disponible.
+
+## 8. Pilares del producto
 
 ### Venta
 

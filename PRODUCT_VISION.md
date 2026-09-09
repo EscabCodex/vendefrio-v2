@@ -68,7 +68,10 @@ La aplicación debe evolucionar desde una herramienta individual para tomar pedi
 - Historial de estados con fecha, hora y usuario responsable.
 - Acceso del depósito a los pedidos sin depender del papel.
 - Registro de preparación, despacho, entrega parcial, faltantes y devoluciones.
-- Stock de depósito.
+- Stock de depósito visible para quien toma pedidos.
+- Stock disponible actualizado para evitar ofrecer mercadería inexistente.
+- Reserva o descuento de stock al confirmar pedidos, sin contar dos veces la misma mercadería.
+- Alertas de reposición y sugerencia de cuándo volver a cargar desde fábrica.
 - Facturación y emisión de comprobantes.
 - Impresión de boletas desde la aplicación cuando exista una impresora compatible.
 - Cuentas, permisos y roles.

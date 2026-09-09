@@ -6,15 +6,14 @@ Cada pedido debe tener un estado visible y un seguimiento entendible, similar a 
 
 ## Estados principales
 
-1. **Pedido cargado** — alguien tomó y guardó el pedido.
-2. **Pedido recibido** — la empresa o el depósito confirmó que lo vio.
-3. **Pedido a preparar** — está en la cola de preparación.
-4. **Pedido en preparación** — alguien está armándolo.
-5. **Pedido preparado** — ya está completo y listo para despacho.
-6. **Pedido en reparto** — salió del depósito.
-7. **Pedido entregado** — llegó al comercio.
-8. **Pedido con incidencia** — existe un problema que requiere atención.
-9. **Pedido cancelado** — se anuló y debe conservarse el motivo.
+1. **Pedido ingresado** — el vendedor lo cargó desde el comercio. No hace falta una etapa de “recibido”: el equipo lo prepara cuando vuelve al depósito.
+2. **Pedido en preparación** — alguien está armándolo y usa la checklist de productos.
+3. **Pedido preparado** — ya fue armado y está listo para subir al vehículo.
+4. **Cargado en el vehículo** — la mercadería fue revisada y subida.
+5. **En reparto** — salió del depósito hacia el comercio.
+6. **Pedido entregado** — llegó al comercio y se confirmó la entrega.
+7. **Pedido con incidencia** — existe un problema que requiere atención.
+8. **Pedido cancelado** — se anuló y debe conservarse el motivo.
 
 ## Vista para el usuario
 
@@ -53,6 +52,32 @@ Ejemplo:
 11:05  Entregado — Roberto
 ```
 
+## Checklist de preparación
+
+Mientras se arma el pedido, cada producto debe mostrarse con su cantidad y una casilla para marcarlo.
+
+```text
+[✓] 5 paquetes de producto A
+[ ] 3 cajas de producto B
+[✓] 2 bolsas de producto C
+```
+
+La checklist debe permitir saber qué ya se colocó en los cajones y qué falta, sin volver a cargar cantidades.
+
+## Faltantes y cambios
+
+Si se pidieron 10 unidades y solo hay 8:
+
+- El responsable de preparación ajusta la cantidad a 8.
+- Agrega una observación.
+- El pedido conserva el dato original y el dato preparado.
+- Se avisa al dueño o responsable económico.
+- No hace falta bloquear todo el pedido.
+
+## Entrega
+
+La confirmación principal será tocar “Marcar como entregado”. Cuando corresponda, se podrá adjuntar una foto del comprobante de transferencia.
+
 ## Reglas
 
 - No borrar el historial de estados.
@@ -61,6 +86,7 @@ Ejemplo:
 - Los estados deben ser fáciles de cambiar desde el celular.
 - El sistema debe contemplar errores, faltantes, devoluciones y entregas parciales.
 - La impresión o facturación futura debe usar el mismo pedido, sin volver a cargarlo manualmente.
+- Si no hay conexión, el pedido se guarda localmente y se sincroniza al recuperar internet.
 
 ## Futuro
 

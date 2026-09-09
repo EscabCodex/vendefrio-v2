@@ -1,5 +1,23 @@
 # VendeFrío — Registro de decisiones y cambios
 
+## 2026-09-09 — Visión futura de stock conectado
+
+- Se registra que quien toma pedidos debe poder consultar el stock real desde la calle.
+- Se define como objetivo reservar o descontar cantidades al confirmar pedidos para no comprometer dos veces la misma mercadería.
+- Se incorpora la planificación de carga desde fábrica para evitar viajes y gastos innecesarios.
+- Se distingue como decisión futura el stock físico, reservado y disponible.
+
+## 2026-09-09 — Definición del flujo operativo con el usuario
+
+- Se priorizan distribuidoras pequeñas, medianas y mayoristas de barrio.
+- Todos los usuarios autorizados compartirán el mismo centro de información y verán los mismos datos.
+- Se elimina “pedido recibido” del flujo inicial porque la preparación ocurre cuando el equipo vuelve al depósito.
+- Se define guardado local y sincronización automática al recuperar internet.
+- Se define checklist por producto durante la preparación.
+- Los faltantes se ajustan con observación y aviso al responsable económico.
+- La entrega se confirma manualmente y puede incluir foto del comprobante de transferencia.
+- La impresión futura será de comprobantes simples; la factura fiscal queda fuera del alcance inicial.
+
 ## 2026-09-09 — Definición del flujo operativo
 
 - Se define que cada pedido tendrá seguimiento por estados.
