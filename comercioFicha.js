@@ -113,8 +113,8 @@
 
         const botonEstado = datos.visitadoEstaSemana
             ? crearBoton(window.icono("puntoRojo",14) + " Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
-            : crearBoton(window.icono("check",14) + " Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); });
-        const botonEliminar = crearBoton(window.icono("tacho",14) + " Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); }); });
+            : crearBoton(window.icono("check",14) + " Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); if (navigator.vibrate) navigator.vibrate(30); });
+        const botonEliminar = crearBoton(window.icono("tacho",14) + " Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercio(comercio.nombre); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); if (navigator.vibrate) navigator.vibrate([25,40,25]); }); });
         modalFicha.querySelector(".fichaAcciones").append(
             crearBoton(window.icono("documento",14) + " Hacer pedido", "agregar", () => { cerrarFicha(); irAPedidoRapido(comercio.nombre); }),
             crearBoton(window.icono("mapa",14) + " Navegar", "ver", () => { cerrarFicha(); mostrarPantalla("rutas"); }),

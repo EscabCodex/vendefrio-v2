@@ -154,6 +154,32 @@ function guardarJSON(clave, datos) {
     }
 }
 
+function mostrarToast(mensaje, tipo) {
+    let contenedor = document.getElementById("contenedorToasts");
+    if (!contenedor) {
+        contenedor = document.createElement("div");
+        contenedor.id = "contenedorToasts";
+        document.body.appendChild(contenedor);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = "toast" + (tipo ? " toast-" + tipo : "");
+    toast.innerHTML =
+        (window.icono ? window.icono("check", 16) : "") +
+        "<span>" + mensaje + "</span>";
+    contenedor.appendChild(toast);
+
+    if (navigator.vibrate) navigator.vibrate(20);
+
+    requestAnimationFrame(() => toast.classList.add("toast-visible"));
+
+    setTimeout(() => {
+        toast.classList.remove("toast-visible");
+        setTimeout(() => toast.remove(), 250);
+    }, 2400);
+}
+window.mostrarToast = mostrarToast;
+
 function mostrarAviso(titulo, mensaje) {
     let modalAviso = document.getElementById("modalAviso");
 

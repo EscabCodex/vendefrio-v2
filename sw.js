@@ -1,12 +1,12 @@
 // =====================================================
-// VendeFrío - Service Worker (v124 - Rework Visual)
+// VendeFrío - Service Worker (v125 - Rework Visual + Íconos)
 // =====================================================
-const CACHE_NAME = "vendefrio-v124";
+const CACHE_NAME = "vendefrio-v125";
 const ARCHIVOS = [
   "./",
   "./index.html",
   "./styles.css",
-  "./rework.css",
+  "./iconos.js",
   "./productos.js",
   "./comercios.js",
   "./database.js",
@@ -20,6 +20,8 @@ const ARCHIVOS = [
   "./productosAdmin.js",
   "./historial.js",
   "./rutas.js",
+  "./navegacion3d.js",
+  "./navegacion3d.css",
   "./manifest.json",
   "./icon.svg"
 ];

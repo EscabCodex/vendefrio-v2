@@ -24,6 +24,9 @@ function mostrarPantalla(nombre) {
 
     if (pantallas[nombre]) {
         pantallas[nombre].classList.remove("oculto");
+        pantallas[nombre].classList.remove("entrada-pantalla");
+        void pantallas[nombre].offsetWidth;
+        pantallas[nombre].classList.add("entrada-pantalla");
     }
 
     document.querySelectorAll(".nav-item").forEach(btn => {

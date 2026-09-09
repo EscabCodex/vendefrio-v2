@@ -790,6 +790,7 @@ function generarPedido() {
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
     if (modalPedido) modalPedido.classList.remove("oculto");
+    if (navigator.vibrate) navigator.vibrate(35);
 
     return true;
 }

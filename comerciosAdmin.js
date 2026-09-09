@@ -176,10 +176,7 @@ function marcarVisitaManual(nombre) {
         actualizarDashboard();
     }
 
-    mostrarAviso(
-        "Visita registrada",
-        "Se marc\u00f3 " + nombre + " como visitado hoy."
-    );
+    mostrarToast("Se marc\u00f3 " + nombre + " como visitado hoy");
 }
 
 function marcarPendienteManual(nombre) {

@@ -39,7 +39,7 @@
 body{
   background:var(--fondo);
   color:var(--texto);
-  padding-bottom:100px;
+  padding-bottom:calc(100px + env(safe-area-inset-bottom));
 }
 
 /* ================= HEADER ================= */
@@ -47,7 +47,7 @@ body{
 header{
   background:var(--superficie);
   color:var(--texto);
-  padding:20px 20px 16px;
+  padding:calc(20px + env(safe-area-inset-top)) 20px 16px;
   display:flex;
   align-items:center;
   gap:14px;
@@ -778,6 +778,60 @@ footer button:active{
   display:none;
 }
 
+.entrada-pantalla{
+  animation:entradaPantalla .22s ease-out;
+}
+
+@keyframes entradaPantalla{
+  from{ opacity:0; transform:translateY(10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .entrada-pantalla{ animation:none; }
+}
+
+/* ================= TOAST (aviso breve, no bloqueante) ================= */
+
+#contenedorToasts{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:calc(78px + env(safe-area-inset-bottom));
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  z-index:3000;
+  pointer-events:none;
+}
+
+.toast{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:var(--texto);
+  color:var(--superficie);
+  padding:11px 18px;
+  border-radius:999px;
+  font-size:13.5px;
+  font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.22);
+  opacity:0;
+  transform:translateY(10px) scale(.95);
+  transition:opacity .22s ease, transform .22s ease;
+  max-width:88vw;
+}
+
+.toast.toast-visible{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+
+.toast svg{
+  flex-shrink:0;
+}
+
 /* ================= MODAL ================= */
 
 .modal{
@@ -786,9 +840,10 @@ footer button:active{
   background:rgba(24,36,32,.5);
   display:flex;
   justify-content:center;
-  align-items:center;
-  padding:20px;
+  align-items:flex-end;
+  padding:0;
   z-index:2000;
+  animation:fondoModal .2s ease;
 }
 
 .modal.oculto{
@@ -798,13 +853,27 @@ footer button:active{
 .modalContenido{
   background:var(--superficie);
   width:100%;
-  max-width:420px;
-  border-radius:var(--radius-lg);
+  max-width:480px;
+  border-radius:20px 20px 0 0;
   padding:22px;
-  box-shadow:0 15px 40px rgba(0,0,0,.2);
-  animation:aparecer .18s ease;
-  max-height:88vh;
+  padding-top:26px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.18);
+  animation:deslizarArriba .28s cubic-bezier(.22,.68,0,1.01);
+  max-height:90vh;
   overflow-y:auto;
+  position:relative;
+}
+
+.modalContenido::before{
+  content:"";
+  position:absolute;
+  top:9px;
+  left:50%;
+  transform:translateX(-50%);
+  width:36px;
+  height:4px;
+  border-radius:99px;
+  background:var(--borde);
 }
 
 .modalContenido h2{
@@ -835,7 +904,7 @@ footer button:active{
 
 #mensajeConfirmacion{
   font-size:15px;
-  color:#444;
+  color:var(--texto-sec);
   text-align:center;
   line-height:1.5;
 }
@@ -868,7 +937,7 @@ footer button:active{
 
 .btnModalCancelar{
   background:var(--gris-claro);
-  color:#555;
+  color:var(--texto);
 }
 
 .btnModalConfirmar{
@@ -883,7 +952,7 @@ footer button:active{
 
 .btnModalSecundario{
   background:var(--gris-claro);
-  color:#333;
+  color:var(--texto);
 }
 
 .btnModalWhatsapp{
@@ -892,7 +961,8 @@ footer button:active{
 }
 
 .detallePedido{
-  background:#f3f5f7;
+  background:var(--fondo);
+  border:1px solid var(--borde);
   border-radius:var(--radius-md);
   padding:14px;
   margin-top:14px;
@@ -905,18 +975,23 @@ footer button:active{
 }
 
 .detallePedido strong{
-  color:#145c42;
+  color:var(--acento-oscuro);
   font-weight:800;
 }
 
-@keyframes aparecer{
+@keyframes fondoModal{
+  from{ background:rgba(24,36,32,0); }
+  to{ background:rgba(24,36,32,.5); }
+}
+
+@keyframes deslizarArriba{
   from{
     opacity:0;
-    transform:scale(.92);
+    transform:translateY(28px);
   }
   to{
     opacity:1;
-    transform:scale(1);
+    transform:translateY(0);
   }
 }
 /* Sube el footer para que no lo tape la barra de navegaci\f3 n inferior */
@@ -948,7 +1023,8 @@ main.container {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 62px;
+  height: calc(62px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--superficie);
   display: flex;
   justify-content: space-around;
@@ -2908,7 +2984,7 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:#
 }
 
 /* Corrección definitiva de ficha: acciones siempre visibles y cierre funcional */
-.modalFichaComercio{display:flex!important;align-items:center;justify-content:center;overflow-y:auto;}
+.modalFichaComercio{display:flex!important;align-items:flex-end!important;justify-content:center;overflow-y:auto;}
 .modalFichaComercio .fichaContenido{display:block!important;width:min(100%,430px);max-height:calc(100dvh - 24px);overflow-y:auto;}
 .modalFichaComercio .fichaAcciones{display:grid!important;visibility:visible!important;position:sticky;bottom:-16px;z-index:3;padding:10px 0 4px;margin-top:10px;background:#fff;}
 .modalFichaComercio .fichaAcciones button{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;align-items:center;justify-content:center;min-height:44px!important;}
