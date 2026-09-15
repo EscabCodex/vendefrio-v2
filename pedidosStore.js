@@ -49,7 +49,7 @@
 
         const numerosExistentes = new Set(
             pedidos
-                .map(p => p && p.numero)
+                .map(p => p && p.numeroVisible)
                 .filter(Boolean)
         );
 
@@ -85,12 +85,13 @@
 
         const anio = obtenerAnioActual();
         const id = generarIdUnico();
-        const numero = obtenerSiguienteNumeroVisible(anio);
+        const numeroVisible = obtenerSiguienteNumeroVisible(anio);
         const fechaHoraIso = new Date().toISOString();
 
         const nuevoPedido = {
+            ...datosPedido,
             id,
-            numero,
+            numeroVisible,
             estado: ESTADO_INICIAL,
             historialEstados: [
                 {
