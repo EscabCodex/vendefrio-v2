@@ -773,15 +773,27 @@ function generarPedido() {
     void copiarTexto(ultimoPedidoTexto);
     registrarPedido(cliente);
 
-    agregarHistorial({
-        fecha,
-        timestamp: Date.now(),
-        comercio: cliente,
-        cantidad: cantidadProductos,
-        pedido: ultimoPedidoTexto,
-        productos: productosEstructurados,
-        observaciones
-    });
+    if (typeof pedidosStore !== "undefined" && typeof pedidosStore.crearPedido === "function") {
+        pedidosStore.crearPedido({
+            fecha,
+            timestamp: Date.now(),
+            comercio: cliente,
+            cantidad: cantidadProductos,
+            pedido: ultimoPedidoTexto,
+            productos: productosEstructurados,
+            observaciones
+        });
+    } else {
+        agregarHistorial({
+            fecha,
+            timestamp: Date.now(),
+            comercio: cliente,
+            cantidad: cantidadProductos,
+            pedido: ultimoPedidoTexto,
+            productos: productosEstructurados,
+            observaciones
+        });
+    }
 
     actualizarEstadoBotonRepetir();
     borrarBorradorPedido();
