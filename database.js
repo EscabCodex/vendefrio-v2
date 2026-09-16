@@ -606,6 +606,10 @@ function eliminarProducto(marca, indice) {
 // -----------------------------------------------------
 
 function obtenerHistorial() {
+    if (typeof pedidosStore !== "undefined" && typeof pedidosStore.obtenerPedidos === "function") {
+        return pedidosStore.obtenerPedidos();
+    }
+
     let historial = leerJSON(DB_HISTORIAL, []);
 
     if (!Array.isArray(historial)) historial = [];
@@ -614,10 +618,18 @@ function obtenerHistorial() {
 }
 
 function guardarHistorial(historial) {
+    if (typeof pedidosStore !== "undefined" && typeof pedidosStore.guardarPedidos === "function") {
+        return pedidosStore.guardarPedidos(historial);
+    }
+
     return guardarJSON(DB_HISTORIAL, Array.isArray(historial) ? historial : []);
 }
 
 function agregarHistorial(registro) {
+    if (typeof pedidosStore !== "undefined" && typeof pedidosStore.crearPedido === "function") {
+        return pedidosStore.crearPedido(registro);
+    }
+
     if (!registro || typeof registro !== "object") return false;
 
     const historial = obtenerHistorial();
@@ -626,6 +638,10 @@ function agregarHistorial(registro) {
 }
 
 function eliminarHistorial(indice) {
+    if (typeof pedidosStore !== "undefined" && typeof pedidosStore.eliminarPedido === "function") {
+        return pedidosStore.eliminarPedido(indice);
+    }
+
     const historial = obtenerHistorial();
     const posicion = Number(indice);
 
