@@ -22,5 +22,21 @@
         }
     } catch (error) {
         console.error("No se pudo iniciar Firebase.", error);
+        return;
+    }
+
+    // Trabajo sin conexión de Firestore (T9): guarda una copia en el celular,
+    // anota los cambios sin internet y los sube solo al volver la señal.
+    // Tiene que activarse antes de cualquier otro uso de Firestore.
+    try {
+        if (window.firebase.firestore) {
+            window.firebase.firestore()
+                .enablePersistence({ synchronizeTabs: true })
+                .catch(error => {
+                    console.warn("Firestore sigue sin copia en el celular.", error);
+                });
+        }
+    } catch (error) {
+        console.warn("No se pudo activar el trabajo sin conexión de Firestore.", error);
     }
 }());

@@ -12,6 +12,8 @@ const DB_ULTIMO_RESPALDO = "vendefrio_ultimo_respaldo";
 const DB_RESPALDO_AUTOMATICO = "vendefrio_respaldo_automatico";
 const DB_ULTIMO_RESPALDO_AUTOMATICO = "vendefrio_ultimo_respaldo_automatico";
 const DB_SEMANA_ACTUAL = "vendefrio_semana_actual";
+// Modo nube de prueba (T9): guarda el uid de la cuenta que lo activ\u00f3.
+const DB_MODO_NUBE_PRUEBA = "vendefrio_modo_nube_prueba";
 const DIAS_ENTRE_RESPALDOS_AUTOMATICOS = 7;
 
 const PALETA_MARCAS = ["#0f9d63", "#ff8a3d", "#8b5cf6", "#3b82f6", "#e5483d", "#0891b2"];
@@ -137,8 +139,9 @@ function programarReinicioSemanal() {
 // (al abrir la app), que trabajan sobre el texto guardado tal cual. Esas dos funciones trabajan contra una copia en
 // memoria; el "adaptador" es el que sabe d\u00f3nde viven los datos de verdad.
 //
-// Hoy hay un solo adaptador: el local (localStorage). El adaptador nube
-// (Firestore, T9) tiene que cumplir esta misma interfaz:
+// Hay dos adaptadores: el local (localStorage, el de siempre) y el nube
+// (Firestore, en nube.js), que por ahora solo se usa en el modo nube de
+// prueba. Los dos cumplen esta misma interfaz:
 //
 //   nombre                            "local", "nube", etc.
 //   leer(coleccion)                   devuelve los datos guardados, o undefined
@@ -236,7 +239,8 @@ function conectarAdaptadorDatos() {
     dejarDeEscucharAdaptador = typeof dejar === "function" ? dejar : null;
 }
 
-// Cambia de d\u00f3nde salen los datos. Todav\u00eda no se usa: queda lista para T9.
+// Cambia de d\u00f3nde salen los datos. Hoy solo la usa nube.js en el modo
+// nube de prueba (T9).
 function usarAdaptadorDatos(adaptador) {
     if (!esAdaptadorValido(adaptador)) {
         console.error("El adaptador de datos no cumple la interfaz.", adaptador);
@@ -252,6 +256,35 @@ function usarAdaptadorDatos(adaptador) {
 
 function obtenerNombreAdaptadorDatos() {
     return adaptadorDatos.nombre || "";
+}
+
+// --- Modo nube de prueba (T9) ---
+// Con el modo prueba, los datos salen de una distribuidora de prueba en la
+// nube. Los datos reales de este celular (localStorage) no se leen ni se
+// escriben mientras dure: por eso las acciones de respaldo quedan frenadas.
+
+function obtenerUidModoNubePrueba() {
+    try {
+        return localStorage.getItem(DB_MODO_NUBE_PRUEBA) || "";
+    } catch (error) {
+        return "";
+    }
+}
+
+function estaEnModoNubePrueba() {
+    return obtenerUidModoNubePrueba() !== "";
+}
+
+// Devuelve true (y avisa) si la acci\u00f3n no se puede usar porque los datos
+// no salen de este celular.
+function frenarSiDatosNoSonLocales() {
+    if (obtenerNombreAdaptadorDatos() === "local") return false;
+
+    mostrarAviso(
+        "No disponible en modo prueba",
+        "Est\u00e1s usando la distribuidora de prueba en la nube. Para usar esta opci\u00f3n, apag\u00e1 el modo prueba en Configuraci\u00f3n > Cuenta."
+    );
+    return true;
 }
 
 function cargarColeccion(coleccion) {
@@ -328,9 +361,9 @@ function olvidarColeccionesEnMemoria(colecciones) {
 // Las pantallas se anotan con escucharCambiosDatos(funcion) para volver a
 // dibujarse solas. La funci\u00f3n recibe { colecciones, externo }: "externo" es
 // true si el cambio vino de afuera (otra pesta\u00f1a u otro celular). Los cambios
-// del mismo momento llegan juntos en un solo aviso. Por ahora ninguna
-// pantalla se anota: cada una se redibuja sola despu\u00e9s de sus cambios, como
-// siempre.
+// del mismo momento llegan juntos en un solo aviso. Las pantallas se
+// redibujan solas despu\u00e9s de sus propios cambios, como siempre; nube.js se
+// anota para redibujarlas cuando el cambio viene de otro celular (T9).
 
 const oyentesCambiosDatos = new Set();
 let avisoCambiosPendiente = null;
@@ -1038,6 +1071,8 @@ function crearDatosRespaldo() {
 }
 
 function exportarRespaldo() {
+    if (frenarSiDatosNoSonLocales()) return;
+
     try {
         const respaldo = crearDatosRespaldo();
         const contenido = JSON.stringify(respaldo, null, 2);
@@ -1072,6 +1107,9 @@ function exportarRespaldo() {
 }
 
 function guardarRespaldoAutomatico() {
+    // La copia interna es de los datos reales: nunca se pisa con datos de prueba.
+    if (obtenerNombreAdaptadorDatos() !== "local") return false;
+
     try {
         const respaldo = crearDatosRespaldo();
         localStorage.setItem(
@@ -1177,6 +1215,7 @@ function restaurarRespaldo(respaldo) {
 
 function importarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
+    if (frenarSiDatosNoSonLocales()) return;
 
     const lector = new FileReader();
 
@@ -1380,6 +1419,7 @@ function combinarRespaldoSinBorrar(respaldo) {
 
 function importarYCombinarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
+    if (frenarSiDatosNoSonLocales()) return;
 
     const lector = new FileReader();
     lector.onload = () => {
@@ -1506,6 +1546,8 @@ function prepararControlesRespaldo() {
 
     if (botonBorrarTodos && !botonBorrarTodos.dataset.configurado) {
         botonBorrarTodos.addEventListener("click", () => {
+            if (frenarSiDatosNoSonLocales()) return;
+
             const borrar = () => {
                 if (!borrarTodosLosDatos()) return;
                 window.location.reload();

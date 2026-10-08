@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v127 - Firebase: distribuidora)
+// VendeFrío - Service Worker (v128 - Firebase: adaptador nube)
 // =====================================================
-const CACHE_NAME = "vendefrio-v127";
+const CACHE_NAME = "vendefrio-v128";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -29,7 +29,8 @@ const ARCHIVOS = [
   "./firebase/firebase-firestore-compat.js",
   "./firebase-config.js",
   "./cuenta.js",
-  "./distribuidora.js"
+  "./distribuidora.js",
+  "./nube.js"
 ];
 
 function esSolicitudGETMismaApp(request) {

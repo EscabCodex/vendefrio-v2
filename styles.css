@@ -3122,3 +3122,8 @@ html[data-tema="oscuro"] .configDetalle .configCuentaClave input[type="text"]{ba
 html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;color:#cbd5e1;}
 html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;}
 html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border:1px solid #f87171;}
+
+/* Modo nube de prueba (T9): cartel fijo para saber siempre que se usan datos de prueba */
+.cartelModoPrueba{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--pendiente);background:var(--pendiente-bg);color:var(--pendiente);font-size:11px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+html[data-tema="oscuro"] .cartelModoPrueba{background:#1f2937;color:#fff;border-color:var(--pendiente);}
+html.conModoPrueba #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}

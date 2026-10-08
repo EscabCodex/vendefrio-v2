@@ -1,11 +1,13 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8)
-// Se publican a mano en la consola de Firebase (tarea M3).
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9)
+// Se publican a mano en la consola de Firebase (tarea M3; volver a publicar
+// cada vez que cambia este archivo).
 //
 // Estructura:
 //   usuarios/{uid}                  a qué distribuidora pertenece cada usuario
-//   distribuidoras/{idDistribuidora}
+//   distribuidoras/{idDistribuidora}   el id es el uid del dueño, o "prueba-" + uid
+//                                   para la distribuidora de prueba (T9)
 //     miembros/{uid}                usuarios autorizados
 //     comercios/{id}
 //     productos/{id}
@@ -56,9 +58,13 @@ service cloud.firestore {
 
       // Al primer ingreso del dueño: la distribuidora usa su uid como id,
       // así cada dueño crea una sola, y se crea junto con su ficha de miembro.
+      // Cada dueño puede crear además una sola distribuidora de prueba
+      // ("prueba-" + uid, con prueba: true) para el modo prueba (T9).
       allow create: if ingreso()
-        && idDistribuidora == request.auth.uid
-        && request.resource.data.keys().hasOnly(["nombre", "duenoUid", "creada"])
+        && (idDistribuidora == request.auth.uid
+            || idDistribuidora == "prueba-" + request.auth.uid)
+        && request.resource.data.keys().hasOnly(["nombre", "duenoUid", "creada", "prueba"])
+        && request.resource.data.get("prueba", false) == (idDistribuidora != request.auth.uid)
         && request.resource.data.duenoUid == request.auth.uid
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() <= 80
