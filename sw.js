@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v131 - Firebase: subida sin repetidos)
+// VendeFrío - Service Worker (v132 - Firebase: sincronización visible)
 // =====================================================
-const CACHE_NAME = "vendefrio-v131";
+const CACHE_NAME = "vendefrio-v132";
 const ARCHIVOS = [
   "./",
   "./index.html",

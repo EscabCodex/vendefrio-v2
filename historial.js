@@ -954,6 +954,11 @@ function renderizarHistorial() {
             informacion.append(crearTextoHistorial("span", "Hist\u00f3rico", "badge badgeHistorico"));
         }
 
+        // Pedido que todav\u00eda no confirm\u00f3 la nube (T12).
+        if (window.nubeVendeFrio?.pedidoSinSubir?.(pedido.id)) {
+            informacion.append(crearTextoHistorial("span", "Pendiente de sincronizar", "badge badgeSinSubir"));
+        }
+
         cabecera.append(avatar, informacion);
 
         const acciones = document.createElement("div");
