@@ -1,74 +1,64 @@
-# VendeFrío — Roadmap estratégico
+# VendeFrío — Roadmap
 
-Este roadmap no es una lista rígida de pantallas. Es el orden para alcanzar calidad de producto.
+No es una lista rígida de pantallas: es el orden para llegar a calidad de producto. El alcance de la 1.0 está en `PRODUCT.md`.
 
-## Horizonte 1 — Definición de producto
+## Hacia la versión 1.0 (propuesta de plan: unas 4 semanas)
 
-- Aprobar visión.
-- Definir usuarios prioritarios.
-- Definir problemas más valiosos.
-- Definir qué justificaría pagar.
-- Elegir métricas de éxito.
-- Ordenar el alcance inicial.
+**Etapa 1 — Base**
+- Consolidar la documentación (este conjunto de 6 archivos).
+- Revisar que el repo público no exponga claves (por ejemplo, la configuración de MapTiler).
+- Elegir el servicio de datos compartidos y definir la arquitectura. Es la decisión técnica más importante.
 
-## Horizonte 2 — Producto esencial excelente
+**Etapa 2 — Datos compartidos**
+- Cuenta de la distribuidora con varios usuarios.
+- Pasar los módulos de `localStorage` a datos compartidos, sin perder lo que ya está cargado.
+- Respaldo y recuperación de datos.
 
-- Pedido extremadamente rápido.
-- Catálogo y precios confiables.
-- Comercios fáciles de consultar.
-- Historial útil para repetir y analizar.
-- Datos protegidos y recuperables.
-- Funcionamiento sólido en celular y con conectividad irregular.
-- Pedido digital claro, listo para compartir y preparar.
+**Etapa 3 — Pedido completo**
+- Ciclo de estados con historial y responsables.
+- Checklist de preparación, faltantes y entrega con foto opcional.
+- Trabajo sin conexión con sincronización automática.
 
-## Horizonte 3 — Operación compartida de la distribuidora
+**Etapa 4 — Pulido y cierre**
+- Rework visual completo de la app.
+- Pruebas en celulares reales, modo claro y oscuro, y PWA.
+- Cierre de la 1.0 y prueba en el trabajo diario.
 
-- Cuentas de empresa con varios usuarios.
-- Roles para vendedor, encargado, depósito, reparto y administración.
-- Bandeja de pedidos recibidos.
-- Estados de preparación y entrega.
-- Depósito viendo pedidos apenas son cargados.
-- Historial de cambios y responsables.
-- Notificaciones internas.
-- Menos dependencia de boletas físicas y mensajes manuales.
+Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
 
-## Horizonte 4 — Operación comercial
+## Después de la 1.0
 
-- Stock de depósito.
-- Reserva o descuento de stock al confirmar pedidos.
-- Cuentas corrientes y condiciones comerciales.
-- Facturación y emisión de comprobantes.
-- Impresión de boletas.
-- Preparación y despacho.
-- Integración futura con sistemas contables o fiscales, según el país.
+1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.
+2. **Operación comercial:** cuentas corrientes, comprobantes simples, impresión de boletas.
+3. **Facturación** fiscal e integraciones contables, según el país.
+4. **Inteligencia comercial:** comercios sin visitar, pedidos inusuales, productos de baja rotación, resúmenes accionables.
+5. **Producto comercializable:** multiempresa, planes de pago, panel para distribuidoras, soporte y documentación.
 
-## Horizonte 5 — Inteligencia comercial
+## Tareas abiertas
 
-- Sugerencias de reposición.
-- Detección de pedidos inusuales.
-- Comercios sin visitar.
-- Evolución de ventas.
-- Productos con baja rotación.
-- Resúmenes accionables, no solo gráficos.
+- [ ] Aprobar la visión y el alcance de la 1.0 (`PRODUCT.md`).
+- [ ] Elegir el servicio de datos compartidos.
+- [ ] Definir los tres problemas de mayor valor.
+- [ ] Definir qué funciones son esenciales y cuáles secundarias.
+- [ ] Definir qué podría justificar un pago.
+- [ ] Definir la diferencia entre stock físico, reservado y disponible (para después de la 1.0).
+- [ ] Rework visual completo.
 
-## Horizonte 5 — Producto profesional y comercializable
+## Decisiones abiertas
 
-- Cuentas y perfiles.
-- Sincronización segura.
-- Equipos y permisos.
-- Respaldo remoto.
-- Suscripciones o planes.
-- Panel para distribuidoras.
-- Soporte, onboarding y documentación.
+- ¿Qué pasa si dos personas modifican el mismo pedido a la vez?
+- ¿Quién puede cambiar cada estado?
+- ¿Qué datos mínimos necesita el depósito para preparar?
+- ¿Cómo entra un empleado nuevo a la cuenta de la distribuidora?
+- ¿Qué diferencia hay entre pedido, remito, factura y entrega?
+- ¿Qué impresora o dispositivo se usará más adelante?
 
-## Orden de decisión
+## Cómo se decide
 
-Antes de desarrollar cualquier horizonte debemos responder:
+Antes de desarrollar cualquier cosa hay que poder responder: qué usuario lo necesita, qué problema concreto resuelve, cuánto tiempo o error ahorra, qué datos necesita, cómo se prueba, qué riesgo agrega y si puede convertirse en algo por lo que alguien pague.
 
-1. ¿Qué usuario lo necesita?
-2. ¿Qué problema concreto resuelve?
-3. ¿Cuánto tiempo o error ahorra?
-4. ¿Qué datos necesita?
-5. ¿Cómo se prueba?
-6. ¿Qué riesgo agrega?
-7. ¿Puede convertirse en una ventaja por la que alguien pague?
+## Prohibido por ahora
+
+- Cambiar la tecnología base sin decisión explícita.
+- Agregar funciones solo porque parecen modernas.
+- Mezclar propuestas de varias IAs sin una decisión consolidada.
