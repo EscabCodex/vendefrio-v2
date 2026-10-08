@@ -767,21 +767,47 @@
         return { grupos, marcas, orden: obtenerMarcasOrdenadas(productos) };
     }
 
-    // Ids que la nube ya confirmó, por grupo. Lo que todavía espera subir
-    // desde este celular no cuenta como subido.
+    // Clave para reconocer el mismo registro aunque tenga otro id (por
+    // ejemplo, si se subió desde otro celular): comercios y rutas por nombre,
+    // productos por marca y nombre. La app no deja repetir esos nombres.
+    // Los pedidos no tienen clave: dos pedidos iguales pueden ser reales.
+    function claveRegistro(clave, registro, marca) {
+        const nombre = normalizarTexto(registro && registro.nombre);
+        if (!nombre) return "";
+
+        if (clave === "comercios" || clave === "rutas") return nombre;
+        if (clave === "productos") return normalizarTexto(marca) + "|" + nombre;
+        return "";
+    }
+
+    // Ids y claves que la nube ya confirmó, por grupo. Lo que todavía espera
+    // subir desde este celular no cuenta como subido.
     async function leerIdsEnNube(ref) {
-        const ids = {};
+        const enNube = {};
 
         for (const grupo of GRUPOS_MIGRACION) {
             const foto = await esperarNube(ref.collection(grupo.subcoleccion).get({ source: "server" }));
-            ids[grupo.clave] = new Set();
+            enNube[grupo.clave] = { ids: new Set(), claves: new Set() };
 
             foto.forEach(documento => {
-                if (!documento.metadata.hasPendingWrites) ids[grupo.clave].add(documento.id);
+                if (documento.metadata.hasPendingWrites) return;
+
+                const datos = documento.data() || {};
+                const clave = claveRegistro(grupo.clave, deDocumento(documento.id, datos), datos._marca);
+
+                enNube[grupo.clave].ids.add(documento.id);
+                if (clave) enNube[grupo.clave].claves.add(clave);
             });
         }
 
-        return ids;
+        return enNube;
+    }
+
+    function estaEnNube(enGrupo, clave, item) {
+        if (enGrupo.ids.has(item.registro.id)) return true;
+
+        const claveItem = claveRegistro(clave, item.registro, item.extras._marca);
+        return Boolean(claveItem && enGrupo.claves.has(claveItem));
     }
 
     function unirListas(lista, nuevas) {
@@ -806,11 +832,13 @@
 
             while (indice < escrituras.length && cantidad < MAX_ESCRITURAS_POR_TANDA) {
                 const escritura = escrituras[indice];
-                const peso = JSON.stringify(escritura.datos).length;
+                const peso = escritura.tipo === "borrar" ? 0 : JSON.stringify(escritura.datos).length;
 
                 if (cantidad > 0 && bytes + peso > MAX_BYTES_POR_TANDA) break;
 
-                if (escritura.combinar) {
+                if (escritura.tipo === "borrar") {
+                    tanda.delete(escritura.ref);
+                } else if (escritura.combinar) {
                     tanda.set(escritura.ref, escritura.datos, { merge: true });
                 } else {
                     tanda.set(escritura.ref, escritura.datos);
@@ -871,7 +899,8 @@
 
             GRUPOS_MIGRACION.forEach(grupo => {
                 local.grupos[grupo.clave].forEach(item => {
-                    if (enNube[grupo.clave].has(item.registro.id)) return;
+                    // Ya está (por id, o por nombre si vino de otro celular): no se repite.
+                    if (estaEnNube(enNube[grupo.clave], grupo.clave, item)) return;
 
                     escrituras.push({
                         ref: ref.collection(grupo.subcoleccion).doc(item.registro.id),
@@ -904,13 +933,13 @@
             const verificados = await leerIdsEnNube(ref);
 
             const totales = GRUPOS_MIGRACION.map(grupo => {
-                const ids = local.grupos[grupo.clave].map(item => item.registro.id);
+                const items = local.grupos[grupo.clave];
 
                 return {
                     clave: grupo.clave,
                     nombre: grupo.nombre,
-                    enEsteCelular: ids.length,
-                    enLaNube: ids.filter(id => verificados[grupo.clave].has(id)).length
+                    enEsteCelular: items.length,
+                    enLaNube: items.filter(item => estaEnNube(verificados[grupo.clave], grupo.clave, item)).length
                 };
             });
 
@@ -927,6 +956,249 @@
         } finally {
             migracionEnCurso = false;
         }
+    }
+
+    // -------------------------------------------------
+    // Juntar comercios y productos repetidos (arreglo de T11)
+    // -------------------------------------------------
+    // Si la migración se corrió desde dos lugares (por ejemplo la vista previa
+    // de Vercel, que guarda sus propios datos, y la app principal), el mismo
+    // comercio o producto quedó dos veces con distinto id. Se deja uno por
+    // nombre (el que usan las rutas o, si no, el que tiene más datos), se le
+    // pasan los datos que le falten y las rutas pasan a apuntar a ese. Los
+    // pedidos no se tocan. Antes se descarga un respaldo de toda la nube.
+
+    function estaVacio(valor) {
+        if (valor === undefined || valor === null || valor === "" || valor === false || valor === 0) return true;
+        if (Array.isArray(valor)) return valor.length === 0;
+        if (typeof valor === "object") return Object.keys(valor).length === 0;
+        return false;
+    }
+
+    function cantidadDeDatos(registro) {
+        return Object.keys(registro).filter(campo => {
+            return campo !== "id" && campo !== "nombre" && !estaVacio(registro[campo]);
+        }).length;
+    }
+
+    function combinarRegistros(base, otros) {
+        const resultado = { ...base };
+
+        otros.forEach(otro => {
+            Object.keys(otro).forEach(campo => {
+                if (campo === "id") return;
+
+                if (campo === "pedidosRealizados") {
+                    resultado[campo] = Math.max(Number(resultado[campo]) || 0, Number(otro[campo]) || 0);
+                    return;
+                }
+
+                if (campo === "ultimaVisita" && !estaVacio(resultado[campo]) && !estaVacio(otro[campo])) {
+                    if (Date.parse(otro[campo]) > Date.parse(resultado[campo])) resultado[campo] = otro[campo];
+                    return;
+                }
+
+                if (estaVacio(resultado[campo]) && !estaVacio(otro[campo])) {
+                    resultado[campo] = otro[campo];
+                }
+            });
+        });
+
+        return resultado;
+    }
+
+    function idsUsadosEnRutas() {
+        const usados = new Set();
+
+        documentos.rutas.forEach((datos, id) => {
+            const ruta = deDocumento(id, datos);
+            (Array.isArray(ruta.idsComercios) ? ruta.idsComercios : []).forEach(idComercio => usados.add(idComercio));
+        });
+
+        return usados;
+    }
+
+    function agruparRepetidos(clave, usadosEnRutas) {
+        const grupos = new Map();
+
+        documentosOrdenados(documentos[clave]).forEach(([id, datos]) => {
+            const registro = deDocumento(id, datos);
+            const claveItem = claveRegistro(clave, registro, datos._marca);
+            if (!claveItem) return;
+
+            if (!grupos.has(claveItem)) grupos.set(claveItem, []);
+            grupos.get(claveItem).push({ id, datos, registro });
+        });
+
+        return Array.from(grupos.values())
+            .filter(copias => copias.length > 1)
+            .map(copias => {
+                // Queda el que usan las rutas, después el que tiene más datos
+                // y, si empatan, el primero de la lista.
+                const ordenadas = copias.slice().sort((a, b) => {
+                    const enRutas = Number(usadosEnRutas.has(b.id)) - Number(usadosEnRutas.has(a.id));
+                    if (enRutas !== 0) return enRutas;
+                    return cantidadDeDatos(b.registro) - cantidadDeDatos(a.registro);
+                });
+
+                return { queda: ordenadas[0], sobran: ordenadas.slice(1) };
+            });
+    }
+
+    function buscarRepetidos() {
+        const usadosEnRutas = idsUsadosEnRutas();
+
+        return {
+            comercios: agruparRepetidos("comercios", usadosEnRutas),
+            productos: agruparRepetidos("productos", usadosEnRutas)
+        };
+    }
+
+    function contarRepetidos() {
+        const repetidos = buscarRepetidos();
+        const sobran = grupos => grupos.reduce((total, grupo) => total + grupo.sobran.length, 0);
+
+        return { comercios: sobran(repetidos.comercios), productos: sobran(repetidos.productos) };
+    }
+
+    function descargarArchivo(nombre, datos) {
+        const archivo = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json" });
+        const enlace = document.createElement("a");
+        const url = URL.createObjectURL(archivo);
+
+        enlace.href = url;
+        enlace.download = nombre;
+        enlace.style.display = "none";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    let juntandoRepetidos = false;
+
+    async function juntarRepetidos() {
+        if (modo !== "nube" || !db || !refDistribuidora) {
+            throw new Error("Esta opción funciona solo usando la nube.");
+        }
+        if (estado !== "conectada" || !navigator.onLine) {
+            throw new Error("Esperá a que diga \"Conectada\" y probá de nuevo. Hace falta internet.");
+        }
+        if (juntandoRepetidos) throw new Error("Ya se están juntando los repetidos.");
+
+        const repetidos = buscarRepetidos();
+        const escrituras = [];
+        const reemplazos = new Map();
+        const borrados = { comercios: 0, productos: 0 };
+
+        ["comercios", "productos"].forEach(clave => {
+            repetidos[clave].forEach(({ queda, sobran }) => {
+                const combinado = combinarRegistros(queda.registro, sobran.map(copia => copia.registro));
+                const extras = { _orden: queda.datos._orden };
+                if (queda.datos._marca !== undefined) extras._marca = queda.datos._marca;
+
+                const datos = aDocumento(combinado, extras);
+                if (textoComparable(datos) !== textoComparable(queda.datos)) {
+                    escrituras.push({ ref: refDistribuidora.collection(clave).doc(queda.id), datos });
+                }
+
+                sobran.forEach(copia => {
+                    escrituras.push({ tipo: "borrar", ref: refDistribuidora.collection(clave).doc(copia.id) });
+                    borrados[clave]++;
+                    if (clave === "comercios") reemplazos.set(copia.id, queda);
+                });
+            });
+        });
+
+        if (!escrituras.length) return { ...borrados, rutas: 0 };
+
+        // Las rutas pasan a apuntar al comercio que queda.
+        let rutasCambiadas = 0;
+
+        documentos.rutas.forEach((datos, id) => {
+            const ruta = deDocumento(id, datos);
+            if (!Array.isArray(ruta.idsComercios) || !Array.isArray(ruta.comercios)) return;
+            if (!ruta.idsComercios.some(idComercio => reemplazos.has(idComercio))) return;
+
+            const vistos = new Set();
+            const ids = [];
+            const nombres = [];
+
+            ruta.comercios.forEach((nombre, posicion) => {
+                let idComercio = ruta.idsComercios[posicion] || "";
+                let nombreComercio = nombre;
+
+                if (reemplazos.has(idComercio)) {
+                    const queda = reemplazos.get(idComercio);
+                    idComercio = queda.id;
+                    nombreComercio = queda.registro.nombre;
+                }
+
+                // Si la ruta ya tenía el que queda, no se repite la parada.
+                if (idComercio && vistos.has(idComercio)) return;
+                if (idComercio) vistos.add(idComercio);
+
+                ids.push(idComercio);
+                nombres.push(nombreComercio);
+            });
+
+            escrituras.push({
+                ref: refDistribuidora.collection("rutas").doc(id),
+                datos: aDocumento({ ...ruta, comercios: nombres, idsComercios: ids }, { _orden: datos._orden })
+            });
+            rutasCambiadas++;
+        });
+
+        // Marcas que quedaron vacías y están repetidas con otra escrita parecido.
+        const productosQueSalen = new Set();
+        repetidos.productos.forEach(({ sobran }) => sobran.forEach(copia => productosQueSalen.add(copia.id)));
+
+        const productosPorMarca = new Map();
+        documentos.productos.forEach((datos, id) => {
+            if (productosQueSalen.has(id)) return;
+            const marca = String(datos._marca || "");
+            productosPorMarca.set(marca, (productosPorMarca.get(marca) || 0) + 1);
+        });
+
+        const marcas = Array.isArray(configMarcas.marcas) ? configMarcas.marcas.map(String) : [];
+        const orden = Array.isArray(configMarcas.orden) ? configMarcas.orden.map(String) : [];
+        const sacar = new Set(marcas.filter(marca => {
+            if (productosPorMarca.get(marca)) return false;
+
+            return marcas.some(otra => {
+                return otra !== marca &&
+                    normalizarTexto(otra) === normalizarTexto(marca) &&
+                    productosPorMarca.get(otra);
+            });
+        }));
+
+        if (sacar.size) {
+            escrituras.push({
+                ref: refDistribuidora.collection("config").doc("marcas"),
+                datos: {
+                    marcas: marcas.filter(marca => !sacar.has(marca)),
+                    orden: orden.filter(marca => !sacar.has(marca))
+                },
+                combinar: true
+            });
+        }
+
+        juntandoRepetidos = true;
+
+        try {
+            // Respaldo de cómo estaba todo antes de tocar nada.
+            const fecha = new Date().toISOString().slice(0, 10);
+            descargarArchivo("vendefrio-antes-de-juntar-repetidos-" + fecha + ".json", crearDatosRespaldo());
+
+            await enviarEnTandas(db, escrituras, () => {});
+        } catch (error) {
+            console.error("No se pudieron juntar los repetidos.", error);
+            throw new Error("No se pudo terminar. Revisá la señal y tocá de nuevo \"Juntar repetidos\": sigue desde donde quedó.");
+        } finally {
+            juntandoRepetidos = false;
+        }
+
+        return { ...borrados, rutas: rutasCambiadas };
     }
 
     // Recién con los totales verificados se puede pasar a la nube.
@@ -1044,6 +1316,8 @@
         migracionVerificada: () => Boolean(migracionVerificada),
         activarNube,
         desactivarNube,
+        contarRepetidos,
+        juntarRepetidos,
         reintentar: escucharNube,
         escuchar
     };
