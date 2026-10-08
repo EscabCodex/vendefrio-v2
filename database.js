@@ -1335,6 +1335,7 @@ function obtenerRutasGuardadas() {
 function guardarRutasGuardadas(rutas) {
     const lista = Array.isArray(rutas) ? rutas : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_RUTA);
+    completarIdsComerciosDeRutas(lista);
     return guardarJSON(DB_RUTAS_GUARDADAS, lista);
 }
 
@@ -1354,6 +1355,7 @@ function agregarRutaGuardada(nombre, comercios, dia = "") {
     const datos = {
         nombre: nombreLimpio,
         comercios: listaComercios,
+        idsComercios: armarComerciosDeRuta(listaComercios).ids,
         dia: String(dia || "").trim(),
         actualizado: Date.now()
     };
@@ -1375,6 +1377,415 @@ function eliminarRutaGuardada(nombre) {
 
     if (nuevas.length === rutas.length) return false;
     return guardarRutasGuardadas(nuevas);
+}
+
+// -----------------------------------------------------
+// FUNCIONES POR ID (T4)
+// -----------------------------------------------------
+// Obtener, agregar, actualizar y eliminar un registro por su id.
+// Las funciones viejas (por nombre o posición) siguen existiendo.
+// Lo que devuelven las funciones "obtener...PorId" es una copia:
+// cambiarla no cambia los datos guardados.
+
+function generarIdNuevo(prefijo, registros) {
+    const usados = obtenerIdsDeRegistros(registros);
+    let id = generarId(prefijo);
+    while (usados.has(id)) id = generarId(prefijo);
+    return id;
+}
+
+function buscarIndicePorId(registros, id) {
+    if (!id) return -1;
+    return registros.findIndex(registro => tieneId(registro) && registro.id === id);
+}
+
+// --- Comercios ---
+
+function obtenerComercioPorId(id) {
+    const comercio = obtenerComercios().find(item => tieneId(item) && item.id === id);
+    return comercio ? clonarDatos(comercio) : null;
+}
+
+function existeOtroComercioConNombre(nombre, idExcluir) {
+    const buscado = normalizarTexto(nombre);
+    return obtenerComercios().some(comercio =>
+        comercio.id !== idExcluir && normalizarTexto(comercio.nombre) === buscado
+    );
+}
+
+// Devuelve el id del comercio nuevo, o "" si no se pudo agregar.
+function agregarComercioConId(comercio) {
+    const nombre = String(comercio && comercio.nombre || "").trim();
+    if (!nombre || existeOtroComercioConNombre(nombre, "")) return "";
+
+    const comercios = obtenerComercios();
+    const id = generarIdNuevo(PREFIJO_ID_COMERCIO, comercios);
+
+    comercios.push({
+        id,
+        nombre,
+        direccion: String(comercio.direccion || "").trim(),
+        enlaceMaps: String(comercio.enlaceMaps || "").trim(),
+        origenGps: String(comercio.origenGps || ""),
+        telefono: String(comercio.telefono || "").trim(),
+        lat: comercio.lat !== undefined ? comercio.lat : "",
+        lng: comercio.lng !== undefined ? comercio.lng : "",
+        pedidosRealizados: Number(comercio.pedidosRealizados) || 0,
+        ultimaVisita: comercio.ultimaVisita || "",
+        pendienteSemana: comercio.pendienteSemana === true
+    });
+
+    return guardarComercios(comercios) ? id : "";
+}
+
+// Cambia solo los campos que vienen en "datos". El id nunca cambia.
+// Si cambia el nombre, las rutas guardadas que tienen este comercio
+// pasan a mostrar el nombre nuevo.
+function actualizarComercioPorId(id, datos) {
+    const comercios = obtenerComercios();
+    const indice = buscarIndicePorId(comercios, id);
+    if (indice === -1 || !datos || typeof datos !== "object") return false;
+
+    const anterior = comercios[indice];
+    const nombreNuevo = String(
+        datos.nombre !== undefined ? datos.nombre : anterior.nombre
+    ).trim();
+
+    if (!nombreNuevo || existeOtroComercioConNombre(nombreNuevo, id)) return false;
+
+    comercios[indice] = {
+        ...anterior,
+        ...datos,
+        id,
+        nombre: nombreNuevo,
+        direccion: String(datos.direccion !== undefined ? datos.direccion : (anterior.direccion || "")).trim(),
+        enlaceMaps: String(datos.enlaceMaps !== undefined ? datos.enlaceMaps : (anterior.enlaceMaps || "")).trim(),
+        telefono: String(datos.telefono !== undefined ? datos.telefono : (anterior.telefono || "")).trim()
+    };
+
+    if (!guardarComercios(comercios)) return false;
+
+    if (nombreNuevo !== anterior.nombre) {
+        renombrarComercioEnRutas(id, nombreNuevo);
+    }
+
+    return true;
+}
+
+function eliminarComercioPorId(id) {
+    const comercios = obtenerComercios();
+    const indice = buscarIndicePorId(comercios, id);
+    if (indice === -1) return false;
+
+    comercios.splice(indice, 1);
+    return guardarComercios(comercios);
+}
+
+// --- Productos ---
+
+// Devuelve { marca, indice, producto } o null si no existe.
+function obtenerProductoPorId(id) {
+    const productos = obtenerProductos();
+
+    for (const marca of Object.keys(productos)) {
+        const indice = buscarIndicePorId(productos[marca], id);
+        if (indice !== -1) {
+            return {
+                marca,
+                indice,
+                producto: clonarDatos(productos[marca][indice])
+            };
+        }
+    }
+
+    return null;
+}
+
+// Devuelve el id del producto nuevo, o "" si no se pudo agregar.
+function agregarProductoConId(marca, producto) {
+    const productos = obtenerProductos();
+    const marcaReal = buscarMarca(marca, productos);
+    const nombre = String(producto && producto.nombre || "").trim();
+
+    if (!marcaReal || !nombre || existeProductoEnMarca(marcaReal, nombre)) return "";
+
+    const id = generarIdNuevo(
+        PREFIJO_ID_PRODUCTO,
+        listarProductosDeTodasLasMarcas(productos)
+    );
+
+    productos[marcaReal].push({
+        id,
+        nombre,
+        precio: Number(producto.precio) || 0,
+        imagen: String(producto.imagen || producto.foto || "")
+    });
+
+    return guardarProductos(productos) ? id : "";
+}
+
+// Cambia nombre, precio o imagen. El id y la marca no cambian.
+function actualizarProductoPorId(id, datos) {
+    const encontrado = obtenerProductoPorId(id);
+    if (!encontrado || !datos || typeof datos !== "object") return false;
+
+    const productos = obtenerProductos();
+    const { marca, indice } = encontrado;
+    const anterior = productos[marca][indice];
+    const nombre = String(
+        datos.nombre !== undefined ? datos.nombre : anterior.nombre
+    ).trim();
+
+    if (!nombre || existeProductoEnMarca(marca, nombre, indice)) return false;
+
+    productos[marca][indice] = {
+        id,
+        nombre,
+        precio: datos.precio !== undefined
+            ? Number(datos.precio) || 0
+            : anterior.precio,
+        imagen: datos.imagen !== undefined || datos.foto !== undefined
+            ? String(datos.imagen || datos.foto || "")
+            : anterior.imagen
+    };
+
+    return guardarProductos(productos);
+}
+
+function eliminarProductoPorId(id) {
+    const encontrado = obtenerProductoPorId(id);
+    if (!encontrado) return false;
+
+    const productos = obtenerProductos();
+    productos[encontrado.marca].splice(encontrado.indice, 1);
+    return guardarProductos(productos);
+}
+
+// --- Pedidos (historial) ---
+
+function obtenerPedidoPorId(id) {
+    const pedido = obtenerHistorial().find(item => tieneId(item) && item.id === id);
+    return pedido ? clonarDatos(pedido) : null;
+}
+
+// Agrega el pedido al principio del historial, igual que agregarHistorial.
+// Devuelve el id del pedido nuevo, o "" si no se pudo agregar.
+function agregarPedidoConId(registro) {
+    if (!registro || typeof registro !== "object") return "";
+
+    const historial = obtenerHistorial();
+    const id = generarIdNuevo(PREFIJO_ID_PEDIDO, historial);
+
+    historial.unshift({ ...clonarDatos(registro), id });
+    return guardarHistorial(historial) ? id : "";
+}
+
+// Cambia solo los campos que vienen en "datos". El id nunca cambia.
+function actualizarPedidoPorId(id, datos) {
+    const historial = obtenerHistorial();
+    const indice = buscarIndicePorId(historial, id);
+    if (indice === -1 || !datos || typeof datos !== "object") return false;
+
+    historial[indice] = { ...historial[indice], ...clonarDatos(datos), id };
+    return guardarHistorial(historial);
+}
+
+function eliminarPedidoPorId(id) {
+    const historial = obtenerHistorial();
+    const indice = buscarIndicePorId(historial, id);
+    if (indice === -1) return false;
+
+    historial.splice(indice, 1);
+    return guardarHistorial(historial);
+}
+
+// --- Rutas guardadas ---
+// Cada ruta guarda dos listas paralelas: "comercios" (nombres, para mostrar)
+// e "idsComercios" (el id de cada uno, en la misma posición; "" si ese
+// comercio ya no existe).
+
+// Recibe nombres o ids de comercios y devuelve { nombres, ids }.
+function armarComerciosDeRuta(lista, comercios = obtenerComercios()) {
+    const nombres = [];
+    const ids = [];
+
+    (Array.isArray(lista) ? lista : []).forEach(entrada => {
+        const texto = String(entrada || "").trim();
+        if (!texto) return;
+
+        const comercio =
+            comercios.find(item => tieneId(item) && item.id === texto) ||
+            buscarComercioPorNombre(texto, comercios);
+
+        if (comercio) {
+            nombres.push(comercio.nombre);
+            ids.push(tieneId(comercio) ? comercio.id : "");
+        } else if (texto.indexOf(PREFIJO_ID_COMERCIO + "_") !== 0) {
+            // Comercio que ya no existe: se conserva el nombre, como antes.
+            nombres.push(texto);
+            ids.push("");
+        }
+    });
+
+    return { nombres, ids };
+}
+
+// Completa "idsComercios" en cada ruta: conserva los ids que siguen
+// existiendo y busca por nombre los que faltan. Devuelve true si cambió algo.
+function completarIdsComerciosDeRutas(rutas, comercios = obtenerComercios()) {
+    const idsExistentes = obtenerIdsDeRegistros(comercios);
+    let cambio = false;
+
+    (Array.isArray(rutas) ? rutas : []).forEach(ruta => {
+        if (!ruta || typeof ruta !== "object" || !Array.isArray(ruta.comercios)) return;
+
+        const anteriores = Array.isArray(ruta.idsComercios) ? ruta.idsComercios : [];
+        const ids = ruta.comercios.map((nombre, posicion) => {
+            const id = anteriores[posicion];
+            if (typeof id === "string" && idsExistentes.has(id)) return id;
+
+            const comercio = buscarComercioPorNombre(nombre, comercios);
+            return comercio && tieneId(comercio) ? comercio.id : "";
+        });
+
+        if (JSON.stringify(ids) !== JSON.stringify(ruta.idsComercios)) {
+            ruta.idsComercios = ids;
+            cambio = true;
+        }
+    });
+
+    return cambio;
+}
+
+function renombrarComercioEnRutas(idComercio, nombreNuevo) {
+    const rutas = obtenerRutasGuardadas();
+    let cambio = false;
+
+    rutas.forEach(ruta => {
+        if (!Array.isArray(ruta.idsComercios)) return;
+
+        ruta.idsComercios.forEach((id, posicion) => {
+            if (id === idComercio && ruta.comercios[posicion] !== nombreNuevo) {
+                ruta.comercios[posicion] = nombreNuevo;
+                cambio = true;
+            }
+        });
+    });
+
+    return cambio ? guardarRutasGuardadas(rutas) : true;
+}
+
+function obtenerRutaPorId(id) {
+    const ruta = obtenerRutasGuardadas().find(item => tieneId(item) && item.id === id);
+    return ruta ? clonarDatos(ruta) : null;
+}
+
+// Devuelve los comercios de una ruta: primero por id y, si no, por nombre.
+function obtenerComerciosDeRuta(ruta) {
+    if (!ruta || !Array.isArray(ruta.comercios)) return [];
+
+    const comercios = obtenerComercios();
+    const ids = Array.isArray(ruta.idsComercios) ? ruta.idsComercios : [];
+
+    return ruta.comercios
+        .map((nombre, posicion) => {
+            const id = ids[posicion];
+            return (id && comercios.find(comercio => comercio.id === id)) ||
+                buscarComercioPorNombre(nombre, comercios);
+        })
+        .filter(Boolean)
+        .map(clonarDatos);
+}
+
+function existeOtraRutaConNombre(nombre, idExcluir, rutas) {
+    const buscado = normalizarTexto(nombre);
+    return rutas.some(ruta =>
+        ruta.id !== idExcluir && normalizarTexto(ruta.nombre) === buscado
+    );
+}
+
+// "comercios" puede traer nombres o ids. Devuelve el id de la ruta nueva,
+// o "" si no se pudo agregar (sin nombre, sin comercios o nombre repetido).
+function agregarRutaConId(nombre, comercios, dia = "") {
+    const nombreLimpio = String(nombre || "").trim();
+    const { nombres, ids } = armarComerciosDeRuta(comercios);
+    const rutas = obtenerRutasGuardadas();
+
+    if (!nombreLimpio || nombres.length === 0) return "";
+    if (existeOtraRutaConNombre(nombreLimpio, "", rutas)) return "";
+
+    const id = generarIdNuevo(PREFIJO_ID_RUTA, rutas);
+
+    rutas.push({
+        id,
+        nombre: nombreLimpio,
+        comercios: nombres,
+        idsComercios: ids,
+        dia: String(dia || "").trim(),
+        actualizado: Date.now()
+    });
+
+    return guardarRutasGuardadas(rutas) ? id : "";
+}
+
+// Cambia nombre, comercios (nombres o ids) o día. El id nunca cambia,
+// también al renombrar la ruta.
+function actualizarRutaPorId(id, datos) {
+    const rutas = obtenerRutasGuardadas();
+    const indice = buscarIndicePorId(rutas, id);
+    if (indice === -1 || !datos || typeof datos !== "object") return false;
+
+    const anterior = rutas[indice];
+    const nombre = String(
+        datos.nombre !== undefined ? datos.nombre : anterior.nombre
+    ).trim();
+
+    if (!nombre || existeOtraRutaConNombre(nombre, id, rutas)) return false;
+
+    const actualizada = {
+        ...anterior,
+        id,
+        nombre,
+        dia: String(datos.dia !== undefined ? datos.dia : (anterior.dia || "")).trim(),
+        actualizado: Date.now()
+    };
+
+    if (datos.comercios !== undefined) {
+        const { nombres, ids } = armarComerciosDeRuta(datos.comercios);
+        if (nombres.length === 0) return false;
+
+        actualizada.comercios = nombres;
+        actualizada.idsComercios = ids;
+    }
+
+    rutas[indice] = actualizada;
+    return guardarRutasGuardadas(rutas);
+}
+
+function eliminarRutaPorId(id) {
+    const rutas = obtenerRutasGuardadas();
+    const indice = buscarIndicePorId(rutas, id);
+    if (indice === -1) return false;
+
+    rutas.splice(indice, 1);
+    return guardarRutasGuardadas(rutas);
+}
+
+// Al abrir la app: agrega "idsComercios" a las rutas guardadas que no lo
+// tengan. Trabaja sobre el texto guardado tal cual y solo escribe si hace falta.
+function migrarIdsComerciosEnRutas() {
+    const texto = localStorage.getItem(DB_RUTAS_GUARDADAS);
+    if (!texto) return true;
+
+    let rutas;
+    try {
+        rutas = JSON.parse(texto);
+    } catch (error) {
+        return false;
+    }
+
+    if (!Array.isArray(rutas) || !completarIdsComerciosDeRutas(rutas)) return true;
+    return guardarJSON(DB_RUTAS_GUARDADAS, rutas);
 }
 
 // -----------------------------------------------------
@@ -1497,6 +1908,7 @@ function migrarIdsLocales() {
 }
 
 migrarIdsLocales();
+migrarIdsComerciosEnRutas();
 asegurarReinicioSemanal();
 programarReinicioSemanal();
 respaldarAutomaticamenteSiCorresponde();
