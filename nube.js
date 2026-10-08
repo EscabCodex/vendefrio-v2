@@ -266,6 +266,25 @@
         });
     }
 
+    // Red de seguridad (T10): un solo guardado no puede borrar varios
+    // registros de la nube a la vez. En la app se borra de a uno; la única
+    // excepción es borrar una marca, que se lleva solo sus productos.
+    function esBorradoPermitido(subcoleccion, borrados) {
+        if (borrados.length <= 1) return true;
+        if (subcoleccion !== "productos") return false;
+
+        const marcas = new Set(borrados.map(([, datos]) => String(datos._marca || "")));
+        return marcas.size === 1;
+    }
+
+    function errorBorradoMasivo(subcoleccion, cantidad) {
+        const error = new Error(
+            "Se frenó un cambio que iba a borrar " + cantidad + " registros de " + subcoleccion + " en la nube."
+        );
+        error.code = "borrado-masivo";
+        return error;
+    }
+
     // Compara con lo último conocido y anota en "escrituras" solo los
     // documentos nuevos, cambiados o borrados.
     function compararRegistros(subcoleccion, items, escrituras) {
@@ -288,6 +307,13 @@
             const anterior = anteriores.get(item.registro.id);
             return anterior ? anterior._orden : undefined;
         }));
+
+        const borrados = Array.from(anteriores.entries()).filter(([id]) => !vistos.has(id));
+
+        // Se frena antes de tocar nada: no se escribe ni se olvida ningún registro.
+        if (!esBorradoPermitido(subcoleccion, borrados)) {
+            throw errorBorradoMasivo(subcoleccion, borrados.length);
+        }
 
         const nuevos = new Map();
 
@@ -404,7 +430,7 @@
             if (escrituras.length) enviarEscrituras(escrituras);
         },
 
-        // En la nube no se borran colecciones enteras (eso lo resuelve T10).
+        // En la nube nunca se borran colecciones enteras (T10).
         borrar(coleccion) {
             throw new Error("En la nube no se borra la colección completa: " + coleccion);
         },

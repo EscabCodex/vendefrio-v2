@@ -1,7 +1,7 @@
 // =====================================================
 // VendeFrío - Service Worker (v128 - Firebase: adaptador nube)
 // =====================================================
-const CACHE_NAME = "vendefrio-v128";
+const CACHE_NAME = "vendefrio-v129";
 const ARCHIVOS = [
   "./",
   "./index.html",
