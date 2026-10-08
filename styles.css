@@ -832,10 +832,18 @@ footer button:active{
   flex-shrink:0;
 }
 
-/* El modo oscuro fuerza el color de todos los span: el texto del aviso
-   necesita volver al color de la superficie para leerse sobre su fondo claro. */
-html[data-tema="oscuro"] .toast span{
-  color:var(--superficie) !important;
+/* Modo oscuro: los avisos van con fondo oscuro y letras blancas. */
+html[data-tema="oscuro"] .toast{
+  background:var(--superficie);
+  color:var(--texto);
+  border:1px solid var(--borde);
+}
+@media (prefers-color-scheme:dark){
+  html[data-tema="sistema"] .toast{
+    background:var(--superficie);
+    color:var(--texto);
+    border:1px solid var(--borde);
+  }
 }
 
 /* ================= MODAL ================= */
