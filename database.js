@@ -242,6 +242,83 @@ function iniciales(texto) {
 }
 
 // -----------------------------------------------------
+// IDENTIFICADORES ÚNICOS
+// -----------------------------------------------------
+
+const PREFIJO_ID_COMERCIO = "com";
+const PREFIJO_ID_PRODUCTO = "prod";
+const PREFIJO_ID_PEDIDO = "ped";
+const PREFIJO_ID_RUTA = "ruta";
+
+function generarId(prefijo) {
+    let aleatorio = "";
+
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        aleatorio = window.crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    } else {
+        aleatorio =
+            Math.random().toString(36).slice(2, 8) +
+            Math.random().toString(36).slice(2, 8);
+    }
+
+    return prefijo + "_" + Date.now().toString(36) + aleatorio;
+}
+
+function tieneId(registro) {
+    return Boolean(
+        registro &&
+        typeof registro === "object" &&
+        typeof registro.id === "string" &&
+        registro.id.trim() !== ""
+    );
+}
+
+// Pone un id a cada registro que no lo tenga. Nunca cambia un id existente,
+// salvo que esté repetido: ahí la primera copia lo conserva y la otra recibe uno nuevo.
+function asignarIdsFaltantes(registros, prefijo) {
+    const usados = new Set();
+    const pendientes = [];
+
+    (Array.isArray(registros) ? registros : []).forEach(registro => {
+        if (!registro || typeof registro !== "object") return;
+
+        if (tieneId(registro) && !usados.has(registro.id)) {
+            usados.add(registro.id);
+        } else {
+            pendientes.push(registro);
+        }
+    });
+
+    pendientes.forEach(registro => {
+        let id = generarId(prefijo);
+        while (usados.has(id)) id = generarId(prefijo);
+        registro.id = id;
+        usados.add(id);
+    });
+
+    return pendientes.length;
+}
+
+function listarProductosDeTodasLasMarcas(productos) {
+    if (!productos || typeof productos !== "object" || Array.isArray(productos)) {
+        return [];
+    }
+
+    return Object.keys(productos).reduce((lista, marca) => {
+        return Array.isArray(productos[marca])
+            ? lista.concat(productos[marca])
+            : lista;
+    }, []);
+}
+
+function asignarIdsProductos(productos) {
+    return asignarIdsFaltantes(
+        listarProductosDeTodasLasMarcas(productos),
+        PREFIJO_ID_PRODUCTO
+    );
+}
+
+// -----------------------------------------------------
 // COMERCIOS
 // -----------------------------------------------------
 
@@ -276,7 +353,9 @@ function obtenerComercios() {
 }
 
 function guardarComercios(comercios) {
-    return guardarJSON(DB_COMERCIOS, Array.isArray(comercios) ? comercios : []);
+    const lista = Array.isArray(comercios) ? comercios : [];
+    asignarIdsFaltantes(lista, PREFIJO_ID_COMERCIO);
+    return guardarJSON(DB_COMERCIOS, lista);
 }
 
 function buscarComercioPorNombre(nombre, comercios = obtenerComercios()) {
@@ -372,6 +451,7 @@ function obtenerProductos() {
             ? productos[marca]
                 .filter(producto => producto && typeof producto === "object")
                 .map(producto => ({
+                    ...(tieneId(producto) ? { id: producto.id } : {}),
                     nombre: String(producto.nombre || "").trim(),
                     precio: Number(producto.precio) || 0,
                     imagen: String(producto.imagen || producto.foto || "")
@@ -388,7 +468,9 @@ function obtenerProductos() {
 }
 
 function guardarProductos(productos) {
-    return guardarJSON(DB_PRODUCTOS, productos && typeof productos === "object" ? productos : {});
+    const datos = productos && typeof productos === "object" ? productos : {};
+    asignarIdsProductos(datos);
+    return guardarJSON(DB_PRODUCTOS, datos);
 }
 
 function obtenerOrdenMarcas() {
@@ -582,10 +664,13 @@ function editarProducto(marca, indice, producto) {
 
     if (existeProductoEnMarca(marcaReal, nombre, Number(indice))) return false;
 
+    const anterior = productos[marcaReal][indice];
+
     productos[marcaReal][indice] = {
+        ...(tieneId(anterior) ? { id: anterior.id } : {}),
         nombre,
         precio: Number(producto.precio) || 0,
-        imagen: String(producto.imagen || producto.foto || productos[marcaReal][indice].imagen || "")
+        imagen: String(producto.imagen || producto.foto || anterior.imagen || "")
     };
 
     return guardarProductos(productos);
@@ -614,7 +699,9 @@ function obtenerHistorial() {
 }
 
 function guardarHistorial(historial) {
-    return guardarJSON(DB_HISTORIAL, Array.isArray(historial) ? historial : []);
+    const lista = Array.isArray(historial) ? historial : [];
+    asignarIdsFaltantes(lista, PREFIJO_ID_PEDIDO);
+    return guardarJSON(DB_HISTORIAL, lista);
 }
 
 function agregarHistorial(registro) {
@@ -838,6 +925,12 @@ function restaurarRespaldo(respaldo) {
         ? datos.ordenMarcas
         : Object.keys(datos.productos);
 
+    // Los respaldos viejos no traen ids: se completan sin tocar los que ya vienen.
+    asignarIdsFaltantes(datos.comercios, PREFIJO_ID_COMERCIO);
+    asignarIdsProductos(datos.productos);
+    asignarIdsFaltantes(datos.historial, PREFIJO_ID_PEDIDO);
+    asignarIdsFaltantes(datos.rutasGuardadas, PREFIJO_ID_RUTA);
+
     const guardado =
         guardarJSON(DB_COMERCIOS, datos.comercios) &&
         guardarJSON(DB_PRODUCTOS, datos.productos) &&
@@ -958,8 +1051,17 @@ function obtenerClavePedidoRespaldo(registro) {
     ].join("|");
 }
 
+function obtenerIdsDeRegistros(registros) {
+    return new Set(
+        (Array.isArray(registros) ? registros : [])
+            .filter(tieneId)
+            .map(registro => registro.id)
+    );
+}
+
 function combinarProductosRespaldo(productosActuales, productosNuevos) {
     const resultado = clonarDatos(productosActuales || {});
+    const idsActuales = obtenerIdsDeRegistros(listarProductosDeTodasLasMarcas(resultado));
 
     Object.entries(productosNuevos || {}).forEach(([marca, lista]) => {
         const marcaActual = Object.keys(resultado).find(nombre => {
@@ -969,10 +1071,16 @@ function combinarProductosRespaldo(productosActuales, productosNuevos) {
         if (!Array.isArray(resultado[nombreMarca])) resultado[nombreMarca] = [];
 
         (Array.isArray(lista) ? lista : []).forEach(producto => {
-            if (!resultado[nombreMarca].some(actual => {
-                return normalizarTexto(actual) === normalizarTexto(producto);
-            })) {
+            if (!producto || typeof producto !== "object") return;
+            if (tieneId(producto) && idsActuales.has(producto.id)) return;
+
+            const repetido = resultado[nombreMarca].some(actual => {
+                return normalizarTexto(actual && actual.nombre) === normalizarTexto(producto.nombre);
+            });
+
+            if (!repetido) {
                 resultado[nombreMarca].push(producto);
+                if (tieneId(producto)) idsActuales.add(producto.id);
             }
         });
     });
@@ -989,17 +1097,31 @@ function combinarRespaldoSinBorrar(respaldo) {
     const nombresActuales = new Set(
         comerciosActuales.map(comercio => normalizarTexto(comercio.nombre))
     );
+    const idsComercios = obtenerIdsDeRegistros(comerciosActuales);
     const comerciosAgregados = comerciosNuevos.filter(comercio => {
-        return comercio && !nombresActuales.has(normalizarTexto(comercio.nombre));
+        if (!comercio || typeof comercio !== "object") return false;
+        if (tieneId(comercio) && idsComercios.has(comercio.id)) return false;
+
+        const nombre = normalizarTexto(comercio.nombre);
+        if (nombresActuales.has(nombre)) return false;
+
+        nombresActuales.add(nombre);
+        if (tieneId(comercio)) idsComercios.add(comercio.id);
+        return true;
     });
 
     const historialActual = obtenerHistorial();
     const clavesHistorial = new Set(historialActual.map(obtenerClavePedidoRespaldo));
+    const idsPedidos = obtenerIdsDeRegistros(historialActual);
     const pedidosNuevos = (Array.isArray(datosNuevos.historial) ? datosNuevos.historial : [])
         .filter(registro => {
+            if (!registro || typeof registro !== "object") return false;
+            if (tieneId(registro) && idsPedidos.has(registro.id)) return false;
+
             const clave = obtenerClavePedidoRespaldo(registro);
             if (clavesHistorial.has(clave)) return false;
             clavesHistorial.add(clave);
+            if (tieneId(registro)) idsPedidos.add(registro.id);
             return true;
         });
 
@@ -1020,20 +1142,25 @@ function combinarRespaldoSinBorrar(respaldo) {
 
     const rutasActuales = obtenerRutasGuardadas();
     const nombresRutas = new Set(rutasActuales.map(ruta => normalizarTexto(ruta.nombre)));
+    const idsRutas = obtenerIdsDeRegistros(rutasActuales);
     const rutasNuevas = (Array.isArray(datosNuevos.rutasGuardadas) ? datosNuevos.rutasGuardadas : [])
         .filter(ruta => {
+            if (tieneId(ruta) && idsRutas.has(ruta.id)) return false;
+
             const clave = normalizarTexto(ruta && ruta.nombre);
             if (!clave || nombresRutas.has(clave)) return false;
             nombresRutas.add(clave);
+            if (tieneId(ruta)) idsRutas.add(ruta.id);
             return true;
         });
 
+    // Las funciones de guardado completan los ids de lo que llega de respaldos viejos.
     const guardado =
-        guardarJSON(DB_COMERCIOS, comerciosActuales.concat(comerciosAgregados)) &&
-        guardarJSON(DB_PRODUCTOS, productosCombinados) &&
+        guardarComercios(comerciosActuales.concat(comerciosAgregados)) &&
+        guardarProductos(productosCombinados) &&
         guardarJSON(DB_ORDEN_MARCAS, ordenMarcas) &&
-        guardarJSON(DB_HISTORIAL, historialActual.concat(pedidosNuevos)) &&
-        guardarJSON(DB_RUTAS_GUARDADAS, rutasActuales.concat(rutasNuevas));
+        guardarHistorial(historialActual.concat(pedidosNuevos)) &&
+        guardarRutasGuardadas(rutasActuales.concat(rutasNuevas));
 
     return {
         guardado,
@@ -1206,10 +1333,9 @@ function obtenerRutasGuardadas() {
 }
 
 function guardarRutasGuardadas(rutas) {
-    return guardarJSON(
-        DB_RUTAS_GUARDADAS,
-        Array.isArray(rutas) ? rutas : []
-    );
+    const lista = Array.isArray(rutas) ? rutas : [];
+    asignarIdsFaltantes(lista, PREFIJO_ID_RUTA);
+    return guardarJSON(DB_RUTAS_GUARDADAS, lista);
 }
 
 function agregarRutaGuardada(nombre, comercios, dia = "") {
@@ -1251,6 +1377,126 @@ function eliminarRutaGuardada(nombre) {
     return guardarRutasGuardadas(nuevas);
 }
 
+// -----------------------------------------------------
+// MIGRACIÓN: IDS ÚNICOS (T3)
+// -----------------------------------------------------
+
+// Trabaja sobre el texto guardado tal cual, sin limpiar registros, para que
+// lo único que cambie sea el id agregado. Si algo falla, vuelve todo atrás.
+function migrarIdsLocales() {
+    const colecciones = [
+        {
+            clave: DB_COMERCIOS,
+            registros: datos => Array.isArray(datos) ? datos : [],
+            asignar: datos => asignarIdsFaltantes(datos, PREFIJO_ID_COMERCIO)
+        },
+        {
+            clave: DB_PRODUCTOS,
+            registros: listarProductosDeTodasLasMarcas,
+            asignar: asignarIdsProductos
+        },
+        {
+            clave: DB_HISTORIAL,
+            registros: datos => Array.isArray(datos) ? datos : [],
+            asignar: datos => asignarIdsFaltantes(datos, PREFIJO_ID_PEDIDO)
+        },
+        {
+            clave: DB_RUTAS_GUARDADAS,
+            registros: datos => Array.isArray(datos) ? datos : [],
+            asignar: datos => asignarIdsFaltantes(datos, PREFIJO_ID_RUTA)
+        }
+    ];
+
+    const contarRegistros = (coleccion, datos) => {
+        return coleccion.registros(datos)
+            .filter(registro => registro && typeof registro === "object")
+            .length;
+    };
+
+    // 1) Ver qué hace falta, sin escribir nada.
+    const pendientes = [];
+
+    colecciones.forEach(coleccion => {
+        const texto = localStorage.getItem(coleccion.clave);
+        if (!texto) return;
+
+        let datos;
+        try {
+            datos = JSON.parse(texto);
+        } catch (error) {
+            return;
+        }
+
+        const registros = coleccion.registros(datos)
+            .filter(registro => registro && typeof registro === "object");
+        const ids = new Set();
+        const faltan = registros.some(registro => {
+            if (!tieneId(registro) || ids.has(registro.id)) return true;
+            ids.add(registro.id);
+            return false;
+        });
+
+        if (faltan) {
+            pendientes.push({
+                coleccion,
+                textoOriginal: texto,
+                datos,
+                cantidad: registros.length
+            });
+        }
+    });
+
+    if (pendientes.length === 0) return true;
+
+    // 2) Copia interna automática antes de tocar los datos.
+    if (!guardarRespaldoAutomatico()) {
+        console.warn("No se asignaron ids: no se pudo guardar la copia interna.");
+        return false;
+    }
+
+    // 3) Completar ids, guardar y verificar leyendo de nuevo.
+    const restaurarOriginales = () => {
+        pendientes.forEach(item => {
+            try {
+                localStorage.setItem(item.coleccion.clave, item.textoOriginal);
+            } catch (error) {
+                console.error("No se pudo volver atrás " + item.coleccion.clave, error);
+            }
+        });
+    };
+
+    try {
+        pendientes.forEach(item => {
+            item.coleccion.asignar(item.datos);
+            const texto = JSON.stringify(item.datos);
+            localStorage.setItem(item.coleccion.clave, texto);
+
+            const releido = JSON.parse(localStorage.getItem(item.coleccion.clave));
+            const registros = item.coleccion.registros(releido)
+                .filter(registro => registro && typeof registro === "object");
+            const ids = new Set(registros.filter(tieneId).map(registro => registro.id));
+
+            if (
+                contarRegistros(item.coleccion, releido) !== item.cantidad ||
+                ids.size !== registros.length
+            ) {
+                throw new Error("La verificación de " + item.coleccion.clave + " no coincide.");
+            }
+        });
+    } catch (error) {
+        console.error("No se pudieron asignar los ids. Se dejan los datos como estaban.", error);
+        restaurarOriginales();
+        mostrarAviso(
+            "No se pudieron preparar los datos",
+            "Tus datos quedaron como estaban y hay una copia interna guardada. Revisá si el almacenamiento del navegador está lleno."
+        );
+        return false;
+    }
+
+    return true;
+}
+
+migrarIdsLocales();
 asegurarReinicioSemanal();
 programarReinicioSemanal();
 respaldarAutomaticamenteSiCorresponde();
