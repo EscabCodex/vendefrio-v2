@@ -7,6 +7,7 @@ const DB_COMERCIOS = "vendefrio_comercios";
 const DB_PRODUCTOS = "vendefrio_productos";
 const DB_ORDEN_MARCAS = "vendefrio_orden_marcas";
 const DB_HISTORIAL = "vendefrio_historial";
+const DB_RUTAS_GUARDADAS = "vendefrio_rutas_guardadas";
 const DB_ULTIMO_RESPALDO = "vendefrio_ultimo_respaldo";
 const DB_RESPALDO_AUTOMATICO = "vendefrio_respaldo_automatico";
 const DB_ULTIMO_RESPALDO_AUTOMATICO = "vendefrio_ultimo_respaldo_automatico";
@@ -127,31 +128,244 @@ function programarReinicioSemanal() {
     }, demora);
 }
 
-function leerJSON(clave, valorInicial) {
-    const texto = localStorage.getItem(clave);
+// -----------------------------------------------------
+// CAPA DE DATOS: ADAPTADOR, COPIA EN MEMORIA Y AVISOS (T6)
+// -----------------------------------------------------
+// Los datos compartidos (comercios, productos, orden de marcas, historial
+// y rutas guardadas) se leen y se guardan solo con leerColeccion() y
+// guardarColeccion(), salvo las migraciones del formato local de T3 y T4
+// (al abrir la app), que trabajan sobre el texto guardado tal cual. Esas dos funciones trabajan contra una copia en
+// memoria; el "adaptador" es el que sabe d\u00f3nde viven los datos de verdad.
+//
+// Hoy hay un solo adaptador: el local (localStorage). El adaptador nube
+// (Firestore, T9) tiene que cumplir esta misma interfaz:
+//
+//   nombre                            "local", "nube", etc.
+//   leer(coleccion)                   devuelve los datos guardados, o undefined
+//                                     si no hay nada. Es sincr\u00f3nico: la nube
+//                                     responde con lo \u00faltimo que le lleg\u00f3.
+//                                     Lanza un error si los datos est\u00e1n da\u00f1ados.
+//   guardar(coleccion, datos, texto)  guarda la colecci\u00f3n completa ("texto" es
+//                                     lo mismo pasado a JSON). La nube compara
+//                                     con lo anterior y escribe solo los
+//                                     registros que cambiaron. Lanza un error
+//                                     si no se pudo.
+//   borrar(coleccion)                 borra la colecci\u00f3n.
+//   escucharCambios(alCambiar)        llama a alCambiar(coleccion) cuando los
+//                                     datos cambian desde afuera (otra pesta\u00f1a,
+//                                     otro celular). Devuelve una funci\u00f3n para
+//                                     dejar de escuchar.
+//
+// Las preferencias, el borrador del pedido y las fechas y copias de
+// respaldo son de cada celular: siguen yendo directo a localStorage.
 
-    if (!texto) return clonarDatos(valorInicial);
+const COLECCIONES_COMPARTIDAS = ["comercios", "productos", "ordenMarcas", "historial", "rutasGuardadas"];
 
-    try {
+const adaptadorLocal = {
+    nombre: "local",
+
+    claves: {
+        comercios: DB_COMERCIOS,
+        productos: DB_PRODUCTOS,
+        ordenMarcas: DB_ORDEN_MARCAS,
+        historial: DB_HISTORIAL,
+        rutasGuardadas: DB_RUTAS_GUARDADAS
+    },
+
+    leer(coleccion) {
+        const texto = localStorage.getItem(this.claves[coleccion]);
+        if (!texto) return undefined;
         return JSON.parse(texto);
-    } catch (error) {
-        console.warn(`Los datos de ${clave} estaban da\u00f1ados. Se usar\u00e1n datos de respaldo.`, error);
-        return clonarDatos(valorInicial);
+    },
+
+    guardar(coleccion, datos, texto) {
+        localStorage.setItem(
+            this.claves[coleccion],
+            texto !== undefined ? texto : JSON.stringify(datos)
+        );
+    },
+
+    borrar(coleccion) {
+        localStorage.removeItem(this.claves[coleccion]);
+    },
+
+    // El evento "storage" solo llega cuando cambia otra pesta\u00f1a de la app.
+    escucharCambios(alCambiar) {
+        const alCambiarStorage = evento => {
+            if (evento.storageArea && evento.storageArea !== localStorage) return;
+
+            COLECCIONES_COMPARTIDAS.forEach(coleccion => {
+                if (evento.key === null || evento.key === this.claves[coleccion]) {
+                    alCambiar(coleccion);
+                }
+            });
+        };
+
+        window.addEventListener("storage", alCambiarStorage);
+        return () => window.removeEventListener("storage", alCambiarStorage);
     }
+};
+
+let adaptadorDatos = adaptadorLocal;
+let dejarDeEscucharAdaptador = null;
+
+// Una entrada por colecci\u00f3n: { existe, texto }. "texto" es null si no hay
+// datos o si estaban da\u00f1ados. Se guarda como texto para que cada lectura
+// devuelva una copia nueva, igual que antes al leer de localStorage.
+let memoriaDatos = {};
+
+function esAdaptadorValido(adaptador) {
+    return Boolean(
+        adaptador &&
+        typeof adaptador === "object" &&
+        ["leer", "guardar", "borrar", "escucharCambios"].every(metodo => {
+            return typeof adaptador[metodo] === "function";
+        })
+    );
 }
 
-function guardarJSON(clave, datos) {
+function conectarAdaptadorDatos() {
+    if (dejarDeEscucharAdaptador) dejarDeEscucharAdaptador();
+
+    const dejar = adaptadorDatos.escucharCambios(coleccion => {
+        if (!COLECCIONES_COMPARTIDAS.includes(coleccion)) return;
+        delete memoriaDatos[coleccion];
+        avisarCambioDatos([coleccion], true);
+    });
+
+    dejarDeEscucharAdaptador = typeof dejar === "function" ? dejar : null;
+}
+
+// Cambia de d\u00f3nde salen los datos. Todav\u00eda no se usa: queda lista para T9.
+function usarAdaptadorDatos(adaptador) {
+    if (!esAdaptadorValido(adaptador)) {
+        console.error("El adaptador de datos no cumple la interfaz.", adaptador);
+        return false;
+    }
+
+    adaptadorDatos = adaptador;
+    memoriaDatos = {};
+    conectarAdaptadorDatos();
+    avisarCambioDatos(COLECCIONES_COMPARTIDAS, true);
+    return true;
+}
+
+function obtenerNombreAdaptadorDatos() {
+    return adaptadorDatos.nombre || "";
+}
+
+function cargarColeccion(coleccion) {
+    if (!memoriaDatos[coleccion]) {
+        let entrada;
+
+        try {
+            const datos = adaptadorDatos.leer(coleccion);
+            entrada = datos === undefined
+                ? { existe: false, texto: null }
+                : { existe: true, texto: JSON.stringify(datos) };
+        } catch (error) {
+            console.warn(`Los datos de ${coleccion} estaban da\u00f1ados. Se usar\u00e1n datos de respaldo.`, error);
+            entrada = { existe: true, texto: null };
+        }
+
+        memoriaDatos[coleccion] = entrada;
+    }
+
+    return memoriaDatos[coleccion];
+}
+
+function existeColeccion(coleccion) {
+    return cargarColeccion(coleccion).existe;
+}
+
+// Devuelve una copia: cambiarla no cambia los datos guardados.
+function leerColeccion(coleccion, valorInicial) {
+    const entrada = cargarColeccion(coleccion);
+
+    if (entrada.texto === null) return clonarDatos(valorInicial);
+    return JSON.parse(entrada.texto);
+}
+
+function guardarColeccion(coleccion, datos) {
     try {
-        localStorage.setItem(clave, JSON.stringify(datos));
-        return true;
+        const texto = JSON.stringify(datos);
+        adaptadorDatos.guardar(coleccion, datos, texto);
+        memoriaDatos[coleccion] = { existe: true, texto };
     } catch (error) {
-        console.error(`No se pudieron guardar los datos de ${clave}.`, error);
+        console.error(`No se pudieron guardar los datos de ${coleccion}.`, error);
         mostrarAviso(
             "No se pudieron guardar los cambios",
             "Revis\u00e1 si el almacenamiento del navegador est\u00e1 lleno."
         );
         return false;
     }
+
+    avisarCambioDatos([coleccion], false);
+    return true;
+}
+
+function borrarColeccion(coleccion) {
+    try {
+        adaptadorDatos.borrar(coleccion);
+        memoriaDatos[coleccion] = { existe: false, texto: null };
+    } catch (error) {
+        console.error(`No se pudieron borrar los datos de ${coleccion}.`, error);
+        return false;
+    }
+
+    avisarCambioDatos([coleccion], false);
+    return true;
+}
+
+// Para cuando algo escribi\u00f3 en el adaptador sin pasar por guardarColeccion
+// (las migraciones de ids): la pr\u00f3xima lectura vuelve a cargar.
+function olvidarColeccionesEnMemoria(colecciones) {
+    colecciones.forEach(coleccion => delete memoriaDatos[coleccion]);
+    avisarCambioDatos(colecciones, false);
+}
+
+// --- Aviso interno de cambios ---
+// Las pantallas se anotan con escucharCambiosDatos(funcion) para volver a
+// dibujarse solas. La funci\u00f3n recibe { colecciones, externo }: "externo" es
+// true si el cambio vino de afuera (otra pesta\u00f1a u otro celular). Los cambios
+// del mismo momento llegan juntos en un solo aviso. Por ahora ninguna
+// pantalla se anota: cada una se redibuja sola despu\u00e9s de sus cambios, como
+// siempre.
+
+const oyentesCambiosDatos = new Set();
+let avisoCambiosPendiente = null;
+
+function escucharCambiosDatos(oyente) {
+    if (typeof oyente !== "function") return () => {};
+
+    oyentesCambiosDatos.add(oyente);
+    return () => oyentesCambiosDatos.delete(oyente);
+}
+
+function avisarCambioDatos(colecciones, externo) {
+    if (!avisoCambiosPendiente) {
+        avisoCambiosPendiente = { colecciones: new Set(), externo: false };
+        Promise.resolve().then(enviarAvisoCambioDatos);
+    }
+
+    colecciones.forEach(coleccion => avisoCambiosPendiente.colecciones.add(coleccion));
+    if (externo) avisoCambiosPendiente.externo = true;
+}
+
+function enviarAvisoCambioDatos() {
+    const aviso = {
+        colecciones: Array.from(avisoCambiosPendiente.colecciones),
+        externo: avisoCambiosPendiente.externo
+    };
+    avisoCambiosPendiente = null;
+
+    oyentesCambiosDatos.forEach(oyente => {
+        try {
+            oyente(aviso);
+        } catch (error) {
+            console.error("Fall\u00f3 una pantalla al recibir el aviso de cambios.", error);
+        }
+    });
 }
 
 function mostrarToast(mensaje, tipo) {
@@ -323,7 +537,7 @@ function asignarIdsProductos(productos) {
 // -----------------------------------------------------
 
 function obtenerComercios() {
-    let comercios = leerJSON(DB_COMERCIOS, COMERCIOS);
+    let comercios = leerColeccion("comercios", COMERCIOS);
 
     if (!Array.isArray(comercios)) {
         comercios = clonarDatos(COMERCIOS);
@@ -345,7 +559,7 @@ function obtenerComercios() {
         }))
         .filter(comercio => comercio.nombre !== "");
 
-    if (!localStorage.getItem(DB_COMERCIOS)) {
+    if (!existeColeccion("comercios")) {
         guardarComercios(comercios);
     }
 
@@ -355,7 +569,7 @@ function obtenerComercios() {
 function guardarComercios(comercios) {
     const lista = Array.isArray(comercios) ? comercios : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_COMERCIO);
-    return guardarJSON(DB_COMERCIOS, lista);
+    return guardarColeccion("comercios", lista);
 }
 
 function buscarComercioPorNombre(nombre, comercios = obtenerComercios()) {
@@ -435,7 +649,7 @@ function eliminarComercio(nombre) {
 // -----------------------------------------------------
 
 function obtenerProductos() {
-    let productos = leerJSON(DB_PRODUCTOS, PRODUCTOS);
+    let productos = leerColeccion("productos", PRODUCTOS);
 
     if (!productos || typeof productos !== "object" || Array.isArray(productos)) {
         productos = clonarDatos(PRODUCTOS);
@@ -460,7 +674,7 @@ function obtenerProductos() {
             : [];
     });
 
-    if (!localStorage.getItem(DB_PRODUCTOS)) {
+    if (!existeColeccion("productos")) {
         guardarProductos(productosLimpios);
     }
 
@@ -470,11 +684,11 @@ function obtenerProductos() {
 function guardarProductos(productos) {
     const datos = productos && typeof productos === "object" ? productos : {};
     asignarIdsProductos(datos);
-    return guardarJSON(DB_PRODUCTOS, datos);
+    return guardarColeccion("productos", datos);
 }
 
 function obtenerOrdenMarcas() {
-    const orden = leerJSON(DB_ORDEN_MARCAS, []);
+    const orden = leerColeccion("ordenMarcas", []);
 
     if (!Array.isArray(orden)) {
         return [];
@@ -488,8 +702,8 @@ function obtenerOrdenMarcas() {
 }
 
 function guardarOrdenMarcas(orden) {
-    return guardarJSON(
-        DB_ORDEN_MARCAS,
+    return guardarColeccion(
+        "ordenMarcas",
         Array.isArray(orden) ? orden : []
     );
 }
@@ -691,7 +905,7 @@ function eliminarProducto(marca, indice) {
 // -----------------------------------------------------
 
 function obtenerHistorial() {
-    let historial = leerJSON(DB_HISTORIAL, []);
+    let historial = leerColeccion("historial", []);
 
     if (!Array.isArray(historial)) historial = [];
 
@@ -701,7 +915,7 @@ function obtenerHistorial() {
 function guardarHistorial(historial) {
     const lista = Array.isArray(historial) ? historial : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_PEDIDO);
-    return guardarJSON(DB_HISTORIAL, lista);
+    return guardarColeccion("historial", lista);
 }
 
 function agregarHistorial(registro) {
@@ -731,6 +945,7 @@ function borrarTodosLosDatos() {
         .filter(clave => clave.indexOf("vendefrio_") === 0)
         .forEach(clave => localStorage.removeItem(clave));
 
+    memoriaDatos = {};
     return true;
 }
 
@@ -913,13 +1128,11 @@ function validarRespaldo(respaldo) {
 
 function restaurarRespaldo(respaldo) {
     const datos = respaldo.datos;
-    const anteriores = {
-        comercios: localStorage.getItem(DB_COMERCIOS),
-        productos: localStorage.getItem(DB_PRODUCTOS),
-        ordenMarcas: localStorage.getItem(DB_ORDEN_MARCAS),
-        historial: localStorage.getItem(DB_HISTORIAL),
-        rutasGuardadas: localStorage.getItem(DB_RUTAS_GUARDADAS)
-    };
+    // Foto de cómo estaban los datos, para volver atrás si algo falla.
+    const anteriores = COLECCIONES_COMPARTIDAS.map(coleccion => ({
+        coleccion,
+        ...cargarColeccion(coleccion)
+    }));
 
     const ordenMarcas = Array.isArray(datos.ordenMarcas)
         ? datos.ordenMarcas
@@ -932,36 +1145,30 @@ function restaurarRespaldo(respaldo) {
     asignarIdsFaltantes(datos.rutasGuardadas, PREFIJO_ID_RUTA);
 
     const guardado =
-        guardarJSON(DB_COMERCIOS, datos.comercios) &&
-        guardarJSON(DB_PRODUCTOS, datos.productos) &&
-        guardarJSON(DB_ORDEN_MARCAS, ordenMarcas) &&
-        guardarJSON(DB_HISTORIAL, datos.historial) &&
-        guardarJSON(
-            DB_RUTAS_GUARDADAS,
+        guardarColeccion("comercios", datos.comercios) &&
+        guardarColeccion("productos", datos.productos) &&
+        guardarColeccion("ordenMarcas", ordenMarcas) &&
+        guardarColeccion("historial", datos.historial) &&
+        guardarColeccion(
+            "rutasGuardadas",
             Array.isArray(datos.rutasGuardadas) ? datos.rutasGuardadas : []
         );
 
     if (!guardado) {
         try {
-            Object.entries(anteriores).forEach(([clave, valor]) => {
-                const claveReal = {
-                    comercios: DB_COMERCIOS,
-                    productos: DB_PRODUCTOS,
-                    ordenMarcas: DB_ORDEN_MARCAS,
-                    historial: DB_HISTORIAL,
-                    rutasGuardadas: DB_RUTAS_GUARDADAS
-                }[clave];
-
-                if (valor === null) {
-                    localStorage.removeItem(claveReal);
-                } else {
-                    localStorage.setItem(claveReal, valor);
+            // Lo que estaba dañado (texto null) no se puede volver a escribir.
+            anteriores.forEach(({ coleccion, existe, texto }) => {
+                if (!existe) {
+                    adaptadorDatos.borrar(coleccion);
+                } else if (texto !== null) {
+                    adaptadorDatos.guardar(coleccion, JSON.parse(texto), texto);
                 }
             });
         } catch (error) {
             console.error("No se pudo recuperar el estado anterior.", error);
         }
 
+        olvidarColeccionesEnMemoria(COLECCIONES_COMPARTIDAS);
         return false;
     }
 
@@ -1158,7 +1365,7 @@ function combinarRespaldoSinBorrar(respaldo) {
     const guardado =
         guardarComercios(comerciosActuales.concat(comerciosAgregados)) &&
         guardarProductos(productosCombinados) &&
-        guardarJSON(DB_ORDEN_MARCAS, ordenMarcas) &&
+        guardarColeccion("ordenMarcas", ordenMarcas) &&
         guardarHistorial(historialActual.concat(pedidosNuevos)) &&
         guardarRutasGuardadas(rutasActuales.concat(rutasNuevas));
 
@@ -1323,10 +1530,8 @@ function prepararControlesRespaldo() {
     }
 }
 
-const DB_RUTAS_GUARDADAS = "vendefrio_rutas_guardadas";
-
 function obtenerRutasGuardadas() {
-    const rutas = leerJSON(DB_RUTAS_GUARDADAS, []);
+    const rutas = leerColeccion("rutasGuardadas", []);
     return Array.isArray(rutas)
         ? rutas.filter(ruta => ruta && ruta.nombre && Array.isArray(ruta.comercios))
         : [];
@@ -1336,7 +1541,7 @@ function guardarRutasGuardadas(rutas) {
     const lista = Array.isArray(rutas) ? rutas : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_RUTA);
     completarIdsComerciosDeRutas(lista);
-    return guardarJSON(DB_RUTAS_GUARDADAS, lista);
+    return guardarColeccion("rutasGuardadas", lista);
 }
 
 function agregarRutaGuardada(nombre, comercios, dia = "") {
@@ -1785,7 +1990,7 @@ function migrarIdsComerciosEnRutas() {
     }
 
     if (!Array.isArray(rutas) || !completarIdsComerciosDeRutas(rutas)) return true;
-    return guardarJSON(DB_RUTAS_GUARDADAS, rutas);
+    return guardarColeccion("rutasGuardadas", rutas);
 }
 
 // -----------------------------------------------------
@@ -1794,6 +1999,8 @@ function migrarIdsComerciosEnRutas() {
 
 // Trabaja sobre el texto guardado tal cual, sin limpiar registros, para que
 // lo único que cambie sea el id agregado. Si algo falla, vuelve todo atrás.
+// Es una migración del formato local: lee y escribe localStorage directo y
+// después hace que la copia en memoria se vuelva a cargar.
 function migrarIdsLocales() {
     const colecciones = [
         {
@@ -1897,6 +2104,7 @@ function migrarIdsLocales() {
     } catch (error) {
         console.error("No se pudieron asignar los ids. Se dejan los datos como estaban.", error);
         restaurarOriginales();
+        olvidarColeccionesEnMemoria(COLECCIONES_COMPARTIDAS);
         mostrarAviso(
             "No se pudieron preparar los datos",
             "Tus datos quedaron como estaban y hay una copia interna guardada. Revisá si el almacenamiento del navegador está lleno."
@@ -1904,9 +2112,11 @@ function migrarIdsLocales() {
         return false;
     }
 
+    olvidarColeccionesEnMemoria(COLECCIONES_COMPARTIDAS);
     return true;
 }
 
+conectarAdaptadorDatos();
 migrarIdsLocales();
 migrarIdsComerciosEnRutas();
 asegurarReinicioSemanal();
