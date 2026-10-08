@@ -111,11 +111,11 @@ Revisión completa de `main` hecha por Claude antes de conectar Firebase. Sin ca
 - No hay claves escritas en el código. La clave de MapTiler sale de la variable de entorno `MAPTILER_KEY` de Vercel.
 - La clave igual llega al navegador para dibujar el mapa. Es normal: la protección es limitarla al dominio en el panel de MapTiler.
 - El zip revisado no incluye el historial de GitHub. Si alguna vez se subió una clave escrita, sigue en versiones viejas: conviene regenerarla.
-- `api/resolver-maps.js` acepta cualquier dirección web desde cualquier sitio. Puede usarse como intermediario y gastar la cuota gratuita de Vercel. Debe aceptar solo enlaces de Google Maps.
+- `api/resolver-maps.js` acepta cualquier dirección web desde cualquier sitio. Puede usarse como intermediario y gastar la cuota gratuita de Vercel. Debe aceptar solo enlaces de Google Maps. (Resuelto en T1.)
 
 ### Archivos sueltos
 
-- `maptiler-config.js` en la raíz: nadie lo usa; es una copia vieja de `api/maptiler-config.js`.
+- `maptiler-config.js` en la raíz: nadie lo usa; es una copia vieja de `api/maptiler-config.js`. (Borrado en T1.)
 - `VENDEFRIO_MASTER_BRIEF.md`: documentación vieja que nombra archivos que ya no existen e incluye a Gemini. Puede confundir a una IA. (Borrado en T0.)
 - Todos los demás archivos están conectados y el service worker los guarda.
 - Leaflet se carga desde internet y el service worker no lo guarda. El SDK de Firebase no debe repetir ese problema: va dentro del repo.
@@ -132,7 +132,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
   - Agregar `CLAUDE.md` al mapa de documentos de `README.md`.
   - Borrar `VENDEFRIO_MASTER_BRIEF.md`.
   - **Aceptación:** la app no cambia; los documentos quedan coherentes entre sí.
-- [ ] **T1 — Limpieza de código.**
+- [x] **T1 — Limpieza de código.**
   - Borrar `maptiler-config.js` de la raíz (no la de `api`).
   - `api/resolver-maps.js` acepta solo enlaces de Google Maps (incluidos los enlaces cortos de Google) y rechaza los demás.
   - **Aceptación:** pegar un enlace de Google Maps en un comercio sigue funcionando; el mapa 3D sigue cargando.
@@ -223,3 +223,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-07 — Claude: se eligió Firebase (Firestore + Auth, plan Spark gratuito) y se definió la arquitectura de datos compartidos. Se creó la cuenta de Google de la distribuidora. Sin cambios de código. Próximo paso: revisar el proyecto completo y crear el proyecto en Firebase.
 - 2026-10-07 — Claude: revisión completa del repo. Los datos compartidos pasan por `database.js`; no hay claves en el código; sueltos: `maptiler-config.js` (raíz) y `VENDEFRIO_MASTER_BRIEF.md`. Falta id único por registro y guardado individual. Se armó el plan de Firebase en tareas T0 a T12. Desde ahora el código lo modifica Claude Code en el repo. Sin cambios de código. Próximo paso: T0.
 - 2026-10-08 — Claude Code: T0. `CLAUDE.md` completado con las reglas del plan, `WORKING_GUIDE.md` pasado al flujo de rama, pull request y vista previa de Vercel, `CLAUDE.md` sumado al mapa de `README.md` y borrado `VENDEFRIO_MASTER_BRIEF.md`. Sin cambios de código. Próximo paso: T1.
+- 2026-10-08 — Claude Code: T1. Borrado `maptiler-config.js` de la raíz. `api/resolver-maps.js` acepta solo enlaces de Google Maps (incluidos `maps.app.goo.gl`, `goo.gl/maps` y `g.co/kgs`) y sigue las redirecciones solo dentro de dominios de Google. Próximo paso: M1 (dueño) y después T2.

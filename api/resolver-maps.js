@@ -97,6 +97,85 @@ async function geocodificarDireccion(direccion) {
     return { lat, lng };
 }
 
+const MAXIMO_REDIRECCIONES = 5;
+
+function esDominioGoogle(host) {
+    return /^([a-z0-9-]+\.)*google\.(com|[a-z]{2})(\.[a-z]{2})?$/.test(host);
+}
+
+function esEnlaceGoogleMaps(enlace) {
+    let url;
+
+    try {
+        url = new URL(enlace);
+    } catch (error) {
+        return false;
+    }
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    if (url.username || url.password || url.port) return false;
+
+    const host = url.hostname.toLowerCase();
+    const ruta = url.pathname;
+
+    if (host === "maps.app.goo.gl") return true;
+    if (host === "goo.gl") return ruta.startsWith("/maps/");
+    if (host === "g.co") return ruta.startsWith("/kgs/");
+    if (!esDominioGoogle(host)) return false;
+    if (host.startsWith("maps.")) return true;
+
+    return ruta === "/maps" || ruta.startsWith("/maps/");
+}
+
+function esRedireccionPermitida(enlace) {
+    let url;
+
+    try {
+        url = new URL(enlace);
+    } catch (error) {
+        return false;
+    }
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    if (url.username || url.password || url.port) return false;
+
+    const host = url.hostname.toLowerCase();
+
+    return esDominioGoogle(host) ||
+        host === "maps.app.goo.gl" ||
+        host === "goo.gl" ||
+        host === "g.co";
+}
+
+async function abrirEnlaceGoogle(enlace) {
+    let actual = enlace;
+
+    for (let salto = 0; salto <= MAXIMO_REDIRECCIONES; salto++) {
+        const pagina = await fetch(actual, {
+            redirect: "manual",
+            headers: {
+                "User-Agent": "Mozilla/5.0 VendeFrio"
+            }
+        });
+
+        const destino = pagina.headers.get("location");
+
+        if (pagina.status < 300 || pagina.status >= 400 || !destino) {
+            return { pagina, url: actual };
+        }
+
+        const siguiente = new URL(destino, actual).href;
+
+        if (!esRedireccionPermitida(siguiente)) {
+            return { pagina: null, url: siguiente };
+        }
+
+        actual = siguiente;
+    }
+
+    return { pagina: null, url: actual };
+}
+
 module.exports = async function handler(request, response) {
     response.setHeader("Access-Control-Allow-Origin", "*");
     response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -123,23 +202,23 @@ module.exports = async function handler(request, response) {
         return;
     }
 
-    try {
-        const pagina = await fetch(enlace, {
-            redirect: "follow",
-            headers: {
-                "User-Agent": "Mozilla/5.0 VendeFrio"
-            }
-        });
+    if (!esEnlaceGoogleMaps(enlace)) {
+        response.status(400).json({ ok: false, error: "Solo se aceptan enlaces de Google Maps" });
+        return;
+    }
 
-        if (!pagina.ok) {
+    try {
+        const { pagina, url: urlFinal } = await abrirEnlaceGoogle(enlace);
+
+        if (!pagina || !pagina.ok) {
             response.status(502).json({ ok: false, error: "No se pudo abrir el enlace" });
             return;
         }
 
         const html = await pagina.text();
-        const datosRuta = extraerDatosDeRuta(pagina.url);
+        const datosRuta = extraerDatosDeRuta(urlFinal);
         const titulo = extraerTitulo(html);
-        const coordenadas = extraerCoordenadas(pagina.url + " " + html);
+        const coordenadas = extraerCoordenadas(urlFinal + " " + html);
         const direccion = datosRuta.direccion || "";
         const coordenadasFinales = coordenadas || await geocodificarDireccion(direccion);
 
