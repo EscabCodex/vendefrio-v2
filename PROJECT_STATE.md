@@ -144,7 +144,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 ### Bloque B — Preparar los datos (todavía sin Firebase)
 
-- [ ] **T3 — Identificadores únicos.**
+- [x] **T3 — Identificadores únicos.**
   - Migración local que asigna un `id` a cada comercio, producto, pedido del historial y ruta guardada que no lo tenga. Puede correr muchas veces sin duplicar ni cambiar ids existentes.
   - Antes de migrar, guardar la copia interna automática.
   - Los nuevos registros nacen con `id`.
@@ -226,3 +226,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-08 — Claude Code: T0. `CLAUDE.md` completado con las reglas del plan, `WORKING_GUIDE.md` pasado al flujo de rama, pull request y vista previa de Vercel, `CLAUDE.md` sumado al mapa de `README.md` y borrado `VENDEFRIO_MASTER_BRIEF.md`. Sin cambios de código. Próximo paso: T1.
 - 2026-10-08 — Claude Code: T1. Borrado `maptiler-config.js` de la raíz. `api/resolver-maps.js` acepta solo enlaces de Google Maps (incluidos `maps.app.goo.gl`, `goo.gl/maps` y `g.co/kgs`) y sigue las redirecciones solo dentro de dominios de Google. Próximo paso: M1 (dueño) y después T2.
 - 2026-10-08 — Claude Code: T2. Confirmado el error: nadie leía `vendefrio_producto_catalogo_pendiente`. `pedidos.js` ahora lee esa clave al abrir Pedido, suma 1 unidad al producto, abre su marca, lo muestra con un aviso y borra la clave; el borrador se guarda como siempre. Además, en modo oscuro el texto de los avisos (toasts) quedaba blanco sobre fondo blanco: ahora tienen fondo oscuro y letras blancas, y se sumó la regla de modo oscuro a "Decisiones tomadas". Próximo paso: T3.
+- 2026-10-08 — Claude Code: T3. `database.js` asigna al abrir la app un `id` a cada comercio (`com_`), producto (`prod_`), pedido del historial (`ped_`) y ruta guardada (`ruta_`) que no lo tenga: antes guarda la copia interna automática, no cambia ids existentes, verifica las cantidades y, si algo falla, deja los datos como estaban. Los registros nuevos nacen con id; `obtenerProductos()` y `editarProducto()` conservan el id; restaurar completa ids de respaldos viejos y "combinar respaldo" evita duplicados por id. Se arregló de paso que "combinar respaldo" nunca sumaba productos a una marca existente. Pendiente para T4/T5: al renombrar una ruta, la ruta recibe un id nuevo. Próximo paso: T4.
