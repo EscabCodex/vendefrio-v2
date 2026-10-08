@@ -3103,3 +3103,22 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaFrecuencia{background:#111827
   --vf-text:var(--texto); --vf-muted:var(--texto-sec); --vf-border:var(--borde);
   --vf-radius:var(--radius-lg); --vf-shadow:none; --vf-speed:150ms; --vf-fast:150ms;
 }
+
+/* ================= Configuración: Cuenta (T7) ================= */
+.configCuentaFormulario{display:grid;gap:10px;}
+.configDetalle input[type="email"],
+.configDetalle input[type="password"],
+.configDetalle .configCuentaClave input[type="text"]{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#1f2937;font-size:16px;font-weight:500;}
+.configCuentaClave{position:relative;display:block;}
+.configCuentaClave input{padding-right:48px!important;}
+.configDetalle .configCuentaVer{position:absolute;top:0;right:0;display:grid;width:44px;min-height:44px;height:100%;padding:0;place-items:center;border:0;background:transparent;color:#6b7280;}
+.configDetalle .configCuentaVer.activo{color:var(--acento);}
+.configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;font-weight:800;}
+.configDetalle button:disabled{opacity:.6;}
+.configCuentaError{margin:0;padding:10px;border-radius:10px;background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:600;line-height:1.4;}
+html[data-tema="oscuro"] .configDetalle input[type="email"],
+html[data-tema="oscuro"] .configDetalle input[type="password"],
+html[data-tema="oscuro"] .configDetalle .configCuentaClave input[type="text"]{background:#111827;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;color:#cbd5e1;}
+html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;}
+html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border:1px solid #f87171;}

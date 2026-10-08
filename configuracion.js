@@ -36,6 +36,12 @@
                     placeholder="Buscar en configuración">
 
                 <div class="configMenuPrincipal">
+                    <button class="configFila" data-config-seccion="cuenta">
+                        <span class="configIcono">${window.icono("persona",20)}</span>
+                        <span><strong>Cuenta</strong>
+                        <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small></span><b>›</b>
+                    </button>
+
                     <button class="configFila" data-config-seccion="apariencia">
                         <span class="configIcono">${window.icono("paleta",20)}</span>
                         <span><strong>Apariencia</strong>
@@ -128,7 +134,88 @@
         pantalla().querySelector(".configBuscador").value = "";
     }
 
+    function escaparTexto(texto) {
+        return String(texto || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function htmlCuenta() {
+        const cuenta = window.cuentaVendeFrio;
+
+        if (!cuenta || !cuenta.disponible()) {
+            return `
+                <p class="configEstado">
+                    La cuenta no está disponible en este momento.
+                    Tus datos siguen guardados en este dispositivo.
+                </p>
+            `;
+        }
+
+        const usuario = cuenta.usuarioActual();
+
+        if (usuario) {
+            return `
+                <p class="configEstado">
+                    Sesión iniciada como<br>
+                    <strong>${escaparTexto(usuario.email)}</strong>
+                </p>
+                <p class="configEstado">
+                    Por ahora tus datos siguen guardados en este dispositivo.
+                </p>
+                <button type="button" data-accion="salirCuenta">
+                    Salir de la cuenta
+                </button>
+            `;
+        }
+
+        return `
+            <form class="configCuentaFormulario" id="formularioCuenta" novalidate>
+                <label>${window.icono("persona",15)} Email
+                    <input type="email" id="cuentaEmail" autocomplete="username"
+                        inputmode="email" autocapitalize="off" spellcheck="false"
+                        placeholder="tu@email.com" required>
+                </label>
+
+                <label>${window.icono("escudo",15)} Contraseña
+                    <span class="configCuentaClave">
+                        <input type="password" id="cuentaContrasena"
+                            autocomplete="current-password" placeholder="Tu contraseña" required>
+                        <button type="button" class="configCuentaVer"
+                            data-accion="verContrasena" aria-label="Mostrar contraseña">
+                            ${window.icono("ojo",18)}
+                        </button>
+                    </span>
+                </label>
+
+                <p class="configCuentaError oculto" id="cuentaError" role="alert"></p>
+
+                <button type="submit" class="configCuentaIngresar" id="cuentaIngresar">
+                    Ingresar
+                </button>
+            </form>
+            <p class="configEstado">
+                Iniciar sesión no cambia tus datos: siguen guardados en este dispositivo.
+            </p>
+        `;
+    }
+
+    function actualizarResumenCuenta() {
+        const resumen = document.getElementById("configCuentaResumen");
+        if (!resumen) return;
+
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        resumen.textContent = usuario
+            ? usuario.email
+            : "Ingresá o salí de tu cuenta";
+    }
+
+    let seccionAbierta = null;
+
     function detalle(seccion) {
+        seccionAbierta = seccion;
         const d = leer();
         const caja = document.getElementById("configDetalle");
         const menu = document.querySelector(".configMenuPrincipal");
@@ -136,6 +223,7 @@
         if (!caja || !menu) return;
 
         const titulos = {
+            cuenta: ["Cuenta", "Ingresá con tu email y contraseña"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
@@ -149,6 +237,10 @@
             </button>
             <p class="configDescripcion">${titulos[seccion][1]}</p>
         `;
+
+        if (seccion === "cuenta") {
+            caja.innerHTML += htmlCuenta();
+        }
 
         if (seccion === "apariencia") {
             caja.innerHTML += `
@@ -332,6 +424,33 @@
             mostrarPantalla("rutas");
         }
 
+        if (accion === "verContrasena") {
+            const campo = document.getElementById("cuentaContrasena");
+            const boton = event.target.closest("[data-accion]");
+
+            if (campo && boton) {
+                const mostrar = campo.type === "password";
+                campo.type = mostrar ? "text" : "password";
+                boton.setAttribute(
+                    "aria-label",
+                    mostrar ? "Ocultar contraseña" : "Mostrar contraseña"
+                );
+                boton.classList.toggle("activo", mostrar);
+            }
+        }
+
+        if (accion === "salirCuenta") {
+            const boton = event.target.closest("[data-accion]");
+            if (boton) boton.disabled = true;
+
+            window.cuentaVendeFrio?.salir()
+                .then(() => mostrarToast("Saliste de tu cuenta"))
+                .catch(error => {
+                    if (boton) boton.disabled = false;
+                    mostrarAviso("No se pudo salir", error.message);
+                });
+        }
+
         if (accion === "restablecer") {
             localStorage.removeItem(CLAVE);
             aplicar();
@@ -364,6 +483,46 @@
                 );
             }
         }
+    });
+
+    document.addEventListener("submit", event => {
+        if (event.target.id !== "formularioCuenta") return;
+
+        event.preventDefault();
+
+        const email = document.getElementById("cuentaEmail")?.value || "";
+        const contrasena = document.getElementById("cuentaContrasena")?.value || "";
+        const error = document.getElementById("cuentaError");
+        const boton = document.getElementById("cuentaIngresar");
+
+        const mostrarError = texto => {
+            if (!error) return;
+            error.textContent = texto;
+            error.classList.toggle("oculto", !texto);
+        };
+
+        if (!email.trim() || !contrasena) {
+            mostrarError("Completá el email y la contraseña.");
+            return;
+        }
+
+        mostrarError("");
+
+        if (boton) {
+            boton.disabled = true;
+            boton.textContent = "Ingresando…";
+        }
+
+        window.cuentaVendeFrio.ingresar(email, contrasena)
+            .then(() => mostrarToast("Ingresaste a tu cuenta"))
+            .catch(fallo => {
+                mostrarError(fallo.message);
+
+                if (boton) {
+                    boton.disabled = false;
+                    boton.textContent = "Ingresar";
+                }
+            });
     });
 
     document.addEventListener("change", event => {
@@ -424,4 +583,22 @@
 
     aplicar();
     crear();
+
+    // configuracion.js se carga aparte desde menu.js y puede llegar antes que cuenta.js.
+    function conectarCuenta() {
+        window.cuentaVendeFrio.escuchar(() => {
+            actualizarResumenCuenta();
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
+                detalle("cuenta");
+            }
+        });
+    }
+
+    if (window.cuentaVendeFrio) {
+        conectarCuenta();
+    } else {
+        window.addEventListener("cuentaVendeFrioLista", conectarCuenta, { once: true });
+    }
 }());

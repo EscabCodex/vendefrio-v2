@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v125 - Rework Visual + Íconos)
+// VendeFrío - Service Worker (v126 - Firebase: cuenta)
 // =====================================================
-const CACHE_NAME = "vendefrio-v125";
+const CACHE_NAME = "vendefrio-v126";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -23,7 +23,11 @@ const ARCHIVOS = [
   "./navegacion3d.js",
   "./navegacion3d.css",
   "./manifest.json",
-  "./icon.svg"
+  "./icon.svg",
+  "./firebase/firebase-app-compat.js",
+  "./firebase/firebase-auth-compat.js",
+  "./firebase-config.js",
+  "./cuenta.js"
 ];
 
 function esSolicitudGETMismaApp(request) {

@@ -6,7 +6,7 @@
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase), pero todavía no está conectado. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado, pero los datos todavía no pasan por la nube. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -16,6 +16,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Historial y estadísticas.
 - Rutas, GPS por comercio, optimización de recorrido y mapas (MapTiler).
 - Configuración y respaldo de datos (exportar e importar).
+- Cuenta: ingresar y salir con email y contraseña (Firebase Auth). No cambia de dónde salen los datos.
 - Barra inferior y menú "Más", íconos SVG propios, modales tipo bottom sheet, toasts, transiciones, háptica y safe areas.
 - PWA con service worker.
 
@@ -25,6 +26,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Módulos por sección:** `pedidos.js`, `comercios.js` y `productos.js` (listas iniciales de ejemplo), `comerciosAdmin.js`, `comercioFicha.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
 - **Carga diferida:** `menu.js` carga `configuracion.js`, `estadisticas.js` y `catalogo.js`; `comerciosAdmin.js` carga `comercioFicha.js`; `rutas.js` carga `navegacion3d.js` y `navegacion3d.css`.
 - **Datos:** `database.js`.
+- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js` y `firebase-auth-compat.js`), `firebase-config.js` (configuración web, pública por diseño) y `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`).
 - **Funciones de Vercel (carpeta `api`):** `maptiler-config.js` (entrega la clave de MapTiler desde la variable de entorno `MAPTILER_KEY`) y `resolver-maps.js` (lee enlaces de Google Maps).
 - **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`.
 - **Solo para uso local:** `package.json` y `package-lock.json` (servidor de prueba `servor`).
@@ -165,8 +167,8 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 ### Bloque C — Conectar Firebase (con datos de prueba)
 
-- [ ] **M2 — Crear el proyecto en Firebase (dueño).** Con la cuenta de la distribuidora: plan Spark, sin Google Analytics, app web, Auth con email y contraseña, Firestore en modo producción con ubicación en Sudamérica. Pasarle a Claude Code el bloque de configuración web (es público por diseño).
-- [ ] **T7 — SDK de Firebase e inicio de sesión.**
+- [x] **M2 — Crear el proyecto en Firebase (dueño).** Con la cuenta de la distribuidora: plan Spark, sin Google Analytics, app web, Auth con email y contraseña, Firestore en modo producción con ubicación en Sudamérica. Pasarle a Claude Code el bloque de configuración web (es público por diseño).
+- [x] **T7 — SDK de Firebase e inicio de sesión.**
   - Copiar el SDK de Firebase (versión "compat", que funciona sin módulos) dentro del repo y sumarlo al service worker.
   - Archivo de configuración de Firebase.
   - Sección "Cuenta" en Configuración para ingresar y salir.
@@ -230,3 +232,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-08 — Claude Code: T4. `database.js` suma funciones por id para comercios, productos, pedidos y rutas: `obtener…PorId`, `agregar…ConId` (devuelve el id nuevo), `actualizar…PorId` (el id nunca cambia) y `eliminar…PorId`. Cada ruta guarda ahora `idsComercios` junto a los nombres (al abrir la app se completa en las rutas existentes) y sigue mostrando el nombre; `obtenerComerciosDeRuta` busca por id y, si no, por nombre; renombrar un comercio con `actualizarComercioPorId` actualiza el nombre en las rutas. Las funciones viejas siguen igual (solo `agregarRutaGuardada` y `guardarRutasGuardadas` guardan además los ids). Sin cambios visibles. Pendiente para T5: que los módulos usen estas funciones (así, al renombrar una ruta conserva su id). Próximo paso: T5.
 - 2026-10-08 — Claude Code: T5. Ningún módulo fuera de `database.js` guarda listas enteras: `comerciosAdmin.js` y `comercioFicha.js` (alta, edición, borrado y marcar visitado o pendiente), `pedidos.js` (`registrarPedido` y el pedido nuevo en el historial), `catalogo.js` (precio y foto), `productosAdmin.js` (alta, edición y borrado de productos), `historial.js` (borrar pedido) y `rutas.js` (guardar, renombrar y borrar rutas, y GPS de comercios) usan las funciones por id. Al renombrar una ruta conserva su id; si el nombre nuevo ya es de otra ruta, se reemplaza esa como antes. Las marcas siguen con sus funciones de siempre (T4 no tiene funciones por id para marcas). Sin cambios visibles. Visto de paso, sin tocar: los botones de acciones de la tarjeta de comercio están ocultos por CSS y esas acciones se usan desde la ficha. Próximo paso: T6.
 - 2026-10-08 — Claude Code: T6. `database.js` separa el adaptador local (`adaptadorLocal`, el único que toca `localStorage` para comercios, productos, orden de marcas, historial y rutas) y deja escrita la interfaz que va a cumplir el adaptador nube (`leer`, `guardar`, `borrar`, `escucharCambios`) junto con `usarAdaptadorDatos()` para cambiarlo, que todavía no se usa. Todas las lecturas y escrituras pasan por una copia en memoria (`leerColeccion` y `guardarColeccion`), y hay un aviso interno (`escucharCambiosDatos`) que agrupa los cambios del mismo momento e indica si vinieron de afuera; un cambio hecho en otra pestaña refresca la copia en memoria. Ninguna pantalla se anota todavía al aviso: siguen redibujándose como siempre (se conectan cuando haya cambios desde la nube, T9). Las migraciones de ids de T3 y T4 siguen trabajando sobre `localStorage` tal cual y después recargan la copia en memoria. Preferencias, borrador, fechas y copias de respaldo siguen siendo de cada celular. Sin cambios visibles; todo sigue en `localStorage`. Próximo paso: M2 (dueño) y después T7.
+- 2026-10-08 — Claude Code: T7. SDK de Firebase 12.19.0 (versión "compat", solo App y Auth) guardado en la carpeta `firebase` y sumado al service worker (caché `vendefrio-v126`). Nuevo `firebase-config.js` con la configuración web del proyecto `vendefrio` y `cuenta.js` con ingresar, salir y aviso de cambio de cuenta. Configuración tiene una sección "Cuenta" para ingresar con email y contraseña (con botón para ver la contraseña y errores en castellano) y para salir. Iniciar sesión no cambia los datos: siguen en `localStorage`. La app no tiene registro: el usuario se crea en la consola de Firebase. Próximo paso: T8.
