@@ -571,8 +571,6 @@
         }
 
         if (accion === "restaurar") {
-            if (frenarSiDatosNoSonLocales()) return;
-
             const copia = localStorage.getItem(
                 "vendefrio_respaldo_automatico"
             );
@@ -582,6 +580,52 @@
                     "Sin copia interna",
                     "Todavía no existe una copia automática para restaurar."
                 );
+            }
+
+            // En modo nube restaurar no reemplaza: solo combina, sin borrar nada (T10).
+            if (estaEnModoNube()) {
+                let respaldo = null;
+
+                try {
+                    respaldo = JSON.parse(copia);
+                } catch (e) {
+                    respaldo = null;
+                }
+
+                if (!validarRespaldo(respaldo)) {
+                    return mostrarAviso(
+                        "No se pudo restaurar",
+                        "La copia interna no es válida."
+                    );
+                }
+
+                abrirConfirmacion(
+                    "Combinar copia interna",
+                    "En la nube no se reemplazan datos: la copia interna de este celular se combina con lo que ya hay, sin borrar nada. Los datos de la nube tienen prioridad.",
+                    () => {
+                        const resultado = combinarRespaldoSinBorrar(respaldo);
+
+                        if (!resultado.guardado) {
+                            return mostrarAviso(
+                                "No se pudo combinar",
+                                "Los datos no se pudieron guardar completos."
+                            );
+                        }
+
+                        mostrarAviso(
+                            "Copia combinada",
+                            "Se agregaron:\n" +
+                                "- " + resultado.pedidosAgregados + " pedido(s)\n" +
+                                "- " + resultado.comerciosAgregados + " comercio(s)\n" +
+                                "- " + resultado.rutasAgregadas + " ruta(s)\n\n" +
+                                "No se borró nada."
+                        );
+                        // Sin recargar: las escrituras de la nube siguen su curso y
+                        // las pantallas se redibujan con los datos combinados.
+                        avisarCambioDatos(COLECCIONES_COMPARTIDAS, true);
+                    }
+                );
+                return;
             }
 
             try {

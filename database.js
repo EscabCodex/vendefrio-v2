@@ -275,6 +275,11 @@ function estaEnModoNubePrueba() {
     return obtenerUidModoNubePrueba() !== "";
 }
 
+// Modo nube: los datos no salen de este celular sino de la nube (T10).
+function estaEnModoNube() {
+    return obtenerNombreAdaptadorDatos() !== "local";
+}
+
 // Devuelve true (y avisa) si la acci\u00f3n no se puede usar porque los datos
 // no salen de este celular.
 function frenarSiDatosNoSonLocales() {
@@ -326,6 +331,15 @@ function guardarColeccion(coleccion, datos) {
         memoriaDatos[coleccion] = { existe: true, texto };
     } catch (error) {
         console.error(`No se pudieron guardar los datos de ${coleccion}.`, error);
+
+        if (error && error.code === "borrado-masivo") {
+            mostrarAviso(
+                "Cambio frenado para cuidar los datos",
+                "Ese cambio iba a borrar varios registros de la nube a la vez y se fren\u00f3. No se borr\u00f3 nada. Si quer\u00e9s borrar algo, hacelo de a uno."
+            );
+            return false;
+        }
+
         mostrarAviso(
             "No se pudieron guardar los cambios",
             "Revis\u00e1 si el almacenamiento del navegador est\u00e1 lleno."
@@ -974,6 +988,9 @@ function eliminarHistorial(indice) {
 // -----------------------------------------------------
 
 function borrarTodosLosDatos() {
+    // En modo nube no se borra nada: ni la nube ni este celular (T10).
+    if (estaEnModoNube()) return false;
+
     Object.keys(localStorage)
         .filter(clave => clave.indexOf("vendefrio_") === 0)
         .forEach(clave => localStorage.removeItem(clave));
@@ -1165,6 +1182,13 @@ function validarRespaldo(respaldo) {
 }
 
 function restaurarRespaldo(respaldo) {
+    // En modo nube restaurar reemplazar\u00eda los datos de todos: solo se
+    // combina (combinarRespaldoSinBorrar). T10.
+    if (estaEnModoNube()) {
+        console.error("En modo nube no se restaura reemplazando: solo se combina.");
+        return false;
+    }
+
     const datos = respaldo.datos;
     // Foto de cómo estaban los datos, para volver atrás si algo falla.
     const anteriores = COLECCIONES_COMPARTIDAS.map(coleccion => ({
@@ -1215,7 +1239,12 @@ function restaurarRespaldo(respaldo) {
 
 function importarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
-    if (frenarSiDatosNoSonLocales()) return;
+
+    // En modo nube "Importar" solo combina, sin borrar nada (T10).
+    if (estaEnModoNube()) {
+        importarYCombinarRespaldoDesdeArchivo(archivo);
+        return;
+    }
 
     const lector = new FileReader();
 
@@ -1419,7 +1448,6 @@ function combinarRespaldoSinBorrar(respaldo) {
 
 function importarYCombinarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
-    if (frenarSiDatosNoSonLocales()) return;
 
     const lector = new FileReader();
     lector.onload = () => {
@@ -1437,7 +1465,9 @@ function importarYCombinarRespaldoDesdeArchivo(archivo) {
         }
 
         const mensaje =
-            "Se combinar\u00e1 con los datos actuales sin borrar nada.\n\n" +
+            (estaEnModoNube()
+                ? "En la nube no se reemplazan datos: el archivo se combina con lo que ya hay, sin borrar nada.\n\n"
+                : "Se combinar\u00e1 con los datos actuales sin borrar nada.\n\n") +
             "Pedidos del archivo: " + respaldo.datos.historial.length + "\n" +
             "Comercios del archivo: " + respaldo.datos.comercios.length + "\n\n" +
             "Los datos actuales de VendeFr\u00edo tendr\u00e1n prioridad.";
@@ -1458,6 +1488,14 @@ function importarYCombinarRespaldoDesdeArchivo(archivo) {
                     "- " + resultado.rutasAgregadas + " ruta(s)\n\n" +
                     "Los datos actuales se conservaron."
             );
+
+            // En la nube no se recarga: las escrituras siguen su curso y las
+            // pantallas se redibujan con los datos combinados.
+            if (estaEnModoNube()) {
+                avisarCambioDatos(COLECCIONES_COMPARTIDAS, true);
+                return;
+            }
+
             window.setTimeout(() => window.location.reload(), 1500);
         };
 
@@ -1546,7 +1584,13 @@ function prepararControlesRespaldo() {
 
     if (botonBorrarTodos && !botonBorrarTodos.dataset.configurado) {
         botonBorrarTodos.addEventListener("click", () => {
-            if (frenarSiDatosNoSonLocales()) return;
+            if (estaEnModoNube()) {
+                mostrarAviso(
+                    "No disponible en la nube",
+                    "\"Borrar todos los datos\" no borra nada de la nube: los datos son de toda la distribuidora. Para borrar un comercio, producto, pedido o ruta, hacelo uno por uno desde su pantalla."
+                );
+                return;
+            }
 
             const borrar = () => {
                 if (!borrarTodosLosDatos()) return;
