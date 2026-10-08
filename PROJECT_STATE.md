@@ -6,7 +6,7 @@
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase), pero todavía no está conectado.
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase), pero todavía no está conectado. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -21,17 +21,20 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 
 ## Estructura del repo
 
-- **Pantalla y estilos:** `index.html`, `styles.css`, `navegacion3d.js` y `navegacion3d.css`, `menu.js`.
-- **Módulos por sección:** `pedidos.js`, `comercios.js`, `comerciosAdmin.js`, `comercioFicha.js`, `productos.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
+- **Pantalla y estilos:** `index.html`, `styles.css`, `iconos.js`, `menu.js`.
+- **Módulos por sección:** `pedidos.js`, `comercios.js` y `productos.js` (listas iniciales de ejemplo), `comerciosAdmin.js`, `comercioFicha.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
+- **Carga diferida:** `menu.js` carga `configuracion.js`, `estadisticas.js` y `catalogo.js`; `comerciosAdmin.js` carga `comercioFicha.js`; `rutas.js` carga `navegacion3d.js` y `navegacion3d.css`.
 - **Datos:** `database.js`.
-- **Mapas:** `maptiler-config.js`.
-- **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`, carpeta `api`.
+- **Funciones de Vercel (carpeta `api`):** `maptiler-config.js` (entrega la clave de MapTiler desde la variable de entorno `MAPTILER_KEY`) y `resolver-maps.js` (lee enlaces de Google Maps).
+- **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`.
+- **Solo para uso local:** `package.json` y `package-lock.json` (servidor de prueba `servor`).
 
 ## Restricciones (no negociables)
 
 - No migrar de tecnología sin una decisión explícita.
-- No modificar código desde varias IAs a la vez.
-- No reemplazar archivos parcialmente: siempre archivos completos.
+- No modificar código desde varias IAs a la vez. Desde el 2026-10-07 el código lo modifica **solo Claude Code**, directamente en el repo.
+- Claude Code trabaja en una rama nueva y abre un pull request. Nada se une a `main` sin probarlo en la vista previa de Vercel y sin el OK del dueño.
+- Una tarea del plan por sesión de Claude Code. No se mezclan tareas.
 - No perder los datos existentes de `localStorage` al migrar.
 - No usar confirmaciones nativas del navegador.
 - No cambiar funciones existentes solo por estética.
@@ -51,6 +54,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Se mantiene la base HTML, CSS y JS puro y la PWA. `localStorage` sigue siendo la fuente de datos hasta completar y verificar la migración a Firebase.
 - Se conserva la dirección visual iniciada: SVG propios, bottom sheets, toasts, transiciones, safe areas y háptica.
 - Equipo y reglas de trabajo: ver `WORKING_GUIDE.md`. Gemini quedó afuera del equipo.
+- Forma de trabajo (2026-10-07): el dueño trabaja desde el celular y Claude Code modifica el repo directamente. Ya no se suben archivos a mano.
 
 ### Datos compartidos (decidido el 2026-10-07)
 
@@ -66,16 +70,149 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Migración:** 1) exportar respaldo con la función existente; 2) botón "Subir mis datos a la nube" que copia todo desde `localStorage`; 3) `localStorage` no se borra hasta confirmar que los datos están completos en la nube.
 - **Empleado nuevo (propuesta, a validar):** el dueño agrega el email del empleado desde la app; al registrarse con ese email, queda dentro de la distribuidora.
 
+### Estructura propuesta en Firestore (a validar en la tarea T8)
+
+```text
+distribuidoras/{idDistribuidora}
+  miembros/{uid}           usuarios autorizados
+  comercios/{id}
+  productos/{id}           cada producto en su propio documento, con marca y foto
+  config/marcas            orden de marcas
+  pedidos/{id}
+    estados/{id}           historial de estados: solo se agrega
+  rutas/{id}
+```
+
+Quedan solo en cada celular: preferencias de apariencia, borrador del pedido y fechas de respaldo.
+
+## Diagnóstico del repo (2026-10-07)
+
+Revisión completa de `main` hecha por Claude antes de conectar Firebase. Sin cambios de código.
+
+### Acceso a los datos
+
+- Comercios, productos, marcas, historial y rutas se leen y guardan **solo** a través de `database.js`.
+- Accesos directos a `localStorage` fuera de `database.js`, todos de uso local de cada celular: `configuracion.js` e `index.html` (preferencias de apariencia y fecha de la copia automática), `pedidos.js` (borrador del pedido) y `catalogo.js` (ver error abajo).
+- **Error probable:** `catalogo.js` guarda `vendefrio_producto_catalogo_pendiente` al tocar "＋ Agregar al pedido", pero ningún archivo lee esa clave. El botón abriría Pedido sin agregar el producto.
+- **Código viejo:** `database.js` borra cada semana claves `vendefrio_semanal_` que ya nadie crea. Es inofensivo.
+
+### Lo que hay que cambiar antes de Firebase
+
+- **Guardado en bloque:** cada cambio reescribe la lista entera (comercios, productos o historial). Con varios usuarios, el último que guarda pisa al otro. Hay que guardar registro por registro.
+- **Sin identificadores únicos:** los pedidos se identifican por su posición en la lista (`eliminarHistorial(indice)`), los comercios por el nombre y los productos por marca y posición. Firestore necesita un ID por documento.
+- **Funciones sincrónicas:** `obtenerComercios()` y similares devuelven los datos al instante. Firestore responde en diferido, así que `database.js` necesita una copia en memoria que Firestore mantenga al día.
+- **Fotos dentro del catálogo:** las fotos de productos (JPEG de 300 px) están dentro del objeto de productos. Firestore permite 1 MB por documento: cada producto va en su propio documento.
+- **Contadores del comercio:** `registrarPedido` suma pedidos al comercio reescribiendo toda la lista.
+- **Acciones peligrosas:** "Borrar todos los datos" y "Restaurar respaldo" reescriben todo. En la nube afectarían a todos los usuarios.
+- **Datos iniciales:** `comercios.js` y `productos.js` cargan listas de ejemplo cuando no hay datos. En modo nube no deben cargarse solas.
+
+### Claves
+
+- No hay claves escritas en el código. La clave de MapTiler sale de la variable de entorno `MAPTILER_KEY` de Vercel.
+- La clave igual llega al navegador para dibujar el mapa. Es normal: la protección es limitarla al dominio en el panel de MapTiler.
+- El zip revisado no incluye el historial de GitHub. Si alguna vez se subió una clave escrita, sigue en versiones viejas: conviene regenerarla.
+- `api/resolver-maps.js` acepta cualquier dirección web desde cualquier sitio. Puede usarse como intermediario y gastar la cuota gratuita de Vercel. Debe aceptar solo enlaces de Google Maps.
+
+### Archivos sueltos
+
+- `maptiler-config.js` en la raíz: nadie lo usa; es una copia vieja de `api/maptiler-config.js`.
+- `VENDEFRIO_MASTER_BRIEF.md`: documentación vieja que nombra archivos que ya no existen e incluye a Gemini. Puede confundir a una IA.
+- Todos los demás archivos están conectados y el service worker los guarda.
+- Leaflet se carga desde internet y el service worker no lo guarda. El SDK de Firebase no debe repetir ese problema: va dentro del repo.
+
+## Plan de conexión con Firebase
+
+Cada tarea es una sesión de Claude Code, en su propia rama y con su pull request. Las tareas **M** las hace el dueño a mano; Claude le da los pasos cuando llega el momento. Estado de cada tarea: `[ ]` pendiente, `[x]` hecha.
+
+### Bloque A — Limpieza
+
+- [ ] **T0 — Preparar el repo para Claude Code.**
+  - Crear `CLAUDE.md` en la raíz, corto, que diga: leer `README.md`, `WORKING_GUIDE.md` y `PROJECT_STATE.md` antes de cualquier cambio; hacer solo la tarea pedida; trabajar en una rama nueva y abrir un pull request sin unirlo a `main`; al terminar, marcar la tarea en el plan, agregar una línea a la bitácora y explicarle al dueño cómo probar en el celular con pasos numerados y nivel principiante, en español rioplatense.
+  - Actualizar `WORKING_GUIDE.md` al flujo con Claude Code: reemplazar "archivos completos" y "subir cambios a mano" por rama, pull request y vista previa de Vercel.
+  - Agregar `CLAUDE.md` al mapa de documentos de `README.md`.
+  - Borrar `VENDEFRIO_MASTER_BRIEF.md`.
+  - **Aceptación:** la app no cambia; los documentos quedan coherentes entre sí.
+- [ ] **T1 — Limpieza de código.**
+  - Borrar `maptiler-config.js` de la raíz (no la de `api`).
+  - `api/resolver-maps.js` acepta solo enlaces de Google Maps (incluidos los enlaces cortos de Google) y rechaza los demás.
+  - **Aceptación:** pegar un enlace de Google Maps en un comercio sigue funcionando; el mapa 3D sigue cargando.
+- [ ] **M1 — MapTiler (dueño).** Regenerar la clave, limitarla al dominio de Vercel y actualizar `MAPTILER_KEY` en Vercel.
+- [ ] **T2 — Botón "＋ Agregar al pedido" del catálogo.**
+  - Confirmar el error y arreglarlo: el producto elegido queda cargado en el pedido.
+  - **Aceptación:** desde Catálogo se agrega un producto y aparece en Pedido; el borrador del pedido sigue funcionando.
+
+### Bloque B — Preparar los datos (todavía sin Firebase)
+
+- [ ] **T3 — Identificadores únicos.**
+  - Migración local que asigna un `id` a cada comercio, producto, pedido del historial y ruta guardada que no lo tenga. Puede correr muchas veces sin duplicar ni cambiar ids existentes.
+  - Antes de migrar, guardar la copia interna automática.
+  - Los nuevos registros nacen con `id`.
+  - Exportar e importar respaldo conservan los ids; "combinar respaldo" evita duplicados por id.
+  - **Aceptación:** la app se ve y funciona igual; un respaldo exportado muestra ids en todos los registros.
+- [ ] **T4 — Funciones por id en `database.js`.**
+  - Obtener, agregar, actualizar y eliminar por id para comercios, productos, pedidos y rutas.
+  - Las rutas guardan el id de cada comercio (y siguen mostrando el nombre).
+  - Las funciones viejas siguen existiendo para no romper nada.
+  - **Aceptación:** sin cambios visibles; ninguna regresión.
+- [ ] **T5 — Los módulos guardan registro por registro.**
+  - Ningún módulo fuera de `database.js` guarda listas enteras: `comerciosAdmin.js`, `pedidos.js` (incluido `registrarPedido`), `catalogo.js`, `productosAdmin.js`, `historial.js` y `rutas.js` usan las funciones por id.
+  - **Aceptación:** probar alta, edición y borrado de comercios, productos, pedidos y rutas.
+- [ ] **T6 — Capa de datos con adaptador.**
+  - `database.js` separa el "adaptador local" (`localStorage`) y deja lista la interfaz para un "adaptador nube".
+  - Copia de datos en memoria y un aviso interno cuando los datos cambian, para que las pantallas se vuelvan a dibujar solas.
+  - **Aceptación:** sin cambios visibles; todo sigue en `localStorage`.
+
+### Bloque C — Conectar Firebase (con datos de prueba)
+
+- [ ] **M2 — Crear el proyecto en Firebase (dueño).** Con la cuenta de la distribuidora: plan Spark, sin Google Analytics, app web, Auth con email y contraseña, Firestore en modo producción con ubicación en Sudamérica. Pasarle a Claude Code el bloque de configuración web (es público por diseño).
+- [ ] **T7 — SDK de Firebase e inicio de sesión.**
+  - Copiar el SDK de Firebase (versión "compat", que funciona sin módulos) dentro del repo y sumarlo al service worker.
+  - Archivo de configuración de Firebase.
+  - Sección "Cuenta" en Configuración para ingresar y salir.
+  - Iniciar sesión **no** cambia de dónde salen los datos: siguen en `localStorage`.
+  - **Aceptación:** se puede ingresar y salir; la app abre sin internet; los datos no cambian.
+- [ ] **T8 — Reglas de seguridad y alta de la distribuidora.**
+  - Archivo `firestore.rules` en el repo con la estructura propuesta: solo los miembros leen y escriben su distribuidora; el historial de estados solo admite agregar.
+  - Al primer ingreso del dueño se crea su distribuidora y su ficha de miembro.
+- [ ] **M3 — Publicar las reglas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
+- [ ] **T9 — Adaptador nube.**
+  - Firestore con trabajo sin conexión activado.
+  - Lectura con escucha en tiempo real hacia la copia en memoria; escritura documento por documento.
+  - En modo nube no se cargan las listas de ejemplo.
+  - Interruptor de modo solo para pruebas, con una distribuidora de prueba.
+  - **Aceptación:** con datos de prueba, un cambio en un celular aparece en otro; sin internet se guarda y se sincroniza al volver.
+- [ ] **T10 — Proteger acciones peligrosas en modo nube.**
+  - "Borrar todos los datos" no actúa sobre la nube.
+  - "Restaurar" e "Importar" en modo nube solo combinan sin borrar.
+  - **Aceptación:** ninguna acción desde un celular puede vaciar los datos de todos.
+
+### Bloque D — Pasar a la nube
+
+- [ ] **T11 — Migración "Subir mis datos a la nube".**
+  - Pide primero exportar un respaldo.
+  - Sube en tandas, compara totales (comercios, productos, pedidos, rutas) y muestra un resumen.
+  - Recién con todo verificado ofrece pasar a modo nube. `localStorage` no se borra.
+  - **Aceptación:** los totales coinciden; volver a correrla no duplica nada.
+- [ ] **T12 — Sincronización visible y prueba con dos celulares.**
+  - Cada pedido muestra si está pendiente de sincronizar; indicador general de conexión.
+  - **Aceptación:** prueba real con dos celulares: carga sin internet, sincronización al volver y dos personas sobre los mismos datos sin pisarse.
+
+### Después del plan
+
+- Incorporación de empleados por email (validar la propuesta).
+- Ciclo de estados del pedido, checklist, faltantes y entrega (Etapa 3 del `ROADMAP.md`).
+
+## Decisiones abiertas de la migración
+
+- Cómo se migran los pedidos viejos del historial: sin estado, como "entregado" o como "histórico". Decidir antes de T11.
+- Si la copia automática interna y el respaldo por archivo siguen existiendo en modo nube, y cómo.
+
 ## Pendientes técnicos
 
-- Revisar el proyecto completo (zip del repo), en especial `database.js`: ver si todos los módulos acceden a los datos a través de él o leen `localStorage` por su cuenta.
-- Crear el proyecto en Firebase (plan Spark) con la cuenta de la distribuidora y conectarlo a la app.
-- Escribir las reglas de seguridad de Firestore.
-- Implementar la migración desde `localStorage` sin pérdida de datos.
+- Ejecutar el plan de conexión con Firebase (T0 a T12).
 - Validar la propuesta de incorporación de empleados.
-- Revisar que el repo público no exponga claves de API (por ejemplo, MapTiler).
 - Rework visual completo.
-- Confirmar que no quedan archivos sueltos o desconectados del resto de la app.
+- Leaflet se carga desde internet y no funciona sin conexión (fuera del plan de Firebase).
 
 ## Bitácora de sesiones
 
@@ -84,3 +221,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-09-09 — Etapa estratégica: se pausó el desarrollo y se definieron visión, flujo del pedido, equipo y roadmap.
 - 2026-10-07 — Consolidación de la documentación en 6 archivos. Próximo paso: elegir el servicio de datos compartidos.
 - 2026-10-07 — Claude: se eligió Firebase (Firestore + Auth, plan Spark gratuito) y se definió la arquitectura de datos compartidos. Se creó la cuenta de Google de la distribuidora. Sin cambios de código. Próximo paso: revisar el proyecto completo y crear el proyecto en Firebase.
+- 2026-10-07 — Claude: revisión completa del repo. Los datos compartidos pasan por `database.js`; no hay claves en el código; sueltos: `maptiler-config.js` (raíz) y `VENDEFRIO_MASTER_BRIEF.md`. Falta id único por registro y guardado individual. Se armó el plan de Firebase en tareas T0 a T12. Desde ahora el código lo modifica Claude Code en el repo. Sin cambios de código. Próximo paso: T0.
