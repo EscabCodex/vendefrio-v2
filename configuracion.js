@@ -168,6 +168,50 @@
         `;
     }
 
+    function htmlModoPrueba() {
+        const nube = window.nubeVendeFrio;
+        if (!nube) return "";
+
+        if (!nube.modoPrueba()) {
+            return `
+                <p class="configEstado">
+                    <strong>Modo prueba de la nube</strong><br>
+                    Usa una distribuidora de prueba, aparte de tus datos reales,
+                    para probar la nube con datos inventados. Tus datos de este
+                    celular no se suben ni se borran.
+                </p>
+                <button type="button" data-accion="encenderModoPrueba">
+                    Encender modo prueba
+                </button>
+            `;
+        }
+
+        const textos = {
+            conectando: "Conectando con la nube de prueba…",
+            conectada: "Conectada: los cambios se ven en los otros celulares con esta cuenta.",
+            sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
+            sinPermiso: "La nube no deja leer la distribuidora de prueba. Revisá que las reglas de seguridad estén publicadas.",
+            error: "Hubo un problema con la nube de prueba. Probá de nuevo."
+        };
+        const estadoNube = nube.estado();
+        const reintentar = ["sinConexion", "sinPermiso", "error"].includes(estadoNube)
+            ? `<button type="button" data-accion="reintentarNube">Reintentar</button>`
+            : "";
+
+        return `
+            <p class="configEstado">
+                <strong>Modo prueba encendido</strong><br>
+                Estás viendo la distribuidora de prueba en la nube.
+                Tus datos reales siguen guardados en este celular, sin cambios.
+            </p>
+            <p class="configEstado" id="estadoNubePrueba">${textos[estadoNube] || ""}</p>
+            ${reintentar}
+            <button type="button" data-accion="apagarModoPrueba">
+                Apagar modo prueba
+            </button>
+        `;
+    }
+
     function htmlCuenta() {
         const cuenta = window.cuentaVendeFrio;
 
@@ -189,9 +233,11 @@
                     <strong>${escaparTexto(usuario.email)}</strong>
                 </p>
                 ${htmlDistribuidora()}
+                ${window.nubeVendeFrio?.modoPrueba() ? "" : `
                 <p class="configEstado">
                     Por ahora tus datos siguen guardados en este dispositivo.
-                </p>
+                </p>`}
+                ${htmlModoPrueba()}
                 <button type="button" data-accion="salirCuenta">
                     Salir de la cuenta
                 </button>
@@ -235,7 +281,7 @@
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
         resumen.textContent = usuario
-            ? usuario.email
+            ? usuario.email + (window.nubeVendeFrio?.modoPrueba() ? " · modo prueba" : "")
             : "Ingresá o salí de tu cuenta";
     }
 
@@ -482,6 +528,42 @@
             window.distribuidoraVendeFrio?.reintentar();
         }
 
+        if (accion === "encenderModoPrueba") {
+            const boton = event.target.closest("[data-accion]");
+            const encender = () => {
+                if (boton) {
+                    boton.disabled = true;
+                    boton.textContent = "Preparando la nube de prueba…";
+                }
+
+                window.nubeVendeFrio?.activarPrueba().catch(error => {
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.textContent = "Encender modo prueba";
+                    }
+                    mostrarAviso("No se pudo encender el modo prueba", error.message);
+                });
+            };
+
+            abrirConfirmacion(
+                "Encender modo prueba",
+                "La app se va a recargar y va a mostrar la distribuidora de prueba, que arranca vacía. Tus datos reales quedan guardados en este celular y vuelven al apagar el modo prueba.",
+                encender
+            );
+        }
+
+        if (accion === "apagarModoPrueba") {
+            abrirConfirmacion(
+                "Apagar modo prueba",
+                "La app se va a recargar y vuelve a mostrar tus datos reales de este celular. Lo que cargaste en la prueba queda guardado en la nube de prueba.",
+                () => window.nubeVendeFrio?.desactivarPrueba()
+            );
+        }
+
+        if (accion === "reintentarNube") {
+            window.nubeVendeFrio?.reintentar();
+        }
+
         if (accion === "restablecer") {
             localStorage.removeItem(CLAVE);
             aplicar();
@@ -489,6 +571,8 @@
         }
 
         if (accion === "restaurar") {
+            if (frenarSiDatosNoSonLocales()) return;
+
             const copia = localStorage.getItem(
                 "vendefrio_respaldo_automatico"
             );
@@ -647,5 +731,23 @@
         conectarDistribuidora();
     } else {
         window.addEventListener("distribuidoraVendeFrioLista", conectarDistribuidora, { once: true });
+    }
+
+    // Estado del modo nube de prueba (T9).
+    function conectarNube() {
+        window.nubeVendeFrio.escuchar(() => {
+            actualizarResumenCuenta();
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
+                detalle("cuenta");
+            }
+        });
+    }
+
+    if (window.nubeVendeFrio) {
+        conectarNube();
+    } else {
+        window.addEventListener("nubeVendeFrioLista", conectarNube, { once: true });
     }
 }());

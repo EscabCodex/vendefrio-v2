@@ -19,7 +19,10 @@ const pedidoDetalle = document.getElementById("pedidoDetalle");
 const copiarPedido = document.getElementById("copiarPedido");
 const whatsappPedido = document.getElementById("whatsappPedido");
 
-const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
+// En el modo nube de prueba (T9) el borrador va aparte, para no pisar el real.
+const DB_BORRADOR_PEDIDO = estaEnModoNubePrueba()
+    ? "vendefrio_borrador_pedido_prueba"
+    : "vendefrio_borrador_pedido";
 
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;

@@ -6,7 +6,7 @@
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube, pero los datos todavía no pasan por la nube. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube. Los datos reales todavía no pasan por la nube: solo hay un modo prueba, con una distribuidora de prueba aparte, para probar la sincronización entre celulares. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -26,7 +26,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Módulos por sección:** `pedidos.js`, `comercios.js` y `productos.js` (listas iniciales de ejemplo), `comerciosAdmin.js`, `comercioFicha.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
 - **Carga diferida:** `menu.js` carga `configuracion.js`, `estadisticas.js` y `catalogo.js`; `comerciosAdmin.js` carga `comercioFicha.js`; `rutas.js` carga `navegacion3d.js` y `navegacion3d.css`.
 - **Datos:** `database.js`.
-- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js`, `firebase-auth-compat.js` y `firebase-firestore-compat.js`), `firebase-config.js` (configuración web, pública por diseño), `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`), `distribuidora.js` (alta de la distribuidora al primer ingreso) y `firestore.rules` (reglas de seguridad; se publican a mano en la consola de Firebase).
+- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js`, `firebase-auth-compat.js` y `firebase-firestore-compat.js`), `firebase-config.js` (configuración web, pública por diseño), `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`), `distribuidora.js` (alta de la distribuidora al primer ingreso), `nube.js` (adaptador nube con Firestore y modo prueba; el interruptor está en Configuración > Cuenta) y `firestore.rules` (reglas de seguridad; se publican a mano en la consola de Firebase).
 - **Funciones de Vercel (carpeta `api`):** `maptiler-config.js` (entrega la clave de MapTiler desde la variable de entorno `MAPTILER_KEY`) y `resolver-maps.js` (lee enlaces de Google Maps).
 - **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`.
 - **Solo para uso local:** `package.json` y `package-lock.json` (servidor de prueba `servor`).
@@ -77,7 +77,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 
 ```text
 usuarios/{uid}             a qué distribuidora pertenece cada usuario
-distribuidoras/{idDistribuidora}   el id es el uid del dueño
+distribuidoras/{idDistribuidora}   el id es el uid del dueño ("prueba-" + uid para la de prueba)
   miembros/{uid}           usuarios autorizados
   comercios/{id}
   productos/{id}           cada producto en su propio documento, con marca y foto
@@ -86,6 +86,10 @@ distribuidoras/{idDistribuidora}   el id es el uid del dueño
     estados/{id}           historial de estados: solo se agrega
   rutas/{id}
 ```
+
+Cómo guarda los datos el adaptador nube (T9): cada registro es un documento con su `id` como nombre. Campos internos: `_orden` (posición en la lista, para que agregar o borrar escriba solo ese registro) y, en productos, `_marca`. `config/marcas` guarda `orden` (orden de marcas) y `marcas` (lista de marcas, para no perder las vacías). Si un registro tiene listas dentro de listas (Firestore no las admite), se guarda entero como texto en `_json`.
+
+Distribuidora de prueba (T9): `distribuidoras/prueba-{uid}`, con `prueba: true`. Cada dueño puede crear solo la suya; no tiene ficha en `usuarios/{uid}` y nunca se mezcla con la real.
 
 Se sumó `usuarios/{uid}` para que cada usuario sepa cuál es su distribuidora sin buscarla (lo van a necesitar los empleados). La distribuidora usa el uid del dueño como id, así cada dueño crea una sola. Las reglas de `firestore.rules` siguen esta estructura y bloquean todo lo demás.
 
@@ -180,13 +184,14 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 - [x] **T8 — Reglas de seguridad y alta de la distribuidora.**
   - Archivo `firestore.rules` en el repo con la estructura propuesta: solo los miembros leen y escriben su distribuidora; el historial de estados solo admite agregar.
   - Al primer ingreso del dueño se crea su distribuidora y su ficha de miembro.
-- [ ] **M3 — Publicar las reglas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
-- [ ] **T9 — Adaptador nube.**
+- [x] **M3 — Publicar las reglas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
+- [x] **T9 — Adaptador nube.**
   - Firestore con trabajo sin conexión activado.
   - Lectura con escucha en tiempo real hacia la copia en memoria; escritura documento por documento.
   - En modo nube no se cargan las listas de ejemplo.
   - Interruptor de modo solo para pruebas, con una distribuidora de prueba.
   - **Aceptación:** con datos de prueba, un cambio en un celular aparece en otro; sin internet se guarda y se sincroniza al volver.
+- [ ] **M3b — Volver a publicar las reglas (dueño).** T9 cambió `firestore.rules` para permitir la distribuidora de prueba: pegar la versión nueva en la consola de Firebase antes de probar el modo prueba.
 - [ ] **T10 — Proteger acciones peligrosas en modo nube.**
   - "Borrar todos los datos" no actúa sobre la nube.
   - "Restaurar" e "Importar" en modo nube solo combinan sin borrar.
@@ -237,3 +242,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-08 — Claude Code: T6. `database.js` separa el adaptador local (`adaptadorLocal`, el único que toca `localStorage` para comercios, productos, orden de marcas, historial y rutas) y deja escrita la interfaz que va a cumplir el adaptador nube (`leer`, `guardar`, `borrar`, `escucharCambios`) junto con `usarAdaptadorDatos()` para cambiarlo, que todavía no se usa. Todas las lecturas y escrituras pasan por una copia en memoria (`leerColeccion` y `guardarColeccion`), y hay un aviso interno (`escucharCambiosDatos`) que agrupa los cambios del mismo momento e indica si vinieron de afuera; un cambio hecho en otra pestaña refresca la copia en memoria. Ninguna pantalla se anota todavía al aviso: siguen redibujándose como siempre (se conectan cuando haya cambios desde la nube, T9). Las migraciones de ids de T3 y T4 siguen trabajando sobre `localStorage` tal cual y después recargan la copia en memoria. Preferencias, borrador, fechas y copias de respaldo siguen siendo de cada celular. Sin cambios visibles; todo sigue en `localStorage`. Próximo paso: M2 (dueño) y después T7.
 - 2026-10-08 — Claude Code: T7. SDK de Firebase 12.19.0 (versión "compat", solo App y Auth) guardado en la carpeta `firebase` y sumado al service worker (caché `vendefrio-v126`). Nuevo `firebase-config.js` con la configuración web del proyecto `vendefrio` y `cuenta.js` con ingresar, salir y aviso de cambio de cuenta. Configuración tiene una sección "Cuenta" para ingresar con email y contraseña (con botón para ver la contraseña y errores en castellano) y para salir. Iniciar sesión no cambia los datos: siguen en `localStorage`. La app no tiene registro: el usuario se crea en la consola de Firebase. Próximo paso: T8.
 - 2026-10-08 — Claude Code: T8. Nuevo `firestore.rules`: solo los miembros leen y escriben su distribuidora (comercios, productos, config, pedidos y rutas); el historial de estados de cada pedido solo admite agregar; nadie borra la distribuidora ni cambia su dueño; todo lo que no está en la estructura queda bloqueado. Se sumó `usuarios/{uid}` a la estructura y la distribuidora usa el uid del dueño como id. Nuevo `distribuidora.js` y SDK de Firestore 12.19.0 ("compat") en la carpeta `firebase`, sumados al service worker (caché `vendefrio-v127`): al primer ingreso crea juntas la distribuidora ("Mi distribuidora"), la ficha de miembro del dueño y la ficha de usuario; si falla, se reintenta al volver a ingresar, al abrir la app o al volver internet. Cuenta muestra el estado de la distribuidora con botón "Reintentar". Reglas y alta probadas con los emuladores de Firebase (33 pruebas de reglas y prueba en navegador). Firestore todavía sin trabajo sin conexión (T9: activarlo antes de cualquier otro uso de Firestore). Hasta publicar las reglas, Cuenta avisa que faltan. Por ahora cualquier usuario que ingresa sin distribuidora crea la suya (los usuarios se crean solo desde la consola). Los datos siguen en `localStorage`. Próximo paso: M3 (dueño) y después T9.
+- 2026-10-08 — Claude Code: T9. El dueño confirmó M3 (reglas publicadas). Nuevo `nube.js` con el adaptador nube: lee con escucha en tiempo real hacia la copia en memoria y escribe documento por documento (compara con lo último conocido y sube solo lo que cambió, en tandas). `firebase-config.js` activa el trabajo sin conexión de Firestore (`enablePersistence`, varias pestañas) antes de cualquier otro uso. En modo nube las colecciones arrancan vacías: no se cargan las listas de ejemplo. Interruptor "Modo prueba" en Configuración > Cuenta: crea (con internet) la distribuidora de prueba `prueba-{uid}`, recarga la app y la muestra con un cartel fijo; al apagarlo, al salir de la cuenta o si entra otra cuenta, vuelve a los datos de este celular. En modo prueba los datos reales de `localStorage` no se leen ni se escriben: el borrador del pedido va en otra clave y exportar, importar, combinar, restaurar la copia interna y "Borrar todos los datos" quedan frenados con un aviso; la copia interna automática no se pisa. Cuando un cambio llega de otro celular, las pantallas se redibujan solas. Los scripts de Firebase se cargan antes de `database.js`. `firestore.rules` permite crear la distribuidora de prueba (hay que volver a publicarlas: M3b). Service worker con `nube.js` (caché `vendefrio-v128`). Probado con los emuladores de Firebase: 22 pruebas de reglas y 33 pruebas en navegador con dos celulares simulados (cambios en tiempo real, carga sin señal que se sube al volver, `localStorage` real idéntico antes y después, distribuidora real sin datos). Pendiente: T10 (proteger acciones peligrosas en el modo nube real). Próximo paso: M3b (dueño), probar con dos celulares y después T10.
