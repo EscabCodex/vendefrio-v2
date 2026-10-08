@@ -832,6 +832,20 @@ footer button:active{
   flex-shrink:0;
 }
 
+/* Modo oscuro: los avisos van con fondo oscuro y letras blancas. */
+html[data-tema="oscuro"] .toast{
+  background:var(--superficie);
+  color:var(--texto);
+  border:1px solid var(--borde);
+}
+@media (prefers-color-scheme:dark){
+  html[data-tema="sistema"] .toast{
+    background:var(--superficie);
+    color:var(--texto);
+    border:1px solid var(--borde);
+  }
+}
+
 /* ================= MODAL ================= */
 
 .modal{

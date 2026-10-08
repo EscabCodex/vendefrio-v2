@@ -447,6 +447,70 @@ function renderizarPedido() {
     restaurarBorradorPedido();
     actualizarResumenPedido();
     aplicarFiltroProductosPedido();
+    aplicarProductoPendienteCatalogo();
+}
+
+// -----------------------------------------------------
+// PRODUCTO ELEGIDO DESDE CATALOGO
+// -----------------------------------------------------
+
+// catalogo.js deja el producto elegido en esta clave antes de abrir Pedido.
+const DB_PRODUCTO_CATALOGO_PENDIENTE = "vendefrio_producto_catalogo_pendiente";
+
+function aplicarProductoPendienteCatalogo() {
+    const contenido = localStorage.getItem(DB_PRODUCTO_CATALOGO_PENDIENTE);
+    if (!contenido) return;
+
+    localStorage.removeItem(DB_PRODUCTO_CATALOGO_PENDIENTE);
+
+    let pendiente;
+
+    try {
+        pendiente = JSON.parse(contenido);
+    } catch (error) {
+        return;
+    }
+
+    if (!pendiente || typeof pendiente !== "object") return;
+
+    const select = Array.from(
+        document.querySelectorAll(".marca select")
+    ).find(item => {
+        return (
+            normalizarTexto(item.dataset.marca) === normalizarTexto(pendiente.marca) &&
+            normalizarTexto(item.dataset.producto) === normalizarTexto(pendiente.producto)
+        );
+    });
+
+    if (!select) {
+        mostrarAviso(
+            "Producto no encontrado",
+            "No se encontr" + String.fromCodePoint(0xF3) +
+            " el producto en el pedido."
+        );
+        return;
+    }
+
+    if (buscadorProductosPedido && buscadorProductosPedido.value) {
+        buscadorProductosPedido.value = "";
+        aplicarFiltroProductosPedido();
+    }
+
+    cambiarCantidad(select, 1);
+
+    const marca = select.closest(".marca");
+    const cuerpo = marca ? marca.querySelector(".listaProdutos") : null;
+
+    document.querySelectorAll(".listaProdutos").forEach(lista => {
+        lista.style.display = lista === cuerpo ? "block" : "none";
+    });
+
+    const fila = select.closest(".fila");
+    if (fila) fila.scrollIntoView({ block: "center" });
+
+    mostrarToast(
+        escaparHtmlPedido(select.dataset.producto) + " agregado al pedido"
+    );
 }
 
 // Alias usado por menu.js.
