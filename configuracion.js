@@ -287,6 +287,9 @@
             </p>
             <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
             ${reintentar}
+            <button type="button" data-accion="juntarRepetidos">
+                Juntar comercios y productos repetidos
+            </button>
             <button type="button" data-accion="volverDatosCelular">
                 Volver a los datos de este celular
             </button>
@@ -729,6 +732,45 @@
                     window.nubeVendeFrio.activarNube().catch(error => {
                         mostrarAviso("Todavía no", error.message);
                     });
+                }
+            );
+        }
+
+        if (accion === "juntarRepetidos") {
+            const nube = window.nubeVendeFrio;
+            if (!nube || !nube.contarRepetidos) return;
+
+            if (nube.estado() !== "conectada" || !navigator.onLine) {
+                return mostrarAviso(
+                    "Todavía no",
+                    "Esperá a que diga \"Conectada\" y probá de nuevo. Hace falta internet."
+                );
+            }
+
+            const cantidad = nube.contarRepetidos();
+
+            if (!cantidad.comercios && !cantidad.productos) {
+                return mostrarAviso("No hay repetidos", "No hay comercios ni productos repetidos en la nube.");
+            }
+
+            abrirConfirmacion(
+                "Juntar repetidos",
+                "Hay " + cantidad.comercios + " comercio(s) y " + cantidad.productos + " producto(s) de más. " +
+                    "De cada uno queda una sola copia, la que tiene más datos, y se le pasan los datos que le falten (teléfono, dirección, precio, foto). " +
+                    "Las rutas pasan a usar esa copia y los pedidos no se tocan. " +
+                    "Antes se descarga un archivo con todos tus datos de la nube, por las dudas.",
+                () => {
+                    nube.juntarRepetidos()
+                        .then(resultado => {
+                            mostrarAviso(
+                                "Repetidos juntados",
+                                "Se sacaron " + resultado.comercios + " comercio(s) y " + resultado.productos +
+                                    " producto(s) de más" +
+                                    (resultado.rutas ? " y se actualizaron " + resultado.rutas + " ruta(s)" : "") +
+                                    ". Los otros celulares lo ven solos."
+                            );
+                        })
+                        .catch(error => mostrarAviso("No se pudo terminar", error.message));
                 }
             );
         }
