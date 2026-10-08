@@ -37,7 +37,7 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 ## Tareas abiertas
 
 - [ ] Aprobar la visión y el alcance de la 1.0 (`PRODUCT.md`).
-- [ ] Elegir el servicio de datos compartidos.
+- [x] Elegir el servicio de datos compartidos.
 - [ ] Definir los tres problemas de mayor valor.
 - [ ] Definir qué funciones son esenciales y cuáles secundarias.
 - [ ] Definir qué podría justificar un pago.
