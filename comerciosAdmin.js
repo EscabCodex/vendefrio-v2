@@ -158,15 +158,16 @@ function abrirMapsComercio(nombre) {
 }
 
 function marcarVisitaManual(nombre) {
-    const comercios = obtenerComercios();
-    const comercio = buscarComercioPorNombre(nombre, comercios);
+    const comercio = buscarComercioPorNombre(nombre);
 
     if (!comercio) return;
 
-    comercio.ultimaVisita = new Date().toLocaleDateString("es-AR");
-    comercio.pendienteSemana = false;
+    const guardado = actualizarComercioPorId(comercio.id, {
+        ultimaVisita: new Date().toLocaleDateString("es-AR"),
+        pendienteSemana: false
+    });
 
-    if (!guardarComercios(comercios)) {
+    if (!guardado) {
         return;
     }
 
@@ -180,14 +181,11 @@ function marcarVisitaManual(nombre) {
 }
 
 function marcarPendienteManual(nombre) {
-    const comercios = obtenerComercios();
-    const comercio = buscarComercioPorNombre(nombre, comercios);
+    const comercio = buscarComercioPorNombre(nombre);
 
     if (!comercio) return;
 
-    comercio.pendienteSemana = true;
-
-    if (!guardarComercios(comercios)) {
+    if (!actualizarComercioPorId(comercio.id, { pendienteSemana: true })) {
         return;
     }
 
@@ -486,7 +484,7 @@ if (guardarModal) {
         let guardado;
 
         if (comercioSeleccionado === null) {
-            guardado = agregarComercio({
+            guardado = agregarComercioConId({
                 nombre,
                 direccion,
                 enlaceMaps,
@@ -519,8 +517,8 @@ if (guardarModal) {
                 datosActualizacion.origenGps = "maps";
             }
 
-            guardado = actualizarComercio(
-                comercioSeleccionado.nombre,
+            guardado = actualizarComercioPorId(
+                comercioSeleccionado.id,
                 datosActualizacion
             );
 
@@ -628,7 +626,8 @@ if (listaComerciosAdmin) {
                 "Eliminar comercio",
                 "\u00bfEliminar \"" + nombre + "\"?",
                 () => {
-                    eliminarComercio(nombre);
+                    const comercio = buscarComercioPorNombre(nombre);
+                    if (comercio) eliminarComercioPorId(comercio.id);
                     actualizarDatalist();
                     renderizarComercios();
                     if (typeof actualizarDashboard === "function") actualizarDashboard();

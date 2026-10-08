@@ -962,7 +962,7 @@ function renderizarHistorial() {
         const botonEliminar = document.createElement("button");
         botonEliminar.type = "button";
         botonEliminar.className = "btnAccion eliminar eliminarPedidoHistorial";
-        botonEliminar.dataset.indice = String(indice);
+        botonEliminar.dataset.id = String(pedido.id || "");
         botonEliminar.innerHTML = window.icono("tacho", 14) + " Eliminar";
 
         acciones.append(botonVer, botonEliminar);
@@ -1034,13 +1034,13 @@ if (pantallaHistorial) {
         }
 
         if (boton.classList.contains("eliminarPedidoHistorial")) {
-            const indice = Number(boton.dataset.indice);
+            const id = boton.dataset.id;
 
             abrirConfirmacion(
                 "Eliminar pedido",
                 "\u00bfSeguro que quer\u00e9s eliminar este pedido del historial?",
                 () => {
-                    eliminarHistorial(indice);
+                    eliminarPedidoPorId(id);
                     renderizarHistorial();
 
                     if (typeof actualizarDashboard === "function") {

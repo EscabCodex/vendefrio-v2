@@ -20,7 +20,7 @@ const labelPrecio = document.getElementById("labelPrecio");
 
 let modo = "";
 let marcaActual = "";
-let indiceActual = -1;
+let idProductoActual = "";
 
 function cargarSelectMarcas() {
     if (!productoMarca) return;
@@ -62,11 +62,9 @@ function renderizarProductosAdmin(filtro = "") {
         .forEach((nombreMarca, indiceMarca) => {
             const lista = Array.isArray(productos[nombreMarca]) ? productos[nombreMarca] : [];
             const marcaCoincide = normalizarTexto(nombreMarca).includes(filtroNormalizado);
-            const visibles = lista
-                .map((producto, indiceReal) => ({ producto, indiceReal }))
-                .filter(({ producto }) => {
-                    return marcaCoincide || normalizarTexto(producto.nombre).includes(filtroNormalizado);
-                });
+            const visibles = lista.filter(producto => {
+                return marcaCoincide || normalizarTexto(producto.nombre).includes(filtroNormalizado);
+            });
 
             if (filtroNormalizado && visibles.length === 0) return;
 
@@ -100,7 +98,7 @@ function renderizarProductosAdmin(filtro = "") {
                 cuerpo.appendChild(vacio);
             }
 
-            visibles.forEach(({ producto, indiceReal }) => {
+            visibles.forEach(producto => {
                 const fila = document.createElement("div");
                 fila.className = "filaProducto";
 
@@ -116,12 +114,10 @@ function renderizarProductosAdmin(filtro = "") {
                 botones.className = "filaBotones";
                 botones.append(
                     crearBoton("tinteAmbar editarProducto", window.icono("lapiz",14), "Editar producto", {
-                        marca: nombreMarca,
-                        indice: indiceReal
+                        id: producto.id
                     }),
                     crearBoton("tinteRojo eliminarProducto", window.icono("tacho",14), "Eliminar producto", {
-                        marca: nombreMarca,
-                        indice: indiceReal
+                        id: producto.id
                     })
                 );
 
@@ -150,7 +146,7 @@ function mostrarCampo(elemento, mostrar) {
 function abrirModalNuevaMarca() {
     modo = "nuevaMarca";
     marcaActual = "";
-    indiceActual = -1;
+    idProductoActual = "";
 
     modalProductoTitulo.textContent = "Nueva marca";
     mostrarCampo(labelMarca, false);
@@ -175,7 +171,7 @@ function abrirModalNuevoProducto() {
 
     modo = "nuevoProducto";
     marcaActual = "";
-    indiceActual = -1;
+    idProductoActual = "";
 
     modalProductoTitulo.textContent = "Nuevo producto";
     mostrarCampo(labelMarca, true);
@@ -191,7 +187,7 @@ function abrirModalNuevoProducto() {
 function abrirModalEditarMarca(nombre) {
     modo = "editarMarca";
     marcaActual = nombre;
-    indiceActual = -1;
+    idProductoActual = "";
 
     modalProductoTitulo.textContent = "Editar marca";
     mostrarCampo(labelMarca, false);
@@ -202,15 +198,14 @@ function abrirModalEditarMarca(nombre) {
     modalProducto.classList.remove("oculto");
 }
 
-function abrirModalEditarProducto(marca, indice) {
-    const productos = obtenerProductos();
-    const marcaReal = buscarMarca(marca, productos);
-    const producto = marcaReal && productos[marcaReal][indice];
-    if (!producto) return;
+function abrirModalEditarProducto(id) {
+    const encontrado = obtenerProductoPorId(id);
+    if (!encontrado) return;
+    const producto = encontrado.producto;
 
     modo = "editarProducto";
-    marcaActual = marcaReal;
-    indiceActual = indice;
+    marcaActual = encontrado.marca;
+    idProductoActual = id;
 
     modalProductoTitulo.textContent = "Editar producto";
     mostrarCampo(labelMarca, false);
@@ -263,7 +258,7 @@ if (guardarProducto) {
         }
 
         if (modo === "nuevoProducto") {
-            guardado = agregarProducto(
+            guardado = agregarProductoConId(
                 productoMarca.value,
                 { nombre, precio }
             );
@@ -291,9 +286,8 @@ if (guardarProducto) {
         }
 
         if (modo === "editarProducto") {
-            guardado = editarProducto(
-                marcaActual,
-                indiceActual,
+            guardado = actualizarProductoPorId(
+                idProductoActual,
                 { nombre, precio }
             );
 
@@ -347,7 +341,7 @@ if (listaProductosAdmin) {
         }
 
         if (elemento.classList.contains("editarProducto")) {
-            abrirModalEditarProducto(elemento.dataset.marca, Number(elemento.dataset.indice));
+            abrirModalEditarProducto(elemento.dataset.id);
             return;
         }
 
@@ -362,10 +356,9 @@ if (listaProductosAdmin) {
         }
 
         if (elemento.classList.contains("eliminarProducto")) {
-            const marca = elemento.dataset.marca;
-            const indice = Number(elemento.dataset.indice);
+            const id = elemento.dataset.id;
             abrirConfirmacion("Eliminar producto", "\u00bfSeguro que quer\u00e9s eliminar este producto?", () => {
-                eliminarProducto(marca, indice);
+                eliminarProductoPorId(id);
                 renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
                 if (typeof renderizarPedido === "function") renderizarPedido();
             });

@@ -837,7 +837,7 @@ function generarPedido() {
     void copiarTexto(ultimoPedidoTexto);
     registrarPedido(cliente);
 
-    agregarHistorial({
+    agregarPedidoConId({
         fecha,
         timestamp: Date.now(),
         comercio: cliente,
@@ -864,17 +864,16 @@ function generarPedido() {
 // -----------------------------------------------------
 
 function registrarPedido(nombreComercio) {
-    const comercios = obtenerComercios();
-    const comercio = buscarComercioPorNombre(nombreComercio, comercios);
+    const comercio = buscarComercioPorNombre(nombreComercio);
 
     // El pedido ya queda guardado en el historial aunque el nombre sea nuevo.
     if (!comercio) return false;
 
-    comercio.pedidosRealizados = (Number(comercio.pedidosRealizados) || 0) + 1;
-    comercio.ultimaVisita = new Date().toLocaleDateString("es-AR");
-    comercio.pendienteSemana = false;
-
-    return guardarComercios(comercios);
+    return actualizarComercioPorId(comercio.id, {
+        pedidosRealizados: (Number(comercio.pedidosRealizados) || 0) + 1,
+        ultimaVisita: new Date().toLocaleDateString("es-AR"),
+        pendienteSemana: false
+    });
 }
 
 // -----------------------------------------------------

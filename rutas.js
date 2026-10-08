@@ -283,13 +283,9 @@ function crearModalOpcionesRutaGuardada() {
 
         if (!ruta) return;
 
-        if (!agregarRutaGuardada(nuevoNombre, ruta.comercios, ruta.dia || "")) {
+        if (!guardarRutaRegistro(nombreOriginal, nuevoNombre, ruta.comercios, ruta.dia || "")) {
             mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
             return;
-        }
-
-        if (normalizarTexto(nombreOriginal) !== normalizarTexto(nuevoNombre)) {
-            eliminarRutaGuardada(nombreOriginal);
         }
 
         modal.classList.add("oculto");
@@ -664,6 +660,33 @@ function crearControlesRutasGuardadas() {
     renderizarRutasGuardadas();
 }
 
+function buscarRutaGuardadaPorNombre(nombre, rutas = obtenerRutasGuardadas()) {
+    if (!nombre) return null;
+    return rutas.find(ruta => {
+        return normalizarTexto(ruta.nombre) === normalizarTexto(nombre);
+    }) || null;
+}
+
+// Guarda una ruta registro por registro. Si se est\u00e1 editando una ruta
+// (nombreOriginal), se actualiza la misma y conserva su id aunque cambie
+// el nombre. Si el nombre ya es de otra ruta, esa otra se reemplaza y la
+// editada se borra, igual que antes.
+function guardarRutaRegistro(nombreOriginal, nombre, comercios, dia) {
+    const rutas = obtenerRutasGuardadas();
+    const editada = buscarRutaGuardadaPorNombre(nombreOriginal, rutas);
+    const destino = buscarRutaGuardadaPorNombre(nombre, rutas) || editada;
+
+    const guardado = destino
+        ? actualizarRutaPorId(destino.id, { nombre, comercios, dia })
+        : Boolean(agregarRutaConId(nombre, comercios, dia));
+
+    if (guardado && editada && editada.id !== destino.id) {
+        eliminarRutaPorId(editada.id);
+    }
+
+    return guardado;
+}
+
 function guardarRutaActual() {
     const entrada = document.getElementById("nombreRutaGuardada");
     const selectorDia = document.getElementById("diaRutaGuardada");
@@ -681,16 +704,9 @@ function guardarRutaActual() {
         return;
     }
 
-    if (!agregarRutaGuardada(nombre, comercios, dia)) {
+    if (!guardarRutaRegistro(rutaGuardadaEnEdicion, nombre, comercios, dia)) {
         mostrarAviso("No se pudo guardar", "Prob\u00e1 nuevamente.");
         return;
-    }
-
-    if (
-        rutaGuardadaEnEdicion &&
-        normalizarTexto(rutaGuardadaEnEdicion) !== normalizarTexto(nombre)
-    ) {
-        eliminarRutaGuardada(rutaGuardadaEnEdicion);
     }
 
     rutaGuardadaEnEdicion = null;
@@ -735,7 +751,8 @@ function cargarRutaGuardada(nombre, mostrarMensaje = true) {
 
 function confirmarEliminarRutaGuardada(nombre) {
     const borrar = () => {
-        if (!eliminarRutaGuardada(nombre)) return;
+        const ruta = buscarRutaGuardadaPorNombre(nombre);
+        if (!ruta || !eliminarRutaPorId(ruta.id)) return;
         renderizarRutasGuardadas();
         mostrarAviso("Ruta eliminada", "Se elimin\u00f3 la ruta guardada.");
     };
@@ -1053,13 +1070,19 @@ function cancelarEdicionPin() {
     renderizarPines();
 }
 
+// Busca el comercio por nombre y lo guarda por su id.
+function actualizarComercioPorNombre(nombre, datos) {
+    const comercio = buscarComercioPorNombre(nombre);
+    return comercio ? actualizarComercioPorId(comercio.id, datos) : false;
+}
+
 function guardarPinManual() {
     const select = document.getElementById("selectComercioGps");
     const nombre = select ? select.value : "";
 
     if (!nombre || !coordenadasPinPendientes) return;
 
-    const guardado = actualizarComercio(nombre, {
+    const guardado = actualizarComercioPorNombre(nombre, {
         lat: coordenadasPinPendientes.lat,
         lng: coordenadasPinPendientes.lng,
         origenGps: "manual"
@@ -1285,7 +1308,7 @@ function guardarGpsActual(boton) {
 
     navigator.geolocation.getCurrentPosition(
         posicion => {
-            const guardado = actualizarComercio(
+            const guardado = actualizarComercioPorNombre(
                 nombre,
                 {
                     lat: posicion.coords.latitude,
@@ -1366,7 +1389,7 @@ function borrarGpsComercio() {
     }
 
     const borrar = () => {
-        const guardado = actualizarComercio(
+        const guardado = actualizarComercioPorNombre(
             nombre,
             {
                 lat: "",
