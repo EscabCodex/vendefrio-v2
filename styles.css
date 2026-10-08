@@ -3127,3 +3127,14 @@ html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border
 .cartelModoPrueba{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--pendiente);background:var(--pendiente-bg);color:var(--pendiente);font-size:11px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 html[data-tema="oscuro"] .cartelModoPrueba{background:#1f2937;color:#fff;border-color:var(--pendiente);}
 html.conModoPrueba #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}
+
+/* Subir mis datos a la nube (T11) */
+.configMigracion{display:flex;flex-direction:column;gap:8px;}
+.configMigracion button:disabled{opacity:.55;cursor:not-allowed;}
+.migracionResumen ul{margin:6px 0 0;padding:0;list-style:none;}
+.migracionResumen li{padding:2px 0;font-weight:700;}
+.migracionResumen .migracionOk{color:var(--visitado);}
+.migracionResumen .migracionFalta,.migracionError{color:var(--peligro) !important;}
+
+/* Pedidos viejos subidos a la nube (T11) */
+.badgeHistorico{color:var(--texto-sec);margin-top:4px;}

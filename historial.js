@@ -948,6 +948,12 @@ function renderizarHistorial() {
                 " productos diferentes";
 
         informacion.append(titulo, resumen);
+
+        // Pedidos subidos a la nube desde este celular (T11).
+        if (pedido.estado === "historico") {
+            informacion.append(crearTextoHistorial("span", "Hist\u00f3rico", "badge badgeHistorico"));
+        }
+
         cabecera.append(avatar, informacion);
 
         const acciones = document.createElement("div");

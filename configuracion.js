@@ -168,9 +168,134 @@
         `;
     }
 
+    // --- Subir mis datos a la nube (T11) ---
+    // Estado de la migración mientras está abierta la app.
+    const migracion = {
+        respaldo: null,
+        progreso: "",
+        resultado: null,
+        error: ""
+    };
+
+    function horaCorta(fecha) {
+        return fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function htmlResultadoMigracion() {
+        const resultado = migracion.resultado;
+        if (!resultado) return "";
+
+        const filas = resultado.totales.map(total => {
+            const coincide = total.enLaNube === total.enEsteCelular;
+            return `<li class="${coincide ? "migracionOk" : "migracionFalta"}">
+                ${total.nombre}: ${total.enLaNube} de ${total.enEsteCelular} ${coincide ? "✓" : "✗"}
+            </li>`;
+        }).join("");
+
+        const titulo = resultado.completo
+            ? "Todo verificado: los totales coinciden."
+            : "Faltan datos en la nube. Tocá Reintentar: lo que ya se subió no se repite.";
+
+        return `
+            <div class="configEstado migracionResumen" id="migracionResumen">
+                <strong>${titulo}</strong>
+                <ul>${filas}</ul>
+            </div>
+        `;
+    }
+
+    function htmlMigracion() {
+        const nube = window.nubeVendeFrio;
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!nube || !nube.subirDatos || nube.modoPrueba() || nube.modoNube()) return "";
+
+        if (!distribuidora || !distribuidora.idActual()) {
+            return `
+                <p class="configEstado">
+                    <strong>Subir mis datos a la nube</strong><br>
+                    Primero tiene que estar lista tu distribuidora en la nube.
+                </p>
+            `;
+        }
+
+        const enCurso = nube.migracionEnCurso();
+        const verificada = nube.migracionVerificada() && migracion.resultado && migracion.resultado.completo;
+        const respaldoListo = Boolean(migracion.respaldo);
+
+        const textoRespaldo = respaldoListo
+            ? `✓ Respaldo descargado a las ${horaCorta(migracion.respaldo)}`
+            : "1. Exportar respaldo";
+
+        const textoSubir = enCurso
+            ? "Subiendo tus datos…"
+            : migracion.resultado || migracion.error
+                ? "Reintentar"
+                : "2. Subir mis datos";
+
+        return `
+            <div class="configMigracion">
+                <p class="configEstado">
+                    <strong>Subir mis datos a la nube</strong><br>
+                    Copia tus comercios, productos, pedidos y rutas de este celular
+                    a tu distribuidora en la nube. Conviene hacerlo sin pedidos
+                    pendientes, por ejemplo al final del día después de repartir.
+                    Todos los pedidos del historial quedan como "histórico".
+                    Los datos de este celular no se borran.
+                </p>
+                <button type="button" data-accion="migracionRespaldo" ${enCurso ? "disabled" : ""}>
+                    ${textoRespaldo}
+                </button>
+                ${verificada ? "" : `
+                <button type="button" data-accion="migracionSubir"
+                    ${enCurso || !respaldoListo ? "disabled" : ""}>
+                    ${textoSubir}
+                </button>`}
+                <p class="configEstado ${migracion.progreso ? "" : "oculto"}" id="migracionProgreso" role="status">
+                    ${escaparTexto(migracion.progreso)}
+                </p>
+                ${migracion.error ? `<p class="configEstado migracionError" role="alert">${escaparTexto(migracion.error)}</p>` : ""}
+                ${htmlResultadoMigracion()}
+                ${verificada ? `
+                <button type="button" data-accion="migracionUsarNube" class="configCuentaIngresar">
+                    3. Usar la nube desde ahora
+                </button>` : ""}
+            </div>
+        `;
+    }
+
+    function htmlModoNube() {
+        const nube = window.nubeVendeFrio;
+        if (!nube || !nube.modoNube || !nube.modoNube()) return "";
+
+        const textos = {
+            conectando: "Conectando con la nube…",
+            conectada: "Conectada: los cambios se ven en los otros celulares con esta cuenta.",
+            sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
+            sinPermiso: "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas.",
+            error: "Hubo un problema con la nube. Probá de nuevo."
+        };
+        const estadoNube = nube.estado();
+        const reintentar = ["sinConexion", "sinPermiso", "error"].includes(estadoNube)
+            ? `<button type="button" data-accion="reintentarNube">Reintentar</button>`
+            : "";
+
+        return `
+            <p class="configEstado">
+                <strong>Usando la nube</strong><br>
+                Tus datos salen de tu distribuidora en la nube. Los datos de
+                antes siguen guardados en este celular, sin cambios.
+            </p>
+            <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
+            ${reintentar}
+            <button type="button" data-accion="volverDatosCelular">
+                Volver a los datos de este celular
+            </button>
+        `;
+    }
+
     function htmlModoPrueba() {
         const nube = window.nubeVendeFrio;
-        if (!nube) return "";
+        if (!nube || (nube.modoNube && nube.modoNube())) return "";
 
         if (!nube.modoPrueba()) {
             return `
@@ -233,10 +358,12 @@
                     <strong>${escaparTexto(usuario.email)}</strong>
                 </p>
                 ${htmlDistribuidora()}
-                ${window.nubeVendeFrio?.modoPrueba() ? "" : `
+                ${window.nubeVendeFrio?.modoPrueba() || window.nubeVendeFrio?.modoNube?.() ? "" : `
                 <p class="configEstado">
                     Por ahora tus datos siguen guardados en este dispositivo.
                 </p>`}
+                ${htmlModoNube()}
+                ${htmlMigracion()}
                 ${htmlModoPrueba()}
                 <button type="button" data-accion="salirCuenta">
                     Salir de la cuenta
@@ -281,7 +408,9 @@
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
         resumen.textContent = usuario
-            ? usuario.email + (window.nubeVendeFrio?.modoPrueba() ? " · modo prueba" : "")
+            ? usuario.email + (window.nubeVendeFrio?.modoPrueba()
+                ? " · modo prueba"
+                : window.nubeVendeFrio?.modoNube?.() ? " · nube" : "")
             : "Ingresá o salí de tu cuenta";
     }
 
@@ -429,7 +558,9 @@
             caja.innerHTML += `
                 <p class="configEstado">
                     VendeFrío Lite<br>
-                    Los datos se guardan en este dispositivo.
+                    ${window.nubeVendeFrio?.modoNube?.()
+                        ? "Los datos se guardan en la nube de tu distribuidora."
+                        : "Los datos se guardan en este dispositivo."}
                 </p>
 
                 <button type="button" data-accion="restablecer">
@@ -514,14 +645,100 @@
 
         if (accion === "salirCuenta") {
             const boton = event.target.closest("[data-accion]");
-            if (boton) boton.disabled = true;
+            const salir = () => {
+                if (boton) boton.disabled = true;
 
-            window.cuentaVendeFrio?.salir()
-                .then(() => mostrarToast("Saliste de tu cuenta"))
-                .catch(error => {
-                    if (boton) boton.disabled = false;
-                    mostrarAviso("No se pudo salir", error.message);
-                });
+                window.cuentaVendeFrio?.salir()
+                    .then(() => mostrarToast("Saliste de tu cuenta"))
+                    .catch(error => {
+                        if (boton) boton.disabled = false;
+                        mostrarAviso("No se pudo salir", error.message);
+                    });
+            };
+
+            // En modo nube, salir vuelve a los datos de este celular (T11).
+            if (window.nubeVendeFrio?.modoNube?.()) {
+                abrirConfirmacion(
+                    "Salir de la cuenta",
+                    "Al salir, la app se recarga y vuelve a los datos guardados en este celular, que son los de antes de pasar a la nube. Lo que cargaste en la nube queda guardado allá.",
+                    salir
+                );
+            } else {
+                salir();
+            }
+        }
+
+        if (accion === "migracionRespaldo") {
+            const antes = Date.now();
+            exportarRespaldo();
+            const fecha = obtenerFechaUltimoRespaldo();
+
+            if (fecha && fecha.getTime() >= antes) {
+                migracion.respaldo = fecha;
+                detalle("cuenta");
+            }
+        }
+
+        if (accion === "migracionSubir") {
+            if (!migracion.respaldo) {
+                return mostrarAviso("Primero el respaldo", "Tocá \"Exportar respaldo\" y guardá el archivo antes de subir tus datos.");
+            }
+
+            abrirConfirmacion(
+                "Subir mis datos a la nube",
+                "Conviene hacerlo sin pedidos pendientes, por ejemplo al final del día después de repartir: todos los pedidos del historial van a quedar como \"histórico\". Si alguno quedara pendiente, cargalo de nuevo como pedido nuevo. Hace falta internet. Los datos de este celular no se borran.",
+                () => {
+                    migracion.progreso = "Preparando…";
+                    migracion.resultado = null;
+                    migracion.error = "";
+
+                    const subida = window.nubeVendeFrio.subirDatos(texto => {
+                        migracion.progreso = texto;
+                        const progreso = document.getElementById("migracionProgreso");
+                        if (progreso) {
+                            progreso.textContent = texto;
+                            progreso.classList.remove("oculto");
+                        }
+                    });
+
+                    detalle("cuenta");
+
+                    subida
+                        .then(resultado => {
+                            migracion.resultado = resultado;
+                            migracion.progreso = resultado.subidos
+                                ? "Se subieron " + resultado.subidos + " registro(s)."
+                                : "No hizo falta subir nada: ya estaba todo en la nube.";
+                        })
+                        .catch(error => {
+                            migracion.progreso = "";
+                            migracion.error = error.message;
+                        })
+                        .finally(() => {
+                            if (seccionAbierta === "cuenta") detalle("cuenta");
+                        });
+                }
+            );
+        }
+
+        if (accion === "migracionUsarNube") {
+            abrirConfirmacion(
+                "Usar la nube desde ahora",
+                "La app se va a recargar y tus datos van a salir de la nube, compartidos con los otros celulares de tu cuenta. Los datos de este celular quedan guardados sin cambios.",
+                () => {
+                    window.nubeVendeFrio.activarNube().catch(error => {
+                        mostrarAviso("Todavía no", error.message);
+                    });
+                }
+            );
+        }
+
+        if (accion === "volverDatosCelular") {
+            abrirConfirmacion(
+                "Volver a los datos de este celular",
+                "La app se va a recargar y vuelve a mostrar los datos guardados en este celular, que son los de antes de pasar a la nube. Lo que cargaste en la nube no va a aparecer acá, pero queda guardado allá. Para volver a la nube, subí tus datos otra vez.",
+                () => window.nubeVendeFrio?.desactivarNube()
+            );
         }
 
         if (accion === "reintentarDistribuidora") {

@@ -14,6 +14,8 @@ const DB_ULTIMO_RESPALDO_AUTOMATICO = "vendefrio_ultimo_respaldo_automatico";
 const DB_SEMANA_ACTUAL = "vendefrio_semana_actual";
 // Modo nube de prueba (T9): guarda el uid de la cuenta que lo activ\u00f3.
 const DB_MODO_NUBE_PRUEBA = "vendefrio_modo_nube_prueba";
+// Modo nube real (T11): guarda { uid, distribuidora } de la cuenta que lo activ\u00f3.
+const DB_MODO_NUBE = "vendefrio_modo_nube";
 const DIAS_ENTRE_RESPALDOS_AUTOMATICOS = 7;
 
 const PALETA_MARCAS = ["#0f9d63", "#ff8a3d", "#8b5cf6", "#3b82f6", "#e5483d", "#0891b2"];
@@ -275,6 +277,26 @@ function estaEnModoNubePrueba() {
     return obtenerUidModoNubePrueba() !== "";
 }
 
+// --- Modo nube real (T11) ---
+// Despu\u00e9s de subir los datos (migraci\u00f3n), los datos salen de la
+// distribuidora real en la nube. Los datos de este celular (localStorage)
+// no se borran: vuelven si se apaga el modo nube.
+
+function obtenerModoNubeGuardado() {
+    try {
+        const guardado = JSON.parse(localStorage.getItem(DB_MODO_NUBE) || "null");
+
+        if (guardado && typeof guardado.uid === "string" && guardado.uid &&
+            typeof guardado.distribuidora === "string" && guardado.distribuidora) {
+            return { uid: guardado.uid, distribuidora: guardado.distribuidora };
+        }
+    } catch (error) {
+        console.warn("El modo nube guardado no es v\u00e1lido.", error);
+    }
+
+    return null;
+}
+
 // Modo nube: los datos no salen de este celular sino de la nube (T10).
 function estaEnModoNube() {
     return obtenerNombreAdaptadorDatos() !== "local";
@@ -284,6 +306,14 @@ function estaEnModoNube() {
 // no salen de este celular.
 function frenarSiDatosNoSonLocales() {
     if (obtenerNombreAdaptadorDatos() === "local") return false;
+
+    if (!estaEnModoNubePrueba()) {
+        mostrarAviso(
+            "No disponible en modo nube",
+            "Est\u00e1s usando los datos de la nube. Esta opci\u00f3n todav\u00eda no est\u00e1 disponible en modo nube."
+        );
+        return true;
+    }
 
     mostrarAviso(
         "No disponible en modo prueba",
