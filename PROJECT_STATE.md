@@ -1,6 +1,6 @@
 # VendeFrío — Estado del proyecto
 
-**Última actualización:** 2026-10-07
+**Última actualización:** 2026-10-08
 **Repositorio:** `EscabCodex/vendefrio-v2` · rama `main` · fuente de verdad
 **Pruebas:** https://vendefrio-v2.vercel.app/ (Vercel)
 
@@ -116,7 +116,7 @@ Revisión completa de `main` hecha por Claude antes de conectar Firebase. Sin ca
 ### Archivos sueltos
 
 - `maptiler-config.js` en la raíz: nadie lo usa; es una copia vieja de `api/maptiler-config.js`.
-- `VENDEFRIO_MASTER_BRIEF.md`: documentación vieja que nombra archivos que ya no existen e incluye a Gemini. Puede confundir a una IA.
+- `VENDEFRIO_MASTER_BRIEF.md`: documentación vieja que nombra archivos que ya no existen e incluye a Gemini. Puede confundir a una IA. (Borrado en T0.)
 - Todos los demás archivos están conectados y el service worker los guarda.
 - Leaflet se carga desde internet y el service worker no lo guarda. El SDK de Firebase no debe repetir ese problema: va dentro del repo.
 
@@ -126,7 +126,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 ### Bloque A — Limpieza
 
-- [ ] **T0 — Preparar el repo para Claude Code.**
+- [x] **T0 — Preparar el repo para Claude Code.**
   - Crear `CLAUDE.md` en la raíz, corto, que diga: leer `README.md`, `WORKING_GUIDE.md` y `PROJECT_STATE.md` antes de cualquier cambio; hacer solo la tarea pedida; trabajar en una rama nueva y abrir un pull request sin unirlo a `main`; al terminar, marcar la tarea en el plan, agregar una línea a la bitácora y explicarle al dueño cómo probar en el celular con pasos numerados y nivel principiante, en español rioplatense.
   - Actualizar `WORKING_GUIDE.md` al flujo con Claude Code: reemplazar "archivos completos" y "subir cambios a mano" por rama, pull request y vista previa de Vercel.
   - Agregar `CLAUDE.md` al mapa de documentos de `README.md`.
@@ -209,7 +209,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 ## Pendientes técnicos
 
-- Ejecutar el plan de conexión con Firebase (T0 a T12).
+- Ejecutar el plan de conexión con Firebase (T1 a T12).
 - Validar la propuesta de incorporación de empleados.
 - Rework visual completo.
 - Leaflet se carga desde internet y no funciona sin conexión (fuera del plan de Firebase).
@@ -222,3 +222,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-07 — Consolidación de la documentación en 6 archivos. Próximo paso: elegir el servicio de datos compartidos.
 - 2026-10-07 — Claude: se eligió Firebase (Firestore + Auth, plan Spark gratuito) y se definió la arquitectura de datos compartidos. Se creó la cuenta de Google de la distribuidora. Sin cambios de código. Próximo paso: revisar el proyecto completo y crear el proyecto en Firebase.
 - 2026-10-07 — Claude: revisión completa del repo. Los datos compartidos pasan por `database.js`; no hay claves en el código; sueltos: `maptiler-config.js` (raíz) y `VENDEFRIO_MASTER_BRIEF.md`. Falta id único por registro y guardado individual. Se armó el plan de Firebase en tareas T0 a T12. Desde ahora el código lo modifica Claude Code en el repo. Sin cambios de código. Próximo paso: T0.
+- 2026-10-08 — Claude Code: T0. `CLAUDE.md` completado con las reglas del plan, `WORKING_GUIDE.md` pasado al flujo de rama, pull request y vista previa de Vercel, `CLAUDE.md` sumado al mapa de `README.md` y borrado `VENDEFRIO_MASTER_BRIEF.md`. Sin cambios de código. Próximo paso: T1.

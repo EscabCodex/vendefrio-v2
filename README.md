@@ -9,7 +9,7 @@ Plataforma móvil (PWA) para distribuidoras que venden y reparten productos a al
 
 ## Si sos una IA que acaba de llegar
 
-1. Leé primero `WORKING_GUIDE.md`: dice quién es el dueño del producto, **cómo hablarle** (pasos numerados, nivel de principiante) y cómo se trabaja.
+1. Si sos Claude Code, seguí también `CLAUDE.md`. Leé primero `WORKING_GUIDE.md`: dice quién es el dueño del producto, **cómo hablarle** (pasos numerados, nivel de principiante) y cómo se trabaja.
 2. Después leé `PROJECT_STATE.md` para saber cómo está el código hoy.
 3. Leé `PRODUCT.md` y `ORDER_FLOW.md` antes de proponer o tocar funciones de pedidos, y `ROADMAP.md` para saber qué sigue.
 
@@ -20,6 +20,7 @@ Cada archivo tiene un solo trabajo. Si algo cambia, se actualiza donde correspon
 | Archivo | Para qué sirve | Cuándo leerlo |
 |---|---|---|
 | `README.md` | Portada y mapa | Siempre, primero |
+| `CLAUDE.md` | Instrucciones cortas que Claude Code lee solo al empezar cada sesión | Lo lee Claude Code; editarlo solo si cambia la forma de trabajo |
 | `WORKING_GUIDE.md` | Cómo trabajamos: perfil del dueño, estilo de respuesta, roles, reglas, chats, Proyecto de Claude y límite de uso | Antes de responder cualquier cosa |
 | `PRODUCT.md` | Visión, usuarios, propuesta de valor y alcance de la 1.0 | Antes de proponer o decidir funciones |
 | `ORDER_FLOW.md` | Cómo vive un pedido: estados, checklist, faltantes, entrega y trabajo sin conexión | Antes de tocar pedidos |
