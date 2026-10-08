@@ -1,0 +1,116 @@
+rules_version = '2';
+
+// VendeFrío - Reglas de seguridad de Firestore (T8)
+// Se publican a mano en la consola de Firebase (tarea M3).
+//
+// Estructura:
+//   usuarios/{uid}                  a qué distribuidora pertenece cada usuario
+//   distribuidoras/{idDistribuidora}
+//     miembros/{uid}                usuarios autorizados
+//     comercios/{id}
+//     productos/{id}
+//     config/{id}                   por ejemplo config/marcas (orden de marcas)
+//     pedidos/{id}
+//       estados/{id}                historial de estados: solo se agrega
+//     rutas/{id}
+//
+// Solo los miembros de una distribuidora leen y escriben sus datos.
+// Todo lo que no figura acá queda bloqueado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function ingreso() {
+      return request.auth != null;
+    }
+
+    function rutaDistribuidora(idDistribuidora) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora);
+    }
+
+    function esMiembro(idDistribuidora) {
+      return ingreso()
+        && exists(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/miembros/$(request.auth.uid));
+    }
+
+    function esDueno(idDistribuidora) {
+      return ingreso()
+        && get(rutaDistribuidora(idDistribuidora)).data.duenoUid == request.auth.uid;
+    }
+
+    // Ficha de cada usuario: dice a qué distribuidora pertenece.
+    // Por ahora solo la crea el dueño al primer ingreso, junto con su distribuidora.
+    match /usuarios/{uid} {
+      allow read: if ingreso() && request.auth.uid == uid;
+
+      allow create: if ingreso()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(["idDistribuidora", "alta"])
+        && request.resource.data.idDistribuidora == uid
+        && getAfter(rutaDistribuidora(uid)).data.duenoUid == uid;
+
+      allow update, delete: if false;
+    }
+
+    match /distribuidoras/{idDistribuidora} {
+      allow read: if esMiembro(idDistribuidora);
+
+      // Al primer ingreso del dueño: la distribuidora usa su uid como id,
+      // así cada dueño crea una sola, y se crea junto con su ficha de miembro.
+      allow create: if ingreso()
+        && idDistribuidora == request.auth.uid
+        && request.resource.data.keys().hasOnly(["nombre", "duenoUid", "creada"])
+        && request.resource.data.duenoUid == request.auth.uid
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() <= 80
+        && existsAfter(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/miembros/$(request.auth.uid));
+
+      // El dueño puede cambiar el nombre, nunca quién es el dueño.
+      allow update: if esDueno(idDistribuidora)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre"])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() <= 80;
+
+      allow delete: if false;
+
+      // Usuarios autorizados. Por ahora solo existe la ficha del dueño;
+      // la incorporación de empleados se agrega después del plan.
+      match /miembros/{uid} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if ingreso()
+          && request.auth.uid == uid
+          && getAfter(rutaDistribuidora(idDistribuidora)).data.duenoUid == uid
+          && request.resource.data.keys().hasOnly(["email", "rol", "alta"])
+          && request.resource.data.rol == "dueno";
+
+        allow update, delete: if false;
+      }
+
+      match /comercios/{id} {
+        allow read, write: if esMiembro(idDistribuidora);
+      }
+
+      match /productos/{id} {
+        allow read, write: if esMiembro(idDistribuidora);
+      }
+
+      match /config/{id} {
+        allow read, write: if esMiembro(idDistribuidora);
+      }
+
+      match /rutas/{id} {
+        allow read, write: if esMiembro(idDistribuidora);
+      }
+
+      match /pedidos/{id} {
+        allow read, write: if esMiembro(idDistribuidora);
+
+        // Historial de estados: se agrega, nunca se cambia ni se borra.
+        match /estados/{idEstado} {
+          allow read, create: if esMiembro(idDistribuidora);
+          allow update, delete: if false;
+        }
+      }
+    }
+  }
+}

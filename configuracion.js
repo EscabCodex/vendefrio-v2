@@ -142,6 +142,32 @@
             .replace(/"/g, "&quot;");
     }
 
+    function htmlDistribuidora() {
+        const estado = window.distribuidoraVendeFrio?.estado() || "noDisponible";
+
+        const textos = {
+            verificando: "Revisando tu distribuidora en la nube…",
+            lista: "Tu distribuidora está lista en la nube.",
+            creada: "Se creó tu distribuidora en la nube.",
+            sinConexion: "No se pudo revisar tu distribuidora: no hay conexión. Se reintenta sola cuando vuelva la señal.",
+            sinPermiso: "La nube todavía no permite crear tu distribuidora. Falta publicar las reglas de seguridad en Firebase.",
+            error: "No se pudo revisar tu distribuidora. Probá de nuevo.",
+            noDisponible: "La nube no está disponible en este momento."
+        };
+
+        const texto = textos[estado];
+        if (!texto) return "";
+
+        const reintentar = ["sinConexion", "sinPermiso", "error"].includes(estado)
+            ? `<button type="button" data-accion="reintentarDistribuidora">Reintentar</button>`
+            : "";
+
+        return `
+            <p class="configEstado" id="cuentaDistribuidora">${texto}</p>
+            ${reintentar}
+        `;
+    }
+
     function htmlCuenta() {
         const cuenta = window.cuentaVendeFrio;
 
@@ -162,6 +188,7 @@
                     Sesión iniciada como<br>
                     <strong>${escaparTexto(usuario.email)}</strong>
                 </p>
+                ${htmlDistribuidora()}
                 <p class="configEstado">
                     Por ahora tus datos siguen guardados en este dispositivo.
                 </p>
@@ -451,6 +478,10 @@
                 });
         }
 
+        if (accion === "reintentarDistribuidora") {
+            window.distribuidoraVendeFrio?.reintentar();
+        }
+
         if (accion === "restablecer") {
             localStorage.removeItem(CLAVE);
             aplicar();
@@ -600,5 +631,21 @@
         conectarCuenta();
     } else {
         window.addEventListener("cuentaVendeFrioLista", conectarCuenta, { once: true });
+    }
+
+    // Igual que la cuenta: distribuidora.js puede llegar después.
+    function conectarDistribuidora() {
+        window.distribuidoraVendeFrio.escuchar(() => {
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
+                detalle("cuenta");
+            }
+        });
+    }
+
+    if (window.distribuidoraVendeFrio) {
+        conectarDistribuidora();
+    } else {
+        window.addEventListener("distribuidoraVendeFrioLista", conectarDistribuidora, { once: true });
     }
 }());

@@ -6,7 +6,7 @@
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado, pero los datos todavía no pasan por la nube. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube, pero los datos todavía no pasan por la nube. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -16,7 +16,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Historial y estadísticas.
 - Rutas, GPS por comercio, optimización de recorrido y mapas (MapTiler).
 - Configuración y respaldo de datos (exportar e importar).
-- Cuenta: ingresar y salir con email y contraseña (Firebase Auth). No cambia de dónde salen los datos.
+- Cuenta: ingresar y salir con email y contraseña (Firebase Auth). Al primer ingreso se crea la distribuidora en Firestore. No cambia de dónde salen los datos.
 - Barra inferior y menú "Más", íconos SVG propios, modales tipo bottom sheet, toasts, transiciones, háptica y safe areas.
 - PWA con service worker.
 
@@ -26,7 +26,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Módulos por sección:** `pedidos.js`, `comercios.js` y `productos.js` (listas iniciales de ejemplo), `comerciosAdmin.js`, `comercioFicha.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
 - **Carga diferida:** `menu.js` carga `configuracion.js`, `estadisticas.js` y `catalogo.js`; `comerciosAdmin.js` carga `comercioFicha.js`; `rutas.js` carga `navegacion3d.js` y `navegacion3d.css`.
 - **Datos:** `database.js`.
-- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js` y `firebase-auth-compat.js`), `firebase-config.js` (configuración web, pública por diseño) y `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`).
+- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js`, `firebase-auth-compat.js` y `firebase-firestore-compat.js`), `firebase-config.js` (configuración web, pública por diseño), `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`), `distribuidora.js` (alta de la distribuidora al primer ingreso) y `firestore.rules` (reglas de seguridad; se publican a mano en la consola de Firebase).
 - **Funciones de Vercel (carpeta `api`):** `maptiler-config.js` (entrega la clave de MapTiler desde la variable de entorno `MAPTILER_KEY`) y `resolver-maps.js` (lee enlaces de Google Maps).
 - **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`.
 - **Solo para uso local:** `package.json` y `package-lock.json` (servidor de prueba `servor`).
@@ -73,10 +73,11 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Migración:** 1) exportar respaldo con la función existente; 2) botón "Subir mis datos a la nube" que copia todo desde `localStorage`; 3) `localStorage` no se borra hasta confirmar que los datos están completos en la nube.
 - **Empleado nuevo (propuesta, a validar):** el dueño agrega el email del empleado desde la app; al registrarse con ese email, queda dentro de la distribuidora.
 
-### Estructura propuesta en Firestore (a validar en la tarea T8)
+### Estructura en Firestore (validada en T8)
 
 ```text
-distribuidoras/{idDistribuidora}
+usuarios/{uid}             a qué distribuidora pertenece cada usuario
+distribuidoras/{idDistribuidora}   el id es el uid del dueño
   miembros/{uid}           usuarios autorizados
   comercios/{id}
   productos/{id}           cada producto en su propio documento, con marca y foto
@@ -85,6 +86,8 @@ distribuidoras/{idDistribuidora}
     estados/{id}           historial de estados: solo se agrega
   rutas/{id}
 ```
+
+Se sumó `usuarios/{uid}` para que cada usuario sepa cuál es su distribuidora sin buscarla (lo van a necesitar los empleados). La distribuidora usa el uid del dueño como id, así cada dueño crea una sola. Las reglas de `firestore.rules` siguen esta estructura y bloquean todo lo demás.
 
 Quedan solo en cada celular: preferencias de apariencia, borrador del pedido y fechas de respaldo.
 
@@ -174,7 +177,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
   - Sección "Cuenta" en Configuración para ingresar y salir.
   - Iniciar sesión **no** cambia de dónde salen los datos: siguen en `localStorage`.
   - **Aceptación:** se puede ingresar y salir; la app abre sin internet; los datos no cambian.
-- [ ] **T8 — Reglas de seguridad y alta de la distribuidora.**
+- [x] **T8 — Reglas de seguridad y alta de la distribuidora.**
   - Archivo `firestore.rules` en el repo con la estructura propuesta: solo los miembros leen y escriben su distribuidora; el historial de estados solo admite agregar.
   - Al primer ingreso del dueño se crea su distribuidora y su ficha de miembro.
 - [ ] **M3 — Publicar las reglas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
@@ -233,3 +236,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-08 — Claude Code: T5. Ningún módulo fuera de `database.js` guarda listas enteras: `comerciosAdmin.js` y `comercioFicha.js` (alta, edición, borrado y marcar visitado o pendiente), `pedidos.js` (`registrarPedido` y el pedido nuevo en el historial), `catalogo.js` (precio y foto), `productosAdmin.js` (alta, edición y borrado de productos), `historial.js` (borrar pedido) y `rutas.js` (guardar, renombrar y borrar rutas, y GPS de comercios) usan las funciones por id. Al renombrar una ruta conserva su id; si el nombre nuevo ya es de otra ruta, se reemplaza esa como antes. Las marcas siguen con sus funciones de siempre (T4 no tiene funciones por id para marcas). Sin cambios visibles. Visto de paso, sin tocar: los botones de acciones de la tarjeta de comercio están ocultos por CSS y esas acciones se usan desde la ficha. Próximo paso: T6.
 - 2026-10-08 — Claude Code: T6. `database.js` separa el adaptador local (`adaptadorLocal`, el único que toca `localStorage` para comercios, productos, orden de marcas, historial y rutas) y deja escrita la interfaz que va a cumplir el adaptador nube (`leer`, `guardar`, `borrar`, `escucharCambios`) junto con `usarAdaptadorDatos()` para cambiarlo, que todavía no se usa. Todas las lecturas y escrituras pasan por una copia en memoria (`leerColeccion` y `guardarColeccion`), y hay un aviso interno (`escucharCambiosDatos`) que agrupa los cambios del mismo momento e indica si vinieron de afuera; un cambio hecho en otra pestaña refresca la copia en memoria. Ninguna pantalla se anota todavía al aviso: siguen redibujándose como siempre (se conectan cuando haya cambios desde la nube, T9). Las migraciones de ids de T3 y T4 siguen trabajando sobre `localStorage` tal cual y después recargan la copia en memoria. Preferencias, borrador, fechas y copias de respaldo siguen siendo de cada celular. Sin cambios visibles; todo sigue en `localStorage`. Próximo paso: M2 (dueño) y después T7.
 - 2026-10-08 — Claude Code: T7. SDK de Firebase 12.19.0 (versión "compat", solo App y Auth) guardado en la carpeta `firebase` y sumado al service worker (caché `vendefrio-v126`). Nuevo `firebase-config.js` con la configuración web del proyecto `vendefrio` y `cuenta.js` con ingresar, salir y aviso de cambio de cuenta. Configuración tiene una sección "Cuenta" para ingresar con email y contraseña (con botón para ver la contraseña y errores en castellano) y para salir. Iniciar sesión no cambia los datos: siguen en `localStorage`. La app no tiene registro: el usuario se crea en la consola de Firebase. Próximo paso: T8.
+- 2026-10-08 — Claude Code: T8. Nuevo `firestore.rules`: solo los miembros leen y escriben su distribuidora (comercios, productos, config, pedidos y rutas); el historial de estados de cada pedido solo admite agregar; nadie borra la distribuidora ni cambia su dueño; todo lo que no está en la estructura queda bloqueado. Se sumó `usuarios/{uid}` a la estructura y la distribuidora usa el uid del dueño como id. Nuevo `distribuidora.js` y SDK de Firestore 12.19.0 ("compat") en la carpeta `firebase`, sumados al service worker (caché `vendefrio-v127`): al primer ingreso crea juntas la distribuidora ("Mi distribuidora"), la ficha de miembro del dueño y la ficha de usuario; si falla, se reintenta al volver a ingresar, al abrir la app o al volver internet. Cuenta muestra el estado de la distribuidora con botón "Reintentar". Reglas y alta probadas con los emuladores de Firebase (33 pruebas de reglas y prueba en navegador). Firestore todavía sin trabajo sin conexión (T9: activarlo antes de cualquier otro uso de Firestore). Hasta publicar las reglas, Cuenta avisa que faltan. Por ahora cualquier usuario que ingresa sin distribuidora crea la suya (los usuarios se crean solo desde la consola). Los datos siguen en `localStorage`. Próximo paso: M3 (dueño) y después T9.
