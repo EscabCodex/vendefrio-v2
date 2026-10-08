@@ -767,21 +767,47 @@
         return { grupos, marcas, orden: obtenerMarcasOrdenadas(productos) };
     }
 
-    // Ids que la nube ya confirmó, por grupo. Lo que todavía espera subir
-    // desde este celular no cuenta como subido.
+    // Clave para reconocer el mismo registro aunque tenga otro id (por
+    // ejemplo, si se subió desde otro celular): comercios y rutas por nombre,
+    // productos por marca y nombre. La app no deja repetir esos nombres.
+    // Los pedidos no tienen clave: dos pedidos iguales pueden ser reales.
+    function claveRegistro(clave, registro, marca) {
+        const nombre = normalizarTexto(registro && registro.nombre);
+        if (!nombre) return "";
+
+        if (clave === "comercios" || clave === "rutas") return nombre;
+        if (clave === "productos") return normalizarTexto(marca) + "|" + nombre;
+        return "";
+    }
+
+    // Ids y claves que la nube ya confirmó, por grupo. Lo que todavía espera
+    // subir desde este celular no cuenta como subido.
     async function leerIdsEnNube(ref) {
-        const ids = {};
+        const enNube = {};
 
         for (const grupo of GRUPOS_MIGRACION) {
             const foto = await esperarNube(ref.collection(grupo.subcoleccion).get({ source: "server" }));
-            ids[grupo.clave] = new Set();
+            enNube[grupo.clave] = { ids: new Set(), claves: new Set() };
 
             foto.forEach(documento => {
-                if (!documento.metadata.hasPendingWrites) ids[grupo.clave].add(documento.id);
+                if (documento.metadata.hasPendingWrites) return;
+
+                const datos = documento.data() || {};
+                const clave = claveRegistro(grupo.clave, deDocumento(documento.id, datos), datos._marca);
+
+                enNube[grupo.clave].ids.add(documento.id);
+                if (clave) enNube[grupo.clave].claves.add(clave);
             });
         }
 
-        return ids;
+        return enNube;
+    }
+
+    function estaEnNube(enGrupo, clave, item) {
+        if (enGrupo.ids.has(item.registro.id)) return true;
+
+        const claveItem = claveRegistro(clave, item.registro, item.extras._marca);
+        return Boolean(claveItem && enGrupo.claves.has(claveItem));
     }
 
     function unirListas(lista, nuevas) {
@@ -871,7 +897,8 @@
 
             GRUPOS_MIGRACION.forEach(grupo => {
                 local.grupos[grupo.clave].forEach(item => {
-                    if (enNube[grupo.clave].has(item.registro.id)) return;
+                    // Ya está (por id, o por nombre si vino de otro celular): no se repite.
+                    if (estaEnNube(enNube[grupo.clave], grupo.clave, item)) return;
 
                     escrituras.push({
                         ref: ref.collection(grupo.subcoleccion).doc(item.registro.id),
@@ -904,13 +931,13 @@
             const verificados = await leerIdsEnNube(ref);
 
             const totales = GRUPOS_MIGRACION.map(grupo => {
-                const ids = local.grupos[grupo.clave].map(item => item.registro.id);
+                const items = local.grupos[grupo.clave];
 
                 return {
                     clave: grupo.clave,
                     nombre: grupo.nombre,
-                    enEsteCelular: ids.length,
-                    enLaNube: ids.filter(id => verificados[grupo.clave].has(id)).length
+                    enEsteCelular: items.length,
+                    enLaNube: items.filter(item => estaEnNube(verificados[grupo.clave], grupo.clave, item)).length
                 };
             });
 
