@@ -3192,6 +3192,25 @@ html[data-tema="oscuro"] .inicioSesion input{background:#1f2937;color:#f9fafb;bo
 html[data-tema="oscuro"] .inicioSinSesion{color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px solid #f87171;}
 
+/* Empleados (T14): código, roles y panel del dueño */
+#configFilaEmpleados.oculto{display:none;}
+.inicioSesion input.inicioCodigo{font-size:22px;font-weight:800;letter-spacing:.12em;text-align:center;text-transform:uppercase;}
+.inicioRoles{display:grid;gap:8px;margin:0;padding:0;border:0;}
+.inicioRoles legend{margin-bottom:8px;color:var(--texto);font-size:14px;font-weight:700;}
+#inicioListaRoles{display:grid;gap:8px;}
+.inicioRol{display:flex !important;align-items:center;gap:10px;min-height:46px;padding:0 12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);font-weight:600 !important;}
+.inicioSesion .inicioRol input{width:22px;min-height:22px;height:22px;padding:0;flex-shrink:0;accent-color:var(--acento);}
+html[data-tema="oscuro"] .inicioRol{background:#1f2937;color:#f9fafb;border-color:#4b5563;}
+.empleadoCodigo{display:grid;gap:8px;justify-items:center;padding:14px;border:2px dashed var(--acento);border-radius:12px;text-align:center;}
+.empleadoCodigo strong{font-size:30px;font-weight:800;letter-spacing:.12em;color:var(--texto);}
+.empleadoCodigo small{color:var(--texto-sec);font-size:13px;line-height:1.4;}
+.empleadoLista{display:grid;gap:8px;margin:0;padding:0;list-style:none;}
+.empleadoFila{display:grid;gap:6px;padding:12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);}
+.empleadoFila strong{font-size:15px;color:var(--texto);}
+.empleadoFila small{color:var(--texto-sec);font-size:13px;}
+html[data-tema="oscuro"] .empleadoFila{background:#1f2937;color:#f9fafb;border-color:#374151;}
+html[data-tema="oscuro"] .empleadoCodigo strong{color:#f9fafb;}
+
 /* Nombre de la distribuidora en el inicio (T13) */
 .dashboardMarca{min-width:0;}
 .dashboardHeader .dashNombreDistribuidora{margin-top:2px;font-size:14px;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;}

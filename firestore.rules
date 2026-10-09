@@ -1,17 +1,22 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9)
-// Se publican a mano en la consola de Firebase (tarea M3; volver a publicar
-// cada vez que cambia este archivo).
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14)
+// Se publican a mano en la consola de Firebase (tareas M3 y M5; volver a
+// publicar cada vez que cambia este archivo).
 //
 // Estructura:
 //   usuarios/{uid}                  a qué distribuidora pertenece cada usuario
+//   codigosAcceso/{codigo}          códigos de ingreso de empleados (T14):
+//                                   sirven una vez y vencen a las 24 horas
 //   distribuidoras/{idDistribuidora}   el id es el uid del dueño, o "prueba-" + uid
 //                                   para la distribuidora de prueba (T9)
-//     miembros/{uid}                usuarios autorizados
+//     miembros/{uid}                usuarios autorizados (dueño y empleados)
+//     empleados/{idEmpleado}        ficha de cada empleado (T14): la persona,
+//                                   no el celular
 //     comercios/{id}
 //     productos/{id}
-//     config/{id}                   por ejemplo config/marcas (orden de marcas)
+//     config/{id}                   config/marcas (orden de marcas) y
+//                                   config/roles (lista de roles, solo el dueño)
 //     pedidos/{id}
 //       estados/{id}                historial de estados: solo se agrega
 //     rutas/{id}
@@ -25,13 +30,30 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Cuenta anónima (T14): la de los empleados, sin email ni contraseña.
+    function esAnonimo() {
+      return request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
     function rutaDistribuidora(idDistribuidora) {
       return /databases/$(database)/documents/distribuidoras/$(idDistribuidora);
     }
 
+    function rutaMiembro(idDistribuidora, uid) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/miembros/$(uid);
+    }
+
+    function rutaEmpleado(idDistribuidora, idEmpleado) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/empleados/$(idEmpleado);
+    }
+
+    function rutaCodigo(codigo) {
+      return /databases/$(database)/documents/codigosAcceso/$(codigo);
+    }
+
     function esMiembro(idDistribuidora) {
       return ingreso()
-        && exists(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/miembros/$(request.auth.uid));
+        && exists(rutaMiembro(idDistribuidora, request.auth.uid));
     }
 
     function esDueno(idDistribuidora) {
@@ -39,18 +61,113 @@ service cloud.firestore {
         && get(rutaDistribuidora(idDistribuidora)).data.duenoUid == request.auth.uid;
     }
 
+    // 8 caracteres sin letras que se confundan (sin 0/O ni 1/I).
+    function codigoValido(codigo) {
+      return codigo is string
+        && codigo.matches('^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$');
+    }
+
+    function idValido(id) {
+      return id is string && id.matches('^[A-Za-z0-9]{1,40}$');
+    }
+
+    function vigente(datosCodigo) {
+      return request.time < datosCodigo.creado + duration.value(24, 'h');
+    }
+
+    // Canje de un código (T14): el código era de esta distribuidora y de esta
+    // ficha, no estaba usado, no venció y en esta misma tanda queda usado por
+    // esta cuenta. Así sirve una sola vez.
+    function canjeEnEstaTanda(idDistribuidora, codigo, idEmpleado) {
+      let antes = get(rutaCodigo(codigo)).data;
+      let despues = getAfter(rutaCodigo(codigo)).data;
+      return antes.idDistribuidora == idDistribuidora
+        && antes.idEmpleado == idEmpleado
+        && antes.usado == false
+        && vigente(antes)
+        && despues.usado == true
+        && despues.usadoPor == request.auth.uid;
+    }
+
+    // La ficha de empleado se toca en la misma tanda en que esta cuenta se
+    // suma como miembro con un código del tipo indicado ("alta" o "reingreso").
+    function fichaDeCanje(idDistribuidora, idEmpleado, tipo) {
+      let miembro = getAfter(rutaMiembro(idDistribuidora, request.auth.uid)).data;
+      return !exists(rutaMiembro(idDistribuidora, request.auth.uid))
+        && miembro.rol == "empleado"
+        && miembro.idEmpleado == idEmpleado
+        && get(rutaCodigo(miembro.codigo)).data.tipo == tipo;
+    }
+
     // Ficha de cada usuario: dice a qué distribuidora pertenece.
-    // Por ahora solo la crea el dueño al primer ingreso, junto con su distribuidora.
+    // La crea el dueño al primer ingreso, junto con su distribuidora, o el
+    // empleado al usar su código (T14).
     match /usuarios/{uid} {
       allow read: if ingreso() && request.auth.uid == uid;
 
       allow create: if ingreso()
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(["idDistribuidora", "alta"])
-        && request.resource.data.idDistribuidora == uid
-        && getAfter(rutaDistribuidora(uid)).data.duenoUid == uid;
+        && (
+          (request.resource.data.keys().hasOnly(["idDistribuidora", "alta"])
+            && request.resource.data.idDistribuidora == uid
+            && getAfter(rutaDistribuidora(uid)).data.duenoUid == uid)
+          ||
+          (esAnonimo()
+            && request.resource.data.keys().hasOnly(["idDistribuidora", "idEmpleado", "alta"])
+            && idValido(request.resource.data.idDistribuidora)
+            && getAfter(rutaMiembro(request.resource.data.idDistribuidora, uid)).data.rol == "empleado"
+            && getAfter(rutaMiembro(request.resource.data.idDistribuidora, uid)).data.idEmpleado
+                == request.resource.data.idEmpleado)
+        );
 
       allow update, delete: if false;
+    }
+
+    // Códigos de acceso de empleados (T14). El id es el código.
+    // Saber el código es el permiso: se lee de a uno, nunca la lista entera
+    // (salvo el dueño, que ve solo los suyos).
+    match /codigosAcceso/{codigo} {
+      allow get: if ingreso();
+
+      allow list: if ingreso()
+        && resource.data.idDistribuidora == request.auth.uid;
+
+      // Solo el dueño crea códigos para su distribuidora real.
+      // "alta": para una ficha nueva. "reingreso": para una ficha que ya
+      // existe; guarda la cuenta que la usa hoy, que pierde el acceso.
+      allow create: if ingreso()
+        && !esAnonimo()
+        && codigoValido(codigo)
+        && request.resource.data.keys().hasAll(["idDistribuidora", "idEmpleado", "tipo", "creado", "usado"])
+        && request.resource.data.keys().hasOnly(["idDistribuidora", "idEmpleado", "tipo", "creado", "usado", "uidAnterior"])
+        && request.resource.data.idDistribuidora == request.auth.uid
+        && esDueno(request.auth.uid)
+        && request.resource.data.usado == false
+        && request.resource.data.creado == request.time
+        && idValido(request.resource.data.idEmpleado)
+        && (
+          (request.resource.data.tipo == "alta"
+            && !("uidAnterior" in request.resource.data)
+            && !exists(rutaEmpleado(request.auth.uid, request.resource.data.idEmpleado)))
+          ||
+          (request.resource.data.tipo == "reingreso"
+            && request.resource.data.uidAnterior
+                == get(rutaEmpleado(request.auth.uid, request.resource.data.idEmpleado)).data.uidActual)
+        );
+
+      // Usar el código: lo marca la cuenta anónima del empleado, en la misma
+      // tanda en que se suma como miembro con este código.
+      allow update: if ingreso()
+        && esAnonimo()
+        && resource.data.usado == false
+        && vigente(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usado", "usadoPor", "usadoEn"])
+        && request.resource.data.usado == true
+        && request.resource.data.usadoPor == request.auth.uid
+        && request.resource.data.usadoEn == request.time
+        && getAfter(rutaMiembro(resource.data.idDistribuidora, request.auth.uid)).data.codigo == codigo;
+
+      allow delete: if false;
     }
 
     match /distribuidoras/{idDistribuidora} {
@@ -60,7 +177,9 @@ service cloud.firestore {
       // así cada dueño crea una sola, y se crea junto con su ficha de miembro.
       // Cada dueño puede crear además una sola distribuidora de prueba
       // ("prueba-" + uid, con prueba: true) para el modo prueba (T9).
+      // Una cuenta anónima (empleado) nunca crea una distribuidora (T14).
       allow create: if ingreso()
+        && !esAnonimo()
         && (idDistribuidora == request.auth.uid
             || idDistribuidora == "prueba-" + request.auth.uid)
         && request.resource.data.keys().hasOnly(["nombre", "duenoUid", "creada", "prueba"])
@@ -68,7 +187,7 @@ service cloud.firestore {
         && request.resource.data.duenoUid == request.auth.uid
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() <= 80
-        && existsAfter(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/miembros/$(request.auth.uid));
+        && existsAfter(rutaMiembro(idDistribuidora, request.auth.uid));
 
       // El dueño puede cambiar el nombre, nunca quién es el dueño.
       allow update: if esDueno(idDistribuidora)
@@ -78,18 +197,76 @@ service cloud.firestore {
 
       allow delete: if false;
 
-      // Usuarios autorizados. Por ahora solo existe la ficha del dueño;
-      // la incorporación de empleados se agrega después del plan.
+      // Usuarios autorizados: el dueño y los empleados que entraron con un
+      // código (T14).
       match /miembros/{uid} {
         allow read: if esMiembro(idDistribuidora);
 
         allow create: if ingreso()
           && request.auth.uid == uid
-          && getAfter(rutaDistribuidora(idDistribuidora)).data.duenoUid == uid
-          && request.resource.data.keys().hasOnly(["email", "rol", "alta"])
-          && request.resource.data.rol == "dueno";
+          && (
+            (getAfter(rutaDistribuidora(idDistribuidora)).data.duenoUid == uid
+              && request.resource.data.keys().hasOnly(["email", "rol", "alta"])
+              && request.resource.data.rol == "dueno")
+            ||
+            (esAnonimo()
+              && request.resource.data.keys().hasAll(["rol", "idEmpleado", "codigo", "alta"])
+              && request.resource.data.keys().hasOnly(["rol", "idEmpleado", "codigo", "alta"])
+              && request.resource.data.rol == "empleado"
+              && request.resource.data.alta == request.time
+              && codigoValido(request.resource.data.codigo)
+              && idValido(request.resource.data.idEmpleado)
+              && canjeEnEstaTanda(idDistribuidora, request.resource.data.codigo, request.resource.data.idEmpleado)
+              && getAfter(rutaEmpleado(idDistribuidora, request.resource.data.idEmpleado)).data.uidActual == uid)
+          );
 
-        allow update, delete: if false;
+        allow update: if false;
+
+        // Reingreso (T14): el celular nuevo le quita el acceso al viejo, en la
+        // misma tanda en que la ficha del empleado pasa a la cuenta nueva.
+        allow delete: if ingreso()
+          && uid != request.auth.uid
+          && resource.data.rol == "empleado"
+          && getAfter(rutaEmpleado(idDistribuidora, resource.data.idEmpleado)).data.uidActual == request.auth.uid;
+      }
+
+      // Ficha de cada empleado (T14). Nace cuando el empleado usa un código
+      // de alta del dueño; el empleado solo cambia su nombre y sus roles.
+      match /empleados/{idEmpleado} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if ingreso()
+          && esAnonimo()
+          && request.resource.data.keys().hasOnly(["nombre", "roles", "activo", "uidActual", "alta"])
+          && request.resource.data.nombre == ""
+          && request.resource.data.roles == []
+          && request.resource.data.activo == true
+          && request.resource.data.uidActual == request.auth.uid
+          && request.resource.data.alta == request.time
+          && fichaDeCanje(idDistribuidora, idEmpleado, "alta");
+
+        allow update: if ingreso()
+          && (
+            // El empleado cambia solo su nombre (obligatorio) y sus roles.
+            (resource.data.uidActual == request.auth.uid
+              && esMiembro(idDistribuidora)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "roles"])
+              && request.resource.data.nombre is string
+              && request.resource.data.nombre.size() >= 1
+              && request.resource.data.nombre.size() <= 60
+              && request.resource.data.roles is list
+              && request.resource.data.roles.size() <= 20)
+            ||
+            // Reingreso: la ficha pasa a la cuenta nueva y la vieja deja de
+            // ser miembro en la misma tanda.
+            (esAnonimo()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["uidActual"])
+              && request.resource.data.uidActual == request.auth.uid
+              && fichaDeCanje(idDistribuidora, idEmpleado, "reingreso")
+              && !existsAfter(rutaMiembro(idDistribuidora, resource.data.uidActual)))
+          );
+
+        allow delete: if false;
       }
 
       match /comercios/{id} {
@@ -100,8 +277,16 @@ service cloud.firestore {
         allow read, write: if esMiembro(idDistribuidora);
       }
 
+      // config/roles (lista de roles) solo la escribe el dueño (T14).
       match /config/{id} {
-        allow read, write: if esMiembro(idDistribuidora);
+        allow read: if esMiembro(idDistribuidora);
+        allow write: if esMiembro(idDistribuidora) && id != "roles";
+
+        allow create, update: if id == "roles"
+          && esDueno(idDistribuidora)
+          && request.resource.data.keys().hasOnly(["lista"])
+          && request.resource.data.lista is list
+          && request.resource.data.lista.size() <= 50;
       }
 
       match /rutas/{id} {

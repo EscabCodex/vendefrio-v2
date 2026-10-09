@@ -42,6 +42,12 @@
                         <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small></span><b>›</b>
                     </button>
 
+                    <button class="configFila oculto" data-config-seccion="empleados" id="configFilaEmpleados">
+                        <span class="configIcono">${window.icono("persona",20)}</span>
+                        <span><strong>Empleados</strong>
+                        <small>Códigos de ingreso para tus empleados</small></span><b>›</b>
+                    </button>
+
                     <button class="configFila" data-config-seccion="apariencia">
                         <span class="configIcono">${window.icono("paleta",20)}</span>
                         <span><strong>Apariencia</strong>
@@ -403,6 +409,201 @@
         `;
     }
 
+    // --- Empleados (T14) ---
+    // Último código generado mientras está abierta la app.
+    let codigoGenerado = null;
+    let generandoCodigo = false;
+    let quitarOyenteEmpleados = null;
+
+    function fechaYHora(fecha) {
+        return fecha.toLocaleString("es-AR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+        });
+    }
+
+    function textoParaCompartir(codigo) {
+        const empleados = window.empleadosVendeFrio;
+        const nombre = window.distribuidoraVendeFrio?.nombreActual?.() || "la distribuidora";
+
+        return "Tu código para entrar a VendeFrío (" + nombre + "): " +
+            empleados.formatearCodigo(codigo.codigo) + "\n" +
+            "Abrí " + window.location.origin + "/ , elegí \"Empleado\" y escribilo. " +
+            "Sirve una sola vez. Vence: " + fechaYHora(codigo.vence);
+    }
+
+    function htmlCodigoGenerado() {
+        if (!codigoGenerado) return "";
+
+        const empleados = window.empleadosVendeFrio;
+        const titulo = codigoGenerado.tipo === "reingreso"
+            ? "Código de reingreso para " + escaparTexto(codigoGenerado.nombre || "el empleado")
+            : "Código para un empleado nuevo";
+
+        return `
+            <div class="empleadoCodigo" id="empleadoCodigoGenerado">
+                <small>${titulo}</small>
+                <strong>${escaparTexto(empleados.formatearCodigo(codigoGenerado.codigo))}</strong>
+                <small>
+                    Sirve una sola vez. Vence: ${fechaYHora(codigoGenerado.vence)}<br>
+                    ${codigoGenerado.tipo === "reingreso"
+                        ? "Cuando lo use en el celular nuevo, el celular viejo pierde el acceso."
+                        : "El empleado elige \"Empleado\" en la pantalla de inicio y lo escribe."}
+                </small>
+            </div>
+            <div class="configAcciones">
+                <button type="button" data-accion="copiarCodigo">Copiar</button>
+                <button type="button" data-accion="compartirCodigo">Compartir</button>
+            </div>
+        `;
+    }
+
+    function htmlListaEmpleados(lista) {
+        const empleados = window.empleadosVendeFrio;
+
+        if (!lista.length) {
+            return `<p class="configEstado">Todavía no entró ningún empleado.</p>`;
+        }
+
+        return `
+            <ul class="empleadoLista">
+                ${lista.map(empleado => {
+                    const roles = empleados.nombresDeRoles(empleado.roles);
+                    return `
+                        <li class="empleadoFila">
+                            <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
+                            <small>${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
+                            <button type="button" data-accion="codigoReingreso"
+                                data-empleado="${escaparTexto(empleado.id)}"
+                                data-nombre="${escaparTexto(empleado.nombre)}"
+                                ${generandoCodigo ? "disabled" : ""}>
+                                Código de reingreso
+                            </button>
+                        </li>
+                    `;
+                }).join("")}
+            </ul>
+        `;
+    }
+
+    function htmlEmpleados() {
+        const empleados = window.empleadosVendeFrio;
+
+        if (!empleados || !empleados.esDueno()) {
+            return `
+                <p class="configEstado">
+                    Solo el dueño de la distribuidora, con su cuenta iniciada,
+                    puede ver los empleados y generar códigos.
+                </p>
+            `;
+        }
+
+        return `
+            <p class="configEstado">
+                Generá un código y pasáselo al empleado (en persona o por WhatsApp).
+                Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las
+                ${empleados.horasDeVigencia} horas. Hace falta internet.
+            </p>
+            <button type="button" data-accion="generarCodigo" class="configCuentaIngresar"
+                ${generandoCodigo ? "disabled" : ""}>
+                ${generandoCodigo ? "Generando código…" : "Generar código para un empleado nuevo"}
+            </button>
+            ${htmlCodigoGenerado()}
+            <p class="configEstado">
+                <strong>Tus empleados</strong><br>
+                Si un empleado cambia de celular o se le borran los datos, tocá
+                "Código de reingreso": vuelve a ser el mismo empleado, con su
+                nombre y sus roles.
+            </p>
+            <div id="listaEmpleados">${htmlListaEmpleados([])}</div>
+            <p class="configEstado">
+                Cambiar roles, anular códigos y dar de baja llegan en la próxima actualización.
+            </p>
+        `;
+    }
+
+    function dibujarListaEmpleados(lista) {
+        const caja = document.getElementById("listaEmpleados");
+        if (caja) caja.innerHTML = htmlListaEmpleados(lista);
+    }
+
+    function escucharListaEmpleados() {
+        if (quitarOyenteEmpleados || !window.empleadosVendeFrio?.esDueno()) return;
+        quitarOyenteEmpleados = window.empleadosVendeFrio.escucharEmpleados(dibujarListaEmpleados);
+    }
+
+    function dejarDeEscucharListaEmpleados() {
+        if (quitarOyenteEmpleados) {
+            quitarOyenteEmpleados();
+            quitarOyenteEmpleados = null;
+        }
+    }
+
+    function generarCodigo(idEmpleado, nombre) {
+        generandoCodigo = true;
+        if (seccionAbierta === "empleados") detalle("empleados");
+
+        window.empleadosVendeFrio.generarCodigo(idEmpleado)
+            .then(codigo => {
+                codigoGenerado = { ...codigo, nombre };
+            })
+            .catch(error => mostrarAviso("No se pudo generar el código", error.message))
+            .finally(() => {
+                generandoCodigo = false;
+                if (seccionAbierta === "empleados") {
+                    detalle("empleados");
+                    document.getElementById("empleadoCodigoGenerado")
+                        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+                }
+            });
+    }
+
+    // Filas del menú que dependen de quién usa el celular.
+    function actualizarFilasSegunCuenta() {
+        const empleados = window.empleadosVendeFrio;
+        document.getElementById("configFilaEmpleados")
+            ?.classList.toggle("oculto", !(empleados && empleados.esDueno()));
+    }
+
+    // Cuenta de un empleado (T14): sin migración, modo prueba ni acciones
+    // delicadas. Solo su nombre, sus roles, la conexión y salir.
+    function htmlCuentaEmpleado() {
+        const empleados = window.empleadosVendeFrio;
+        const ficha = empleados.miFicha();
+        const roles = ficha ? empleados.nombresDeRoles(ficha.roles) : [];
+        const nube = window.nubeVendeFrio;
+
+        const textos = {
+            conectando: "Conectando con la nube…",
+            conectada: "Conectada: tus cambios se ven en los otros celulares de la distribuidora.",
+            sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
+            sinPermiso: "La nube no deja leer la distribuidora. Pedile ayuda a tu encargado.",
+            error: "Hubo un problema con la nube. Probá de nuevo."
+        };
+        const estadoNube = nube?.estado?.() || "";
+        const reintentar = ["sinConexion", "error"].includes(estadoNube)
+            ? `<button type="button" data-accion="reintentarNube">Reintentar</button>`
+            : "";
+
+        return `
+            <p class="configEstado">
+                Empleado<br>
+                <strong>${escaparTexto(ficha?.nombre) || "…"}</strong><br>
+                Roles: ${roles.length ? escaparTexto(roles.join(", ")) : "ninguno"}
+            </p>
+            <button type="button" data-accion="editarDatosEmpleado">Cambiar mi nombre o mis roles</button>
+            ${htmlNombreDistribuidora()}
+            <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
+            ${htmlSincronizacion()}
+            ${reintentar}
+            <p class="configEstado">
+                <strong>Recomendado:</strong> instalá la app en la pantalla de inicio del
+                celular (Android: menú ⋮ &gt; "Instalar app"; iPhone: Compartir &gt;
+                "Agregar a inicio"). Así el celular no borra los datos de la app.
+            </p>
+            <button type="button" data-accion="salirEmpleado">Salir</button>
+        `;
+    }
+
     function htmlCuenta() {
         const cuenta = window.cuentaVendeFrio;
 
@@ -416,6 +617,10 @@
         }
 
         const usuario = cuenta.usuarioActual();
+
+        if (usuario && window.empleadosVendeFrio?.esEmpleado()) {
+            return htmlCuentaEmpleado();
+        }
 
         if (usuario) {
             return `
@@ -466,6 +671,9 @@
             <p class="configEstado">
                 Iniciar sesión no cambia tus datos: siguen guardados en este dispositivo.
             </p>
+            <button type="button" data-accion="entrarComoEmpleado">
+                ¿Sos empleado? Entrá con el código de tu encargado
+            </button>
         `;
     }
 
@@ -475,6 +683,16 @@
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
         const nombre = usuario ? window.distribuidoraVendeFrio?.nombreActual?.() : "";
+
+        actualizarFilasSegunCuenta();
+
+        if (usuario && window.empleadosVendeFrio?.esEmpleado()) {
+            const ficha = window.empleadosVendeFrio.miFicha();
+            resumen.textContent = "Empleado" + (ficha?.nombre ? ": " + ficha.nombre : "") +
+                (nombre ? " · " + nombre : "");
+            return;
+        }
+
         resumen.textContent = usuario
             ? (nombre ? nombre + " · " : "") + usuario.email + (window.nubeVendeFrio?.modoPrueba()
                 ? " · modo prueba"
@@ -493,7 +711,10 @@
         if (!caja || !menu) return;
 
         const titulos = {
-            cuenta: ["Cuenta", "Ingresá con tu email y contraseña"],
+            cuenta: ["Cuenta", window.empleadosVendeFrio?.esEmpleado()
+                ? "Tu cuenta de empleado"
+                : "Ingresá con tu email y contraseña"],
+            empleados: ["Empleados", "Códigos de ingreso y fichas de tus empleados"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
@@ -510,6 +731,14 @@
 
         if (seccion === "cuenta") {
             caja.innerHTML += htmlCuenta();
+        }
+
+        if (seccion === "empleados") {
+            caja.innerHTML += htmlEmpleados();
+            dejarDeEscucharListaEmpleados();
+            escucharListaEmpleados();
+        } else {
+            dejarDeEscucharListaEmpleados();
         }
 
         if (seccion === "apariencia") {
@@ -538,7 +767,14 @@
             `;
         }
 
-        if (seccion === "respaldo") {
+        if (seccion === "respaldo" && window.empleadosVendeFrio?.esEmpleado()) {
+            caja.innerHTML += `
+                <p class="configEstado">
+                    Tus datos están en la nube de la distribuidora.
+                    Los respaldos los maneja tu encargado.
+                </p>
+            `;
+        } else if (seccion === "respaldo") {
             const ultima = localStorage.getItem(
                 "vendefrio_ultimo_respaldo_automatico"
             );
@@ -734,6 +970,65 @@
             } else {
                 salir();
             }
+        }
+
+        if (accion === "generarCodigo") {
+            generarCodigo(null, "");
+        }
+
+        if (accion === "codigoReingreso") {
+            const boton = event.target.closest("[data-accion]");
+            const nombre = boton?.dataset.nombre || "";
+
+            abrirConfirmacion(
+                "Código de reingreso",
+                "Es para que " + (nombre || "este empleado") + " entre desde otro celular y siga siendo el mismo empleado, con su nombre y sus roles. " +
+                    "Cuando use el código, el celular que usa ahora pierde el acceso.",
+                () => generarCodigo(boton?.dataset.empleado, nombre)
+            );
+        }
+
+        if (accion === "copiarCodigo" && codigoGenerado) {
+            const texto = window.empleadosVendeFrio.formatearCodigo(codigoGenerado.codigo);
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto)
+                    .then(() => mostrarToast("Código copiado"))
+                    .catch(() => mostrarAviso("Código", texto));
+            } else {
+                mostrarAviso("Código", texto);
+            }
+        }
+
+        if (accion === "compartirCodigo" && codigoGenerado) {
+            const texto = textoParaCompartir(codigoGenerado);
+
+            if (navigator.share) {
+                navigator.share({ text: texto }).catch(() => {});
+            } else {
+                window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
+            }
+        }
+
+        if (accion === "entrarComoEmpleado") {
+            if (window.inicioVendeFrio?.abrirEmpleado) {
+                window.inicioVendeFrio.abrirEmpleado();
+            }
+        }
+
+        if (accion === "editarDatosEmpleado") {
+            window.inicioVendeFrio?.pedirDatosEmpleado();
+        }
+
+        if (accion === "salirEmpleado") {
+            abrirConfirmacion(
+                "Salir",
+                "Si salís, este celular pierde el acceso a la distribuidora. Para volver a entrar vas a necesitar un código de reingreso de tu encargado. Los cambios que ya se subieron quedan guardados en la nube.",
+                () => {
+                    window.empleadosVendeFrio.salir()
+                        .catch(error => mostrarAviso("Todavía no", error.message));
+                }
+            );
         }
 
         if (accion === "migracionRespaldo") {
@@ -1156,6 +1451,7 @@
     // Igual que la cuenta: distribuidora.js puede llegar después.
     function conectarDistribuidora() {
         window.distribuidoraVendeFrio.escuchar(() => {
+            actualizarFilasSegunCuenta();
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
                 detalle("cuenta");
@@ -1204,6 +1500,24 @@
             const texto = document.getElementById("sincronizacionNube");
             if (texto) texto.textContent = textoSincronizacion();
         });
+    }
+
+    // Empleados (T14): el nombre y los roles del empleado se ven en Cuenta.
+    function conectarEmpleados() {
+        window.empleadosVendeFrio.escucharMiFicha(() => {
+            actualizarResumenCuenta();
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
+                detalle("cuenta");
+            }
+        });
+    }
+
+    if (window.empleadosVendeFrio) {
+        conectarEmpleados();
+    } else {
+        window.addEventListener("empleadosVendeFrioLista", conectarEmpleados, { once: true });
     }
 
     if (window.nubeVendeFrio) {

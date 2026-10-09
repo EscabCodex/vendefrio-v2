@@ -16,7 +16,8 @@
     let dejarDeEscucharNombre = null;
     const oyentesNombre = [];
 
-    // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible.
+    // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible
+    // y sinAcceso (cuenta de empleado todavía sin distribuidora, T14).
     function cambiarEstado(nuevoEstado, nuevoId) {
         estado = nuevoEstado;
         idDistribuidora = nuevoId || null;
@@ -152,6 +153,15 @@
             if (fichaUsuario.exists) {
                 if (window.cuentaVendeFrio?.usuarioActual()?.uid === uid) {
                     cambiarEstado("lista", fichaUsuario.data().idDistribuidora);
+                }
+                return;
+            }
+
+            // Un empleado (cuenta anónima, T14) nunca crea una distribuidora:
+            // su ficha de usuario se crea al entrar con el código.
+            if (usuario.isAnonymous) {
+                if (window.cuentaVendeFrio?.usuarioActual()?.uid === uid) {
+                    cambiarEstado("sinAcceso");
                 }
                 return;
             }
