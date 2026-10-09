@@ -10,6 +10,8 @@
 (function () {
     const CLAVE_SIN_SESION = "vendefrio_inicio_sin_sesion";
     const LARGO_MINIMO_CONTRASENA = 6;
+    // Igual que el límite de firestore.rules.
+    const LARGO_MAXIMO_NOMBRE = 80;
 
     let pantalla = null;
     let quitarOyenteDistribuidora = null;
@@ -159,7 +161,7 @@
                     <button type="button" class="inicioOpcion" data-inicio="empleado">
                         <span class="inicioOpcionIcono">${icono("persona", 22)}</span>
                         <span><strong>Empleado</strong>
-                        <small>Ingresá con el código de tu encargado</small></span>
+                        <small>Ingresá con el código que te dará tu encargado</small></span>
                         <b aria-hidden="true">›</b>
                     </button>
 
@@ -201,6 +203,10 @@
                         Se crea tu cuenta y tu distribuidora en la nube, vacía.
                         Hace falta internet.
                     </p>
+                    <label>Nombre de tu distribuidora
+                        <input type="text" id="inicioRegistroNombre" autocomplete="organization"
+                            maxlength="${LARGO_MAXIMO_NOMBRE}" placeholder="Por ejemplo: Distribuidora Frío Sur" required>
+                    </label>
                     <label>Email
                         <input type="email" id="inicioRegistroEmail" autocomplete="username"
                             inputmode="email" autocapitalize="off" spellcheck="false"
@@ -514,9 +520,15 @@
         }
 
         if (formulario.id === "inicioFormRegistrarse") {
+            const nombre = (document.getElementById("inicioRegistroNombre")?.value || "").trim();
             const email = document.getElementById("inicioRegistroEmail")?.value || "";
             const contrasena = document.getElementById("inicioRegistroContrasena")?.value || "";
             const repetir = document.getElementById("inicioRegistroRepetir")?.value || "";
+
+            if (!nombre) {
+                mostrarError(formulario, "Escribí el nombre de tu distribuidora.");
+                return;
+            }
 
             if (!email.trim() || !contrasena || !repetir) {
                 mostrarError(formulario, "Completá el email y las dos contraseñas.");
@@ -536,9 +548,13 @@
             mostrarError(formulario, "");
             const liberar = ocupar(boton, "Creando tu cuenta…");
 
+            // La distribuidora se crea con este nombre apenas existe la cuenta.
+            window.distribuidoraVendeFrio?.prepararNombre(nombre);
+
             cuenta.registrarse(email, contrasena)
                 .then(usuario => esperarDistribuidora(usuario.uid))
                 .catch(error => {
+                    window.distribuidoraVendeFrio?.prepararNombre(null);
                     liberar();
                     mostrarError(formulario, error.message);
                 });

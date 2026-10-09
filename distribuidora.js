@@ -6,6 +6,9 @@
     let estado = "sinCuenta";
     let idDistribuidora = null;
     let uidEnCurso = null;
+    // Registro (T13): nombre que eligió el dueño al registrarse.
+    let nombrePendiente = null;
+    const LARGO_MAXIMO_NOMBRE = 80;
 
     // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible.
     function cambiarEstado(nuevoEstado, nuevoId) {
@@ -73,7 +76,7 @@
             const tanda = db.batch();
 
             tanda.set(refDistribuidora, {
-                nombre: "Mi distribuidora",
+                nombre: nombrePendiente || "Mi distribuidora",
                 duenoUid: uid,
                 creada: ahora
             });
@@ -88,6 +91,7 @@
             });
 
             await tanda.commit();
+            nombrePendiente = null;
 
             if (window.cuentaVendeFrio?.usuarioActual()?.uid === uid) {
                 cambiarEstado("creada", uid);
@@ -135,8 +139,15 @@
         window.cuentaVendeFrio.escuchar(revisar);
     }
 
+    // Se llama antes de registrarse; null lo descarta si el registro falla.
+    function prepararNombre(nombre) {
+        const limpio = String(nombre || "").trim().slice(0, LARGO_MAXIMO_NOMBRE);
+        nombrePendiente = limpio || null;
+    }
+
     window.distribuidoraVendeFrio = {
         estado: () => estado,
+        prepararNombre,
         idActual: () => idDistribuidora,
         reintentar: revisar,
         escuchar
