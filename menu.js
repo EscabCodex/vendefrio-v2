@@ -405,6 +405,21 @@ document.querySelectorAll(".volverMenu").forEach(boton => {
     boton.addEventListener("click", () => mostrarPantalla("menu"));
 });
 
+// Nombre de la distribuidora debajo de "VendeFrío" (T13), solo con sesión.
+function mostrarNombreDistribuidora(nombre) {
+    const texto = document.getElementById("dashNombreDistribuidora");
+    if (!texto) return;
+
+    const conSesion = Boolean(window.cuentaVendeFrio?.usuarioActual());
+    const visible = conSesion && Boolean(nombre);
+    texto.textContent = visible ? nombre : "";
+    texto.classList.toggle("oculto", !visible);
+}
+
+if (window.distribuidoraVendeFrio?.escucharNombre) {
+    window.distribuidoraVendeFrio.escucharNombre(mostrarNombreDistribuidora);
+}
+
 window.actualizarDashboard = actualizarDashboard;
 window.addEventListener("DOMContentLoaded", actualizarDashboard);
 window.addEventListener("load", actualizarDashboard);

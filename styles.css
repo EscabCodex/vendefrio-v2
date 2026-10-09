@@ -3191,3 +3191,7 @@ html[data-tema="oscuro"] .inicioOpcion,html[data-tema="oscuro"] .inicioNota{back
 html[data-tema="oscuro"] .inicioSesion input{background:#1f2937;color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .inicioSinSesion{color:#f9fafb;border-color:#4b5563;}
 html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px solid #f87171;}
+
+/* Nombre de la distribuidora en el inicio (T13) */
+.dashboardMarca{min-width:0;}
+.dashboardHeader .dashNombreDistribuidora{margin-top:2px;font-size:14px;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;}
