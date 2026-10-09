@@ -1,5 +1,6 @@
 // VendeFrío - Adaptador nube (Firestore), modo nube de prueba (T9),
-// migración "Subir mis datos a la nube" y modo nube real (T11).
+// migración "Subir mis datos a la nube" y modo nube real (T11),
+// sincronización visible e indicador de conexión (T12).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Se usa en dos modos:
 // - Modo prueba: los datos salen de la distribuidora de prueba "prueba-{uid}".
@@ -44,6 +45,17 @@
     // Texto de lo último entregado a la app por colección, para avisar
     // solo cuando algo cambió de verdad.
     const textos = {};
+
+    // Sincronización visible (T12). Por cada parte que se escucha
+    // (comercios, productos, pedidos, rutas, config): ids con cambios que
+    // todavía no confirmó la nube y si lo último llegó de la copia del celular.
+    const idsSinSubir = {};
+    const partesDesdeCache = new Set();
+    // Borrados mandados que la nube todavía no confirmó (no aparecen en la escucha).
+    let borradosSinSubir = 0;
+    const oyentesSincronizacion = [];
+    let textoSincronizacion = "";
+    let textoPedidosSinSubir = "";
 
     // Estados: apagado, conectando, conectada, sinConexion, sinPermiso, error.
     function cambiarEstado(nuevoEstado) {
@@ -381,7 +393,20 @@
                 }
             });
 
-            tanda.commit().catch(errorAlEscribir);
+            const borrados = escrituras
+                .slice(inicio, inicio + MAX_ESCRITURAS_POR_TANDA)
+                .filter(escritura => escritura.tipo === "borrar").length;
+
+            borradosSinSubir += borrados;
+            if (borrados) avisarSincronizacion();
+
+            tanda.commit()
+                .catch(errorAlEscribir)
+                .finally(() => {
+                    if (!borrados) return;
+                    borradosSinSubir = Math.max(0, borradosSinSubir - borrados);
+                    avisarSincronizacion();
+                });
         }
     }
 
@@ -470,36 +495,122 @@
         cambiarEstado(estadoDeError(error));
     }
 
+    // -------------------------------------------------
+    // Sincronización visible (T12)
+    // -------------------------------------------------
+
+    function cantidadSinSubir() {
+        const enDocumentos = Object.values(idsSinSubir)
+            .reduce((total, ids) => total + ids.size, 0);
+        return enDocumentos + borradosSinSubir;
+    }
+
+    function sincronizacion() {
+        return { estado, sinSubir: cantidadSinSubir() };
+    }
+
+    function avisarSincronizacion() {
+        const actual = sincronizacion();
+        const texto = actual.estado + "|" + actual.sinSubir;
+
+        if (texto !== textoSincronizacion) {
+            textoSincronizacion = texto;
+            actualizarIndicador();
+
+            oyentesSincronizacion.forEach(oyente => {
+                try {
+                    oyente(actual);
+                } catch (error) {
+                    console.error("Falló un aviso de sincronización.", error);
+                }
+            });
+        }
+
+        // Cada pedido muestra si está pendiente de sincronizar.
+        const pedidos = Array.from(idsSinSubir.pedidos || []).sort().join(",");
+        if (pedidos !== textoPedidosSinSubir) {
+            textoPedidosSinSubir = pedidos;
+            if (typeof renderizarHistorial === "function") intentar(renderizarHistorial);
+        }
+    }
+
+    // Anota qué documentos de una parte esperan subir y si la foto vino de
+    // la copia del celular (sin confirmar con la nube).
+    function anotarSincronizacion(parte, foto, documentosDeLaFoto) {
+        const ids = new Set();
+
+        documentosDeLaFoto.forEach(documento => {
+            if (documento.metadata.hasPendingWrites) ids.add(documento.id);
+        });
+
+        idsSinSubir[parte] = ids;
+
+        if (foto.metadata.fromCache) {
+            partesDesdeCache.add(parte);
+        } else {
+            partesDesdeCache.delete(parte);
+        }
+    }
+
+    // Conectada solo cuando la nube confirmó lo que se ve; si los datos salen
+    // de la copia del celular, es "sin señal" o todavía "conectando".
+    function actualizarConexion(faltanPartes) {
+        if (faltanPartes) return;
+
+        if (!navigator.onLine) {
+            cambiarEstado("sinConexion");
+        } else if (partesDesdeCache.size) {
+            cambiarEstado("conectando");
+        } else {
+            cambiarEstado("conectada");
+        }
+    }
+
     function escucharNube() {
         if (!db || !refDistribuidora) return;
 
         dejarDeEscuchar();
+        partesDesdeCache.clear();
+        Object.keys(idsSinSubir).forEach(parte => delete idsSinSubir[parte]);
         cambiarEstado("conectando");
 
         const pendientes = new Set(Object.keys(documentos).concat("config"));
         const llego = parte => {
             pendientes.delete(parte);
-            if (pendientes.size === 0) cambiarEstado("conectada");
+            actualizarConexion(pendientes.size > 0);
+            avisarSincronizacion();
         };
+
+        // includeMetadataChanges: también avisa cuando la nube confirma un
+        // cambio o cuando se pasa de la copia del celular a la nube.
+        const opciones = { includeMetadataChanges: true };
 
         Object.keys(SUBCOLECCIONES).forEach(coleccion => {
             const subcoleccion = SUBCOLECCIONES[coleccion];
+            let primera = true;
 
             desuscripciones.push(
-                refDistribuidora.collection(subcoleccion).onSnapshot(foto => {
-                    const mapa = new Map();
-                    foto.forEach(documento => mapa.set(documento.id, documento.data()));
-                    documentos[subcoleccion] = mapa;
-                    avisarSiCambio([coleccion]);
+                refDistribuidora.collection(subcoleccion).onSnapshot(opciones, foto => {
+                    // Si solo cambió el estado de sincronización, los datos son los mismos.
+                    if (primera || foto.docChanges().length) {
+                        const mapa = new Map();
+                        foto.forEach(documento => mapa.set(documento.id, documento.data()));
+                        documentos[subcoleccion] = mapa;
+                        avisarSiCambio([coleccion]);
+                        primera = false;
+                    }
+
+                    anotarSincronizacion(subcoleccion, foto, foto.docs);
                     llego(subcoleccion);
                 }, alFallarEscucha)
             );
         });
 
         desuscripciones.push(
-            refDistribuidora.collection("config").doc("marcas").onSnapshot(foto => {
+            refDistribuidora.collection("config").doc("marcas").onSnapshot(opciones, foto => {
                 configMarcas = foto.exists ? (foto.data() || {}) : {};
                 avisarSiCambio(["productos", "ordenMarcas"]);
+                anotarSincronizacion("config", foto, foto.exists ? [foto] : []);
                 llego("config");
             }, alFallarEscucha)
         );
@@ -661,6 +772,64 @@
         cartel.textContent = "Modo prueba · distribuidora de prueba en la nube";
         document.body.appendChild(cartel);
         document.documentElement.classList.add("conModoPrueba");
+        actualizarIndicador();
+    }
+
+    // -------------------------------------------------
+    // Indicador general de conexión (T12)
+    // -------------------------------------------------
+    // En modo nube es un cartel fijo abajo; en modo prueba se suma al cartel
+    // de modo prueba. Muestra la conexión y cuántos cambios faltan subir.
+
+    function textoCambios(cantidad) {
+        return cantidad === 1 ? "1 cambio" : cantidad + " cambios";
+    }
+
+    function textoIndicador() {
+        const sinSubir = cantidadSinSubir();
+
+        if (estado === "sinConexion") {
+            return sinSubir ? "Sin señal · " + textoCambios(sinSubir) + " sin subir" : "Sin señal · todo guardado";
+        }
+        if (estado === "conectada") {
+            return sinSubir ? "Subiendo " + textoCambios(sinSubir) + "…" : "Conectada · todo subido";
+        }
+        if (estado === "sinPermiso") return "La nube no da permiso";
+        if (estado === "error") return "Problema con la nube";
+        return sinSubir ? "Conectando · " + textoCambios(sinSubir) + " sin subir" : "Conectando…";
+    }
+
+    function estadoIndicador() {
+        if (["sinPermiso", "error"].includes(estado)) return "error";
+        if (estado === "conectada" && !cantidadSinSubir()) return "ok";
+        return "espera";
+    }
+
+    function mostrarIndicadorNube() {
+        if (document.getElementById("indicadorNube")) return;
+
+        const indicador = document.createElement("div");
+        indicador.id = "indicadorNube";
+        indicador.className = "indicadorNube";
+        indicador.setAttribute("role", "status");
+        document.body.appendChild(indicador);
+        document.documentElement.classList.add("conIndicadorNube");
+        actualizarIndicador();
+    }
+
+    function actualizarIndicador() {
+        if (!modo || !document.body) return;
+
+        const texto = textoIndicador();
+        const tipo = estadoIndicador();
+        const indicador = modo === "prueba"
+            ? document.getElementById("cartelModoPrueba")
+            : document.getElementById("indicadorNube");
+
+        if (!indicador) return;
+
+        indicador.dataset.estado = tipo;
+        indicador.textContent = (modo === "prueba" ? "Modo prueba · " : "") + texto;
     }
 
     // -------------------------------------------------
@@ -1205,13 +1374,7 @@
     // Antes se vacía la copia de Firestore en el celular (no localStorage):
     // la que quedó de la migración dejaba trabada la escucha en tiempo real.
     // No se pierde nada: todo lo subido ya está confirmado en la nube.
-    async function activarNube() {
-        const usuario = window.cuentaVendeFrio?.usuarioActual();
-
-        if (!usuario || !migracionVerificada || migracionVerificada.uid !== usuario.uid) {
-            throw new Error("Primero subí tus datos y esperá que coincidan los totales.");
-        }
-
+    async function vaciarCopiaDeLaNube() {
         try {
             const firestore = obtenerFirestore();
 
@@ -1222,8 +1385,76 @@
         } catch (error) {
             console.warn("No se pudo vaciar la copia de la nube en el celular.", error);
         }
+    }
+
+    async function activarNube() {
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+
+        if (!usuario || !migracionVerificada || migracionVerificada.uid !== usuario.uid) {
+            throw new Error("Primero subí tus datos y esperá que coincidan los totales.");
+        }
+
+        await vaciarCopiaDeLaNube();
 
         localStorage.setItem(DB_MODO_NUBE, JSON.stringify(migracionVerificada));
+        window.location.reload();
+    }
+
+    // Para los demás celulares (T12): pasan a la nube sin subir sus propios
+    // datos (por ejemplo, las listas de ejemplo). Solo se permite si la nube
+    // ya tiene datos subidos desde el celular principal. localStorage no se toca.
+    async function usarNubeSinSubir() {
+        if (migracionEnCurso) throw errorMigracion("Esperá a que termine la subida.", "datos-locales");
+        if (modo) {
+            throw errorMigracion(
+                modo === "prueba" ? "Primero apagá el modo prueba." : "Tus datos ya salen de la nube.",
+                "datos-locales"
+            );
+        }
+
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
+        const firestore = obtenerFirestore();
+
+        if (!usuario) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
+        if (!idDistribuidora) {
+            throw errorMigracion("Tu distribuidora en la nube todavía no está lista.", "datos-locales");
+        }
+        if (!firestore) throw errorMigracion("La nube no está disponible en este momento.", "datos-locales");
+        if (!navigator.onLine) throw errorMigracion("Hace falta internet para revisar la nube.", "datos-locales");
+
+        let tieneDatos = false;
+
+        try {
+            const ref = firestore.collection("distribuidoras").doc(idDistribuidora);
+
+            for (const grupo of GRUPOS_MIGRACION) {
+                const foto = await esperarNube(ref.collection(grupo.subcoleccion).limit(1).get({ source: "server" }));
+                if (!foto.empty) {
+                    tieneDatos = true;
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error("No se pudo revisar la nube.", error);
+            throw errorMigracion(
+                error && error.code === "permission-denied"
+                    ? "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas."
+                    : "No se pudo revisar la nube. Revisá la señal y probá de nuevo.",
+                "datos-locales"
+            );
+        }
+
+        if (!tieneDatos) {
+            throw errorMigracion(
+                "Tu distribuidora en la nube está vacía. Primero subí los datos desde el celular principal con \"Subir mis datos\".",
+                "datos-locales"
+            );
+        }
+
+        await vaciarCopiaDeLaNube();
+
+        localStorage.setItem(DB_MODO_NUBE, JSON.stringify({ uid: usuario.uid, distribuidora: idDistribuidora }));
         window.location.reload();
     }
 
@@ -1285,7 +1516,14 @@
         usarAdaptadorDatos(adaptadorNube);
         escucharCambiosDatos(redibujarPantallas);
 
-        if (tipo === "prueba") alCargarPagina(mostrarCartelPrueba);
+        if (tipo === "prueba") {
+            alCargarPagina(mostrarCartelPrueba);
+        } else {
+            alCargarPagina(mostrarIndicadorNube);
+        }
+
+        // El indicador sigue el estado de la conexión (T12).
+        oyentes.push(() => avisarSincronizacion());
 
         // Si se sale de la cuenta o entra otra, se vuelve a los datos de este celular.
         window.cuentaVendeFrio.escuchar(usuario => {
@@ -1303,6 +1541,11 @@
         window.addEventListener("online", () => {
             if (["sinConexion", "error"].includes(estado)) escucharNube();
         });
+
+        // Sin señal se avisa enseguida, sin esperar a que Firestore lo note.
+        window.addEventListener("offline", () => {
+            if (["conectada", "conectando"].includes(estado)) cambiarEstado("sinConexion");
+        });
     }
 
     window.nubeVendeFrio = {
@@ -1315,7 +1558,22 @@
         migracionEnCurso: () => migracionEnCurso,
         migracionVerificada: () => Boolean(migracionVerificada),
         activarNube,
+        usarNubeSinSubir,
         desactivarNube,
+        // Sincronización visible (T12).
+        sincronizacion,
+        pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
+        escucharSincronizacion(oyente) {
+            if (typeof oyente !== "function") return () => {};
+
+            oyentesSincronizacion.push(oyente);
+            oyente(sincronizacion());
+
+            return () => {
+                const indice = oyentesSincronizacion.indexOf(oyente);
+                if (indice >= 0) oyentesSincronizacion.splice(indice, 1);
+            };
+        },
         contarRepetidos,
         juntarRepetidos,
         reintentar: escucharNube,

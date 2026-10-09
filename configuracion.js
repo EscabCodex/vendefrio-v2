@@ -260,7 +260,34 @@
                     3. Usar la nube desde ahora
                 </button>` : ""}
             </div>
+            ${enCurso || verificada || !nube.usarNubeSinSubir ? "" : `
+            <div class="configMigracion">
+                <p class="configEstado">
+                    <strong>¿Ya subiste los datos desde otro celular?</strong><br>
+                    Usá la nube en este celular sin subir nada desde acá.
+                    Los datos de este celular no se suben ni se borran.
+                </p>
+                <button type="button" data-accion="usarNubeSinSubir">
+                    Usar la nube sin subir datos
+                </button>
+            </div>`}
         `;
+    }
+
+    // --- Sincronización visible (T12) ---
+    function textoSincronizacion() {
+        const nube = window.nubeVendeFrio;
+        if (!nube || !nube.sincronizacion) return "";
+
+        const sinSubir = nube.sincronizacion().sinSubir;
+        if (!sinSubir) return "✓ Todos los cambios de este celular están en la nube.";
+
+        return (sinSubir === 1 ? "1 cambio espera" : sinSubir + " cambios esperan") +
+            " para subir a la nube. Se suben solos cuando haya señal.";
+    }
+
+    function htmlSincronizacion() {
+        return `<p class="configEstado" id="sincronizacionNube" role="status">${textoSincronizacion()}</p>`;
     }
 
     function htmlModoNube() {
@@ -286,6 +313,7 @@
                 antes siguen guardados en este celular, sin cambios.
             </p>
             <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
+            ${htmlSincronizacion()}
             ${reintentar}
             <button type="button" data-accion="juntarRepetidos">
                 Juntar comercios y productos repetidos
@@ -333,6 +361,7 @@
                 Tus datos reales siguen guardados en este celular, sin cambios.
             </p>
             <p class="configEstado" id="estadoNubePrueba">${textos[estadoNube] || ""}</p>
+            ${htmlSincronizacion()}
             ${reintentar}
             <button type="button" data-accion="apagarModoPrueba">
                 Apagar modo prueba
@@ -736,6 +765,29 @@
             );
         }
 
+        if (accion === "usarNubeSinSubir") {
+            const boton = event.target.closest("[data-accion]");
+
+            abrirConfirmacion(
+                "Usar la nube sin subir datos",
+                "Es para los demás celulares, cuando los datos ya se subieron desde el celular principal. La app se va a recargar y tus datos van a salir de la nube, compartidos con los otros celulares de tu cuenta. Los datos de este celular no se suben ni se borran. Hace falta internet.",
+                () => {
+                    if (boton) {
+                        boton.disabled = true;
+                        boton.textContent = "Revisando la nube…";
+                    }
+
+                    window.nubeVendeFrio.usarNubeSinSubir().catch(error => {
+                        if (boton) {
+                            boton.disabled = false;
+                            boton.textContent = "Usar la nube sin subir datos";
+                        }
+                        mostrarAviso("Todavía no", error.message);
+                    });
+                }
+            );
+        }
+
         if (accion === "juntarRepetidos") {
             const nube = window.nubeVendeFrio;
             if (!nube || !nube.contarRepetidos) return;
@@ -1048,9 +1100,21 @@
         });
     }
 
+    // Cambios que esperan subir (T12): se actualiza solo ese texto.
+    function conectarSincronizacion() {
+        if (!window.nubeVendeFrio.escucharSincronizacion) return;
+
+        window.nubeVendeFrio.escucharSincronizacion(() => {
+            const texto = document.getElementById("sincronizacionNube");
+            if (texto) texto.textContent = textoSincronizacion();
+        });
+    }
+
     if (window.nubeVendeFrio) {
         conectarNube();
+        conectarSincronizacion();
     } else {
+        window.addEventListener("nubeVendeFrioLista", conectarSincronizacion, { once: true });
         window.addEventListener("nubeVendeFrioLista", conectarNube, { once: true });
     }
 }());

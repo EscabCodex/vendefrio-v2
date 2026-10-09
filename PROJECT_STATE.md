@@ -18,6 +18,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Configuración y respaldo de datos (exportar e importar).
 - Cuenta: ingresar y salir con email y contraseña (Firebase Auth). Al primer ingreso se crea la distribuidora en Firestore. Iniciar sesión no cambia de dónde salen los datos.
 - Subir mis datos a la nube (T11): respaldo obligatorio, subida en tandas, totales verificados, paso a modo nube y botón para volver a los datos del celular. Los pedidos subidos llevan la etiqueta "Histórico" en Historial.
+- Sincronización visible (T12): en modo nube, cartel fijo abajo con la conexión y los cambios sin subir; en Historial, cada pedido que todavía no llegó a la nube dice "Pendiente de sincronizar". Los demás celulares pasan a la nube con "Usar la nube sin subir datos".
 - Barra inferior y menú "Más", íconos SVG propios, modales tipo bottom sheet, toasts, transiciones, háptica y safe areas.
 - PWA con service worker.
 
@@ -73,7 +74,61 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Fotos de comprobante:** se comprimen en el celular y se guardan en Firestore. No se usa Firebase Storage porque exige plan con tarjeta.
 - **Migración:** 1) exportar respaldo con la función existente; 2) botón "Subir mis datos a la nube" que copia todo desde `localStorage`; 3) `localStorage` no se borra hasta confirmar que los datos están completos en la nube.
 - **Pedidos viejos (decidido el 2026-10-08):** al subir los datos a la nube (T11), todos los pedidos del historial se marcan como **"histórico"**. No es un estado del recorrido: no se pasa de "histórico" a otro estado ni al revés, y no se agrega ninguna entrada al historial de estados (no se inventan fechas ni usuarios). Se ven en Historial y Estadísticas, pero nunca en las vistas de trabajo (a preparar, en reparto, etc.). Se descartaron "sin estado" (podían aparecer como pendientes) y "entregado" (era un dato inventado que después no se puede borrar). La migración se hace en un momento sin pedidos pendientes, por ejemplo al final del día después de repartir; si alguno quedara pendiente, se carga de nuevo como pedido nuevo.
-- **Empleado nuevo (propuesta, a validar):** el dueño agrega el email del empleado desde la app; al registrarse con ese email, queda dentro de la distribuidora.
+- **Empleado nuevo:** reemplazado por "Usuarios y acceso" (decidido el 2026-10-09, ver abajo). Ya no se usa el email del empleado.
+
+### Usuarios y acceso (decidido el 2026-10-09)
+
+Problema: hoy los celulares entran todos con la cuenta del dueño y no se sabe quién hizo cada cosa. Además, un registro abierto con email permitiría que cualquiera entre y gaste el límite gratuito de Firebase. Todo esto entra en el plan gratuito (Spark), sin funciones pagas.
+
+**Pantalla de inicio**
+- Al abrir la app sin sesión aparece una pantalla con dos accesos: **"Distribuidora"** (dueño, encargado o persona a cargo) y **"Empleado"**. Abajo, **"Continuar sin iniciar sesión"**.
+- "Continuar sin iniciar sesión" es la app como funcionaba antes de Firebase: los datos quedan solo en ese celular y no se comparten. El celular recuerda la elección y no vuelve a preguntar; desde Configuración > Cuenta se puede ingresar después.
+- Quien ya ingresó no vuelve a ver la pantalla: la sesión queda guardada en el celular y la app abre y trabaja sin internet (T12). Solo el primer ingreso o el registro necesitan internet.
+
+**Distribuidora (dueño o encargado)**
+- Ingresa con email y contraseña. Tiene botón **"Registrarse"**: crea la cuenta y su distribuidora vacía.
+- Si al registrarse el celular tiene datos propios, se le ofrece la migración de T11 ("Subir mis datos a la nube"); si no, usa la nube directamente.
+- Solo la cuenta dueña de la distribuidora ve el panel de empleados y las acciones delicadas (subir datos, juntar repetidos).
+
+**Empleado: ingreso con código**
+- El encargado genera un **código de acceso** en Configuración > Empleados y se lo pasa al empleado (en persona o por WhatsApp).
+- El código tiene 8 caracteres sin letras que se confundan (sin 0/O ni 1/I), sirve **una sola vez** y **vence a las 24 horas**. Así nadie puede adivinar uno ni entrar sin permiso del encargado.
+- El empleado elige "Empleado", escribe el código y la app le crea una **cuenta anónima** (cuenta sin email ni contraseña, guardada en ese celular). Las reglas de seguridad de Firestore revisan el código y lo suman a la distribuidora.
+- Después completa **su nombre (obligatorio)** y **sus roles (opcional)**. Sin nombre no avanza.
+- **Roles (actualizado el 2026-10-09):** casillas que se pueden marcar varias a la vez (por ejemplo, un repartidor que además vende y arma pedidos). Se puede no marcar ninguna.
+- **El encargado edita la lista de roles** (Configuración > Empleados > "Editar roles"): crear roles nuevos, cambiarles el nombre y eliminarlos. Los roles nuevos aparecen enseguida en la lista para elegir, en todos los celulares. Los empleados no pueden editar la lista.
+- Cada distribuidora arranca con 5 roles precargados, que también se pueden editar o eliminar:
+  - **Vendedor:** visita comercios y toma pedidos (preventista).
+  - **Depósito:** prepara los pedidos con la checklist y carga el vehículo.
+  - **Repartidor:** reparte y marca los pedidos como entregados.
+  - **Cobranza:** cobra y revisa los comprobantes de transferencia.
+  - **Administración:** controla pedidos, faltantes y precios desde la oficina; es el "responsable económico" que recibe el aviso de faltantes (ver "Decisiones tomadas").
+- Cada rol tiene un id que no cambia: al renombrarlo, los empleados que lo tienen lo conservan con el nombre nuevo.
+- Eliminar un rol que tienen empleados pide confirmación con la cantidad ("lo tienen 3 empleados") y se lo quita a esos empleados; no se borra ningún empleado. No se pueden crear dos roles con el mismo nombre.
+- Por ahora los roles son solo nombres. En la Etapa 3, como los roles son editables, los permisos no van a depender del nombre: cada rol va a tener sus propias casillas de permiso (por ejemplo "prepara pedidos", "entrega", "recibe aviso de faltantes"). El encargado puede cambiar los roles de cualquier empleado desde el panel.
+- El empleado siempre usa la nube de la distribuidora: no tiene "datos de este celular", ni migración, ni modo prueba, ni acciones delicadas.
+
+**Si el empleado cambia de celular o se le borran los datos**
+- La sesión no se cierra sola ni vence: no hace falta un botón "Mantener sesión activa". El acceso se pierde solo si se cambia de celular, se borran los datos del navegador o se desinstala la app.
+- Solución: la persona es la **ficha de empleado** (nombre, roles e historial), no el celular. El encargado toca **"Código de reingreso"** en la ficha de ese empleado; el empleado lo escribe en el celular nuevo y vuelve a ser **el mismo empleado**, con su nombre, roles e historial. El celular viejo pierde el acceso automáticamente. Mismas reglas que el código nuevo: una vez, 24 horas.
+- Prevención: la pantalla del empleado recomienda **instalar la app en la pantalla de inicio**. En iPhone, Safari puede borrar los datos de una web que no se usa en 7 días si no está instalada; instalada como app, no.
+- Lo que se registre en los pedidos (Etapa 3) guarda el id de la ficha de empleado y su nombre, no el de la cuenta anónima, para que el historial no se corte al cambiar de celular.
+
+**Panel de empleados (Configuración > Empleados, solo encargado)**
+- Lista de empleados con nombre, roles y si está activo.
+- **Alta:** generar código nuevo. **Roles:** marcar o desmarcar. **Reingreso:** generar código para otro celular. **Baja:** quitar el acceso.
+- Al dar de baja, la nube le niega el acceso al instante (aunque tenga la app abierta); su celular borra la copia de los datos de la nube y vuelve a la pantalla de inicio. La ficha queda guardada como "dado de baja" para que su nombre siga apareciendo en el historial.
+- Los códigos sin usar se pueden anular desde el panel.
+
+**Estructura en Firestore (propuesta, se valida en T14)**
+
+```text
+codigosAcceso/{codigo}          distribuidora, empleado (si es reingreso), vence, usado
+distribuidoras/{id}
+  empleados/{idEmpleado}        nombre, roles (lista de ids de rol), activo, uid actual
+  config/roles                  lista de roles: id y nombre (solo la edita el dueño)
+  miembros/{uid}                acceso del celular; para empleados guarda idEmpleado
+```
 
 ### Estructura en Firestore (validada en T8)
 
@@ -148,7 +203,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
   - Borrar `maptiler-config.js` de la raíz (no la de `api`).
   - `api/resolver-maps.js` acepta solo enlaces de Google Maps (incluidos los enlaces cortos de Google) y rechaza los demás.
   - **Aceptación:** pegar un enlace de Google Maps en un comercio sigue funcionando; el mapa 3D sigue cargando.
-- [ ] **M1 — MapTiler (dueño).** Regenerar la clave, limitarla al dominio de Vercel y actualizar `MAPTILER_KEY` en Vercel.
+- [x] **M1 — MapTiler (dueño).** Regenerar la clave, limitarla al dominio de Vercel y actualizar `MAPTILER_KEY` en Vercel.
 - [x] **T2 — Botón "＋ Agregar al pedido" del catálogo.**
   - Confirmar el error y arreglarlo: el producto elegido queda cargado en el pedido.
   - **Aceptación:** desde Catálogo se agrega un producto y aparece en Pedido; el borrador del pedido sigue funcionando.
@@ -207,14 +262,38 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
   - Todos los pedidos del historial suben marcados como "histórico" (ver "Datos compartidos"). Avisa que conviene hacerla sin pedidos pendientes.
   - Recién con todo verificado ofrece pasar a modo nube. `localStorage` no se borra.
   - **Aceptación:** los totales coinciden; volver a correrla no duplica nada.
-- [ ] **T12 — Sincronización visible y prueba con dos celulares.**
+- [x] **T12 — Sincronización visible y prueba con dos celulares.**
   - Cada pedido muestra si está pendiente de sincronizar; indicador general de conexión.
   - **Aceptación:** prueba real con dos celulares: carga sin internet, sincronización al volver y dos personas sobre los mismos datos sin pisarse.
 
+### Bloque E — Usuarios y acceso (cierra la Etapa 2)
+
+Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
+
+- [ ] **T13 — Pantalla de inicio y registro de la distribuidora.**
+  - Pantalla al abrir sin sesión: "Distribuidora", "Empleado" (todavía sin funcionar: avisa que llega en T14) y "Continuar sin iniciar sesión".
+  - "Distribuidora": ingresar con email y contraseña y "Registrarse" (crea cuenta y distribuidora). Con datos propios en el celular ofrece la migración de T11; sin datos, usa la nube directamente.
+  - "Continuar sin iniciar sesión" queda recordado en el celular; desde Configuración > Cuenta se puede ingresar después.
+  - Quien ya tiene sesión entra directo, también sin internet.
+  - **Aceptación:** registrarse con un email nuevo crea la distribuidora y entra a la nube; el dueño actual entra como siempre con sus datos; "Continuar sin iniciar sesión" muestra los datos de antes; la app abre sin internet con sesión iniciada; `localStorage` intacto.
+- [ ] **M4 — Inicio anónimo (dueño).** En la consola de Firebase, activar el método de inicio de sesión "Anónimo". Claude Code pasa los pasos.
+- [ ] **T14 — Ingreso del empleado con código.**
+  - En Configuración > Empleados, el encargado genera un código (8 caracteres, una vez, 24 horas).
+  - "Empleado" en la pantalla de inicio: código → cuenta anónima → nombre obligatorio y roles opcionales, varios a la vez, de la lista de roles de la distribuidora (si todavía no existe, se crea con los 5 precargados) → entra a la nube de la distribuidora.
+  - Ficha de empleado y código de reingreso para otro celular (el celular viejo pierde el acceso).
+  - El empleado no ve migración, modo prueba ni acciones delicadas. Recomendación de instalar la app en la pantalla de inicio.
+  - `firestore.rules`: solo el dueño crea códigos y fichas; un código sirve una vez y vence; el empleado solo edita su nombre y sus roles.
+  - **Aceptación:** con dos celulares, el empleado entra con un código y ve los mismos datos; un código usado, vencido o inventado no deja entrar; el reingreso en otro celular conserva nombre y rol y saca al celular viejo; reglas probadas con los emuladores.
+- [ ] **M5 — Publicar las reglas nuevas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
+- [ ] **T15 — Panel de empleados.**
+  - Lista con nombre, roles y estado; cambiar roles; anular códigos sin usar; dar de baja.
+  - "Editar roles": crear, renombrar y eliminar roles (al eliminar uno en uso, confirma con la cantidad y se lo quita a esos empleados). `firestore.rules`: solo el dueño escribe `config/roles`.
+  - Baja: la nube le niega el acceso al instante; su celular borra la copia de la nube y vuelve a la pantalla de inicio; la ficha queda como "dado de baja".
+  - **Aceptación:** con dos celulares, dar de baja al empleado con la app abierta lo saca enseguida; un rol creado en un celular aparece en el otro, renombrarlo lo cambia en los empleados que lo tienen y eliminarlo se lo quita sin borrar empleados; un empleado dado de baja no puede volver a entrar sin un código nuevo; los datos de la distribuidora no se tocan.
+
 ### Después del plan
 
-- Incorporación de empleados por email (validar la propuesta).
-- Ciclo de estados del pedido, checklist, faltantes y entrega (Etapa 3 del `ROADMAP.md`).
+- Ciclo de estados del pedido, checklist, faltantes y entrega (Etapa 3 del `ROADMAP.md`), con permisos por rol.
 
 ## Decisiones abiertas de la migración
 
@@ -222,9 +301,8 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 ## Pendientes técnicos
 
-- Ejecutar el plan de conexión con Firebase (T1 a T12).
-- Validar la propuesta de incorporación de empleados.
-- Rework visual completo.
+- Bloque E: usuarios y acceso (T13 a T15, M4 y M5).
+- Rework visual completo. Incluye mover el indicador de conexión de T12 (hoy, cartel chico abajo) arriba a la derecha del nombre "VendeFrío", donde dice "Reparto Activo" (pedido del dueño, 2026-10-09).
 - Leaflet se carga desde internet y no funciona sin conexión (fuera del plan de Firebase).
 
 ## Bitácora de sesiones
@@ -249,3 +327,9 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-08 — Claude: decisión sobre los pedidos viejos. Al migrar (T11) todos se marcan como "histórico": se ven en Historial y Estadísticas, no en las vistas de trabajo, y no se inventan entradas en el historial de estados. La migración se hace sin pedidos pendientes. Sin cambios de código. Próximo paso: T11.
 - 2026-10-08 — Claude Code: T11. Configuración > Cuenta tiene la tarjeta "Subir mis datos a la nube" (solo con cuenta, distribuidora lista, sin modo prueba y con los datos del celular): 1) "Exportar respaldo" obligatorio; 2) "Subir mis datos", con confirmación que avisa que conviene hacerlo sin pedidos pendientes y que todos los pedidos quedan como "histórico"; sube comercios, productos (con su marca), marcas y su orden, pedidos y rutas en tandas (hasta 400 escrituras o 4 MB) y espera que la nube confirme cada una; 3) compara los totales leyendo del servidor y muestra "X de Y ✓"; 4) recién con todo verificado aparece "Usar la nube desde ahora". Cada registro sube con su id como nombre del documento y se saltea si ya está en la nube: volver a correrla no duplica ni pisa nada, y si se corta a la mitad "Reintentar" sube solo lo que falta. Los pedidos suben con `estado: "historico"` y sin entradas en el historial de estados. Los documentos quedan iguales a los que escribe el adaptador nube, así el primer cambio en modo nube escribe solo ese registro. Nuevo modo nube real en `nube.js` (clave `vendefrio_modo_nube` con `{ uid, distribuidora }`): mismo adaptador que el modo prueba, apuntando a `distribuidoras/{uid}`. Al pasar a la nube se vacía la copia interna de Firestore del celular (no `localStorage`), porque la que quedaba de la migración dejaba trabada la escucha en tiempo real. En Cuenta, en modo nube: estado de la conexión, "Volver a los datos de este celular" (con confirmación) y sin modo prueba; "Salir de la cuenta" avisa que vuelve a los datos del celular. Historial muestra la etiqueta "Histórico". `localStorage` no se borra ni se cambia. No hizo falta tocar `firestore.rules`. Service worker con caché `vendefrio-v130`. Probado con los emuladores de Firebase: 40 pruebas (120 comercios, 150 productos con fotos, 950 pedidos y 2 rutas; sin internet, corte a la mitad, reintento, segunda corrida sin duplicar, faltantes que se completan, pedidos como histórico, otro celular en tiempo real, volver y salir, `localStorage` idéntico) y 6 pruebas del modo prueba sin cambios. Pendiente para T12: un segundo celular solo puede entrar al modo nube corriendo la migración, que subiría sus propios datos (por ejemplo, las listas de ejemplo); hace falta "Usar la nube sin subir datos" para los demás celulares. Si después de volver a los datos del celular se sube otra vez, reaparece en la nube lo que se había borrado allá. Próximo paso: probar T11 y después T12.
 - 2026-10-08 — Claude Code: arreglo de T11 (repetidos). El dueño subió sus datos y aparecieron comercios y productos repetidos en la nube. Causa probable: la subida se corrió también en la vista previa de Vercel, que guarda sus propios datos (las listas de ejemplo, con otros ids). Ahora la migración saltea un comercio o ruta si en la nube ya hay uno con el mismo nombre, y un producto si ya hay uno con la misma marca y nombre, aunque tengan otro id; los totales se verifican igual. Los pedidos no se comparan por nombre. Service worker con caché `vendefrio-v131`. Probado con los emuladores de Firebase: 7 pruebas nuevas (subir desde dos lugares no repite) y las 40 de T11. El dueño dio el OK para juntar los repetidos que ya están en la nube: en modo nube, Configuración > Cuenta tiene "Juntar comercios y productos repetidos" (necesita estar "Conectada"). Agrupa comercios por nombre y productos por marca y nombre (sin importar mayúsculas ni tildes); de cada grupo queda la copia que usan las rutas o, si no, la que tiene más datos, y se le pasan los datos que le falten (`pedidosRealizados` toma el mayor y `ultimaVisita` la más nueva). Las rutas pasan a apuntar a esa copia, sin paradas repetidas; se saca de la lista de marcas la marca que quedó vacía si estaba repetida con otra escrita parecido. Los pedidos no se tocan. Antes de escribir descarga un respaldo de toda la nube (`vendefrio-antes-de-juntar-repetidos-FECHA.json`, se puede combinar). Pide confirmación con las cantidades y se puede repetir: si se corta, sigue desde donde quedó. Escribe directo en Firestore en tandas (no pasa por la red de seguridad de T10, que frena borrar varios registros desde la app). Probado con los emuladores: 21 pruebas (33 comercios y 20 productos de más, datos combinados, ruta corregida, marca repetida, 950 pedidos intactos, 120 fotos, otro celular, sin internet). En el emulador, el otro celular recibe los borrados de a uno (unos 24 segundos para 33); la nube real los manda juntos.
+- 2026-10-08 — Claude Code: T12. Indicador general de conexión: en modo nube, un cartel fijo abajo (`indicadorNube`) dice "Conectada · todo subido", "Subiendo N cambios…", "Sin señal · N cambios sin subir", "Conectando…" o el error; en modo prueba se suma al cartel de modo prueba ("Modo prueba · …"). En modo oscuro va con fondo oscuro y letras blancas. Historial muestra "Pendiente de sincronizar" en cada pedido que la nube todavía no confirmó, y Configuración > Cuenta dice cuántos cambios esperan subir. `nube.js` escucha también los avisos de sincronización de Firestore (`includeMetadataChanges`): "Conectada" ahora significa que la nube confirmó los datos (antes bastaba la copia del celular) y sin señal se avisa enseguida. Nuevo "Usar la nube sin subir datos" en Cuenta (pendiente de T11): para los demás celulares, pasa a la nube sin subir sus propios datos; solo se permite si la nube ya tiene datos. `localStorage` no se borra ni se cambia. Service worker con caché `vendefrio-v132`. Probado con los emuladores de Firebase: 32 pruebas con dos celulares simulados (A sube y pasa a la nube, B usa la nube sin subir y ve los mismos totales, cuenta con nube vacía frenada, A sin señal carga un pedido y edita un comercio mientras B edita otro y carga otro pedido, al volver la señal los dos ven todo sin pisarse, etiquetas e indicador que se limpian, modo prueba, modo oscuro, `localStorage` real idéntico). Falta la prueba real con dos celulares del dueño (guion en el pull request). Próximo paso: probar T12 con dos celulares; con eso se completa el plan de Firebase.
+- 2026-10-09 — Claude Code: el dueño probó T12 con dos celulares reales y anduvo todo (carga sin señal, sincronización al volver y dos personas sobre los mismos datos sin pisarse). Comentario de diseño, para el rework visual: el indicador de conexión no va como cartel chico abajo, sino arriba a la derecha del nombre, donde hoy dice "Reparto Activo". Anotado en "Pendientes técnicos" y en `ROADMAP.md`. Sin cambios de código. Queda pendiente M1 (MapTiler). Próximo paso: decidir si se cierra la Etapa 2.
+- 2026-10-09 — Claude Code: el dueño confirmó M1 (clave de MapTiler regenerada, limitada al dominio y actualizada en Vercel); marcada en el plan. Con eso el plan de Firebase queda completo. Se anotó la idea de registro y de ingreso obligatorio, todavía sin decidir en qué etapa va. Sin cambios de código.
+- 2026-10-09 — Claude Code: decisión "Usuarios y acceso" con el dueño. Pantalla de inicio con "Distribuidora" (email, contraseña y "Registrarse"), "Empleado" (código del encargado: 8 caracteres, una vez, 24 horas; nombre obligatorio y rol opcional de una lista fija) y "Continuar sin iniciar sesión". Si el empleado cambia de celular, el encargado le da un código de reingreso y vuelve a ser la misma ficha de empleado (no hace falta "mantener sesión activa": la sesión no vence). Panel de empleados con alta, roles, reingreso y baja. Plan en el Bloque E (T13, M4, T14, M5, T15), que cierra la Etapa 2. Sin cambios de código. Próximo paso: T13.
+- 2026-10-09 — Claude Code: el dueño ajustó los roles: casillas que se pueden marcar varias a la vez, sobre una lista fija de 5 (Vendedor, Depósito, Repartidor, Cobranza, Administración); se sacó "Otro". Sin cambios de código.
+- 2026-10-09 — Claude Code: el dueño pidió roles editables. La distribuidora arranca con los 5 roles precargados y el encargado puede crear, renombrar y eliminar roles desde "Editar roles" (en T15); cada rol tiene un id fijo y, en la Etapa 3, sus propias casillas de permiso. Sin cambios de código.

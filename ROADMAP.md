@@ -10,7 +10,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Elegir el servicio de datos compartidos y definir la arquitectura. Es la decisión técnica más importante.
 
 **Etapa 2 — Datos compartidos**
-- Cuenta de la distribuidora con varios usuarios.
+- Cuenta de la distribuidora con varios usuarios: pantalla de inicio, registro del encargado, ingreso de empleados con código y panel de empleados (Bloque E de `PROJECT_STATE.md`).
 - Pasar los módulos de `localStorage` a datos compartidos, sin perder lo que ya está cargado.
 - Respaldo y recuperación de datos.
 
@@ -20,7 +20,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Trabajo sin conexión con sincronización automática.
 
 **Etapa 4 — Pulido y cierre**
-- Rework visual completo de la app.
+- Rework visual completo de la app. Incluye pasar el indicador de conexión (T12) arriba a la derecha del nombre, en lugar de "Reparto Activo".
 - Pruebas en celulares reales, modo claro y oscuro, y PWA.
 - Cierre de la 1.0 y prueba en el trabajo diario.
 
@@ -49,7 +49,6 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 - ¿Qué pasa si dos personas modifican el mismo pedido a la vez?
 - ¿Quién puede cambiar cada estado?
 - ¿Qué datos mínimos necesita el depósito para preparar?
-- ¿Cómo entra un empleado nuevo a la cuenta de la distribuidora?
 - ¿Qué diferencia hay entre pedido, remito, factura y entrega?
 - ¿Qué impresora o dispositivo se usará más adelante?
 
