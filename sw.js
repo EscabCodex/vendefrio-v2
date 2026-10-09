@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v132 - Firebase: sincronización visible)
+// VendeFrío - Service Worker (v133 - Pantalla de inicio y registro)
 // =====================================================
-const CACHE_NAME = "vendefrio-v132";
+const CACHE_NAME = "vendefrio-v133";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -30,7 +30,8 @@ const ARCHIVOS = [
   "./firebase-config.js",
   "./cuenta.js",
   "./distribuidora.js",
-  "./nube.js"
+  "./nube.js",
+  "./inicio.js"
 ];
 
 function esSolicitudGETMismaApp(request) {

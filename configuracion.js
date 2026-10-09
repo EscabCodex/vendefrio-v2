@@ -142,6 +142,40 @@
             .replace(/"/g, "&quot;");
     }
 
+    // --- Nombre de la distribuidora (T13) ---
+    let editandoNombre = false;
+
+    function htmlNombreDistribuidora() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        if (!distribuidora || !distribuidora.nombreActual || !usuario || !distribuidora.idActual()) return "";
+
+        const nombre = distribuidora.nombreActual();
+        const esDueno = distribuidora.idActual() === usuario.uid;
+
+        if (editandoNombre && esDueno) {
+            return `
+                <form class="configCuentaFormulario configNombreDistribuidora" id="formNombreDistribuidora" novalidate>
+                    <label>${window.icono("tienda",15)} Nombre de tu distribuidora
+                        <input type="text" id="nombreDistribuidoraNuevo" autocomplete="organization"
+                            maxlength="${distribuidora.largoMaximoNombre}" value="${escaparTexto(nombre)}" required>
+                    </label>
+                    <p class="configCuentaError oculto" id="nombreDistribuidoraError" role="alert"></p>
+                    <button type="submit" class="configCuentaIngresar">Guardar nombre</button>
+                    <button type="button" data-accion="cancelarNombreDistribuidora">Cancelar</button>
+                </form>
+            `;
+        }
+
+        return `
+            <p class="configEstado configNombreDistribuidora">
+                Distribuidora<br>
+                <strong id="cuentaNombreDistribuidora">${escaparTexto(nombre) || "…"}</strong>
+            </p>
+            ${esDueno ? `<button type="button" data-accion="editarNombreDistribuidora">Cambiar nombre</button>` : ""}
+        `;
+    }
+
     function htmlDistribuidora() {
         const estado = window.distribuidoraVendeFrio?.estado() || "noDisponible";
 
@@ -389,6 +423,7 @@
                     Sesión iniciada como<br>
                     <strong>${escaparTexto(usuario.email)}</strong>
                 </p>
+                ${htmlNombreDistribuidora()}
                 ${htmlDistribuidora()}
                 ${window.nubeVendeFrio?.modoPrueba() || window.nubeVendeFrio?.modoNube?.() ? "" : `
                 <p class="configEstado">
@@ -439,8 +474,9 @@
         if (!resumen) return;
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const nombre = usuario ? window.distribuidoraVendeFrio?.nombreActual?.() : "";
         resumen.textContent = usuario
-            ? usuario.email + (window.nubeVendeFrio?.modoPrueba()
+            ? (nombre ? nombre + " · " : "") + usuario.email + (window.nubeVendeFrio?.modoPrueba()
                 ? " · modo prueba"
                 : window.nubeVendeFrio?.modoNube?.() ? " · nube" : "")
             : "Ingresá o salí de tu cuenta";
@@ -835,6 +871,21 @@
             );
         }
 
+        if (accion === "editarNombreDistribuidora") {
+            editandoNombre = true;
+            detalle("cuenta");
+            const campo = document.getElementById("nombreDistribuidoraNuevo");
+            if (campo) {
+                campo.focus();
+                campo.select();
+            }
+        }
+
+        if (accion === "cancelarNombreDistribuidora") {
+            editandoNombre = false;
+            detalle("cuenta");
+        }
+
         if (accion === "reintentarDistribuidora") {
             window.distribuidoraVendeFrio?.reintentar();
         }
@@ -953,6 +1004,36 @@
                 );
             }
         }
+    });
+
+    document.addEventListener("submit", event => {
+        if (event.target.id !== "formNombreDistribuidora") return;
+
+        event.preventDefault();
+
+        const nombre = (document.getElementById("nombreDistribuidoraNuevo")?.value || "").trim();
+        const error = document.getElementById("nombreDistribuidoraError");
+
+        if (!nombre) {
+            if (error) {
+                error.textContent = "Escribí el nombre de tu distribuidora.";
+                error.classList.remove("oculto");
+            }
+            return;
+        }
+
+        window.distribuidoraVendeFrio.cambiarNombre(nombre)
+            .then(() => {
+                editandoNombre = false;
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Nombre guardado" : "Nombre guardado. Se sube cuando vuelva la señal");
+            })
+            .catch(fallo => {
+                if (error) {
+                    error.textContent = fallo.message;
+                    error.classList.remove("oculto");
+                }
+            });
     });
 
     document.addEventListener("submit", event => {
@@ -1082,9 +1163,24 @@
         });
     }
 
+    // Nombre de la distribuidora: se cambia solo el texto, sin redibujar
+    // (así no se borra lo que se está escribiendo).
+    function conectarNombreDistribuidora() {
+        if (!window.distribuidoraVendeFrio.escucharNombre) return;
+
+        window.distribuidoraVendeFrio.escucharNombre(nombre => {
+            actualizarResumenCuenta();
+
+            const texto = document.getElementById("cuentaNombreDistribuidora");
+            if (texto) texto.textContent = nombre || "…";
+        });
+    }
+
     if (window.distribuidoraVendeFrio) {
+        conectarNombreDistribuidora();
         conectarDistribuidora();
     } else {
+        window.addEventListener("distribuidoraVendeFrioLista", conectarNombreDistribuidora, { once: true });
         window.addEventListener("distribuidoraVendeFrioLista", conectarDistribuidora, { once: true });
     }
 

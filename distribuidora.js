@@ -6,11 +6,21 @@
     let estado = "sinCuenta";
     let idDistribuidora = null;
     let uidEnCurso = null;
+    // Registro (T13): nombre que eligió el dueño al registrarse.
+    let nombrePendiente = null;
+    const LARGO_MAXIMO_NOMBRE = 80;
+    // Nombre de la distribuidora, para mostrarlo en el inicio y en Cuenta.
+    // Se escucha en tiempo real (sin internet sale de la copia del celular).
+    let nombre = "";
+    let idNombre = null;
+    let dejarDeEscucharNombre = null;
+    const oyentesNombre = [];
 
     // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible.
     function cambiarEstado(nuevoEstado, nuevoId) {
         estado = nuevoEstado;
         idDistribuidora = nuevoId || null;
+        escucharNombreEnLaNube(idDistribuidora);
 
         oyentes.forEach(oyente => {
             try {
@@ -19,6 +29,86 @@
                 console.error("Falló un aviso de la distribuidora.", error);
             }
         });
+    }
+
+    function avisarNombre() {
+        oyentesNombre.forEach(oyente => {
+            try {
+                oyente(nombre);
+            } catch (error) {
+                console.error("Falló un aviso del nombre de la distribuidora.", error);
+            }
+        });
+    }
+
+    function cambiarNombreConocido(nuevoNombre) {
+        if (nuevoNombre === nombre) return;
+        nombre = nuevoNombre;
+        avisarNombre();
+    }
+
+    function escucharNombreEnLaNube(id) {
+        if (id === idNombre) return;
+
+        if (dejarDeEscucharNombre) {
+            dejarDeEscucharNombre();
+            dejarDeEscucharNombre = null;
+        }
+
+        idNombre = id || null;
+
+        if (!idNombre) {
+            cambiarNombreConocido("");
+            return;
+        }
+
+        const db = obtenerFirestore();
+        if (!db) return;
+
+        dejarDeEscucharNombre = db.collection("distribuidoras").doc(idNombre).onSnapshot(
+            foto => {
+                const datos = foto.exists ? foto.data() : null;
+                cambiarNombreConocido(datos && typeof datos.nombre === "string" ? datos.nombre : "");
+            },
+            error => {
+                console.warn("No se pudo leer el nombre de la distribuidora.", error);
+                // Se vuelve a intentar la próxima vez que cambie la distribuidora.
+                dejarDeEscucharNombre = null;
+                idNombre = null;
+            }
+        );
+    }
+
+    // Solo el dueño puede cambiar el nombre (lo controla firestore.rules).
+    // No espera a la nube: sin internet se sube solo cuando vuelve la señal.
+    function cambiarNombre(nuevoNombre) {
+        const db = obtenerFirestore();
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const limpio = String(nuevoNombre || "").trim().slice(0, LARGO_MAXIMO_NOMBRE);
+
+        if (!db || !usuario || !idDistribuidora) {
+            return Promise.reject(new Error("Tu distribuidora en la nube todavía no está lista."));
+        }
+        if (idDistribuidora !== usuario.uid) {
+            return Promise.reject(new Error("Solo el dueño de la distribuidora puede cambiar el nombre."));
+        }
+        if (!limpio) {
+            return Promise.reject(new Error("Escribí el nombre de tu distribuidora."));
+        }
+
+        const guardado = db.collection("distribuidoras").doc(idDistribuidora).update({ nombre: limpio });
+        guardado.catch(error => {
+            console.error("No se pudo cambiar el nombre de la distribuidora.", error);
+            if (typeof mostrarAviso === "function") {
+                mostrarAviso(
+                    "No se pudo cambiar el nombre",
+                    error && error.code === "permission-denied"
+                        ? "La nube no dejó cambiar el nombre. Revisá que las reglas de seguridad estén publicadas."
+                        : "Probá de nuevo en un rato."
+                );
+            }
+        });
+        return Promise.resolve(limpio);
     }
 
     function obtenerFirestore() {
@@ -73,7 +163,7 @@
             const tanda = db.batch();
 
             tanda.set(refDistribuidora, {
-                nombre: "Mi distribuidora",
+                nombre: nombrePendiente || "Mi distribuidora",
                 duenoUid: uid,
                 creada: ahora
             });
@@ -88,6 +178,7 @@
             });
 
             await tanda.commit();
+            nombrePendiente = null;
 
             if (window.cuentaVendeFrio?.usuarioActual()?.uid === uid) {
                 cambiarEstado("creada", uid);
@@ -135,8 +226,29 @@
         window.cuentaVendeFrio.escuchar(revisar);
     }
 
+    // Se llama antes de registrarse; null lo descarta si el registro falla.
+    function prepararNombre(nombre) {
+        const limpio = String(nombre || "").trim().slice(0, LARGO_MAXIMO_NOMBRE);
+        nombrePendiente = limpio || null;
+    }
+
     window.distribuidoraVendeFrio = {
         estado: () => estado,
+        prepararNombre,
+        nombreActual: () => nombre,
+        cambiarNombre,
+        largoMaximoNombre: LARGO_MAXIMO_NOMBRE,
+        escucharNombre(oyente) {
+            if (typeof oyente !== "function") return () => {};
+
+            oyentesNombre.push(oyente);
+            oyente(nombre);
+
+            return () => {
+                const indice = oyentesNombre.indexOf(oyente);
+                if (indice >= 0) oyentesNombre.splice(indice, 1);
+            };
+        },
         idActual: () => idDistribuidora,
         reintentar: revisar,
         escuchar
