@@ -3150,3 +3150,44 @@ html.conModoPrueba #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bot
 .indicadorNube[data-estado="espera"]{border-color:var(--pendiente);}
 html.conIndicadorNube #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}
 html[data-tema="oscuro"] .indicadorNube{background:#1f2937;color:#fff;}
+
+/* ================= PANTALLA DE INICIO (T13) ================= */
+html.inicioAbierto,html.inicioAbierto body{overflow:hidden;}
+.inicioSesion{position:fixed;inset:0;z-index:10050;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--fondo);color:var(--texto);padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));animation:fondoModal .2s ease;}
+.inicioContenido{width:100%;max-width:420px;margin:0 auto;display:grid;gap:14px;}
+.inicioMarca{display:grid;justify-items:center;gap:6px;padding:18px 0 8px;text-align:center;}
+.inicioMarca img{width:56px;height:56px;border-radius:14px;}
+.inicioMarca h1{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--texto);}
+.inicioMarca p{color:var(--texto-sec);font-size:14px;}
+.inicioContenido [data-paso]{display:grid;gap:12px;}
+.inicioContenido [data-paso].oculto{display:none;}
+.inicioContenido h2{font-size:19px;font-weight:800;color:var(--texto);}
+.inicioOpcion{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:14px;border:1px solid var(--borde);border-radius:var(--radius-lg);background:var(--superficie);color:var(--texto);text-align:left;font-size:15px;cursor:pointer;}
+.inicioOpcion > span:nth-child(2){display:grid;gap:2px;flex:1;min-width:0;}
+.inicioOpcion small{color:var(--texto-sec);font-size:13px;}
+.inicioOpcion b{color:var(--texto-sec);font-size:22px;font-weight:400;}
+.inicioOpcionIcono{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:10px;background:var(--acento-bg);color:var(--acento-oscuro);}
+.inicioOpcion:active{transform:scale(.99);}
+.inicioFormulario label{display:grid;gap:6px;color:var(--texto);font-size:14px;font-weight:700;}
+.inicioSesion input{width:100%;min-height:46px;margin:0;padding:10px 12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);color:var(--texto);font-size:16px;font-weight:500;}
+.inicioClave{position:relative;display:block;}
+.inicioClave input{padding-right:48px;}
+.inicioVer{position:absolute;top:0;right:0;display:grid;place-items:center;width:46px;height:100%;padding:0;border:0;background:transparent;color:var(--texto-sec);}
+.inicioVer.activo{color:var(--acento);}
+.inicioPrincipal{width:100%;min-height:48px;border:1px solid var(--acento);border-radius:10px;background:var(--acento);color:#fff;font-size:16px;font-weight:800;}
+.inicioPrincipal:disabled{opacity:.7;}
+.inicioSinSesion{width:100%;min-height:46px;border:1px solid var(--borde);border-radius:10px;background:transparent;color:var(--texto);font-size:15px;font-weight:700;}
+.inicioEnlace,.inicioVolver{width:100%;min-height:44px;border:0;background:transparent;color:var(--texto-sec);font-size:14px;}
+.inicioEnlace strong{color:var(--acento);}
+.inicioVolver{text-align:left;font-weight:700;}
+.inicioAclaracion{color:var(--texto-sec);font-size:13px;line-height:1.45;text-align:center;}
+.inicioFormulario .inicioAclaracion{text-align:left;}
+.inicioNota{padding:12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);color:var(--texto);font-size:14px;line-height:1.45;}
+.inicioError{margin:0;padding:10px;border-radius:10px;background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:600;line-height:1.4;}
+.inicioSesion .oculto{display:none;}
+/* Modo oscuro: fondo oscuro y letras blancas, también en los avisos. */
+html[data-tema="oscuro"] .inicioSesion{background:#111827;color:#f9fafb;}
+html[data-tema="oscuro"] .inicioOpcion,html[data-tema="oscuro"] .inicioNota{background:#1f2937;color:#f9fafb;border-color:#374151;}
+html[data-tema="oscuro"] .inicioSesion input{background:#1f2937;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .inicioSinSesion{color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px solid #f87171;}

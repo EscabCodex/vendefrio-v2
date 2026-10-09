@@ -43,6 +43,8 @@
             "auth/user-not-found": "El email o la contraseña no son correctos.",
             "auth/user-disabled": "Esta cuenta está desactivada.",
             "auth/too-many-requests": "Hubo demasiados intentos. Esperá unos minutos y probá de nuevo.",
+            "auth/email-already-in-use": "Ya hay una cuenta con ese email. Tocá \"Ingresar\".",
+            "auth/weak-password": "La contraseña tiene que tener al menos 6 caracteres.",
             "auth/operation-not-allowed": "El ingreso con email y contraseña no está activado en Firebase.",
             "auth/unauthorized-domain": "Esta dirección de la app no está autorizada en Firebase."
         };
@@ -59,6 +61,28 @@
 
         try {
             const resultado = await auth.signInWithEmailAndPassword(
+                String(email || "").trim(),
+                String(contrasena || "")
+            );
+            return resultado.user;
+        } catch (error) {
+            const aviso = new Error(mensajeDeError(error));
+            aviso.code = error && error.code;
+            throw aviso;
+        }
+    }
+
+    // Registro (T13): crea la cuenta. La distribuidora la crea distribuidora.js
+    // al primer ingreso, como siempre.
+    async function registrarse(email, contrasena) {
+        const auth = obtenerAuth();
+
+        if (!auth) {
+            throw new Error("La cuenta no está disponible en este momento.");
+        }
+
+        try {
+            const resultado = await auth.createUserWithEmailAndPassword(
                 String(email || "").trim(),
                 String(contrasena || "")
             );
@@ -112,6 +136,7 @@
         listo: () => listo,
         usuarioActual: () => usuario,
         ingresar,
+        registrarse,
         salir,
         escuchar
     };

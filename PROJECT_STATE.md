@@ -1,12 +1,12 @@
 # VendeFrío — Estado del proyecto
 
-**Última actualización:** 2026-10-08
+**Última actualización:** 2026-10-09
 **Repositorio:** `EscabCodex/vendefrio-v2` · rama `main` · fuente de verdad
 **Pruebas:** https://vendefrio-v2.vercel.app/ (Vercel)
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube. Ya existe la migración "Subir mis datos a la nube" (Configuración > Cuenta): copia los datos de este celular a la distribuidora real, verifica los totales y recién ahí ofrece pasar a modo nube; `localStorage` no se borra y se puede volver a los datos del celular. También sigue el modo prueba, con una distribuidora de prueba aparte. En modo nube, las acciones peligrosas ("Borrar todos los datos", restaurar e importar) ya no pueden vaciar los datos de todos. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube. Ya existe la migración "Subir mis datos a la nube" (Configuración > Cuenta): copia los datos de este celular a la distribuidora real, verifica los totales y recién ahí ofrece pasar a modo nube; `localStorage` no se borra y se puede volver a los datos del celular. También sigue el modo prueba, con una distribuidora de prueba aparte. En modo nube, las acciones peligrosas ("Borrar todos los datos", restaurar e importar) ya no pueden vaciar los datos de todos. Al abrir la app sin sesión aparece la pantalla de inicio (T13), con registro de la distribuidora. El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -19,6 +19,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Cuenta: ingresar y salir con email y contraseña (Firebase Auth). Al primer ingreso se crea la distribuidora en Firestore. Iniciar sesión no cambia de dónde salen los datos.
 - Subir mis datos a la nube (T11): respaldo obligatorio, subida en tandas, totales verificados, paso a modo nube y botón para volver a los datos del celular. Los pedidos subidos llevan la etiqueta "Histórico" en Historial.
 - Sincronización visible (T12): en modo nube, cartel fijo abajo con la conexión y los cambios sin subir; en Historial, cada pedido que todavía no llegó a la nube dice "Pendiente de sincronizar". Los demás celulares pasan a la nube con "Usar la nube sin subir datos".
+- Pantalla de inicio (T13): al abrir sin sesión, "Distribuidora" (ingresar o "Registrarse", que crea la cuenta y la distribuidora), "Empleado" (llega en T14) y "Continuar sin iniciar sesión" (queda recordado). Con sesión se entra directo, también sin internet.
 - Barra inferior y menú "Más", íconos SVG propios, modales tipo bottom sheet, toasts, transiciones, háptica y safe areas.
 - PWA con service worker.
 
@@ -28,7 +29,7 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - **Módulos por sección:** `pedidos.js`, `comercios.js` y `productos.js` (listas iniciales de ejemplo), `comerciosAdmin.js`, `comercioFicha.js`, `productosAdmin.js`, `catalogo.js`, `historial.js`, `estadisticas.js`, `rutas.js`, `configuracion.js`.
 - **Carga diferida:** `menu.js` carga `configuracion.js`, `estadisticas.js` y `catalogo.js`; `comerciosAdmin.js` carga `comercioFicha.js`; `rutas.js` carga `navegacion3d.js` y `navegacion3d.css`.
 - **Datos:** `database.js`.
-- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js`, `firebase-auth-compat.js` y `firebase-firestore-compat.js`), `firebase-config.js` (configuración web, pública por diseño), `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`), `distribuidora.js` (alta de la distribuidora al primer ingreso), `nube.js` (adaptador nube con Firestore, modo prueba, migración "Subir mis datos a la nube" y modo nube real; todo se maneja desde Configuración > Cuenta) y `firestore.rules` (reglas de seguridad; se publican a mano en la consola de Firebase).
+- **Firebase:** carpeta `firebase` (SDK "compat" 12.19.0 guardado en el repo: `firebase-app-compat.js`, `firebase-auth-compat.js` y `firebase-firestore-compat.js`), `firebase-config.js` (configuración web, pública por diseño), `cuenta.js` (ingresar, salir y aviso de cambio de cuenta; la pantalla está en `configuracion.js`), `distribuidora.js` (alta de la distribuidora al primer ingreso), `nube.js` (adaptador nube con Firestore, modo prueba, migración "Subir mis datos a la nube" y modo nube real; todo se maneja desde Configuración > Cuenta) y `inicio.js` (pantalla de inicio y registro, T13) y `firestore.rules` (reglas de seguridad; se publican a mano en la consola de Firebase).
 - **Funciones de Vercel (carpeta `api`):** `maptiler-config.js` (entrega la clave de MapTiler desde la variable de entorno `MAPTILER_KEY`) y `resolver-maps.js` (lee enlaces de Google Maps).
 - **PWA y despliegue:** `manifest.json`, `sw.js`, `icon.svg`, `vercel.json`.
 - **Solo para uso local:** `package.json` y `package-lock.json` (servidor de prueba `servor`).
@@ -270,7 +271,7 @@ Cada tarea es una sesión de Claude Code, en su propia rama y con su pull reques
 
 Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 
-- [ ] **T13 — Pantalla de inicio y registro de la distribuidora.**
+- [x] **T13 — Pantalla de inicio y registro de la distribuidora.**
   - Pantalla al abrir sin sesión: "Distribuidora", "Empleado" (todavía sin funcionar: avisa que llega en T14) y "Continuar sin iniciar sesión".
   - "Distribuidora": ingresar con email y contraseña y "Registrarse" (crea cuenta y distribuidora). Con datos propios en el celular ofrece la migración de T11; sin datos, usa la nube directamente.
   - "Continuar sin iniciar sesión" queda recordado en el celular; desde Configuración > Cuenta se puede ingresar después.
@@ -301,7 +302,7 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 
 ## Pendientes técnicos
 
-- Bloque E: usuarios y acceso (T13 a T15, M4 y M5).
+- Bloque E: usuarios y acceso (M4, T14, M5 y T15).
 - Rework visual completo. Incluye mover el indicador de conexión de T12 (hoy, cartel chico abajo) arriba a la derecha del nombre "VendeFrío", donde dice "Reparto Activo" (pedido del dueño, 2026-10-09).
 - Leaflet se carga desde internet y no funciona sin conexión (fuera del plan de Firebase).
 
@@ -333,3 +334,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-09 — Claude Code: decisión "Usuarios y acceso" con el dueño. Pantalla de inicio con "Distribuidora" (email, contraseña y "Registrarse"), "Empleado" (código del encargado: 8 caracteres, una vez, 24 horas; nombre obligatorio y rol opcional de una lista fija) y "Continuar sin iniciar sesión". Si el empleado cambia de celular, el encargado le da un código de reingreso y vuelve a ser la misma ficha de empleado (no hace falta "mantener sesión activa": la sesión no vence). Panel de empleados con alta, roles, reingreso y baja. Plan en el Bloque E (T13, M4, T14, M5, T15), que cierra la Etapa 2. Sin cambios de código. Próximo paso: T13.
 - 2026-10-09 — Claude Code: el dueño ajustó los roles: casillas que se pueden marcar varias a la vez, sobre una lista fija de 5 (Vendedor, Depósito, Repartidor, Cobranza, Administración); se sacó "Otro". Sin cambios de código.
 - 2026-10-09 — Claude Code: el dueño pidió roles editables. La distribuidora arranca con los 5 roles precargados y el encargado puede crear, renombrar y eliminar roles desde "Editar roles" (en T15); cada rol tiene un id fijo y, en la Etapa 3, sus propias casillas de permiso. Sin cambios de código.
+- 2026-10-09 — Claude Code: T13. Antes de programar se revisó el registro: hoy cualquiera con la configuración pública de Firebase puede crear una cuenta (aun sin botón en la app) y, con ella, su distribuidora, y gastar el cupo diario gratuito, que es compartido. El dueño decidió dejar el registro abierto, sin protecciones extra: la app es de uso personal, para él y 4 o 5 compañeros de trabajo. Nuevo `inicio.js`: al abrir la app sin sesión aparece una pantalla de inicio (tapa toda la app) con "Distribuidora", "Empleado" y "Continuar sin iniciar sesión". "Distribuidora" ingresa con email y contraseña (como en Configuración > Cuenta: los datos siguen saliendo de donde salían) o "Registrarse" (email, contraseña de al menos 6 caracteres repetida): crea la cuenta (`registrarse` en `cuenta.js`) y `distribuidora.js` crea la distribuidora como siempre. Si el celular solo tiene las listas de ejemplo, pasa directo a la nube con la distribuidora vacía (`usarNubeNueva` en `nube.js`); si tiene datos propios (pedidos, rutas o comercios y productos distintos de los de ejemplo), ofrece "Subir mis datos a la nube" (abre Configuración > Cuenta con la migración de T11) o "Ahora no". "Empleado" avisa que llega en T14. "Continuar sin iniciar sesión" guarda `vendefrio_inicio_sin_sesion` y no vuelve a preguntar. Con sesión guardada no aparece la pantalla, también sin internet. Errores en castellano (email ya usado, contraseña corta o distinta). Modo oscuro con fondo oscuro y letras blancas. No se tocaron `firestore.rules` ni los datos de `localStorage`. Service worker con `inicio.js` (caché `vendefrio-v133`). Probado con los emuladores de Firebase: 31 pruebas en navegador (pantalla sin sesión, empleado, seguir sin sesión recordado, registro sin datos que entra a la nube vacía, registro con datos que ofrece la migración, email repetido y contraseña mala, ingreso del dueño con sus datos, apertura sin internet con sesión, `localStorage` idéntico). Próximo paso: M4 (dueño) y después T14.

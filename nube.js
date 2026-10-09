@@ -1,6 +1,7 @@
 // VendeFrío - Adaptador nube (Firestore), modo nube de prueba (T9),
 // migración "Subir mis datos a la nube" y modo nube real (T11),
-// sincronización visible e indicador de conexión (T12).
+// sincronización visible e indicador de conexión (T12) y nube directa
+// al registrarse (T13).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Se usa en dos modos:
 // - Modo prueba: los datos salen de la distribuidora de prueba "prueba-{uid}".
@@ -1458,6 +1459,32 @@
         window.location.reload();
     }
 
+    // Registro (T13): la distribuidora recién creada arranca vacía y este
+    // celular no tiene datos propios, así que se usa la nube directamente,
+    // sin subir nada. localStorage no se toca.
+    async function usarNubeNueva() {
+        if (migracionEnCurso) throw errorMigracion("Esperá a que termine la subida.", "datos-locales");
+        if (modo) {
+            throw errorMigracion(
+                modo === "prueba" ? "Primero apagá el modo prueba." : "Tus datos ya salen de la nube.",
+                "datos-locales"
+            );
+        }
+
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
+
+        if (!usuario) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
+        if (!idDistribuidora || idDistribuidora !== usuario.uid) {
+            throw errorMigracion("Tu distribuidora en la nube todavía no está lista.", "datos-locales");
+        }
+
+        await vaciarCopiaDeLaNube();
+
+        localStorage.setItem(DB_MODO_NUBE, JSON.stringify({ uid: usuario.uid, distribuidora: idDistribuidora }));
+        window.location.reload();
+    }
+
     // Vuelve a los datos de este celular. Lo de la nube queda guardado allá.
     function desactivarNube() {
         localStorage.removeItem(DB_MODO_NUBE);
@@ -1559,6 +1586,7 @@
         migracionVerificada: () => Boolean(migracionVerificada),
         activarNube,
         usarNubeSinSubir,
+        usarNubeNueva,
         desactivarNube,
         // Sincronización visible (T12).
         sincronizacion,
