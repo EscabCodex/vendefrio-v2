@@ -94,19 +94,25 @@ Problema: hoy los celulares entran todos con la cuenta del dueño y no se sabe q
 - El encargado genera un **código de acceso** en Configuración > Empleados y se lo pasa al empleado (en persona o por WhatsApp).
 - El código tiene 8 caracteres sin letras que se confundan (sin 0/O ni 1/I), sirve **una sola vez** y **vence a las 24 horas**. Así nadie puede adivinar uno ni entrar sin permiso del encargado.
 - El empleado elige "Empleado", escribe el código y la app le crea una **cuenta anónima** (cuenta sin email ni contraseña, guardada en ese celular). Las reglas de seguridad de Firestore revisan el código y lo suman a la distribuidora.
-- Después completa **su nombre (obligatorio)** y **su rol (opcional)**. Sin nombre no avanza.
-- Roles: lista fija **Vendedor, Depósito, Repartidor, Otro**. Por ahora el rol es solo un nombre: qué puede hacer cada rol se decide en la Etapa 3 ("¿Quién puede cambiar cada estado?").
+- Después completa **su nombre (obligatorio)** y **sus roles (opcional)**. Sin nombre no avanza.
+- **Roles (actualizado el 2026-10-09):** lista fija de casillas que se pueden marcar varias a la vez (por ejemplo, un repartidor que además vende y arma pedidos). Se puede no marcar ninguna. Son 5:
+  - **Vendedor:** visita comercios y toma pedidos (preventista).
+  - **Depósito:** prepara los pedidos con la checklist y carga el vehículo.
+  - **Repartidor:** reparte y marca los pedidos como entregados.
+  - **Cobranza:** cobra y revisa los comprobantes de transferencia.
+  - **Administración:** controla pedidos, faltantes y precios desde la oficina; es el "responsable económico" que recibe el aviso de faltantes (ver "Decisiones tomadas").
+- Por ahora los roles son solo nombres: qué puede hacer cada rol se decide en la Etapa 3 ("¿Quién puede cambiar cada estado?"). El encargado puede cambiar los roles de cualquier empleado desde el panel.
 - El empleado siempre usa la nube de la distribuidora: no tiene "datos de este celular", ni migración, ni modo prueba, ni acciones delicadas.
 
 **Si el empleado cambia de celular o se le borran los datos**
 - La sesión no se cierra sola ni vence: no hace falta un botón "Mantener sesión activa". El acceso se pierde solo si se cambia de celular, se borran los datos del navegador o se desinstala la app.
-- Solución: la persona es la **ficha de empleado** (nombre, rol e historial), no el celular. El encargado toca **"Código de reingreso"** en la ficha de ese empleado; el empleado lo escribe en el celular nuevo y vuelve a ser **el mismo empleado**, con su nombre, rol e historial. El celular viejo pierde el acceso automáticamente. Mismas reglas que el código nuevo: una vez, 24 horas.
+- Solución: la persona es la **ficha de empleado** (nombre, roles e historial), no el celular. El encargado toca **"Código de reingreso"** en la ficha de ese empleado; el empleado lo escribe en el celular nuevo y vuelve a ser **el mismo empleado**, con su nombre, roles e historial. El celular viejo pierde el acceso automáticamente. Mismas reglas que el código nuevo: una vez, 24 horas.
 - Prevención: la pantalla del empleado recomienda **instalar la app en la pantalla de inicio**. En iPhone, Safari puede borrar los datos de una web que no se usa en 7 días si no está instalada; instalada como app, no.
 - Lo que se registre en los pedidos (Etapa 3) guarda el id de la ficha de empleado y su nombre, no el de la cuenta anónima, para que el historial no se corte al cambiar de celular.
 
 **Panel de empleados (Configuración > Empleados, solo encargado)**
-- Lista de empleados con nombre, rol y si está activo.
-- **Alta:** generar código nuevo. **Rol:** asignar o cambiar. **Reingreso:** generar código para otro celular. **Baja:** quitar el acceso.
+- Lista de empleados con nombre, roles y si está activo.
+- **Alta:** generar código nuevo. **Roles:** marcar o desmarcar. **Reingreso:** generar código para otro celular. **Baja:** quitar el acceso.
 - Al dar de baja, la nube le niega el acceso al instante (aunque tenga la app abierta); su celular borra la copia de los datos de la nube y vuelve a la pantalla de inicio. La ficha queda guardada como "dado de baja" para que su nombre siga apareciendo en el historial.
 - Los códigos sin usar se pueden anular desde el panel.
 
@@ -115,7 +121,7 @@ Problema: hoy los celulares entran todos con la cuenta del dueño y no se sabe q
 ```text
 codigosAcceso/{codigo}          distribuidora, empleado (si es reingreso), vence, usado
 distribuidoras/{id}
-  empleados/{idEmpleado}        nombre, rol, activo, uid actual
+  empleados/{idEmpleado}        nombre, roles (lista), activo, uid actual
   miembros/{uid}                acceso del celular; para empleados guarda idEmpleado
 ```
 
@@ -268,14 +274,14 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 - [ ] **M4 — Inicio anónimo (dueño).** En la consola de Firebase, activar el método de inicio de sesión "Anónimo". Claude Code pasa los pasos.
 - [ ] **T14 — Ingreso del empleado con código.**
   - En Configuración > Empleados, el encargado genera un código (8 caracteres, una vez, 24 horas).
-  - "Empleado" en la pantalla de inicio: código → cuenta anónima → nombre obligatorio y rol opcional (Vendedor, Depósito, Repartidor, Otro) → entra a la nube de la distribuidora.
+  - "Empleado" en la pantalla de inicio: código → cuenta anónima → nombre obligatorio y roles opcionales, varios a la vez (Vendedor, Depósito, Repartidor, Cobranza, Administración) → entra a la nube de la distribuidora.
   - Ficha de empleado y código de reingreso para otro celular (el celular viejo pierde el acceso).
   - El empleado no ve migración, modo prueba ni acciones delicadas. Recomendación de instalar la app en la pantalla de inicio.
-  - `firestore.rules`: solo el dueño crea códigos y fichas; un código sirve una vez y vence; el empleado solo edita su nombre y su rol.
+  - `firestore.rules`: solo el dueño crea códigos y fichas; un código sirve una vez y vence; el empleado solo edita su nombre y sus roles.
   - **Aceptación:** con dos celulares, el empleado entra con un código y ve los mismos datos; un código usado, vencido o inventado no deja entrar; el reingreso en otro celular conserva nombre y rol y saca al celular viejo; reglas probadas con los emuladores.
 - [ ] **M5 — Publicar las reglas nuevas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
 - [ ] **T15 — Panel de empleados.**
-  - Lista con nombre, rol y estado; cambiar rol; anular códigos sin usar; dar de baja.
+  - Lista con nombre, roles y estado; cambiar roles; anular códigos sin usar; dar de baja.
   - Baja: la nube le niega el acceso al instante; su celular borra la copia de la nube y vuelve a la pantalla de inicio; la ficha queda como "dado de baja".
   - **Aceptación:** con dos celulares, dar de baja al empleado con la app abierta lo saca enseguida; un empleado dado de baja no puede volver a entrar sin un código nuevo; los datos de la distribuidora no se tocan.
 
@@ -319,3 +325,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-09 — Claude Code: el dueño probó T12 con dos celulares reales y anduvo todo (carga sin señal, sincronización al volver y dos personas sobre los mismos datos sin pisarse). Comentario de diseño, para el rework visual: el indicador de conexión no va como cartel chico abajo, sino arriba a la derecha del nombre, donde hoy dice "Reparto Activo". Anotado en "Pendientes técnicos" y en `ROADMAP.md`. Sin cambios de código. Queda pendiente M1 (MapTiler). Próximo paso: decidir si se cierra la Etapa 2.
 - 2026-10-09 — Claude Code: el dueño confirmó M1 (clave de MapTiler regenerada, limitada al dominio y actualizada en Vercel); marcada en el plan. Con eso el plan de Firebase queda completo. Se anotó la idea de registro y de ingreso obligatorio, todavía sin decidir en qué etapa va. Sin cambios de código.
 - 2026-10-09 — Claude Code: decisión "Usuarios y acceso" con el dueño. Pantalla de inicio con "Distribuidora" (email, contraseña y "Registrarse"), "Empleado" (código del encargado: 8 caracteres, una vez, 24 horas; nombre obligatorio y rol opcional de una lista fija) y "Continuar sin iniciar sesión". Si el empleado cambia de celular, el encargado le da un código de reingreso y vuelve a ser la misma ficha de empleado (no hace falta "mantener sesión activa": la sesión no vence). Panel de empleados con alta, roles, reingreso y baja. Plan en el Bloque E (T13, M4, T14, M5, T15), que cierra la Etapa 2. Sin cambios de código. Próximo paso: T13.
+- 2026-10-09 — Claude Code: el dueño ajustó los roles: casillas que se pueden marcar varias a la vez, sobre una lista fija de 5 (Vendedor, Depósito, Repartidor, Cobranza, Administración); se sacó "Otro". Sin cambios de código.
