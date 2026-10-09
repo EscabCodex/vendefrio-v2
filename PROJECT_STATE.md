@@ -95,13 +95,17 @@ Problema: hoy los celulares entran todos con la cuenta del dueño y no se sabe q
 - El código tiene 8 caracteres sin letras que se confundan (sin 0/O ni 1/I), sirve **una sola vez** y **vence a las 24 horas**. Así nadie puede adivinar uno ni entrar sin permiso del encargado.
 - El empleado elige "Empleado", escribe el código y la app le crea una **cuenta anónima** (cuenta sin email ni contraseña, guardada en ese celular). Las reglas de seguridad de Firestore revisan el código y lo suman a la distribuidora.
 - Después completa **su nombre (obligatorio)** y **sus roles (opcional)**. Sin nombre no avanza.
-- **Roles (actualizado el 2026-10-09):** lista fija de casillas que se pueden marcar varias a la vez (por ejemplo, un repartidor que además vende y arma pedidos). Se puede no marcar ninguna. Son 5:
+- **Roles (actualizado el 2026-10-09):** casillas que se pueden marcar varias a la vez (por ejemplo, un repartidor que además vende y arma pedidos). Se puede no marcar ninguna.
+- **El encargado edita la lista de roles** (Configuración > Empleados > "Editar roles"): crear roles nuevos, cambiarles el nombre y eliminarlos. Los roles nuevos aparecen enseguida en la lista para elegir, en todos los celulares. Los empleados no pueden editar la lista.
+- Cada distribuidora arranca con 5 roles precargados, que también se pueden editar o eliminar:
   - **Vendedor:** visita comercios y toma pedidos (preventista).
   - **Depósito:** prepara los pedidos con la checklist y carga el vehículo.
   - **Repartidor:** reparte y marca los pedidos como entregados.
   - **Cobranza:** cobra y revisa los comprobantes de transferencia.
   - **Administración:** controla pedidos, faltantes y precios desde la oficina; es el "responsable económico" que recibe el aviso de faltantes (ver "Decisiones tomadas").
-- Por ahora los roles son solo nombres: qué puede hacer cada rol se decide en la Etapa 3 ("¿Quién puede cambiar cada estado?"). El encargado puede cambiar los roles de cualquier empleado desde el panel.
+- Cada rol tiene un id que no cambia: al renombrarlo, los empleados que lo tienen lo conservan con el nombre nuevo.
+- Eliminar un rol que tienen empleados pide confirmación con la cantidad ("lo tienen 3 empleados") y se lo quita a esos empleados; no se borra ningún empleado. No se pueden crear dos roles con el mismo nombre.
+- Por ahora los roles son solo nombres. En la Etapa 3, como los roles son editables, los permisos no van a depender del nombre: cada rol va a tener sus propias casillas de permiso (por ejemplo "prepara pedidos", "entrega", "recibe aviso de faltantes"). El encargado puede cambiar los roles de cualquier empleado desde el panel.
 - El empleado siempre usa la nube de la distribuidora: no tiene "datos de este celular", ni migración, ni modo prueba, ni acciones delicadas.
 
 **Si el empleado cambia de celular o se le borran los datos**
@@ -121,7 +125,8 @@ Problema: hoy los celulares entran todos con la cuenta del dueño y no se sabe q
 ```text
 codigosAcceso/{codigo}          distribuidora, empleado (si es reingreso), vence, usado
 distribuidoras/{id}
-  empleados/{idEmpleado}        nombre, roles (lista), activo, uid actual
+  empleados/{idEmpleado}        nombre, roles (lista de ids de rol), activo, uid actual
+  config/roles                  lista de roles: id y nombre (solo la edita el dueño)
   miembros/{uid}                acceso del celular; para empleados guarda idEmpleado
 ```
 
@@ -274,7 +279,7 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 - [ ] **M4 — Inicio anónimo (dueño).** En la consola de Firebase, activar el método de inicio de sesión "Anónimo". Claude Code pasa los pasos.
 - [ ] **T14 — Ingreso del empleado con código.**
   - En Configuración > Empleados, el encargado genera un código (8 caracteres, una vez, 24 horas).
-  - "Empleado" en la pantalla de inicio: código → cuenta anónima → nombre obligatorio y roles opcionales, varios a la vez (Vendedor, Depósito, Repartidor, Cobranza, Administración) → entra a la nube de la distribuidora.
+  - "Empleado" en la pantalla de inicio: código → cuenta anónima → nombre obligatorio y roles opcionales, varios a la vez, de la lista de roles de la distribuidora (si todavía no existe, se crea con los 5 precargados) → entra a la nube de la distribuidora.
   - Ficha de empleado y código de reingreso para otro celular (el celular viejo pierde el acceso).
   - El empleado no ve migración, modo prueba ni acciones delicadas. Recomendación de instalar la app en la pantalla de inicio.
   - `firestore.rules`: solo el dueño crea códigos y fichas; un código sirve una vez y vence; el empleado solo edita su nombre y sus roles.
@@ -282,8 +287,9 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 - [ ] **M5 — Publicar las reglas nuevas (dueño).** Pegar `firestore.rules` en la consola de Firebase.
 - [ ] **T15 — Panel de empleados.**
   - Lista con nombre, roles y estado; cambiar roles; anular códigos sin usar; dar de baja.
+  - "Editar roles": crear, renombrar y eliminar roles (al eliminar uno en uso, confirma con la cantidad y se lo quita a esos empleados). `firestore.rules`: solo el dueño escribe `config/roles`.
   - Baja: la nube le niega el acceso al instante; su celular borra la copia de la nube y vuelve a la pantalla de inicio; la ficha queda como "dado de baja".
-  - **Aceptación:** con dos celulares, dar de baja al empleado con la app abierta lo saca enseguida; un empleado dado de baja no puede volver a entrar sin un código nuevo; los datos de la distribuidora no se tocan.
+  - **Aceptación:** con dos celulares, dar de baja al empleado con la app abierta lo saca enseguida; un rol creado en un celular aparece en el otro, renombrarlo lo cambia en los empleados que lo tienen y eliminarlo se lo quita sin borrar empleados; un empleado dado de baja no puede volver a entrar sin un código nuevo; los datos de la distribuidora no se tocan.
 
 ### Después del plan
 
@@ -326,3 +332,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-09 — Claude Code: el dueño confirmó M1 (clave de MapTiler regenerada, limitada al dominio y actualizada en Vercel); marcada en el plan. Con eso el plan de Firebase queda completo. Se anotó la idea de registro y de ingreso obligatorio, todavía sin decidir en qué etapa va. Sin cambios de código.
 - 2026-10-09 — Claude Code: decisión "Usuarios y acceso" con el dueño. Pantalla de inicio con "Distribuidora" (email, contraseña y "Registrarse"), "Empleado" (código del encargado: 8 caracteres, una vez, 24 horas; nombre obligatorio y rol opcional de una lista fija) y "Continuar sin iniciar sesión". Si el empleado cambia de celular, el encargado le da un código de reingreso y vuelve a ser la misma ficha de empleado (no hace falta "mantener sesión activa": la sesión no vence). Panel de empleados con alta, roles, reingreso y baja. Plan en el Bloque E (T13, M4, T14, M5, T15), que cierra la Etapa 2. Sin cambios de código. Próximo paso: T13.
 - 2026-10-09 — Claude Code: el dueño ajustó los roles: casillas que se pueden marcar varias a la vez, sobre una lista fija de 5 (Vendedor, Depósito, Repartidor, Cobranza, Administración); se sacó "Otro". Sin cambios de código.
+- 2026-10-09 — Claude Code: el dueño pidió roles editables. La distribuidora arranca con los 5 roles precargados y el encargado puede crear, renombrar y eliminar roles desde "Editar roles" (en T15); cada rol tiene un id fijo y, en la Etapa 3, sus propias casillas de permiso. Sin cambios de código.
