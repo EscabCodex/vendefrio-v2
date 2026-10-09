@@ -20,7 +20,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Trabajo sin conexión con sincronización automática.
 
 **Etapa 4 — Pulido y cierre**
-- Rework visual completo de la app.
+- Rework visual completo de la app. Incluye pasar el indicador de conexión (T12) arriba a la derecha del nombre, en lugar de "Reparto Activo".
 - Pruebas en celulares reales, modo claro y oscuro, y PWA.
 - Cierre de la 1.0 y prueba en el trabajo diario.
 
