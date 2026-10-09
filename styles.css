@@ -3194,6 +3194,8 @@ html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px s
 
 /* Empleados (T14): código, roles y panel del dueño */
 #configFilaEmpleados.oculto{display:none;}
+.configEstado.empleadoAvisoNube{border:1px solid #f59e0b;background:#fffbeb;color:#78350f;}
+html[data-tema="oscuro"] .configEstado.empleadoAvisoNube{background:#1f2937;color:#fff;border-color:#f59e0b;}
 .inicioSesion input.inicioCodigo{font-size:22px;font-weight:800;letter-spacing:.12em;text-align:center;text-transform:uppercase;}
 .inicioRoles{display:grid;gap:8px;margin:0;padding:0;border:0;}
 .inicioRoles legend{margin-bottom:8px;color:var(--texto);font-size:14px;font-weight:700;}

@@ -497,7 +497,25 @@
             `;
         }
 
+        // Aviso temporal hasta "Solo nube" (T16): el dueño todavía puede estar
+        // viendo los datos del celular o la distribuidora de prueba, y sus
+        // empleados siempre ven la nube de la distribuidora.
+        const nube = window.nubeVendeFrio;
+        const enLaNube = Boolean(nube?.modoNube?.());
+        const avisoNube = enLaNube ? "" : `
+            <p class="configEstado empleadoAvisoNube" role="alert">
+                <strong>Ojo: vos y tus empleados no ven los mismos datos.</strong><br>
+                ${nube?.modoPrueba?.()
+                    ? "En este celular estás viendo la distribuidora de prueba."
+                    : "En este celular estás viendo los datos guardados en el celular."}
+                Tus empleados ven la nube de tu distribuidora. Para ver lo mismo que
+                ellos, pasá a la nube desde Configuración &gt; Cuenta.
+            </p>
+            <button type="button" data-config-seccion="cuenta">Ir a Cuenta</button>
+        `;
+
         return `
+            ${avisoNube}
             <p class="configEstado">
                 Generá un código y pasáselo al empleado (en persona o por WhatsApp).
                 Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las

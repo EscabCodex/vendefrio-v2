@@ -11,7 +11,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 
 **Etapa 2 — Datos compartidos**
 - Cuenta de la distribuidora con varios usuarios: pantalla de inicio, registro del encargado, ingreso de empleados con código y panel de empleados (Bloque E de `PROJECT_STATE.md`).
-- Pasar los módulos de `localStorage` a datos compartidos, sin perder lo que ya está cargado.
+- Pasar los módulos de `localStorage` a datos compartidos, sin perder lo que ya está cargado. Al final, toda la app usa solo la nube (T16 "Solo nube").
 - Respaldo y recuperación de datos.
 
 **Etapa 3 — Pedido completo**
