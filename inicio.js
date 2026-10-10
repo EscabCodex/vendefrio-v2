@@ -2,7 +2,8 @@
 // Al abrir la app sin sesión aparece una pantalla con tres caminos:
 // - "Distribuidora": ingresar con email y contraseña, o "Registrarse"
 //   (crea la cuenta y la distribuidora vacía).
-// - "Empleado": todavía no funciona (llega en T14).
+// - "Empleado" (T14): entra con el código que le da el encargado y después
+//   carga su nombre (obligatorio) y sus roles (opcionales). Ver empleados.js.
 // - "Continuar sin iniciar sesión": la app como antes, con los datos de este
 //   celular. El celular recuerda la elección y no vuelve a preguntar.
 // Quien ya tiene sesión no ve la pantalla: la sesión queda guardada en el
@@ -15,6 +16,7 @@
 
     let pantalla = null;
     let quitarOyenteDistribuidora = null;
+    let quitarOyenteRoles = null;
 
     function eligioSinSesion() {
         try {
@@ -30,6 +32,22 @@
         } catch (error) {
             console.warn("No se pudo recordar la elección de seguir sin sesión.", error);
         }
+    }
+
+    function horasCodigo() {
+        return window.empleadosVendeFrio?.horasDeVigencia || 24;
+    }
+
+    function largoNombreEmpleado() {
+        return window.empleadosVendeFrio?.largoMaximoNombre || 60;
+    }
+
+    function escapar(texto) {
+        return String(texto || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
     }
 
     function icono(nombre, tamano) {
@@ -151,6 +169,8 @@
                 </div>
 
                 <div data-paso="elegir">
+                    <p class="inicioNota oculto" id="inicioAviso" role="alert"></p>
+
                     <button type="button" class="inicioOpcion" data-inicio="distribuidora">
                         <span class="inicioOpcionIcono">${icono("tienda", 22)}</span>
                         <span><strong>Distribuidora</strong>
@@ -165,10 +185,6 @@
                         <b aria-hidden="true">›</b>
                     </button>
 
-                    <p class="inicioNota oculto" id="inicioNotaEmpleado" role="status">
-                        El ingreso de empleados con código llega en la próxima actualización.
-                        Por ahora entrá como Distribuidora o seguí sin iniciar sesión.
-                    </p>
 
                     <button type="button" class="inicioSinSesion" data-inicio="sinSesion">
                         Continuar sin iniciar sesión
@@ -226,6 +242,46 @@
                     <button type="button" class="inicioVolver" data-inicio="volver">‹ Volver</button>
                 </form>
 
+                <form data-paso="empleadoCodigo" class="inicioFormulario oculto" id="inicioFormEmpleado" novalidate>
+                    <h2>Entrar como empleado</h2>
+                    <p class="inicioAclaracion">
+                        Escribí el código que te dio tu encargado. Sirve una sola vez
+                        y vence a las ${horasCodigo()} horas. Hace falta internet.
+                    </p>
+                    <label>Código
+                        <input type="text" id="inicioCodigo" class="inicioCodigo" autocomplete="one-time-code"
+                            autocapitalize="characters" autocorrect="off" spellcheck="false"
+                            maxlength="12" placeholder="ABCD-2345" required>
+                    </label>
+                    <p class="inicioError oculto" role="alert"></p>
+                    <button type="submit" class="inicioPrincipal">Entrar</button>
+                    <button type="button" class="inicioVolver" data-inicio="volver">‹ Volver</button>
+                </form>
+
+                <form data-paso="empleadoDatos" class="inicioFormulario oculto" id="inicioFormDatosEmpleado" novalidate>
+                    <h2>Tus datos</h2>
+                    <p class="inicioAclaracion">
+                        Así te ven tu encargado y tus compañeros.
+                    </p>
+                    <label>Tu nombre
+                        <input type="text" id="inicioNombreEmpleado" autocomplete="name"
+                            maxlength="${largoNombreEmpleado()}" placeholder="Por ejemplo: Juan Pérez" required>
+                    </label>
+                    <fieldset class="inicioRoles">
+                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
+                        <div id="inicioListaRoles"></div>
+                    </fieldset>
+                    <p class="inicioNota">
+                        <strong>Recomendado:</strong> instalá la app en la pantalla de inicio
+                        del celular. En Android: menú ⋮ del navegador &gt; "Agregar a la
+                        pantalla principal" o "Instalar app". En iPhone: botón Compartir
+                        de Safari &gt; "Agregar a inicio". Si no la instalás, el celular
+                        puede borrar los datos de la app y vas a necesitar un código nuevo.
+                    </p>
+                    <p class="inicioError oculto" role="alert"></p>
+                    <button type="submit" class="inicioPrincipal">Guardar y entrar</button>
+                </form>
+
                 <div data-paso="creando" class="oculto">
                     <h2>Tu distribuidora</h2>
                     <p class="inicioNota" id="inicioEstadoCreando" role="status"></p>
@@ -271,6 +327,11 @@
     }
 
     function cerrar() {
+        if (quitarOyenteRoles) {
+            quitarOyenteRoles();
+            quitarOyenteRoles = null;
+        }
+
         if (quitarOyenteDistribuidora) {
             quitarOyenteDistribuidora();
             quitarOyenteDistribuidora = null;
@@ -389,6 +450,105 @@
         quitarOyenteDistribuidora = quitar;
     }
 
+    // --- Empleado (T14) ---
+
+    function enviarCodigo(formulario, boton) {
+        const empleados = window.empleadosVendeFrio;
+        const codigo = document.getElementById("inicioCodigo")?.value || "";
+
+        if (!empleados) {
+            mostrarError(formulario, "La nube no está disponible en este momento.");
+            return;
+        }
+
+        mostrarError(formulario, "");
+        const liberar = ocupar(boton, "Revisando el código…");
+
+        empleados.canjearCodigo(codigo)
+            .then(resultado => {
+                boton.textContent = resultado.tipo === "reingreso"
+                    ? "¡Listo! Volviste a entrar…"
+                    : "¡Listo! Entrando…";
+                return empleados.entrarALaNube();
+            })
+            .catch(error => {
+                liberar();
+                mostrarError(formulario, error.message);
+            });
+    }
+
+    function dibujarRoles() {
+        const caja = document.getElementById("inicioListaRoles");
+        const empleados = window.empleadosVendeFrio;
+        if (!caja || !empleados) return;
+
+        // Se conservan las casillas ya marcadas al redibujar.
+        const marcados = new Set(
+            Array.from(caja.querySelectorAll("input:checked")).map(casilla => casilla.value)
+        );
+        if (!caja.dataset.dibujado) {
+            (empleados.miFicha()?.roles || []).forEach(id => marcados.add(id));
+            caja.dataset.dibujado = "1";
+        }
+
+        caja.innerHTML = empleados.roles().map(rol => `
+            <label class="inicioRol">
+                <input type="checkbox" value="${escapar(rol.id)}" ${marcados.has(rol.id) ? "checked" : ""}>
+                <span>${escapar(rol.nombre)}</span>
+            </label>
+        `).join("");
+    }
+
+    // La pide empleados.js mientras la ficha no tenga nombre.
+    function pedirDatosEmpleado() {
+        const empleados = window.empleadosVendeFrio;
+        if (!empleados) return;
+
+        const yaAbierta = pantalla && !pantalla.querySelector('[data-paso="empleadoDatos"]').classList.contains("oculto");
+        if (yaAbierta) return;
+
+        crear();
+        mostrarPaso("empleadoDatos");
+
+        const campo = document.getElementById("inicioNombreEmpleado");
+        if (campo && !campo.value) campo.value = empleados.miFicha()?.nombre || "";
+
+        if (quitarOyenteRoles) quitarOyenteRoles();
+        quitarOyenteRoles = empleados.escucharRoles(dibujarRoles);
+    }
+
+    function enviarDatosEmpleado(formulario, boton) {
+        const empleados = window.empleadosVendeFrio;
+        const nombre = (document.getElementById("inicioNombreEmpleado")?.value || "").trim();
+        const roles = Array.from(document.querySelectorAll("#inicioListaRoles input:checked"))
+            .map(casilla => casilla.value);
+
+        if (!nombre) {
+            mostrarError(formulario, "Escribí tu nombre.");
+            return;
+        }
+
+        mostrarError(formulario, "");
+        const liberar = ocupar(boton, "Guardando…");
+
+        empleados.guardarMisDatos(nombre, roles)
+            .then(ficha => {
+                cerrar();
+                mostrarToast("¡Hola, " + escapar(ficha.nombre) + "!");
+            })
+            .catch(error => {
+                liberar();
+                mostrarError(formulario, error.message);
+            });
+    }
+
+    // Desde Configuración > Cuenta, sin sesión.
+    function abrirEmpleado() {
+        crear();
+        mostrarPaso("empleadoCodigo");
+        document.getElementById("inicioCodigo")?.focus();
+    }
+
     // --- Acciones ---
 
     function alTocar(event) {
@@ -403,7 +563,8 @@
         }
 
         if (accion === "empleado") {
-            document.getElementById("inicioNotaEmpleado")?.classList.remove("oculto");
+            mostrarPaso("empleadoCodigo");
+            document.getElementById("inicioCodigo")?.focus();
             return;
         }
 
@@ -495,6 +656,16 @@
             return;
         }
 
+        if (formulario.id === "inicioFormEmpleado") {
+            enviarCodigo(formulario, boton);
+            return;
+        }
+
+        if (formulario.id === "inicioFormDatosEmpleado") {
+            enviarDatosEmpleado(formulario, boton);
+            return;
+        }
+
         if (formulario.id === "inicioFormIngresar") {
             const email = document.getElementById("inicioEmail")?.value || "";
             const contrasena = document.getElementById("inicioContrasena")?.value || "";
@@ -564,7 +735,12 @@
     // --- Arranque ---
     // Se espera a saber si hay sesión guardada (también sin internet).
     function decidir() {
-        if (eligioSinSesion()) return;
+        // Un empleado que perdió el acceso vuelve a ver la pantalla con el aviso.
+        const aviso = window.empleadosVendeFrio?.hayAvisoParaElInicio?.()
+            ? window.empleadosVendeFrio.avisoParaElInicio()
+            : "";
+
+        if (eligioSinSesion() && !aviso) return;
 
         const cuenta = window.cuentaVendeFrio;
         if (!cuenta || !cuenta.disponible()) return;
@@ -579,12 +755,20 @@
             if (!usuario) {
                 crear();
                 mostrarPaso("elegir");
+
+                const nota = document.getElementById("inicioAviso");
+                if (nota && aviso) {
+                    nota.textContent = aviso;
+                    nota.classList.remove("oculto");
+                }
             }
         });
     }
 
     window.inicioVendeFrio = {
-        tieneDatosPropios: celularTieneDatosPropios
+        tieneDatosPropios: celularTieneDatosPropios,
+        pedirDatosEmpleado,
+        abrirEmpleado
     };
 
     decidir();

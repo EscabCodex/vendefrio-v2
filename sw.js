@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v133 - Pantalla de inicio y registro)
+// VendeFrío - Service Worker (v134 - Ingreso de empleados con código)
 // =====================================================
-const CACHE_NAME = "vendefrio-v133";
+const CACHE_NAME = "vendefrio-v134";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -31,6 +31,7 @@ const ARCHIVOS = [
   "./cuenta.js",
   "./distribuidora.js",
   "./nube.js",
+  "./empleados.js",
   "./inicio.js"
 ];
 
