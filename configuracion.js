@@ -409,11 +409,17 @@
         `;
     }
 
-    // --- Empleados (T14) ---
+    // --- Empleados (T14) y panel del dueño (T15) ---
     // Último código generado mientras está abierta la app.
     let codigoGenerado = null;
     let generandoCodigo = false;
     let quitarOyenteEmpleados = null;
+    let quitarOyenteCodigos = null;
+    let quitarOyenteRoles = null;
+    let ultimaListaEmpleados = [];
+    // Empleado al que se le están cambiando los roles (T15).
+    let editandoRolesDe = null;
+    let editorRolesAbierto = false;
 
     function fechaYHora(fecha) {
         return fecha.toLocaleString("es-AR", {
@@ -457,6 +463,55 @@
         `;
     }
 
+    function casillasDeRoles(marcados) {
+        return window.empleadosVendeFrio.roles().map(rol => `
+            <label class="inicioRol">
+                <input type="checkbox" value="${escaparTexto(rol.id)}" ${marcados.has(rol.id) ? "checked" : ""}>
+                <span>${escaparTexto(rol.nombre)}</span>
+            </label>
+        `).join("");
+    }
+
+    function htmlEmpleadoActivo(empleado, marcadosEnPantalla) {
+        const empleados = window.empleadosVendeFrio;
+        const roles = empleados.nombresDeRoles(empleado.roles);
+        const datos = `
+            data-empleado="${escaparTexto(empleado.id)}"
+            data-nombre="${escaparTexto(empleado.nombre)}"
+        `;
+
+        if (editandoRolesDe === empleado.id) {
+            const marcados = marcadosEnPantalla || new Set(empleado.roles);
+            return `
+                <li class="empleadoFila">
+                    <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
+                    <div class="empleadoRoles" id="empleadoRolesEdicion">${casillasDeRoles(marcados)}</div>
+                    <div class="configAcciones">
+                        <button type="button" data-accion="cancelarRolesEmpleado">Cancelar</button>
+                        <button type="button" data-accion="guardarRolesEmpleado" class="configCuentaIngresar" ${datos}>
+                            Guardar roles
+                        </button>
+                    </div>
+                </li>
+            `;
+        }
+
+        return `
+            <li class="empleadoFila">
+                <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
+                <small>Activo · ${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
+                <div class="configAcciones">
+                    <button type="button" data-accion="cambiarRolesEmpleado" ${datos}>Cambiar roles</button>
+                    <button type="button" data-accion="codigoReingreso" ${datos}
+                        ${generandoCodigo ? "disabled" : ""}>
+                        Código de reingreso
+                    </button>
+                </div>
+                <button type="button" data-accion="darDeBaja" class="empleadoBaja" ${datos}>Dar de baja</button>
+            </li>
+        `;
+    }
+
     function htmlListaEmpleados(lista) {
         const empleados = window.empleadosVendeFrio;
 
@@ -464,24 +519,101 @@
             return `<p class="configEstado">Todavía no entró ningún empleado.</p>`;
         }
 
+        // Al redibujar se conservan las casillas que se están marcando.
+        let marcadosEnPantalla = null;
+        const caja = document.getElementById("empleadoRolesEdicion");
+        if (caja && editandoRolesDe) {
+            marcadosEnPantalla = new Set(
+                Array.from(caja.querySelectorAll("input:checked")).map(casilla => casilla.value)
+            );
+        }
+
+        const activos = lista.filter(empleado => empleado.activo);
+        const deBaja = lista.filter(empleado => !empleado.activo);
+
+        return `
+            ${activos.length ? `
+                <ul class="empleadoLista">
+                    ${activos.map(empleado => htmlEmpleadoActivo(empleado, marcadosEnPantalla)).join("")}
+                </ul>
+            ` : `<p class="configEstado">No hay empleados activos.</p>`}
+            ${deBaja.length ? `
+                <p class="configEstado"><strong>Dados de baja</strong><br>
+                    Ya no tienen acceso. Su nombre sigue en el historial.
+                    Para que uno vuelva, generale un código nuevo.</p>
+                <ul class="empleadoLista">
+                    ${deBaja.map(empleado => {
+                        const roles = empleados.nombresDeRoles(empleado.roles);
+                        return `
+                            <li class="empleadoFila empleadoDeBaja">
+                                <strong>${escaparTexto(empleado.nombre) || "Sin nombre"}</strong>
+                                <small>Dado de baja${empleado.baja ? " el " + escaparTexto(fechaYHora(empleado.baja)) : ""}
+                                    · ${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
+                            </li>
+                        `;
+                    }).join("")}
+                </ul>
+            ` : ""}
+        `;
+    }
+
+    function htmlListaCodigos(lista) {
+        const empleados = window.empleadosVendeFrio;
+
+        if (!lista.length) {
+            return `<p class="configEstado">No hay códigos sin usar.</p>`;
+        }
+
+        const nombrePorId = new Map(ultimaListaEmpleados.map(empleado => [empleado.id, empleado.nombre]));
+
         return `
             <ul class="empleadoLista">
-                ${lista.map(empleado => {
-                    const roles = empleados.nombresDeRoles(empleado.roles);
+                ${lista.map(codigo => {
+                    const para = codigo.tipo === "reingreso"
+                        ? "Reingreso de " + (nombrePorId.get(codigo.idEmpleado) || "un empleado")
+                        : "Empleado nuevo";
                     return `
                         <li class="empleadoFila">
-                            <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
-                            <small>${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
-                            <button type="button" data-accion="codigoReingreso"
-                                data-empleado="${escaparTexto(empleado.id)}"
-                                data-nombre="${escaparTexto(empleado.nombre)}"
-                                ${generandoCodigo ? "disabled" : ""}>
-                                Código de reingreso
-                            </button>
+                            <strong class="empleadoCodigoTexto">${escaparTexto(empleados.formatearCodigo(codigo.codigo))}</strong>
+                            <small>${escaparTexto(para)} · vence ${escaparTexto(fechaYHora(codigo.vence))}</small>
+                            <button type="button" data-accion="anularCodigo"
+                                data-codigo="${escaparTexto(codigo.codigo)}">Anular</button>
                         </li>
                     `;
                 }).join("")}
             </ul>
+        `;
+    }
+
+    function htmlEditorRoles() {
+        const empleados = window.empleadosVendeFrio;
+
+        if (!editorRolesAbierto) {
+            return `<button type="button" data-accion="editarRoles">Editar roles</button>`;
+        }
+
+        return `
+            <ul class="empleadoLista">
+                ${empleados.roles().map(rol => `
+                    <li class="empleadoFila">
+                        <label>Nombre del rol
+                            <input type="text" class="empleadoRolNombre" data-rol="${escaparTexto(rol.id)}"
+                                value="${escaparTexto(rol.nombre)}" maxlength="${empleados.largoMaximoRol}">
+                        </label>
+                        <div class="configAcciones">
+                            <button type="button" data-accion="renombrarRol" data-rol="${escaparTexto(rol.id)}">Guardar nombre</button>
+                            <button type="button" data-accion="eliminarRol" data-rol="${escaparTexto(rol.id)}"
+                                data-nombre="${escaparTexto(rol.nombre)}" class="empleadoBaja">Eliminar</button>
+                        </div>
+                    </li>
+                `).join("")}
+            </ul>
+            <label>Rol nuevo
+                <input type="text" id="empleadoRolNuevo" maxlength="${empleados.largoMaximoRol}"
+                    placeholder="Por ejemplo: Encargado de depósito">
+            </label>
+            <button type="button" data-accion="agregarRol" class="configCuentaIngresar">Agregar rol</button>
+            <button type="button" data-accion="cerrarEditorRoles">Listo</button>
         `;
     }
 
@@ -527,6 +659,11 @@
             </button>
             ${htmlCodigoGenerado()}
             <p class="configEstado">
+                <strong>Códigos sin usar</strong><br>
+                Si pasaste un código por error o a la persona equivocada, anulalo.
+            </p>
+            <div id="listaCodigos">${htmlListaCodigos([])}</div>
+            <p class="configEstado">
                 <strong>Tus empleados</strong><br>
                 Si un empleado cambia de celular o se le borran los datos, tocá
                 "Código de reingreso": vuelve a ser el mismo empleado, con su
@@ -534,26 +671,54 @@
             </p>
             <div id="listaEmpleados">${htmlListaEmpleados([])}</div>
             <p class="configEstado">
-                Cambiar roles, anular códigos y dar de baja llegan en la próxima actualización.
+                <strong>Roles</strong><br>
+                Creá, renombrá o eliminá los roles que pueden elegir tus empleados.
             </p>
+            <div id="editorRoles">${htmlEditorRoles()}</div>
         `;
     }
 
     function dibujarListaEmpleados(lista) {
+        ultimaListaEmpleados = lista;
+        if (editandoRolesDe && !lista.some(empleado => empleado.id === editandoRolesDe && empleado.activo)) {
+            editandoRolesDe = null;
+        }
         const caja = document.getElementById("listaEmpleados");
         if (caja) caja.innerHTML = htmlListaEmpleados(lista);
     }
 
+    function dibujarListaCodigos(lista) {
+        // Si el código recién generado ya se usó o se anuló, deja de mostrarse.
+        if (codigoGenerado && !lista.some(codigo => codigo.codigo === codigoGenerado.codigo) &&
+            document.getElementById("empleadoCodigoGenerado")) {
+            codigoGenerado = null;
+            detalle("empleados");
+            return;
+        }
+        const caja = document.getElementById("listaCodigos");
+        if (caja) caja.innerHTML = htmlListaCodigos(lista);
+    }
+
+    function dibujarEditorRoles() {
+        const caja = document.getElementById("editorRoles");
+        if (caja) caja.innerHTML = htmlEditorRoles();
+    }
+
     function escucharListaEmpleados() {
-        if (quitarOyenteEmpleados || !window.empleadosVendeFrio?.esDueno()) return;
-        quitarOyenteEmpleados = window.empleadosVendeFrio.escucharEmpleados(dibujarListaEmpleados);
+        const empleados = window.empleadosVendeFrio;
+        if (quitarOyenteEmpleados || !empleados?.esDueno()) return;
+        quitarOyenteEmpleados = empleados.escucharEmpleados(dibujarListaEmpleados);
+        quitarOyenteCodigos = empleados.escucharCodigos(dibujarListaCodigos);
+        quitarOyenteRoles = empleados.escucharRoles(dibujarEditorRoles);
     }
 
     function dejarDeEscucharListaEmpleados() {
-        if (quitarOyenteEmpleados) {
-            quitarOyenteEmpleados();
-            quitarOyenteEmpleados = null;
-        }
+        [quitarOyenteEmpleados, quitarOyenteCodigos, quitarOyenteRoles].forEach(quitar => {
+            if (quitar) quitar();
+        });
+        quitarOyenteEmpleados = null;
+        quitarOyenteCodigos = null;
+        quitarOyenteRoles = null;
     }
 
     function generarCodigo(idEmpleado, nombre) {
@@ -732,7 +897,7 @@
             cuenta: ["Cuenta", window.empleadosVendeFrio?.esEmpleado()
                 ? "Tu cuenta de empleado"
                 : "Ingresá con tu email y contraseña"],
-            empleados: ["Empleados", "Códigos de ingreso y fichas de tus empleados"],
+            empleados: ["Empleados", "Códigos, fichas, roles y bajas de tus empleados"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
@@ -1003,6 +1168,115 @@
                 "Es para que " + (nombre || "este empleado") + " entre desde otro celular y siga siendo el mismo empleado, con su nombre y sus roles. " +
                     "Cuando use el código, el celular que usa ahora pierde el acceso.",
                 () => generarCodigo(boton?.dataset.empleado, nombre)
+            );
+        }
+
+        // --- Panel de empleados (T15) ---
+        if (accion === "cambiarRolesEmpleado") {
+            editandoRolesDe = event.target.closest("[data-accion]").dataset.empleado || null;
+            dibujarListaEmpleados(ultimaListaEmpleados);
+        }
+
+        if (accion === "cancelarRolesEmpleado") {
+            editandoRolesDe = null;
+            dibujarListaEmpleados(ultimaListaEmpleados);
+        }
+
+        if (accion === "guardarRolesEmpleado") {
+            const boton = event.target.closest("[data-accion]");
+            const elegidos = Array.from(document.querySelectorAll("#empleadoRolesEdicion input:checked"))
+                .map(casilla => casilla.value);
+
+            window.empleadosVendeFrio.cambiarRolesDe(boton.dataset.empleado, elegidos)
+                .then(() => {
+                    editandoRolesDe = null;
+                    dibujarListaEmpleados(ultimaListaEmpleados);
+                    mostrarToast("Roles guardados");
+                })
+                .catch(error => mostrarAviso("No se guardaron los roles", error.message));
+        }
+
+        if (accion === "darDeBaja") {
+            const boton = event.target.closest("[data-accion]");
+            const nombre = boton.dataset.nombre || "este empleado";
+
+            abrirConfirmacion(
+                "Dar de baja a " + nombre,
+                "Pierde el acceso enseguida, aunque tenga la app abierta: su celular borra la copia de la nube y vuelve a la pantalla de inicio. " +
+                    "Su ficha queda como \"dado de baja\" para que su nombre siga en el historial. " +
+                    "No se puede deshacer: para que vuelva, vas a tener que generarle un código nuevo. " +
+                    "Los datos de la distribuidora no se tocan.",
+                () => {
+                    boton.disabled = true;
+                    window.empleadosVendeFrio.darDeBaja(boton.dataset.empleado)
+                        .then(() => mostrarToast(escaparTexto(nombre) + " quedó dado de baja"))
+                        .catch(error => {
+                            boton.disabled = false;
+                            mostrarAviso("No se pudo dar de baja", error.message);
+                        });
+                }
+            );
+        }
+
+        if (accion === "anularCodigo") {
+            const boton = event.target.closest("[data-accion]");
+            const codigo = boton.dataset.codigo;
+
+            abrirConfirmacion(
+                "Anular código",
+                "El código " + window.empleadosVendeFrio.formatearCodigo(codigo) + " deja de servir. Si alguien lo escribe, no va a poder entrar.",
+                () => {
+                    boton.disabled = true;
+                    window.empleadosVendeFrio.anularCodigo(codigo)
+                        .then(() => mostrarToast("Código anulado"))
+                        .catch(error => {
+                            boton.disabled = false;
+                            mostrarAviso("No se pudo anular", error.message);
+                        });
+                }
+            );
+        }
+
+        if (accion === "editarRoles" || accion === "cerrarEditorRoles") {
+            editorRolesAbierto = accion === "editarRoles";
+            dibujarEditorRoles();
+        }
+
+        if (accion === "agregarRol") {
+            const campo = document.getElementById("empleadoRolNuevo");
+
+            window.empleadosVendeFrio.crearRol(campo?.value)
+                .then(rol => mostrarToast("Rol \"" + escaparTexto(rol.nombre) + "\" creado"))
+                .catch(error => mostrarAviso("No se creó el rol", error.message));
+        }
+
+        if (accion === "renombrarRol") {
+            const id = event.target.closest("[data-accion]").dataset.rol;
+            const campo = Array.from(document.querySelectorAll(".empleadoRolNombre"))
+                .find(entrada => entrada.dataset.rol === id);
+
+            window.empleadosVendeFrio.renombrarRol(id, campo?.value)
+                .then(rol => mostrarToast("Ahora se llama \"" + escaparTexto(rol.nombre) + "\""))
+                .catch(error => mostrarAviso("No se cambió el nombre", error.message));
+        }
+
+        if (accion === "eliminarRol") {
+            const boton = event.target.closest("[data-accion]");
+            const cantidad = window.empleadosVendeFrio.cantidadConRol(boton.dataset.rol);
+            const nombre = boton.dataset.nombre || "este rol";
+
+            abrirConfirmacion(
+                "Eliminar el rol " + nombre,
+                (cantidad
+                    ? "Lo tiene" + (cantidad === 1 ? " 1 empleado" : "n " + cantidad + " empleados") +
+                        ": se les quita el rol, pero no se borra ningún empleado."
+                    : "Ningún empleado lo tiene.") +
+                    " Deja de aparecer en la lista para elegir.",
+                () => {
+                    window.empleadosVendeFrio.eliminarRol(boton.dataset.rol)
+                        .then(() => mostrarToast("Rol eliminado"))
+                        .catch(error => mostrarAviso("No se eliminó el rol", error.message));
+                }
             );
         }
 
