@@ -74,7 +74,7 @@ Ya no se suben archivos a mano. Claude Code hace los cambios en una rama (una co
 1. Abrir el repo en GitHub y entrar a la pestaña **Pull requests**. Tocar el que abrió Claude Code.
 2. En la pestaña **Files changed** se ve qué cambió: en verde lo agregado, en rojo lo borrado.
 3. En la pestaña **Conversation**, esperar uno o dos minutos el comentario de Vercel y tocar el enlace **Preview** (o **Visit Preview**). Es una vista previa: una copia de la app con los cambios, que no toca la versión de `main`.
-4. Probar en el celular lo que se cambió, en modo claro y oscuro.
+4. Probar en el celular lo que se cambió, en modo claro y oscuro. Ojo: la vista previa usa la misma nube que la app publicada. Si la prueba usa la nube, entrar en la vista previa con la cuenta de prueba (la distribuidora "PRUEBA"), no con la real.
 5. Si todo funciona, tocar **Merge pull request** y después **Confirm merge**. Vercel publica la nueva versión en https://vendefrio-v2.vercel.app/ en uno o dos minutos.
 6. Si algo falla, no unir: mandarle a Claude Code una captura de pantalla o el mensaje de error.
 
