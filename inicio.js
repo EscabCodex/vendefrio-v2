@@ -92,8 +92,8 @@
         return true;
     }
 
-    // Cartel fijo, arriba de la barra de abajo. Al tocarlo abre
-    // Configuración > Cuenta para iniciar sesión.
+    // Cartel fijo, arriba de la barra de abajo. Al tocarlo abre la pantalla
+    // de inicio, para ingresar o registrarse (o entrar como empleado).
     function mostrarCartelPersonal() {
         if (!document.body || document.getElementById("cartelModoPersonal")) return;
 
@@ -103,9 +103,8 @@
         cartel.className = "cartelModoPersonal";
         cartel.textContent = TEXTO_CARTEL_PERSONAL;
         cartel.addEventListener("click", () => {
-            if (!abrirCuentaEnConfiguracion()) {
-                mostrarAviso("Iniciar sesión", "Entrá a Configuración > Cuenta para ingresar o registrarte.");
-            }
+            crear();
+            mostrarPaso("elegir");
         });
 
         document.body.appendChild(cartel);
@@ -836,6 +835,12 @@
         }
 
         if (accion === "sinSesion") {
+            // Abierta desde el cartel: ya tiene nombre, sigue como estaba.
+            if (usaModoPersonal() && datosPersonales()) {
+                cerrar();
+                return;
+            }
+
             pedirDatosPersonales(false);
             document.getElementById("inicioNombrePersonal")?.focus();
             return;
