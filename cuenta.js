@@ -1,5 +1,6 @@
 // VendeFrío - Cuenta (inicio de sesión con Firebase Auth)
-// Iniciar sesión todavía NO cambia de dónde salen los datos: siguen en localStorage.
+// Con cuenta, los datos salen de la nube de la distribuidora (Solo nube, T16c):
+// eso lo deciden inicio.js y nube.js.
 (function () {
     const oyentes = [];
     let usuario = null;
