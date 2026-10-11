@@ -1393,6 +1393,135 @@ function prepararRecordatorioRespaldoNube() {
     }
 }
 
+// -----------------------------------------------------
+// LIMPIEZA DE LOS DATOS VIEJOS DEL CELULAR (T16e)
+// -----------------------------------------------------
+// Con la nube, los datos de antes siguen en localStorage sin usarse. Solo el
+// dueño los borra, en tres pasos: descargar un archivo con todo, revisar con
+// internet qué está en la nube (nube.js) y borrar con confirmación. Si algo
+// falta en la nube, se muestra y se deja borrar igual: queda en el archivo,
+// y "Combinar respaldo" lo puede recuperar (decidido con el dueño el
+// 2026-10-11). La nube no se toca.
+
+// Datos viejos: comercios, productos, marcas, pedidos, rutas y la copia
+// interna (con su fecha).
+const CLAVES_DATOS_VIEJOS = [
+    DB_COMERCIOS,
+    DB_PRODUCTOS,
+    DB_ORDEN_MARCAS,
+    DB_HISTORIAL,
+    DB_RUTAS_GUARDADAS,
+    DB_RESPALDO_AUTOMATICO,
+    DB_ULTIMO_RESPALDO_AUTOMATICO
+];
+// Se borran junto con los datos viejos (decidido con el dueño): la marca de
+// la subida a medias y el borrador del modo prueba, que se sacó en T16c.
+// "vendefrio_migracion_resuelta" queda: la app la vuelve a escribir al abrir.
+const CLAVES_SIN_USO_CON_DATOS_VIEJOS = [
+    DB_SUBIDA_EMPEZADA,
+    "vendefrio_borrador_pedido_prueba"
+];
+
+function puedeLimpiarDatosViejos() {
+    return usaNubeReal() && esDuenoEnLaNube() && estaEnModoNube();
+}
+
+function celularTieneDatosViejos() {
+    try {
+        return CLAVES_DATOS_VIEJOS.some(clave => localStorage.getItem(clave) !== null);
+    } catch (error) {
+        return false;
+    }
+}
+
+// Lee los datos viejos directo de localStorage (la capa de datos ya lee la
+// nube). "firma" es el texto guardado: si cambia, hay que volver a descargar.
+function leerDatosViejosDelCelular() {
+    const textos = {};
+    const sinLeer = {};
+
+    CLAVES_DATOS_VIEJOS.forEach(clave => {
+        textos[clave] = localStorage.getItem(clave);
+    });
+
+    const leer = (clave, esValido, vacio) => {
+        const texto = textos[clave];
+        if (texto === null) return vacio;
+
+        try {
+            const datos = JSON.parse(texto);
+            if (esValido(datos)) return datos;
+        } catch (error) {
+            // Se guarda tal cual en el archivo, más abajo.
+        }
+
+        sinLeer[clave] = texto;
+        return vacio;
+    };
+
+    const esLista = datos => Array.isArray(datos);
+    const esObjeto = datos => Boolean(datos) && typeof datos === "object" && !Array.isArray(datos);
+    const productos = leer(DB_PRODUCTOS, esObjeto, {});
+
+    Object.keys(productos).forEach(marca => {
+        if (!Array.isArray(productos[marca])) productos[marca] = [];
+    });
+
+    return {
+        firma: JSON.stringify(textos),
+        datos: {
+            comercios: leer(DB_COMERCIOS, esLista, []),
+            productos,
+            ordenMarcas: leer(DB_ORDEN_MARCAS, esLista, []),
+            historial: leer(DB_HISTORIAL, esLista, []),
+            rutasGuardadas: leer(DB_RUTAS_GUARDADAS, esLista, [])
+        },
+        copiaInterna: leer(DB_RESPALDO_AUTOMATICO, esObjeto, null),
+        sinLeer
+    };
+}
+
+// Paso 1: archivo con todo, en el formato del respaldo, así "Combinar
+// respaldo" lo acepta. Devuelve la firma de lo descargado, o null.
+function descargarDatosViejosDelCelular() {
+    try {
+        const viejos = leerDatosViejosDelCelular();
+        const respaldo = {
+            aplicacion: "VendeFrío",
+            version: 1,
+            fecha: new Date().toISOString(),
+            origen: "celular",
+            datos: viejos.datos
+        };
+
+        if (viejos.copiaInterna) respaldo.copiaInterna = viejos.copiaInterna;
+        if (Object.keys(viejos.sinLeer).length) respaldo.sinLeer = viejos.sinLeer;
+
+        const fecha = new Date().toISOString().slice(0, 10);
+        descargarArchivoRespaldo(respaldo, `vendefrio-datos-viejos-celular-${fecha}.json`);
+        return viejos.firma;
+    } catch (error) {
+        console.error("No se pudo descargar el archivo con los datos viejos.", error);
+        mostrarAviso("No se pudo descargar", "No se pudo crear el archivo con los datos viejos de este celular.");
+        return null;
+    }
+}
+
+// Paso 3: borra los datos viejos. Quedan las preferencias, el borrador del
+// pedido, la sesión, el modo personal y las fechas de respaldo.
+function borrarDatosViejosDelCelular() {
+    if (!puedeLimpiarDatosViejos()) return false;
+
+    try {
+        CLAVES_DATOS_VIEJOS.concat(CLAVES_SIN_USO_CON_DATOS_VIEJOS)
+            .forEach(clave => localStorage.removeItem(clave));
+        return true;
+    } catch (error) {
+        console.error("No se pudieron borrar los datos viejos del celular.", error);
+        return false;
+    }
+}
+
 function guardarRespaldoAutomatico() {
     // La copia interna es de los datos de este celular.
     if (obtenerNombreAdaptadorDatos() !== "local") return false;
