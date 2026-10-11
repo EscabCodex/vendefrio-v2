@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14)
-// Se publican a mano en la consola de Firebase (tareas M3 y M5; volver a
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15)
+// Se publican a mano en la consola de Firebase (tareas M3, M5 y M6; volver a
 // publicar cada vez que cambia este archivo).
 //
 // Estructura:
@@ -152,7 +152,9 @@ service cloud.firestore {
           ||
           (request.resource.data.tipo == "reingreso"
             && request.resource.data.uidAnterior
-                == get(rutaEmpleado(request.auth.uid, request.resource.data.idEmpleado)).data.uidActual)
+                == get(rutaEmpleado(request.auth.uid, request.resource.data.idEmpleado)).data.uidActual
+            // Una ficha dada de baja no vuelve con reingreso (T15).
+            && get(rutaEmpleado(request.auth.uid, request.resource.data.idEmpleado)).data.activo == true)
         );
 
       // Usar el código: lo marca la cuenta anónima del empleado, en la misma
@@ -167,7 +169,11 @@ service cloud.firestore {
         && request.resource.data.usadoEn == request.time
         && getAfter(rutaMiembro(resource.data.idDistribuidora, request.auth.uid)).data.codigo == codigo;
 
-      allow delete: if false;
+      // Anular un código sin usar (T15): solo el dueño que lo creó.
+      allow delete: if ingreso()
+        && !esAnonimo()
+        && resource.data.idDistribuidora == request.auth.uid
+        && resource.data.usado == false;
     }
 
     match /distribuidoras/{idDistribuidora} {
@@ -224,16 +230,24 @@ service cloud.firestore {
 
         // Reingreso (T14): el celular nuevo le quita el acceso al viejo, en la
         // misma tanda en que la ficha del empleado pasa a la cuenta nueva.
+        // Baja (T15): el dueño le quita el acceso a un empleado, en la misma
+        // tanda en que su ficha queda como "dado de baja".
         allow delete: if ingreso()
           && uid != request.auth.uid
           && resource.data.rol == "empleado"
-          && getAfter(rutaEmpleado(idDistribuidora, resource.data.idEmpleado)).data.uidActual == request.auth.uid;
+          && (getAfter(rutaEmpleado(idDistribuidora, resource.data.idEmpleado)).data.uidActual == request.auth.uid
+            || (esDueno(idDistribuidora)
+              && getAfter(rutaEmpleado(idDistribuidora, resource.data.idEmpleado)).data.activo == false));
       }
 
       // Ficha de cada empleado (T14). Nace cuando el empleado usa un código
       // de alta del dueño; el empleado solo cambia su nombre y sus roles.
+      // El dueño cambia los roles y da de baja (T15). Nunca se borra.
       match /empleados/{idEmpleado} {
-        allow read: if esMiembro(idDistribuidora);
+        // Un empleado dado de baja puede leer solo su propia ficha, para que
+        // su celular sepa que fue una baja (T15). No ve nada más.
+        allow read: if esMiembro(idDistribuidora)
+          || (ingreso() && resource.data.uidActual == request.auth.uid);
 
         allow create: if ingreso()
           && esAnonimo()
@@ -258,11 +272,28 @@ service cloud.firestore {
               && request.resource.data.roles.size() <= 20)
             ||
             // Reingreso: la ficha pasa a la cuenta nueva y la vieja deja de
-            // ser miembro en la misma tanda.
+            // ser miembro en la misma tanda. Solo si la ficha está activa.
             (esAnonimo()
+              && resource.data.activo == true
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["uidActual"])
               && request.resource.data.uidActual == request.auth.uid
               && fichaDeCanje(idDistribuidora, idEmpleado, "reingreso")
+              && !existsAfter(rutaMiembro(idDistribuidora, resource.data.uidActual)))
+            ||
+            // El dueño cambia los roles de un empleado (T15).
+            (esDueno(idDistribuidora)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["roles"])
+              && request.resource.data.roles is list
+              && request.resource.data.roles.size() <= 20)
+            ||
+            // Baja (T15): la ficha queda como "dado de baja" y, en la misma
+            // tanda, su cuenta deja de ser miembro. No hay vuelta atrás: para
+            // volver hace falta un código de alta nuevo (otra ficha).
+            (esDueno(idDistribuidora)
+              && resource.data.activo == true
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["activo", "baja"])
+              && request.resource.data.activo == false
+              && request.resource.data.baja == request.time
               && !existsAfter(rutaMiembro(idDistribuidora, resource.data.uidActual)))
           );
 

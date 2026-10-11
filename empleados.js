@@ -1,4 +1,4 @@
-// VendeFrío - Empleados: ingreso con código (T14)
+// VendeFrío - Empleados: ingreso con código (T14) y panel del dueño (T15)
 // - El dueño genera códigos en Configuración > Empleados: uno de alta para un
 //   empleado nuevo, o uno de reingreso para pasar a un empleado a otro celular.
 //   8 caracteres sin letras que se confundan, sirven una vez y vencen a las 24 h.
@@ -8,7 +8,10 @@
 //   miembro y se crea (o, en el reingreso, se pasa a su cuenta) su ficha de
 //   empleado. firestore.rules revisa que el código sea válido.
 // - El empleado siempre usa la nube de la distribuidora. Si otro celular entra
-//   con un código de reingreso, este pierde el acceso y vuelve al inicio.
+//   con un código de reingreso, o si el dueño lo da de baja, este pierde el
+//   acceso y vuelve al inicio.
+// - Panel del dueño (T15): cambiar roles, anular códigos sin usar, dar de baja
+//   y editar la lista de roles.
 // Los datos de este celular (localStorage) no se leen ni se borran.
 (function () {
     // Este celular es de un empleado: { uid, distribuidora, idEmpleado }.
@@ -19,6 +22,8 @@
     const LARGO_CODIGO = 8;
     const HORAS_DE_VIGENCIA = 24;
     const LARGO_MAXIMO_NOMBRE = 60;
+    const LARGO_MAXIMO_ROL = 30;
+    const MAXIMO_DE_ROLES = 50;
     const ESPERA_MAXIMA_NUBE = 30 * 1000;
 
     // Cada distribuidora arranca con estos roles (el id no cambia nunca).
@@ -33,9 +38,11 @@
     let miFicha = null;
     let roles = null;
     let empleados = [];
+    let codigosSinUsar = [];
     const oyentesMiFicha = [];
     const oyentesRoles = [];
     const oyentesEmpleados = [];
+    const oyentesCodigos = [];
     let dejarDeEscucharEmpleados = null;
     let saliendo = false;
 
@@ -412,10 +419,39 @@
 
         const refDistribuidora = db.collection("distribuidoras").doc(guardado.distribuidora);
 
-        const perdioElAcceso = () => dejarCelularSinEmpleado(
-            "Este celular ya no tiene acceso a la distribuidora. " +
-            "Si sos el mismo empleado, pedile a tu encargado un código de reingreso."
+        const refEmpleado = refDistribuidora.collection("empleados").doc(guardado.idEmpleado);
+
+        const loDieronDeBaja = () => dejarCelularSinEmpleado(
+            "Tu encargado te dio de baja en la distribuidora: este celular ya no tiene acceso. " +
+            "Para volver a entrar hace falta un código nuevo de tu encargado."
         );
+
+        // Puede ser un reingreso desde otro celular o una baja (T15). Después
+        // de una baja la ficha sigue siendo de esta cuenta y el empleado
+        // todavía puede leerla; después de un reingreso pasó a otra cuenta.
+        // Se espera un momento: el cambio de la ficha puede llegar un poco
+        // después de que la nube avisa que ya no es miembro.
+        const perdioElAcceso = async () => {
+            if (saliendo) return;
+            await new Promise(resolver => setTimeout(resolver, 1500));
+            if (saliendo) return;
+
+            try {
+                const ficha = await esperarNube(refEmpleado.get({ source: "server" }));
+                const datos = ficha.exists ? ficha.data() || {} : {};
+                if (datos.activo === false || datos.uidActual === guardado.uid) {
+                    loDieronDeBaja();
+                    return;
+                }
+            } catch (error) {
+                // Sin permiso para leerla: la ficha pasó a otro celular.
+            }
+
+            dejarCelularSinEmpleado(
+                "Este celular ya no tiene acceso a la distribuidora. " +
+                "Si sos el mismo empleado, pedile a tu encargado un código de reingreso."
+            );
+        };
 
         const siNoHayPermiso = error => {
             console.warn("La nube no deja leer los datos del empleado.", error);
@@ -426,10 +462,17 @@
             if (!foto.exists && !foto.metadata.fromCache) perdioElAcceso();
         }, siNoHayPermiso);
 
-        refDistribuidora.collection("empleados").doc(guardado.idEmpleado).onSnapshot(foto => {
+        refEmpleado.onSnapshot(foto => {
             if (!foto.exists) return;
 
             const datos = foto.data() || {};
+
+            // Baja (T15): la nube ya le niega el acceso; se sale enseguida.
+            if (datos.activo === false) {
+                loDieronDeBaja();
+                return;
+            }
+
             miFicha = {
                 nombre: typeof datos.nombre === "string" ? datos.nombre : "",
                 roles: Array.isArray(datos.roles) ? datos.roles : []
@@ -563,7 +606,8 @@
                     id: documento.id,
                     nombre: typeof datos.nombre === "string" ? datos.nombre : "",
                     roles: Array.isArray(datos.roles) ? datos.roles : [],
-                    activo: datos.activo !== false
+                    activo: datos.activo !== false,
+                    baja: datos.baja && typeof datos.baja.toDate === "function" ? datos.baja.toDate() : null
                 };
             }).sort((a, b) => (a.nombre || "~").localeCompare(b.nombre || "~", "es"));
             avisarA(oyentesEmpleados, empleados);
@@ -578,10 +622,247 @@
             avisarA(oyentesEmpleados, empleados);
         }, error => console.warn("No se pudo leer la lista de roles.", error));
 
+        // Códigos sin usar (T15): desaparecen solos cuando un empleado los usa.
+        const quitarCodigos = db.collection("codigosAcceso")
+            .where("idDistribuidora", "==", uid)
+            .where("usado", "==", false)
+            .onSnapshot(foto => {
+                codigosSinUsar = foto.docs.map(documento => {
+                    const datos = documento.data() || {};
+                    return {
+                        codigo: documento.id,
+                        tipo: datos.tipo === "reingreso" ? "reingreso" : "alta",
+                        idEmpleado: datos.idEmpleado || "",
+                        vence: venceEl(datos.creado)
+                    };
+                }).sort((a, b) => b.vence - a.vence);
+                avisarA(oyentesCodigos, codigosVigentes());
+            }, error => console.warn("No se pudo leer la lista de códigos.", error));
+
         dejarDeEscucharEmpleados = () => {
             quitarEmpleados();
             quitarRoles();
+            quitarCodigos();
         };
+    }
+
+    // Los vencidos ya no sirven: no se muestran.
+    function codigosVigentes() {
+        const ahoraMismo = Date.now();
+        return codigosSinUsar.filter(codigo => codigo.vence.getTime() > ahoraMismo);
+    }
+
+    function escucharCodigos(oyente) {
+        const quitar = sumarOyente(oyentesCodigos, oyente, codigosVigentes());
+        arrancarEscuchaDeEmpleados();
+        return quitar;
+    }
+
+    // -------------------------------------------------
+    // Dueño: panel de empleados (T15)
+    // -------------------------------------------------
+
+    function refDeMiDistribuidora() {
+        const db = obtenerFirestore();
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+
+        if (!db || !usuario || !esDueno()) {
+            throw errorConTexto("Solo el dueño de la distribuidora puede hacer esto.");
+        }
+        return { db, refDistribuidora: db.collection("distribuidoras").doc(usuario.uid), uid: usuario.uid };
+    }
+
+    function errorDelPanel(error, texto) {
+        console.error(texto, error);
+        if (error && error.code === "empleados") return error;
+        if (error && error.code === "permission-denied") {
+            return errorConTexto("La nube no lo permitió. Revisá que las reglas nuevas estén publicadas en Firebase (M6).");
+        }
+        return errorConTexto(texto + " Revisá la señal y probá de nuevo.");
+    }
+
+    // Cambia los roles de un empleado. Sin señal queda en el celular y se
+    // sube solo al volver.
+    function cambiarRolesDe(idEmpleado, idsRoles) {
+        try {
+            const { refDistribuidora } = refDeMiDistribuidora();
+            const validos = new Set(listaDeRoles().map(rol => rol.id));
+            const elegidos = Array.from(new Set(idsRoles || [])).filter(id => validos.has(id));
+
+            refDistribuidora.collection("empleados").doc(idEmpleado)
+                .update({ roles: elegidos })
+                .catch(error => {
+                    console.error("No se pudieron guardar los roles.", error);
+                    if (typeof mostrarAviso === "function") {
+                        mostrarAviso("No se guardaron los roles", errorDelPanel(error, "No se guardaron los roles.").message);
+                    }
+                });
+
+            return Promise.resolve(elegidos);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    // Anula un código sin usar (hace falta internet).
+    async function anularCodigo(codigo) {
+        if (!navigator.onLine) throw errorConTexto("Hace falta internet para anular un código.");
+
+        try {
+            const { db } = refDeMiDistribuidora();
+            await esperarNube(db.collection("codigosAcceso").doc(codigo).delete());
+        } catch (error) {
+            throw errorDelPanel(error, "No se pudo anular el código.");
+        }
+    }
+
+    // Baja (T15): en una sola tanda la ficha queda como "dado de baja", la
+    // cuenta del empleado deja de ser miembro (la nube le niega el acceso al
+    // instante) y se anulan sus códigos sin usar. La ficha no se borra, para
+    // que su nombre siga en el historial. Hace falta internet.
+    async function darDeBaja(idEmpleado) {
+        if (!navigator.onLine) throw errorConTexto("Hace falta internet para dar de baja a un empleado.");
+
+        try {
+            const { db, refDistribuidora, uid } = refDeMiDistribuidora();
+            const refEmpleado = refDistribuidora.collection("empleados").doc(idEmpleado);
+            const ficha = await esperarNube(refEmpleado.get({ source: "server" }));
+
+            if (!ficha.exists) throw errorConTexto("No se encontró la ficha de ese empleado.");
+
+            const datos = ficha.data() || {};
+            if (datos.activo === false) throw errorConTexto("Ese empleado ya estaba dado de baja.");
+
+            const tanda = db.batch();
+            tanda.update(refEmpleado, { activo: false, baja: ahora() });
+
+            if (datos.uidActual) {
+                const refMiembro = refDistribuidora.collection("miembros").doc(datos.uidActual);
+                const miembro = await esperarNube(refMiembro.get({ source: "server" }));
+                if (miembro.exists && miembro.data().rol === "empleado") tanda.delete(refMiembro);
+            }
+
+            const codigos = await esperarNube(db.collection("codigosAcceso")
+                .where("idDistribuidora", "==", uid)
+                .where("usado", "==", false)
+                .get({ source: "server" }));
+            codigos.docs
+                .filter(documento => documento.data().idEmpleado === idEmpleado)
+                .forEach(documento => tanda.delete(documento.ref));
+
+            await esperarNube(tanda.commit());
+        } catch (error) {
+            throw errorDelPanel(error, "No se pudo dar de baja.");
+        }
+    }
+
+    // --- Editar roles (T15) ---
+
+    // Para comparar nombres sin importar mayúsculas ni tildes.
+    function nombreComparable(nombre) {
+        return String(nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase().trim().replace(/\s+/g, " ");
+    }
+
+    function limpiarNombreRol(nombre) {
+        return String(nombre || "").trim().replace(/\s+/g, " ").slice(0, LARGO_MAXIMO_ROL);
+    }
+
+    function revisarNombreRol(nombre, idQueSeRenombra) {
+        if (!nombre) throw errorConTexto("Escribí el nombre del rol.");
+
+        const repetido = listaDeRoles().some(rol =>
+            rol.id !== idQueSeRenombra && nombreComparable(rol.nombre) === nombreComparable(nombre));
+        if (repetido) throw errorConTexto("Ya hay un rol que se llama \"" + nombre + "\".");
+    }
+
+    // Guarda la lista entera de roles (solo el dueño, ver firestore.rules).
+    // Sin señal queda en el celular y se sube solo al volver.
+    function guardarListaDeRoles(lista, tanda) {
+        const { db, refDistribuidora } = refDeMiDistribuidora();
+        const lote = tanda || db.batch();
+
+        lote.set(refDistribuidora.collection("config").doc("roles"), {
+            lista: lista.map(rol => ({ id: rol.id, nombre: rol.nombre }))
+        });
+
+        lote.commit().catch(error => {
+            console.error("No se pudo guardar la lista de roles.", error);
+            if (typeof mostrarAviso === "function") {
+                mostrarAviso("No se guardaron los roles", errorDelPanel(error, "No se guardaron los roles.").message);
+            }
+        });
+
+        // Se ve enseguida en este celular.
+        roles = lista;
+        avisarA(oyentesRoles, listaDeRoles());
+        avisarA(oyentesEmpleados, empleados);
+    }
+
+    function crearRol(nombre) {
+        try {
+            const limpio = limpiarNombreRol(nombre);
+            revisarNombreRol(limpio, null);
+
+            const actual = listaDeRoles();
+            if (actual.length >= MAXIMO_DE_ROLES) {
+                throw errorConTexto("Llegaste al máximo de " + MAXIMO_DE_ROLES + " roles.");
+            }
+
+            const usados = new Set(actual.map(rol => rol.id));
+            let id = "";
+            do {
+                id = "rol" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            } while (usados.has(id));
+
+            guardarListaDeRoles([...actual, { id, nombre: limpio }]);
+            return Promise.resolve({ id, nombre: limpio });
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    // El id no cambia: los empleados que lo tienen ven el nombre nuevo.
+    function renombrarRol(id, nombre) {
+        try {
+            const limpio = limpiarNombreRol(nombre);
+            revisarNombreRol(limpio, id);
+
+            const actual = listaDeRoles();
+            if (!actual.some(rol => rol.id === id)) throw errorConTexto("Ese rol ya no existe.");
+
+            guardarListaDeRoles(actual.map(rol => rol.id === id ? { id, nombre: limpio } : rol));
+            return Promise.resolve({ id, nombre: limpio });
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    // Cuántos empleados tienen ese rol (activos o dados de baja).
+    function empleadosConRol(id) {
+        return empleados.filter(empleado => empleado.roles.includes(id));
+    }
+
+    // Saca el rol de la lista y, en la misma tanda, se lo quita a los
+    // empleados que lo tienen. No se borra ningún empleado.
+    function eliminarRol(id) {
+        try {
+            const { db, refDistribuidora } = refDeMiDistribuidora();
+            const actual = listaDeRoles();
+            if (!actual.some(rol => rol.id === id)) throw errorConTexto("Ese rol ya no existe.");
+
+            const tanda = db.batch();
+            empleadosConRol(id).forEach(empleado => {
+                tanda.update(refDistribuidora.collection("empleados").doc(empleado.id), {
+                    roles: window.firebase.firestore.FieldValue.arrayRemove(id)
+                });
+            });
+
+            guardarListaDeRoles(actual.filter(rol => rol.id !== id), tanda);
+            return Promise.resolve();
+        } catch (error) {
+            return Promise.reject(error);
+        }
     }
 
     // -------------------------------------------------
@@ -607,7 +888,16 @@
         avisoParaElInicio,
         hayAvisoParaElInicio,
         generarCodigo,
-        escucharEmpleados
+        escucharEmpleados,
+        escucharCodigos,
+        cambiarRolesDe,
+        anularCodigo,
+        darDeBaja,
+        largoMaximoRol: LARGO_MAXIMO_ROL,
+        crearRol,
+        renombrarRol,
+        eliminarRol,
+        cantidadConRol: id => empleadosConRol(id).length
     };
 
     // El celular de un empleado arranca a escuchar apenas se sabe la cuenta.
@@ -642,6 +932,7 @@
                 dejarDeEscucharEmpleados();
                 dejarDeEscucharEmpleados = null;
                 empleados = [];
+                codigosSinUsar = [];
             }
         });
     }

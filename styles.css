@@ -3216,3 +3216,17 @@ html[data-tema="oscuro"] .empleadoCodigo strong{color:#f9fafb;}
 /* Nombre de la distribuidora en el inicio (T13) */
 .dashboardMarca{min-width:0;}
 .dashboardHeader .dashNombreDistribuidora{margin-top:2px;font-size:14px;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;}
+
+/* Panel de empleados (T15): roles, códigos sin usar, bajas y editor de roles */
+.empleadoRoles{display:grid;gap:8px;}
+.empleadoRoles .inicioRol input{width:22px;min-height:22px;height:22px;padding:0;flex-shrink:0;accent-color:var(--acento);}
+.empleadoFila .configAcciones button{min-height:44px;}
+.configDetalle .empleadoBaja{border-color:var(--peligro);color:var(--peligro);}
+.empleadoFila.empleadoDeBaja{opacity:.75;border-style:dashed;}
+.empleadoFila .empleadoCodigoTexto{font-size:18px;letter-spacing:.1em;}
+.empleadoFila label{padding:0;border-bottom:0;}
+.configDetalle .empleadoFila input[type="text"],
+.configDetalle #empleadoRolNuevo{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#1f2937;font-size:16px;font-weight:500;}
+html[data-tema="oscuro"] .configDetalle .empleadoFila input[type="text"],
+html[data-tema="oscuro"] .configDetalle #empleadoRolNuevo{background:#111827;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .configDetalle .empleadoBaja{background:#1f2937;border-color:#f87171;color:#fca5a5;}
