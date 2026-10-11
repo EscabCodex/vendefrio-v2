@@ -4,8 +4,11 @@
 //   (crea la cuenta y la distribuidora vacía).
 // - "Empleado" (T14): entra con el código que le da el encargado y después
 //   carga su nombre (obligatorio) y sus roles (opcionales). Ver empleados.js.
-// - "Continuar sin iniciar sesión": la app como antes, con los datos de este
-//   celular. El celular recuerda la elección y no vuelve a preguntar.
+// - "Continuar sin iniciar sesión": el modo personal (T16d), con los datos
+//   solo en este celular. Pide nombre (obligatorio) y roles (opcionales) y
+//   los guarda en el celular, que recuerda la elección y no vuelve a
+//   preguntar. Mientras se usa, un cartel fijo avisa que los datos no están
+//   protegidos.
 // Solo nube (T16c): con cuenta se entra siempre a la nube de la
 // distribuidora, al ingresar, al registrarse y al abrir la app con sesión.
 // Antes, si el celular tiene datos propios, se pregunta una sola vez si se
@@ -16,6 +19,20 @@
     const LARGO_MINIMO_CONTRASENA = 6;
     // Igual que el límite de firestore.rules.
     const LARGO_MAXIMO_NOMBRE = 80;
+    // Modo personal (T16d): { nombre, roles } de quien usa la app sin cuenta.
+    // Vive solo en este celular y no se sube a la nube.
+    const CLAVE_MODO_PERSONAL = "vendefrio_modo_personal";
+    const LARGO_MAXIMO_NOMBRE_PERSONAL = 60;
+    // Los 5 roles precargados, con los mismos ids que ROLES_PRECARGADOS de
+    // empleados.js (acá no hay distribuidora de donde leerlos).
+    const ROLES_PERSONALES = [
+        { id: "vendedor", nombre: "Vendedor" },
+        { id: "deposito", nombre: "Depósito" },
+        { id: "repartidor", nombre: "Repartidor" },
+        { id: "cobranza", nombre: "Cobranza" },
+        { id: "administracion", nombre: "Administración" }
+    ];
+    const TEXTO_CARTEL_PERSONAL = "Tus datos no están protegidos: están solo en este celular. Iniciá sesión para guardarlos en la nube";
 
     let pantalla = null;
     let quitarOyenteDistribuidora = null;
@@ -35,6 +52,68 @@
         } catch (error) {
             console.warn("No se pudo recordar la elección de seguir sin sesión.", error);
         }
+    }
+
+    // --- Modo personal (T16d) ---
+
+    function datosPersonales() {
+        try {
+            const datos = JSON.parse(localStorage.getItem(CLAVE_MODO_PERSONAL) || "null");
+            if (!datos || typeof datos !== "object") return null;
+
+            const nombre = String(datos.nombre || "").trim();
+            if (!nombre) return null;
+
+            const ids = ROLES_PERSONALES.map(rol => rol.id);
+            const roles = Array.isArray(datos.roles) ? datos.roles.filter(id => ids.includes(id)) : [];
+            return { nombre, roles };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function guardarDatosPersonales(nombre, roles) {
+        localStorage.setItem(CLAVE_MODO_PERSONAL, JSON.stringify({ nombre, roles }));
+    }
+
+    function nombresDeRolesPersonales(roles) {
+        return ROLES_PERSONALES
+            .filter(rol => (roles || []).includes(rol.id))
+            .map(rol => rol.nombre);
+    }
+
+    // Se usa la app sin cuenta: ni nube, ni sesión con email, ni empleado.
+    function usaModoPersonal() {
+        if (!eligioSinSesion() || usaNubeReal()) return false;
+
+        const usuario = window.cuentaVendeFrio?.usuarioActual?.();
+        if (usuario && !usuario.isAnonymous) return false;
+        if (usuario && window.empleadosVendeFrio?.esEmpleado?.()) return false;
+        return true;
+    }
+
+    // Cartel fijo, arriba de la barra de abajo. Al tocarlo abre la pantalla
+    // de inicio, para ingresar o registrarse (o entrar como empleado).
+    function mostrarCartelPersonal() {
+        if (!document.body || document.getElementById("cartelModoPersonal")) return;
+
+        const cartel = document.createElement("button");
+        cartel.type = "button";
+        cartel.id = "cartelModoPersonal";
+        cartel.className = "cartelModoPersonal";
+        cartel.textContent = TEXTO_CARTEL_PERSONAL;
+        cartel.addEventListener("click", () => {
+            crear();
+            mostrarPaso("elegir");
+        });
+
+        document.body.appendChild(cartel);
+        document.documentElement.classList.add("conCartelPersonal");
+    }
+
+    function quitarCartelPersonal() {
+        document.getElementById("cartelModoPersonal")?.remove();
+        document.documentElement.classList.remove("conCartelPersonal");
     }
 
     function horasCodigo() {
@@ -197,6 +276,33 @@
                         Podés ingresar después desde Configuración &gt; Cuenta.
                     </p>
                 </div>
+
+                <form data-paso="personal" class="inicioFormulario oculto" id="inicioFormPersonal" novalidate>
+                    <h2>Usar sin cuenta</h2>
+                    <p class="inicioNota">
+                        Tus datos no están protegidos: quedan solo en este celular
+                        y no se comparten. Si se pierde o se borra el celular, se pierden.
+                        Podés iniciar sesión después para guardarlos en la nube.
+                    </p>
+                    <label>Tu nombre
+                        <input type="text" id="inicioNombrePersonal" autocomplete="name"
+                            maxlength="${LARGO_MAXIMO_NOMBRE_PERSONAL}" placeholder="Por ejemplo: Juan Pérez" required>
+                    </label>
+                    <fieldset class="inicioRoles">
+                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
+                        <div id="inicioRolesPersonales">
+                            ${ROLES_PERSONALES.map(rol => `
+                                <label class="inicioRol">
+                                    <input type="checkbox" value="${escapar(rol.id)}">
+                                    <span>${escapar(rol.nombre)}</span>
+                                </label>
+                            `).join("")}
+                        </div>
+                    </fieldset>
+                    <p class="inicioError oculto" role="alert"></p>
+                    <button type="submit" class="inicioPrincipal">Guardar y entrar</button>
+                    <button type="button" class="inicioVolver" data-inicio="volverPersonal">‹ Volver</button>
+                </form>
 
                 <form data-paso="ingresar" class="inicioFormulario oculto" id="inicioFormIngresar" novalidate>
                     <h2>Ingresar</h2>
@@ -523,6 +629,7 @@
         if (eligioSubirDatos || uidEntrando === usuario.uid) return;
 
         uidEntrando = usuario.uid;
+        quitarCartelPersonal();
         crear();
         esperarDistribuidora(usuario.uid);
     }
@@ -639,6 +746,68 @@
             });
     }
 
+    // --- Modo personal (T16d) ---
+
+    let personalDesdeConfiguracion = false;
+
+    // Pide nombre y roles. Lo ve quien toca "Continuar sin iniciar sesión" y,
+    // una sola vez, quien ya lo había elegido antes de T16d.
+    function pedirDatosPersonales(desdeConfiguracion) {
+        personalDesdeConfiguracion = Boolean(desdeConfiguracion);
+        crear();
+        mostrarPaso("personal");
+
+        const formulario = document.getElementById("inicioFormPersonal");
+        if (formulario) mostrarError(formulario, "");
+
+        const datos = datosPersonales();
+        const campo = document.getElementById("inicioNombrePersonal");
+        if (campo) campo.value = datos ? datos.nombre : "";
+
+        document.querySelectorAll("#inicioRolesPersonales input").forEach(casilla => {
+            casilla.checked = Boolean(datos && datos.roles.includes(casilla.value));
+        });
+    }
+
+    function enviarDatosPersonales(formulario, boton) {
+        const nombre = (document.getElementById("inicioNombrePersonal")?.value || "").trim();
+        const roles = Array.from(document.querySelectorAll("#inicioRolesPersonales input:checked"))
+            .map(casilla => casilla.value);
+
+        if (!nombre) {
+            mostrarError(formulario, "Escribí tu nombre.");
+            return;
+        }
+
+        try {
+            guardarDatosPersonales(nombre.slice(0, LARGO_MAXIMO_NOMBRE_PERSONAL), roles);
+        } catch (error) {
+            mostrarError(formulario, "No se pudo guardar en este celular. Probá de nuevo.");
+            return;
+        }
+
+        const desdeConfiguracion = personalDesdeConfiguracion;
+        mostrarError(formulario, "");
+        recordarSinSesion();
+        cerrar();
+        mostrarCartelPersonal();
+        window.dispatchEvent(new CustomEvent("modoPersonalVendeFrio"));
+        mostrarToast(desdeConfiguracion ? "Datos guardados" : "¡Hola, " + escapar(nombre) + "!");
+        if (boton) boton.blur();
+    }
+
+    // Al abrir la app en modo personal: el nombre se pide una sola vez.
+    function seguirEnModoPersonal() {
+        if (usaNubeReal()) return;
+
+        if (datosPersonales()) {
+            mostrarCartelPersonal();
+            return;
+        }
+
+        pedirDatosPersonales(false);
+    }
+
     // Desde Configuración > Cuenta, sin sesión.
     function abrirEmpleado() {
         crear();
@@ -666,8 +835,25 @@
         }
 
         if (accion === "sinSesion") {
-            recordarSinSesion();
-            cerrar();
+            // Abierta desde el cartel: ya tiene nombre, sigue como estaba.
+            if (usaModoPersonal() && datosPersonales()) {
+                cerrar();
+                return;
+            }
+
+            pedirDatosPersonales(false);
+            document.getElementById("inicioNombrePersonal")?.focus();
+            return;
+        }
+
+        if (accion === "volverPersonal") {
+            // Desde Configuración se cierra sin cambiar nada.
+            if (personalDesdeConfiguracion && datosPersonales()) {
+                cerrar();
+                return;
+            }
+
+            mostrarPaso("elegir");
             return;
         }
 
@@ -760,6 +946,12 @@
 
         const cuenta = window.cuentaVendeFrio;
         const boton = formulario.querySelector('button[type="submit"]');
+
+        // El modo personal no usa la cuenta (T16d).
+        if (formulario.id === "inicioFormPersonal") {
+            enviarDatosPersonales(formulario, boton);
+            return;
+        }
 
         if (!cuenta) {
             mostrarError(formulario, "La cuenta no está disponible en este momento.");
@@ -859,7 +1051,11 @@
             : "";
 
         const cuenta = window.cuentaVendeFrio;
-        if (!cuenta || !cuenta.disponible()) return;
+        if (!cuenta || !cuenta.disponible()) {
+            // Sin cuenta disponible, quien eligió el modo personal sigue en él.
+            if (eligioSinSesion() && !usaNubeReal()) seguirEnModoPersonal();
+            return;
+        }
 
         let primera = true;
 
@@ -875,7 +1071,10 @@
             if (!esPrimera) return;
             // El empleado ya entró con su código: lo maneja empleados.js.
             if (usuario && window.empleadosVendeFrio?.esEmpleado()) return;
-            if (eligioSinSesion() && !aviso) return;
+            if (eligioSinSesion() && !aviso) {
+                seguirEnModoPersonal();
+                return;
+            }
 
             crear();
             mostrarPaso("elegir");
@@ -893,7 +1092,12 @@
         ofrecerSubirDatos,
         entrarConCuenta,
         pedirDatosEmpleado,
-        abrirEmpleado
+        abrirEmpleado,
+        // Modo personal (T16d)
+        usaModoPersonal,
+        datosPersonales,
+        nombresDeRolesPersonales,
+        pedirDatosPersonales: () => pedirDatosPersonales(true)
     };
 
     decidir();

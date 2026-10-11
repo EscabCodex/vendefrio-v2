@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v137 - Solo nube con cuenta)
+// VendeFrío - Service Worker (v138 - Modo personal)
 // =====================================================
-const CACHE_NAME = "vendefrio-v137";
+const CACHE_NAME = "vendefrio-v138";
 const ARCHIVOS = [
   "./",
   "./index.html",

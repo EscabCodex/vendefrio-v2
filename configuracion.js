@@ -777,11 +777,33 @@
         `;
     }
 
+    // Modo personal (T16d): nombre y roles de quien usa la app sin cuenta.
+    function htmlModoPersonal() {
+        const inicio = window.inicioVendeFrio;
+        const datos = inicio?.usaModoPersonal?.() ? inicio.datosPersonales() : null;
+        if (!datos) return "";
+
+        const roles = inicio.nombresDeRolesPersonales(datos.roles);
+
+        return `
+            <p class="configEstado">
+                Modo personal: <strong>${escaparTexto(datos.nombre)}</strong><br>
+                ${roles.length ? "Roles: " + escaparTexto(roles.join(", ")) : "Sin roles"}<br>
+                Tus datos no están protegidos: están solo en este celular.
+                Iniciá sesión para guardarlos en la nube.
+            </p>
+            <button type="button" data-accion="cambiarDatosPersonales">
+                Cambiar mi nombre y mis roles
+            </button>
+        `;
+    }
+
     function htmlCuenta() {
         const cuenta = window.cuentaVendeFrio;
 
         if (!cuenta || !cuenta.disponible()) {
             return `
+                ${htmlModoPersonal()}
                 <p class="configEstado">
                     La cuenta no está disponible en este momento.
                     ${usaNubeReal()
@@ -825,6 +847,7 @@
         }
 
         return `
+            ${htmlModoPersonal()}
             <form class="configCuentaFormulario" id="formularioCuenta" novalidate>
                 <label>${window.icono("persona",15)} Email
                     <input type="email" id="cuentaEmail" autocomplete="username"
@@ -875,9 +898,15 @@
             return;
         }
 
+        const personal = !usuario && window.inicioVendeFrio?.usaModoPersonal?.()
+            ? window.inicioVendeFrio.datosPersonales()
+            : null;
+
         resumen.textContent = usuario
             ? (nombre ? nombre + " · " : "") + usuario.email + (window.nubeVendeFrio?.modoNube?.() ? " · nube" : "")
-            : "Ingresá o salí de tu cuenta";
+            : personal
+                ? "Modo personal: " + personal.nombre + " · Iniciá sesión"
+                : "Ingresá o salí de tu cuenta";
     }
 
     let seccionAbierta = null;
@@ -1120,6 +1149,10 @@
         if (accion === "rutas") {
             pantalla()?.classList.add("oculto");
             mostrarPantalla("rutas");
+        }
+
+        if (accion === "cambiarDatosPersonales") {
+            window.inicioVendeFrio?.pedirDatosPersonales?.();
         }
 
         if (accion === "verContrasena") {
@@ -1726,6 +1759,16 @@
     } else {
         window.addEventListener("cuentaVendeFrioLista", conectarCuenta, { once: true });
     }
+
+    // Modo personal (T16d): al guardar nombre y roles se actualiza Cuenta.
+    window.addEventListener("modoPersonalVendeFrio", () => {
+        actualizarResumenCuenta();
+
+        const caja = document.getElementById("configDetalle");
+        if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
+            detalle("cuenta");
+        }
+    });
 
     // Igual que la cuenta: distribuidora.js puede llegar después.
     function conectarDistribuidora() {
