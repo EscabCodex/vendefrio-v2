@@ -3123,10 +3123,6 @@ html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;
 html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;}
 html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border:1px solid #f87171;}
 
-/* Modo nube de prueba (T9): cartel fijo para saber siempre que se usan datos de prueba */
-.cartelModoPrueba{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--pendiente);background:var(--pendiente-bg);color:var(--pendiente);font-size:11px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
-html[data-tema="oscuro"] .cartelModoPrueba{background:#1f2937;color:#fff;border-color:var(--pendiente);}
-html.conModoPrueba #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}
 
 /* Subir mis datos a la nube (T11) */
 .configMigracion{display:flex;flex-direction:column;gap:8px;}
@@ -3142,10 +3138,10 @@ html.conModoPrueba #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bot
 /* Sincronización visible (T12): pedido sin subir e indicador de conexión */
 .badgeSinSubir{color:var(--pendiente);margin-top:4px;margin-left:8px;}
 .indicadorNube{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font-size:11px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.indicadorNube::before,.cartelModoPrueba[data-estado]::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--pendiente);flex-shrink:0;vertical-align:1px;}
+.indicadorNube::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--pendiente);flex-shrink:0;vertical-align:1px;}
 .indicadorNube::before{margin-right:0;}
-.indicadorNube[data-estado="ok"]::before,.cartelModoPrueba[data-estado="ok"]::before{background:var(--visitado);}
-.indicadorNube[data-estado="error"]::before,.cartelModoPrueba[data-estado="error"]::before{background:var(--peligro);}
+.indicadorNube[data-estado="ok"]::before{background:var(--visitado);}
+.indicadorNube[data-estado="error"]::before{background:var(--peligro);}
 .indicadorNube[data-estado="error"]{border-color:var(--peligro);}
 .indicadorNube[data-estado="espera"]{border-color:var(--pendiente);}
 html.conIndicadorNube #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}
@@ -3194,8 +3190,6 @@ html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px s
 
 /* Empleados (T14): código, roles y panel del dueño */
 #configFilaEmpleados.oculto{display:none;}
-.configEstado.empleadoAvisoNube{border:1px solid #f59e0b;background:#fffbeb;color:#78350f;}
-html[data-tema="oscuro"] .configEstado.empleadoAvisoNube{background:#1f2937;color:#fff;border-color:#f59e0b;}
 .inicioSesion input.inicioCodigo{font-size:22px;font-weight:800;letter-spacing:.12em;text-align:center;text-transform:uppercase;}
 .inicioRoles{display:grid;gap:8px;margin:0;padding:0;border:0;}
 .inicioRoles legend{margin-bottom:8px;color:var(--texto);font-size:14px;font-weight:700;}

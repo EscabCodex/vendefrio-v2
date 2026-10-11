@@ -953,6 +953,13 @@
         migracionEnCurso = true;
         migracionVerificada = null;
 
+        // Si se corta y se vuelve a abrir la app, se pregunta otra vez (T16c).
+        try {
+            localStorage.setItem(DB_SUBIDA_EMPEZADA, "1");
+        } catch (error) {
+            console.warn("No se pudo anotar la subida empezada.", error);
+        }
+
         try {
             const ref = firestore.collection("distribuidoras").doc(idDistribuidora);
             const local = prepararDatosLocales();
@@ -1023,6 +1030,63 @@
         } finally {
             migracionEnCurso = false;
         }
+    }
+
+    // ¿Este celular ya subió sus datos antes? (T16c, decidido con el dueño)
+    // Un celular que subió con T11 y después volvió a los datos del celular
+    // no tiene ninguna marca. Antes de preguntar se revisa con internet si
+    // alguno de sus registros ya está en la nube, por su id (como en la
+    // verificación de T11). Si alguno está, ya subió: se da por resuelto sin
+    // preguntar, porque subir otra vez vuelve a crear allá lo que se borró.
+    // Lo que falte queda en el celular, para la revisión de T16e.
+    const IDS_POR_CONSULTA = 30;
+
+    async function datosDelCelularEnLaNube() {
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
+        const firestore = obtenerFirestore();
+
+        if (!usuario || usuario.isAnonymous || !idDistribuidora || !firestore) {
+            throw errorMigracion("La nube no está disponible en este momento.", "datos-locales");
+        }
+        if (!navigator.onLine) {
+            throw errorMigracion("Hace falta internet para revisar si tus datos ya están en la nube. Tocá Reintentar cuando vuelva la señal.", "datos-locales");
+        }
+
+        const ref = firestore.collection("distribuidoras").doc(idDistribuidora);
+        const idDocumento = window.firebase.firestore.FieldPath.documentId();
+        const grupos = [
+            ["comercios", obtenerComercios()],
+            ["rutas", obtenerRutasGuardadas()],
+            ["productos", listarProductosDeTodasLasMarcas(obtenerProductos())],
+            ["pedidos", obtenerHistorial()]
+        ];
+
+        try {
+            for (const [subcoleccion, registros] of grupos) {
+                const ids = Array.from(new Set(registros.map(registro => registro && registro.id).filter(esIdValido)));
+
+                for (let inicio = 0; inicio < ids.length; inicio += IDS_POR_CONSULTA) {
+                    const foto = await esperarNube(
+                        ref.collection(subcoleccion)
+                            .where(idDocumento, "in", ids.slice(inicio, inicio + IDS_POR_CONSULTA))
+                            .limit(1)
+                            .get({ source: "server" })
+                    );
+                    if (!foto.empty) return true;
+                }
+            }
+        } catch (error) {
+            console.error("No se pudo revisar si los datos ya están en la nube.", error);
+            throw errorMigracion(
+                error && error.code === "permission-denied"
+                    ? "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas."
+                    : "No se pudo revisar si tus datos ya están en la nube. Revisá la señal y tocá Reintentar.",
+                "datos-locales"
+            );
+        }
+
+        return false;
     }
 
     // -------------------------------------------------
@@ -1392,57 +1456,6 @@
     }
 
     // -------------------------------------------------
-    // Reinicio semanal de las etiquetas de visita (T16c)
-    // -------------------------------------------------
-    // Cada semana se sacan las marcas "pendiente" de los comercios. Con la
-    // nube se hace sobre la nube y una sola vez por semana para toda la
-    // distribuidora: config/semana guarda la semana del último reinicio, así
-    // un celular que abre más tarde no borra las marcas que otro puso esa
-    // semana. Solo con "Conectada", para decidir con lo último de la nube.
-
-    let semanaRevisada = "";
-    let revisandoSemana = false;
-
-    async function reiniciarSemanaSiCorresponde() {
-        if (modo !== "nube" || !db || !refDistribuidora) return;
-        if (estado !== "conectada" || !navigator.onLine || revisandoSemana) return;
-
-        const semana = obtenerClaveSemanaActual();
-        if (semanaRevisada === semana) return;
-
-        revisandoSemana = true;
-
-        try {
-            const refSemana = refDistribuidora.collection("config").doc("semana");
-            const foto = await esperarNube(refSemana.get({ source: "server" }));
-            const guardada = foto.exists ? (foto.data() || {}).semana : "";
-
-            if (guardada !== semana) {
-                const comercios = obtenerComercios();
-                let guardado = true;
-
-                if (comercios.some(comercio => comercio.pendienteSemana === true)) {
-                    comercios.forEach(comercio => {
-                        comercio.pendienteSemana = false;
-                    });
-                    guardado = guardarComercios(comercios);
-                    // Las pantallas se redibujan con las etiquetas nuevas.
-                    if (guardado) avisarCambioDatos(["comercios"], true);
-                }
-
-                if (!guardado) return;
-                refSemana.set({ semana }).catch(errorAlEscribir);
-            }
-
-            semanaRevisada = semana;
-        } catch (error) {
-            console.warn("No se pudo revisar el reinicio semanal en la nube.", error);
-        } finally {
-            revisandoSemana = false;
-        }
-    }
-
-    // -------------------------------------------------
     // Arranque
     // -------------------------------------------------
 
@@ -1494,11 +1507,6 @@
             return;
         }
 
-        // El reinicio semanal de las etiquetas de visita se hace al conectar.
-        oyentes.push(nuevoEstado => {
-            if (nuevoEstado === "conectada") reiniciarSemanaSiCorresponde();
-        });
-
         // Si se pierde la sesión o entra otra cuenta, se sale de la nube a la
         // pantalla de inicio (no a los datos de este celular).
         window.cuentaVendeFrio.escuchar(usuario => {
@@ -1530,8 +1538,8 @@
         activarNube,
         // Solo nube (T16c).
         usarNube,
+        datosDelCelularEnLaNube,
         salirDeLaCuenta,
-        reiniciarSemanaSiCorresponde,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),

@@ -432,15 +432,37 @@
     }
 
     function seguirConLaDistribuidora() {
-        if (ofrecerSubirDatos()) {
+        mostrarPaso("creando");
+
+        // Sin datos propios (o ya resueltos): la nube directamente.
+        if (!ofrecerSubirDatos()) {
+            mostrarEstadoCreando("Tu distribuidora está lista. Abriendo la nube…", false);
+            usarLaNube(texto => mostrarEstadoCreando(texto, true));
+            return;
+        }
+
+        // Si una subida empezó en este celular y quedó a medias, se pregunta
+        // otra vez para poder terminarla.
+        const nube = window.nubeVendeFrio;
+        if (subidaDeDatosEmpezada() || !nube || !nube.datosDelCelularEnLaNube) {
             mostrarPaso("datosPropios");
             return;
         }
 
-        // Sin datos propios (o ya resueltos): la nube directamente.
-        mostrarPaso("creando");
-        mostrarEstadoCreando("Tu distribuidora está lista. Abriendo la nube…", false);
-        usarLaNube(texto => mostrarEstadoCreando(texto, true));
+        // Si este celular ya subió sus datos antes, no se pregunta (T16c).
+        mostrarEstadoCreando("Revisando si los datos de este celular ya están en la nube…", false);
+
+        nube.datosDelCelularEnLaNube()
+            .then(yaEstan => {
+                if (!yaEstan) {
+                    mostrarPaso("datosPropios");
+                    return;
+                }
+
+                mostrarEstadoCreando("Los datos de este celular ya estaban en la nube. Abriendo la nube…", false);
+                usarLaNube(texto => mostrarEstadoCreando(texto, true));
+            })
+            .catch(error => mostrarEstadoCreando(error.message, true));
     }
 
     // distribuidora.js crea la distribuidora al primer ingreso, como siempre.

@@ -24,6 +24,9 @@ const DB_INICIO_SIN_SESION = "vendefrio_inicio_sin_sesion";
 // resolvieron (se subieron, se eligi\u00f3 no subirlos o el celular ya usaba la
 // nube). As\u00ed "Subir mis datos a la nube" se ofrece una sola vez por celular.
 const DB_MIGRACION_RESUELTA = "vendefrio_migracion_resuelta";
+// Solo nube (T16c): "1" mientras una subida de T11 empezada en este celular
+// no termin\u00f3. As\u00ed, al volver a abrir, se pregunta otra vez y se puede terminar.
+const DB_SUBIDA_EMPEZADA = "vendefrio_subida_empezada";
 // Respaldo de la nube (T16b): fecha de la \u00faltima descarga en este celular y
 // d\u00eda (AAAA-MM-DD) en que se mostr\u00f3 el recordatorio.
 const DB_ULTIMO_RESPALDO_NUBE = "vendefrio_ultimo_respaldo_nube";
@@ -105,13 +108,11 @@ function comercioEstaVisitadoEstaSemana(comercio) {
 }
 
 function asegurarReinicioSemanal() {
-    // Con la nube, el reinicio se hace sobre los datos de la nube (T16c).
-    if (usaNubeReal()) {
-        if (window.nubeVendeFrio && window.nubeVendeFrio.reiniciarSemanaSiCorresponde) {
-            window.nubeVendeFrio.reiniciarSemanaSiCorresponde();
-        }
-        return;
-    }
+    // Con la nube no se hace (decidido con el due\u00f1o en T16c): cada celular
+    // anotaba la semana por su cuenta y uno que volv\u00eda tarde borraba las
+    // marcas que otro puso esa semana. No cambia lo que se ve: "visitado"
+    // sale de la fecha de la \u00faltima visita y cada visita saca la marca.
+    if (usaNubeReal()) return;
 
     const semanaActual = obtenerClaveSemanaActual();
     const semanaGuardada = localStorage.getItem(DB_SEMANA_ACTUAL);
@@ -324,8 +325,17 @@ function migracionResuelta() {
 function marcarMigracionResuelta() {
     try {
         if (!migracionResuelta()) localStorage.setItem(DB_MIGRACION_RESUELTA, "1");
+        localStorage.removeItem(DB_SUBIDA_EMPEZADA);
     } catch (error) {
         console.warn("No se pudo anotar que los datos del celular ya se resolvieron.", error);
+    }
+}
+
+function subidaDeDatosEmpezada() {
+    try {
+        return localStorage.getItem(DB_SUBIDA_EMPEZADA) === "1";
+    } catch (error) {
+        return false;
     }
 }
 
@@ -2469,15 +2479,15 @@ function migrarIdsLocales() {
 conectarAdaptadorDatos();
 
 // Con la nube (T16c), al abrir la app no se escribe nada en los datos de este
-// celular: ni las listas de ejemplo ni los ids ni la copia interna. El
-// reinicio semanal lo hace nube.js sobre la nube cuando conecta.
+// celular (ni las listas de ejemplo ni los ids ni la copia interna) y no se
+// hace el reinicio semanal de la marca "pendiente".
 if (!usaNubeReal()) {
     migrarIdsLocales();
     migrarIdsComerciosEnRutas();
     asegurarReinicioSemanal();
+    programarReinicioSemanal();
     respaldarAutomaticamenteSiCorresponde();
 }
 
-programarReinicioSemanal();
 prepararControlesRespaldo();
 prepararRecordatorioRespaldoNube();
