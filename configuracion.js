@@ -57,7 +57,9 @@
                     <button class="configFila" data-config-seccion="respaldo">
                         <span class="configIcono">${window.icono("disquete",20)}</span>
                         <span><strong>Datos y respaldo</strong>
-                        <small>Copias, restauración y frecuencia automática</small></span><b>›</b>
+                        <small>${usaNubeReal()
+                            ? "Respaldo de los datos de la nube"
+                            : "Copias, restauración y frecuencia automática"}</small></span><b>›</b>
                     </button>
 
                     <button class="configFila" data-config-seccion="trabajo">
@@ -407,6 +409,57 @@
                 Apagar modo prueba
             </button>
         `;
+    }
+
+    // --- Respaldo de la nube (T16b) ---
+    function textoUltimoRespaldoNube() {
+        const fecha = obtenerFechaUltimoRespaldoNube();
+        return fecha ? fecha.toLocaleString("es-AR") : "todavía ninguno";
+    }
+
+    function textoConexionRespaldo() {
+        const nube = window.nubeVendeFrio;
+
+        if (!nube?.modoNube?.()) {
+            return "La nube no está disponible. Cerrá y volvé a abrir la app con internet.";
+        }
+
+        return nube.estado() === "conectada"
+            ? "✓ Conectada: el archivo va a tener lo último de la nube."
+            : "Para exportar, esperá a que abajo diga \"Conectada\". Hace falta internet.";
+    }
+
+    function htmlRespaldoNube() {
+        return `
+            <p class="configEstado">
+                <strong>Respaldo de la nube</strong><br>
+                Tus datos están en la nube de tu distribuidora. Descargá un
+                respaldo una vez por semana y guardalo en un lugar seguro,
+                como Google Drive.
+            </p>
+            <p class="configEstado">
+                Último respaldo descargado en este celular:
+                <strong id="configUltimoRespaldoNube">${textoUltimoRespaldoNube()}</strong>
+            </p>
+            <p class="configEstado" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>
+            <div class="configAcciones">
+                <button type="button" data-accion="exportar">Exportar respaldo</button>
+                <button type="button" data-accion="importar">Combinar respaldo</button>
+            </div>
+            <p class="configEstado">
+                "Combinar respaldo" agrega a la nube lo que falte de un archivo,
+                sin borrar nada: lo que ya está en la nube tiene prioridad.
+            </p>
+        `;
+    }
+
+    // Se cambian solo los textos, sin redibujar la sección.
+    function actualizarRespaldoNube() {
+        const ultimo = document.getElementById("configUltimoRespaldoNube");
+        const conexion = document.getElementById("configConexionRespaldo");
+
+        if (ultimo) ultimo.textContent = textoUltimoRespaldoNube();
+        if (conexion) conexion.textContent = textoConexionRespaldo();
     }
 
     // --- Empleados (T14) y panel del dueño (T15) ---
@@ -950,13 +1003,20 @@
             `;
         }
 
-        if (seccion === "respaldo" && window.empleadosVendeFrio?.esEmpleado()) {
+        // Con la nube real, el empleado no ve los respaldos (T14) y el dueño
+        // descarga y combina la nube, sin copia interna (T16b).
+        const empleadoEnLaNube = window.empleadosVendeFrio?.esEmpleado() ||
+            (usaNubeReal() && !esDuenoEnLaNube());
+
+        if (seccion === "respaldo" && empleadoEnLaNube) {
             caja.innerHTML += `
                 <p class="configEstado">
                     Tus datos están en la nube de la distribuidora.
                     Los respaldos los maneja tu encargado.
                 </p>
             `;
+        } else if (seccion === "respaldo" && usaNubeReal()) {
+            caja.innerHTML += htmlRespaldoNube();
         } else if (seccion === "respaldo") {
             const ultima = localStorage.getItem(
                 "vendefrio_ultimo_respaldo_automatico"
@@ -1104,9 +1164,12 @@
 
         if (accion === "exportar") {
             document.getElementById("exportarRespaldo")?.click();
+            actualizarRespaldoNube();
         }
 
         if (accion === "importar") {
+            // Con la nube real se frena antes de elegir el archivo (T16b).
+            if (frenarRespaldoEnLaNube()) return;
             document.getElementById("importarRespaldo")?.click();
         }
 
@@ -1520,6 +1583,15 @@
         }
 
         if (accion === "restaurar") {
+            // Con la nube real no se ofrece la copia interna: es de los datos
+            // viejos de este celular (T16b).
+            if (usaNubeReal()) {
+                return mostrarAviso(
+                    "No disponible en la nube",
+                    "Para recuperar datos de la nube, usá \"Combinar respaldo\" con un archivo que hayas descargado."
+                );
+            }
+
             const copia = localStorage.getItem(
                 "vendefrio_respaldo_automatico"
             );
@@ -1776,6 +1848,7 @@
     function conectarNube() {
         window.nubeVendeFrio.escuchar(() => {
             actualizarResumenCuenta();
+            actualizarRespaldoNube();
 
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {

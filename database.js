@@ -16,7 +16,12 @@ const DB_SEMANA_ACTUAL = "vendefrio_semana_actual";
 const DB_MODO_NUBE_PRUEBA = "vendefrio_modo_nube_prueba";
 // Modo nube real (T11): guarda { uid, distribuidora } de la cuenta que lo activ\u00f3.
 const DB_MODO_NUBE = "vendefrio_modo_nube";
+// Respaldo de la nube (T16b): fecha de la \u00faltima descarga en este celular y
+// d\u00eda (AAAA-MM-DD) en que se mostr\u00f3 el recordatorio.
+const DB_ULTIMO_RESPALDO_NUBE = "vendefrio_ultimo_respaldo_nube";
+const DB_RECORDATORIO_RESPALDO_NUBE = "vendefrio_recordatorio_respaldo_nube";
 const DIAS_ENTRE_RESPALDOS_AUTOMATICOS = 7;
+const DIAS_PARA_RECORDAR_RESPALDO_NUBE = 7;
 
 const PALETA_MARCAS = ["#0f9d63", "#ff8a3d", "#8b5cf6", "#3b82f6", "#e5483d", "#0891b2"];
 const PALETA_AVATAR = ["#0f9d63", "#ff8a3d", "#8b5cf6", "#3b82f6", "#e5483d", "#0891b2", "#f59e0b", "#14b8a6"];
@@ -300,6 +305,21 @@ function obtenerModoNubeGuardado() {
 // Modo nube: los datos no salen de este celular sino de la nube (T10).
 function estaEnModoNube() {
     return obtenerNombreAdaptadorDatos() !== "local";
+}
+
+// Solo nube (T16b): este celular usa la nube real de una distribuidora
+// (dueño o empleado), aunque la nube todavía no haya cargado. Se sabe al
+// abrir la app, antes que nube.js, y también sin internet.
+function usaNubeReal() {
+    return !estaEnModoNubePrueba() && obtenerModoNubeGuardado() !== null;
+}
+
+// El dueño usa la nube de su propia distribuidora (su id es el uid del
+// dueño). El empleado usa la de su encargado, con otra cuenta.
+function esDuenoEnLaNube() {
+    const guardado = obtenerModoNubeGuardado();
+    if (!usaNubeReal() || guardado.distribuidora !== guardado.uid) return false;
+    return !(window.empleadosVendeFrio && window.empleadosVendeFrio.esEmpleado());
 }
 
 // Devuelve true (y avisa) si la acci\u00f3n no se puede usar porque los datos
@@ -1117,27 +1137,38 @@ function crearDatosRespaldo() {
     };
 }
 
+function descargarArchivoRespaldo(respaldo, nombreArchivo) {
+    const contenido = JSON.stringify(respaldo, null, 2);
+    const archivo = new Blob([contenido], {
+        type: "application/json"
+    });
+
+    const enlace = document.createElement("a");
+    const url = URL.createObjectURL(archivo);
+
+    enlace.href = url;
+    enlace.download = nombreArchivo;
+    enlace.style.display = "none";
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    URL.revokeObjectURL(url);
+}
+
 function exportarRespaldo() {
+    // Con la nube real se descargan los datos de la nube (T16b).
+    if (usaNubeReal()) {
+        exportarRespaldoNube();
+        return;
+    }
+
     if (frenarSiDatosNoSonLocales()) return;
 
     try {
         const respaldo = crearDatosRespaldo();
-        const contenido = JSON.stringify(respaldo, null, 2);
-        const archivo = new Blob([contenido], {
-            type: "application/json"
-        });
-
-        const enlace = document.createElement("a");
-        const url = URL.createObjectURL(archivo);
         const fecha = new Date().toISOString().slice(0, 10);
 
-        enlace.href = url;
-        enlace.download = `vendefrio-respaldo-${fecha}.json`;
-        enlace.style.display = "none";
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        URL.revokeObjectURL(url);
+        descargarArchivoRespaldo(respaldo, `vendefrio-respaldo-${fecha}.json`);
         guardarFechaUltimoRespaldo();
 
         mostrarAviso(
@@ -1153,9 +1184,195 @@ function exportarRespaldo() {
     }
 }
 
+// -----------------------------------------------------
+// RESPALDO DE LA NUBE (T16b)
+// -----------------------------------------------------
+// Con la nube real, "Exportar respaldo" descarga los datos de la nube (los
+// mismos que ve la app) en un archivo que "Combinar respaldo" acepta. Solo
+// el dueño exporta y combina, y exportar pide "Conectada" para que el
+// archivo tenga lo último. La copia interna no se hace ni se ofrece.
+
+// Devuelve true (y avisa) si el respaldo no se puede usar con la nube real:
+// el empleado no lo usa y, si la nube no cargó, se mezclaría con los datos
+// viejos del celular.
+function frenarRespaldoEnLaNube() {
+    if (!usaNubeReal()) return false;
+
+    if (!esDuenoEnLaNube()) {
+        mostrarAviso("Solo el dueño", "Los respaldos los maneja tu encargado.");
+        return true;
+    }
+
+    if (!estaEnModoNube()) {
+        mostrarAviso(
+            "La nube no está disponible",
+            "Para usar los respaldos tiene que cargar la nube. Cerrá y volvé a abrir la app con internet."
+        );
+        return true;
+    }
+
+    return false;
+}
+
+function obtenerFechaUltimoRespaldoNube() {
+    return obtenerFechaDesdeClave(DB_ULTIMO_RESPALDO_NUBE);
+}
+
+function contarRegistrosRespaldo(respaldo) {
+    const datos = respaldo.datos;
+
+    return {
+        comercios: datos.comercios.length,
+        productos: listarProductosDeTodasLasMarcas(datos.productos).length,
+        marcas: Object.keys(datos.productos).length,
+        pedidos: datos.historial.length,
+        rutas: datos.rutasGuardadas.length
+    };
+}
+
+function exportarRespaldoNube() {
+    if (frenarRespaldoEnLaNube()) return;
+
+    const nube = window.nubeVendeFrio;
+
+    if (!nube || nube.estado() !== "conectada" || !navigator.onLine) {
+        mostrarAviso(
+            "Todavía no",
+            "Para que el archivo tenga lo último de la nube, esperá a que abajo diga \"Conectada\" y tocá de nuevo. Hace falta internet."
+        );
+        return;
+    }
+
+    try {
+        // Mismo formato que el respaldo del celular (y que el de "Juntar
+        // repetidos"): crearDatosRespaldo lee lo que ve la app, que es la nube.
+        const respaldo = crearDatosRespaldo();
+        const nombre = window.distribuidoraVendeFrio && window.distribuidoraVendeFrio.nombreActual();
+        const fecha = new Date().toISOString().slice(0, 10);
+
+        respaldo.origen = "nube";
+        if (nombre) respaldo.distribuidora = nombre;
+
+        descargarArchivoRespaldo(respaldo, `vendefrio-respaldo-nube-${fecha}.json`);
+        localStorage.setItem(DB_ULTIMO_RESPALDO_NUBE, String(Date.now()));
+
+        const total = contarRegistrosRespaldo(respaldo);
+        mostrarAviso(
+            "Respaldo de la nube descargado",
+            "El archivo tiene:\n" +
+                "- " + total.comercios + " comercio(s)\n" +
+                "- " + total.productos + " producto(s) en " + total.marcas + " marca(s)\n" +
+                "- " + total.pedidos + " pedido(s)\n" +
+                "- " + total.rutas + " ruta(s)\n\n" +
+                "Guardalo en un lugar seguro, como Google Drive. Para recuperar datos, usá \"Combinar respaldo\": agrega lo que falte, sin borrar nada."
+        );
+    } catch (error) {
+        console.error("No se pudo exportar el respaldo de la nube.", error);
+        mostrarAviso(
+            "No se pudo exportar",
+            "No se pudo crear el archivo de respaldo."
+        );
+    }
+}
+
+// Recordatorio: si pasaron 7 días desde la última descarga en este celular
+// (o nunca se descargó), el dueño ve un aviso con "Descargar ahora", como
+// máximo una vez por día. Se muestra al conectar, así el botón funciona.
+
+function obtenerClaveDeHoy() {
+    const hoy = new Date();
+    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoy.getDate()).padStart(2, "0");
+    return hoy.getFullYear() + "-" + mes + "-" + dia;
+}
+
+function mostrarRecordatorioRespaldoNube(ultimo) {
+    let modal = document.getElementById("modalRecordatorioRespaldo");
+
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "modalRecordatorioRespaldo";
+        modal.className = "modal oculto";
+        modal.innerHTML = `
+            <div class="modalContenido">
+                <h2>Descargá un respaldo</h2>
+                <p id="mensajeRecordatorioRespaldo" style="text-align:center;line-height:1.5;"></p>
+                <div class="modalBotones">
+                    <button type="button" class="btnModalCancelar" data-recordatorio="ahoraNo">Ahora no</button>
+                    <button type="button" class="btnModalConfirmar" data-recordatorio="descargar">Descargar ahora</button>
+                </div>
+            </div>
+        `;
+
+        modal.addEventListener("click", event => {
+            const boton = event.target.closest("[data-recordatorio]");
+            if (!boton && event.target !== modal) return;
+
+            modal.classList.add("oculto");
+            if (boton && boton.dataset.recordatorio === "descargar") exportarRespaldo();
+        });
+
+        document.body.appendChild(modal);
+    }
+
+    const dias = ultimo ? Math.floor((Date.now() - ultimo.getTime()) / (24 * 60 * 60 * 1000)) : 0;
+
+    document.getElementById("mensajeRecordatorioRespaldo").textContent =
+        (ultimo
+            ? "Pasaron " + dias + " días desde el último respaldo de la nube que descargaste en este celular."
+            : "Todavía no descargaste un respaldo de la nube en este celular.") +
+        " Guardalo en un lugar seguro, como Google Drive, por si algún día hace falta recuperar datos.";
+    modal.classList.remove("oculto");
+}
+
+function revisarRecordatorioRespaldoNube() {
+    if (!esDuenoEnLaNube() || !estaEnModoNube() || !document.body) return;
+    if (!window.nubeVendeFrio || window.nubeVendeFrio.estado() !== "conectada") return;
+    if (document.documentElement.classList.contains("inicioAbierto")) return;
+
+    try {
+        const hoy = obtenerClaveDeHoy();
+        if (localStorage.getItem(DB_RECORDATORIO_RESPALDO_NUBE) === hoy) return;
+
+        const ultimo = obtenerFechaUltimoRespaldoNube();
+        const intervalo = DIAS_PARA_RECORDAR_RESPALDO_NUBE * 24 * 60 * 60 * 1000;
+        if (ultimo && Date.now() - ultimo.getTime() < intervalo) return;
+
+        // Con la nube vacía no hay nada que respaldar.
+        const total = contarRegistrosRespaldo(crearDatosRespaldo());
+        if (!total.comercios && !total.productos && !total.pedidos && !total.rutas) return;
+
+        localStorage.setItem(DB_RECORDATORIO_RESPALDO_NUBE, hoy);
+        mostrarRecordatorioRespaldoNube(ultimo);
+    } catch (error) {
+        console.warn("No se pudo revisar el recordatorio del respaldo.", error);
+    }
+}
+
+function prepararRecordatorioRespaldoNube() {
+    if (!usaNubeReal()) return;
+
+    // nube.js se carga después de database.js.
+    const conectar = () => {
+        window.nubeVendeFrio.escuchar(estado => {
+            if (estado !== "conectada") return;
+            // Un momento después de conectar, para no tapar la app mientras se dibuja.
+            window.setTimeout(revisarRecordatorioRespaldoNube, 1500);
+        });
+    };
+
+    if (window.nubeVendeFrio) {
+        conectar();
+    } else {
+        window.addEventListener("nubeVendeFrioLista", conectar, { once: true });
+    }
+}
+
 function guardarRespaldoAutomatico() {
     // La copia interna es de los datos reales: nunca se pisa con datos de prueba.
     if (obtenerNombreAdaptadorDatos() !== "local") return false;
+    // Con la nube real no se hace (T16b): copiaría los datos viejos del celular.
+    if (usaNubeReal()) return false;
 
     try {
         const respaldo = crearDatosRespaldo();
@@ -1270,8 +1487,9 @@ function restaurarRespaldo(respaldo) {
 function importarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
 
-    // En modo nube "Importar" solo combina, sin borrar nada (T10).
-    if (estaEnModoNube()) {
+    // En modo nube "Importar" solo combina, sin borrar nada (T10). Con la nube
+    // real, también si todavía no cargó: ahí combinar se frena (T16b).
+    if (estaEnModoNube() || usaNubeReal()) {
         importarYCombinarRespaldoDesdeArchivo(archivo);
         return;
     }
@@ -1478,6 +1696,7 @@ function combinarRespaldoSinBorrar(respaldo) {
 
 function importarYCombinarRespaldoDesdeArchivo(archivo) {
     if (!archivo) return;
+    if (frenarRespaldoEnLaNube()) return;
 
     const lector = new FileReader();
     lector.onload = () => {
@@ -2239,3 +2458,4 @@ asegurarReinicioSemanal();
 programarReinicioSemanal();
 respaldarAutomaticamenteSiCorresponde();
 prepararControlesRespaldo();
+prepararRecordatorioRespaldoNube();

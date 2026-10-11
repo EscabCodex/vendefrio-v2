@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v135 - Panel de empleados)
+// VendeFrío - Service Worker (v136 - Respaldo de la nube)
 // =====================================================
-const CACHE_NAME = "vendefrio-v135";
+const CACHE_NAME = "vendefrio-v136";
 const ARCHIVOS = [
   "./",
   "./index.html",
