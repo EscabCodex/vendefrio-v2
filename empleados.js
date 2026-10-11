@@ -190,7 +190,8 @@
     }
 
     // Deja este celular sin cuenta de empleado: sin modo nube, sin la copia
-    // de la nube y sin sesión. Vuelve a la pantalla de inicio.
+    // de la nube y sin sesión. Vuelve a la pantalla de inicio, también si
+    // antes se había elegido "Continuar sin iniciar sesión" (T16c).
     async function dejarCelularSinEmpleado(avisoParaElInicio) {
         if (saliendo) return;
         saliendo = true;
@@ -198,6 +199,7 @@
         try {
             localStorage.removeItem(CLAVE_EMPLEADO);
             localStorage.removeItem(DB_MODO_NUBE);
+            localStorage.removeItem(DB_INICIO_SIN_SESION);
             // El aviso hace que aparezca la pantalla de inicio al recargar.
             if (avisoParaElInicio) sessionStorage.setItem(CLAVE_AVISO_INICIO, avisoParaElInicio);
         } catch (error) {
@@ -914,6 +916,13 @@
             const guardado = leerGuardado();
 
             if (usuario && usuario.isAnonymous && guardado && usuario.uid === guardado.uid) {
+                // Con código se entra siempre a la nube (T16c): si la app se
+                // cerró antes de pasar a la nube, se pasa ahora.
+                if (!usaNubeReal()) {
+                    entrarALaNube().catch(error => console.warn("No se pudo entrar a la nube.", error));
+                    return;
+                }
+
                 iniciarCelularDeEmpleado();
             } else {
                 try {

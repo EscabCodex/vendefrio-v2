@@ -246,10 +246,13 @@
         `;
     }
 
+    // Solo nube (T16c): se ofrece una sola vez por celular, solo al dueño con
+    // datos propios y antes de entrar a la nube.
     function htmlMigracion() {
         const nube = window.nubeVendeFrio;
         const distribuidora = window.distribuidoraVendeFrio;
-        if (!nube || !nube.subirDatos || nube.modoPrueba() || nube.modoNube()) return "";
+        if (!nube || !nube.subirDatos || nube.modoNube()) return "";
+        if (!window.inicioVendeFrio?.ofrecerSubirDatos?.()) return "";
 
         if (!distribuidora || !distribuidora.idActual()) {
             return `
@@ -302,15 +305,16 @@
                     3. Usar la nube desde ahora
                 </button>` : ""}
             </div>
-            ${enCurso || verificada || !nube.usarNubeSinSubir ? "" : `
+            ${enCurso || verificada || !nube.usarNube ? "" : `
             <div class="configMigracion">
                 <p class="configEstado">
-                    <strong>¿Ya subiste los datos desde otro celular?</strong><br>
-                    Usá la nube en este celular sin subir nada desde acá.
-                    Los datos de este celular no se suben ni se borran.
+                    <strong>¿No querés subirlos?</strong><br>
+                    Usá la nube sin subir los datos de este celular. Quedan
+                    guardados acá, sin cambios, pero la app ya no los muestra.
+                    En este celular no se vuelve a ofrecer subirlos.
                 </p>
-                <button type="button" data-accion="usarNubeSinSubir">
-                    Usar la nube sin subir datos
+                <button type="button" data-accion="noSubirDatos">
+                    No subirlos y usar la nube
                 </button>
             </div>`}
         `;
@@ -351,62 +355,13 @@
         return `
             <p class="configEstado">
                 <strong>Usando la nube</strong><br>
-                Tus datos salen de tu distribuidora en la nube. Los datos de
-                antes siguen guardados en este celular, sin cambios.
+                Tus datos salen de tu distribuidora en la nube.
             </p>
             <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
             ${htmlSincronizacion()}
             ${reintentar}
             <button type="button" data-accion="juntarRepetidos">
                 Juntar comercios y productos repetidos
-            </button>
-            <button type="button" data-accion="volverDatosCelular">
-                Volver a los datos de este celular
-            </button>
-        `;
-    }
-
-    function htmlModoPrueba() {
-        const nube = window.nubeVendeFrio;
-        if (!nube || (nube.modoNube && nube.modoNube())) return "";
-
-        if (!nube.modoPrueba()) {
-            return `
-                <p class="configEstado">
-                    <strong>Modo prueba de la nube</strong><br>
-                    Usa una distribuidora de prueba, aparte de tus datos reales,
-                    para probar la nube con datos inventados. Tus datos de este
-                    celular no se suben ni se borran.
-                </p>
-                <button type="button" data-accion="encenderModoPrueba">
-                    Encender modo prueba
-                </button>
-            `;
-        }
-
-        const textos = {
-            conectando: "Conectando con la nube de prueba…",
-            conectada: "Conectada: los cambios se ven en los otros celulares con esta cuenta.",
-            sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
-            sinPermiso: "La nube no deja leer la distribuidora de prueba. Revisá que las reglas de seguridad estén publicadas.",
-            error: "Hubo un problema con la nube de prueba. Probá de nuevo."
-        };
-        const estadoNube = nube.estado();
-        const reintentar = ["sinConexion", "sinPermiso", "error"].includes(estadoNube)
-            ? `<button type="button" data-accion="reintentarNube">Reintentar</button>`
-            : "";
-
-        return `
-            <p class="configEstado">
-                <strong>Modo prueba encendido</strong><br>
-                Estás viendo la distribuidora de prueba en la nube.
-                Tus datos reales siguen guardados en este celular, sin cambios.
-            </p>
-            <p class="configEstado" id="estadoNubePrueba">${textos[estadoNube] || ""}</p>
-            ${htmlSincronizacion()}
-            ${reintentar}
-            <button type="button" data-accion="apagarModoPrueba">
-                Apagar modo prueba
             </button>
         `;
     }
@@ -682,25 +637,7 @@
             `;
         }
 
-        // Aviso temporal hasta "Solo nube" (T16): el dueño todavía puede estar
-        // viendo los datos del celular o la distribuidora de prueba, y sus
-        // empleados siempre ven la nube de la distribuidora.
-        const nube = window.nubeVendeFrio;
-        const enLaNube = Boolean(nube?.modoNube?.());
-        const avisoNube = enLaNube ? "" : `
-            <p class="configEstado empleadoAvisoNube" role="alert">
-                <strong>Ojo: vos y tus empleados no ven los mismos datos.</strong><br>
-                ${nube?.modoPrueba?.()
-                    ? "En este celular estás viendo la distribuidora de prueba."
-                    : "En este celular estás viendo los datos guardados en el celular."}
-                Tus empleados ven la nube de tu distribuidora. Para ver lo mismo que
-                ellos, pasá a la nube desde Configuración &gt; Cuenta.
-            </p>
-            <button type="button" data-config-seccion="cuenta">Ir a Cuenta</button>
-        `;
-
         return `
-            ${avisoNube}
             <p class="configEstado">
                 Generá un código y pasáselo al empleado (en persona o por WhatsApp).
                 Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las
@@ -800,8 +737,8 @@
             ?.classList.toggle("oculto", !(empleados && empleados.esDueno()));
     }
 
-    // Cuenta de un empleado (T14): sin migración, modo prueba ni acciones
-    // delicadas. Solo su nombre, sus roles, la conexión y salir.
+    // Cuenta de un empleado (T14): sin migración ni acciones delicadas.
+    // Solo su nombre, sus roles, la conexión y salir.
     function htmlCuentaEmpleado() {
         const empleados = window.empleadosVendeFrio;
         const ficha = empleados.miFicha();
@@ -847,7 +784,9 @@
             return `
                 <p class="configEstado">
                     La cuenta no está disponible en este momento.
-                    Tus datos siguen guardados en este dispositivo.
+                    ${usaNubeReal()
+                        ? "Cerrá y volvé a abrir la app con internet."
+                        : "Tus datos siguen guardados en este dispositivo."}
                 </p>
             `;
         }
@@ -859,6 +798,11 @@
         }
 
         if (usuario) {
+            // Con cuenta se usa siempre la nube (T16c). Antes de entrar, solo
+            // queda elegir si se suben los datos propios de este celular.
+            const enLaNube = Boolean(window.nubeVendeFrio?.modoNube?.());
+            const eligiendo = !enLaNube && window.inicioVendeFrio?.ofrecerSubirDatos?.();
+
             return `
                 <p class="configEstado">
                     Sesión iniciada como<br>
@@ -866,13 +810,14 @@
                 </p>
                 ${htmlNombreDistribuidora()}
                 ${htmlDistribuidora()}
-                ${window.nubeVendeFrio?.modoPrueba() || window.nubeVendeFrio?.modoNube?.() ? "" : `
+                ${enLaNube ? "" : `
                 <p class="configEstado">
-                    Por ahora tus datos siguen guardados en este dispositivo.
+                    ${eligiendo
+                        ? "Todavía no entraste a la nube: elegí si subís los datos de este celular o si usás la nube sin subirlos."
+                        : "Entrando a la nube de tu distribuidora…"}
                 </p>`}
                 ${htmlModoNube()}
                 ${htmlMigracion()}
-                ${htmlModoPrueba()}
                 <button type="button" data-accion="salirCuenta">
                     Salir de la cuenta
                 </button>
@@ -905,7 +850,8 @@
                 </button>
             </form>
             <p class="configEstado">
-                Iniciar sesión no cambia tus datos: siguen guardados en este dispositivo.
+                Al ingresar, la app usa los datos de tu distribuidora en la nube.
+                Si este celular tiene datos propios, primero te pregunta si querés subirlos.
             </p>
             <button type="button" data-accion="entrarComoEmpleado">
                 ¿Sos empleado? Entrá con el código de tu encargado
@@ -930,9 +876,7 @@
         }
 
         resumen.textContent = usuario
-            ? (nombre ? nombre + " · " : "") + usuario.email + (window.nubeVendeFrio?.modoPrueba()
-                ? " · modo prueba"
-                : window.nubeVendeFrio?.modoNube?.() ? " · nube" : "")
+            ? (nombre ? nombre + " · " : "") + usuario.email + (window.nubeVendeFrio?.modoNube?.() ? " · nube" : "")
             : "Ingresá o salí de tu cuenta";
     }
 
@@ -1193,29 +1137,38 @@
             }
         }
 
+        // Salir lleva siempre a la pantalla de inicio (T16c). Como el
+        // empleado, el dueño no sale con cambios sin subir.
         if (accion === "salirCuenta") {
             const boton = event.target.closest("[data-accion]");
-            const salir = () => {
-                if (boton) boton.disabled = true;
+            const nube = window.nubeVendeFrio;
+            const sinSubir = nube?.sincronizacion?.().sinSubir || 0;
 
-                window.cuentaVendeFrio?.salir()
-                    .then(() => mostrarToast("Saliste de tu cuenta"))
-                    .catch(error => {
+            if (sinSubir > 0) {
+                return mostrarAviso(
+                    "Todavía no",
+                    "Hay " + sinSubir + " cambio(s) sin subir a la nube. Esperá a tener señal y que diga \"todo subido\" antes de salir."
+                );
+            }
+
+            abrirConfirmacion(
+                "Salir de la cuenta",
+                nube?.modoNube?.()
+                    ? "Vas a volver a la pantalla de inicio. Tus datos quedan guardados en la nube, pero este celular deja de tenerlos: para volver a verlos, ingresá con tu email y contraseña (hace falta internet)."
+                    : "Vas a volver a la pantalla de inicio. Los datos de este celular no se borran.",
+                () => {
+                    if (boton) boton.disabled = true;
+
+                    const salida = nube?.salirDeLaCuenta
+                        ? nube.salirDeLaCuenta()
+                        : Promise.reject(new Error("La cuenta no está disponible en este momento."));
+
+                    salida.catch(error => {
                         if (boton) boton.disabled = false;
                         mostrarAviso("No se pudo salir", error.message);
                     });
-            };
-
-            // En modo nube, salir vuelve a los datos de este celular (T11).
-            if (window.nubeVendeFrio?.modoNube?.()) {
-                abrirConfirmacion(
-                    "Salir de la cuenta",
-                    "Al salir, la app se recarga y vuelve a los datos guardados en este celular, que son los de antes de pasar a la nube. Lo que cargaste en la nube queda guardado allá.",
-                    salir
-                );
-            } else {
-                salir();
-            }
+                }
+            );
         }
 
         if (accion === "generarCodigo") {
@@ -1451,22 +1404,23 @@
             );
         }
 
-        if (accion === "usarNubeSinSubir") {
+        // "No subirlos y usar la nube" (T16c): una sola vez por celular.
+        if (accion === "noSubirDatos") {
             const boton = event.target.closest("[data-accion]");
 
             abrirConfirmacion(
-                "Usar la nube sin subir datos",
-                "Es para los demás celulares, cuando los datos ya se subieron desde el celular principal. La app se va a recargar y tus datos van a salir de la nube, compartidos con los otros celulares de tu cuenta. Los datos de este celular no se suben ni se borran. Hace falta internet.",
+                "No subirlos y usar la nube",
+                "Los datos de este celular no se suben ni se borran: quedan guardados acá, pero la app ya no los muestra. La app se va a recargar con los datos de la nube de tu distribuidora. En este celular no se vuelve a ofrecer subirlos.",
                 () => {
                     if (boton) {
                         boton.disabled = true;
-                        boton.textContent = "Revisando la nube…";
+                        boton.textContent = "Abriendo la nube…";
                     }
 
-                    window.nubeVendeFrio.usarNubeSinSubir().catch(error => {
+                    window.nubeVendeFrio.usarNube().catch(error => {
                         if (boton) {
                             boton.disabled = false;
-                            boton.textContent = "Usar la nube sin subir datos";
+                            boton.textContent = "No subirlos y usar la nube";
                         }
                         mostrarAviso("Todavía no", error.message);
                     });
@@ -1513,14 +1467,6 @@
             );
         }
 
-        if (accion === "volverDatosCelular") {
-            abrirConfirmacion(
-                "Volver a los datos de este celular",
-                "La app se va a recargar y vuelve a mostrar los datos guardados en este celular, que son los de antes de pasar a la nube. Lo que cargaste en la nube no va a aparecer acá, pero queda guardado allá. Para volver a la nube, subí tus datos otra vez.",
-                () => window.nubeVendeFrio?.desactivarNube()
-            );
-        }
-
         if (accion === "editarNombreDistribuidora") {
             editandoNombre = true;
             detalle("cuenta");
@@ -1538,38 +1484,6 @@
 
         if (accion === "reintentarDistribuidora") {
             window.distribuidoraVendeFrio?.reintentar();
-        }
-
-        if (accion === "encenderModoPrueba") {
-            const boton = event.target.closest("[data-accion]");
-            const encender = () => {
-                if (boton) {
-                    boton.disabled = true;
-                    boton.textContent = "Preparando la nube de prueba…";
-                }
-
-                window.nubeVendeFrio?.activarPrueba().catch(error => {
-                    if (boton) {
-                        boton.disabled = false;
-                        boton.textContent = "Encender modo prueba";
-                    }
-                    mostrarAviso("No se pudo encender el modo prueba", error.message);
-                });
-            };
-
-            abrirConfirmacion(
-                "Encender modo prueba",
-                "La app se va a recargar y va a mostrar la distribuidora de prueba, que arranca vacía. Tus datos reales quedan guardados en este celular y vuelven al apagar el modo prueba.",
-                encender
-            );
-        }
-
-        if (accion === "apagarModoPrueba") {
-            abrirConfirmacion(
-                "Apagar modo prueba",
-                "La app se va a recargar y vuelve a mostrar tus datos reales de este celular. Lo que cargaste en la prueba queda guardado en la nube de prueba.",
-                () => window.nubeVendeFrio?.desactivarPrueba()
-            );
         }
 
         if (accion === "reintentarNube") {
@@ -1723,8 +1637,9 @@
             boton.textContent = "Ingresando…";
         }
 
+        // Con cuenta se entra a la nube (T16c): la pantalla de inicio sigue.
         window.cuentaVendeFrio.ingresar(email, contrasena)
-            .then(() => mostrarToast("Ingresaste a tu cuenta"))
+            .then(usuario => window.inicioVendeFrio?.entrarConCuenta?.(usuario))
             .catch(fallo => {
                 mostrarError(fallo.message);
 
@@ -1844,7 +1759,7 @@
         window.addEventListener("distribuidoraVendeFrioLista", conectarDistribuidora, { once: true });
     }
 
-    // Estado del modo nube de prueba (T9).
+    // Estado de la nube (T9).
     function conectarNube() {
         window.nubeVendeFrio.escuchar(() => {
             actualizarResumenCuenta();

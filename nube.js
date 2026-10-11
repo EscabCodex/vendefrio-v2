@@ -1,15 +1,12 @@
-// VendeFrío - Adaptador nube (Firestore), modo nube de prueba (T9),
-// migración "Subir mis datos a la nube" y modo nube real (T11),
-// sincronización visible e indicador de conexión (T12) y nube directa
-// al registrarse (T13).
+// VendeFrío - Adaptador nube (Firestore) (T9), migración "Subir mis datos
+// a la nube" y modo nube (T11), sincronización visible e indicador de
+// conexión (T12), nube directa al registrarse (T13) y Solo nube (T16c).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
-// database.js. Se usa en dos modos:
-// - Modo prueba: los datos salen de la distribuidora de prueba "prueba-{uid}".
-// - Modo nube: los datos salen de la distribuidora real, después de subirlos.
-// En los dos, los datos de este celular (localStorage) no se leen ni se
-// escriben: quedan guardados tal cual y vuelven al apagar el modo.
+// database.js. Con cuenta o con código los datos salen siempre de la
+// distribuidora en la nube (T16c): los datos de este celular (localStorage)
+// no se leen ni se escriben y quedan guardados tal cual. El modo prueba
+// (T9) se sacó en T16c: para probar se usa una cuenta de prueba.
 (function () {
-    const PREFIJO_DISTRIBUIDORA_PRUEBA = "prueba-";
     const MAX_ESCRITURAS_POR_TANDA = 400;
     // La migración corta las tandas también por tamaño (las fotos pesan).
     const MAX_BYTES_POR_TANDA = 4 * 1024 * 1024;
@@ -25,7 +22,7 @@
     };
 
     const oyentes = [];
-    // "prueba", "nube" o null (datos de este celular).
+    // "nube" o null (datos de este celular, solo sin sesión).
     let modo = null;
     let estado = "apagado";
     let db = null;
@@ -359,10 +356,6 @@
         documentos[subcoleccion] = nuevos;
     }
 
-    function nombreNube() {
-        return modo === "prueba" ? "nube de prueba" : "nube";
-    }
-
     function errorAlEscribir(error) {
         console.error("La nube no aceptó un cambio.", error);
         cambiarEstado(estadoDeError(error));
@@ -372,8 +365,8 @@
             mostrarAviso(
                 "La nube no guardó un cambio",
                 error && error.code === "permission-denied"
-                    ? "La " + nombreNube() + " rechazó el cambio. Revisá que las reglas de seguridad estén publicadas."
-                    : "No se pudo guardar un cambio en la " + nombreNube() + ". Probá de nuevo."
+                    ? "La nube rechazó el cambio. Revisá que las reglas de seguridad estén publicadas."
+                    : "No se pudo guardar un cambio en la nube. Probá de nuevo."
             );
         }
     }
@@ -421,8 +414,11 @@
         },
 
         guardar(coleccion, datos) {
+            // Si Firebase no cargó, no se guarda en ningún lado (T16c).
             if (!db || !refDistribuidora) {
-                throw new Error("La " + nombreNube() + " no está lista.");
+                const error = new Error("La nube no está disponible.");
+                error.code = "nube-no-disponible";
+                throw error;
             }
 
             const escrituras = [];
@@ -491,6 +487,13 @@
     }
 
     function alFallarEscucha(error) {
+        // Al salir (dueño o empleado) se vacía la copia de la nube y Firestore
+        // corta las escuchas: no es un error.
+        if (saliendo || !obtenerModoNubeGuardado()) {
+            dejarDeEscuchar();
+            return;
+        }
+
         console.error("Se cortó la escucha de la nube.", error);
         dejarDeEscuchar();
         cambiarEstado(estadoDeError(error));
@@ -618,89 +621,6 @@
     }
 
     // -------------------------------------------------
-    // Distribuidora de prueba
-    // -------------------------------------------------
-
-    function idDistribuidoraPrueba(uid) {
-        return PREFIJO_DISTRIBUIDORA_PRUEBA + uid;
-    }
-
-    // Se fija si la distribuidora de prueba existe y, si no, la crea junto
-    // con la ficha de miembro. Necesita internet.
-    async function asegurarDistribuidoraPrueba(usuario) {
-        const firestore = obtenerFirestore();
-        if (!firestore) throw Object.assign(new Error("Firestore no está disponible."), { code: "no-disponible" });
-
-        const ref = firestore.collection("distribuidoras").doc(idDistribuidoraPrueba(usuario.uid));
-
-        try {
-            const ficha = await ref.get({ source: "server" });
-            if (ficha.exists) return;
-        } catch (error) {
-            // Si todavía no existe, las reglas no dejan leerla: se intenta crearla.
-            if (!error || error.code !== "permission-denied") throw error;
-        }
-
-        const ahora = window.firebase.firestore.FieldValue.serverTimestamp();
-        const tanda = firestore.batch();
-
-        tanda.set(ref, {
-            nombre: "Distribuidora de prueba",
-            duenoUid: usuario.uid,
-            prueba: true,
-            creada: ahora
-        });
-        tanda.set(ref.collection("miembros").doc(usuario.uid), {
-            email: usuario.email || "",
-            rol: "dueno",
-            alta: ahora
-        });
-
-        await tanda.commit();
-    }
-
-    function mensajeDeError(error) {
-        const codigo = error && error.code;
-
-        if (codigo === "permission-denied") {
-            return "La nube no dejó crear la distribuidora de prueba. Falta publicar las reglas de seguridad nuevas en Firebase.";
-        }
-        if (!navigator.onLine || codigo === "unavailable" || codigo === "deadline-exceeded") {
-            return "No hay conexión a internet. Para encender el modo prueba hace falta señal.";
-        }
-        return "No se pudo encender el modo prueba. Probá de nuevo.";
-    }
-
-    async function activarPrueba() {
-        const usuario = window.cuentaVendeFrio?.usuarioActual();
-
-        if (!usuario) {
-            throw new Error("Primero ingresá a tu cuenta.");
-        }
-        if (modo === "nube") {
-            throw new Error("Estás usando la nube. Para encender el modo prueba, primero volvé a los datos de este celular.");
-        }
-        if (!navigator.onLine) {
-            throw new Error(mensajeDeError({ code: "unavailable" }));
-        }
-
-        try {
-            await asegurarDistribuidoraPrueba(usuario);
-        } catch (error) {
-            console.error("No se pudo preparar la distribuidora de prueba.", error);
-            throw new Error(mensajeDeError(error));
-        }
-
-        localStorage.setItem(DB_MODO_NUBE_PRUEBA, usuario.uid);
-        window.location.reload();
-    }
-
-    function desactivarPrueba() {
-        localStorage.removeItem(DB_MODO_NUBE_PRUEBA);
-        window.location.reload();
-    }
-
-    // -------------------------------------------------
     // Pantallas: se redibujan cuando el cambio vino de otro celular
     // -------------------------------------------------
 
@@ -760,27 +680,9 @@
     }
 
     // -------------------------------------------------
-    // Cartel fijo para saber siempre que estás en modo prueba
-    // -------------------------------------------------
-
-    function mostrarCartelPrueba() {
-        if (document.getElementById("cartelModoPrueba")) return;
-
-        const cartel = document.createElement("div");
-        cartel.id = "cartelModoPrueba";
-        cartel.className = "cartelModoPrueba";
-        cartel.setAttribute("role", "status");
-        cartel.textContent = "Modo prueba · distribuidora de prueba en la nube";
-        document.body.appendChild(cartel);
-        document.documentElement.classList.add("conModoPrueba");
-        actualizarIndicador();
-    }
-
-    // -------------------------------------------------
     // Indicador general de conexión (T12)
     // -------------------------------------------------
-    // En modo nube es un cartel fijo abajo; en modo prueba se suma al cartel
-    // de modo prueba. Muestra la conexión y cuántos cambios faltan subir.
+    // Es un cartel fijo abajo. Muestra la conexión y cuántos cambios faltan subir.
 
     function textoCambios(cantidad) {
         return cantidad === 1 ? "1 cambio" : cantidad + " cambios";
@@ -821,16 +723,11 @@
     function actualizarIndicador() {
         if (!modo || !document.body) return;
 
-        const texto = textoIndicador();
-        const tipo = estadoIndicador();
-        const indicador = modo === "prueba"
-            ? document.getElementById("cartelModoPrueba")
-            : document.getElementById("indicadorNube");
-
+        const indicador = document.getElementById("indicadorNube");
         if (!indicador) return;
 
-        indicador.dataset.estado = tipo;
-        indicador.textContent = (modo === "prueba" ? "Modo prueba · " : "") + texto;
+        indicador.dataset.estado = estadoIndicador();
+        indicador.textContent = textoIndicador();
     }
 
     // -------------------------------------------------
@@ -1034,19 +931,19 @@
             throw errorMigracion("La subida ya está en curso.", "datos-locales");
         }
         if (modo) {
-            throw errorMigracion(
-                modo === "prueba"
-                    ? "Para subir tus datos, primero apagá el modo prueba."
-                    : "Tus datos ya salen de la nube.",
-                "datos-locales"
-            );
+            throw errorMigracion("Tus datos ya salen de la nube.", "datos-locales");
+        }
+        // Una sola vez por celular (T16c): subir otra vez después de trabajar
+        // en la nube vuelve a crear allá lo que se borró.
+        if (migracionResuelta()) {
+            throw errorMigracion("Los datos de este celular ya se resolvieron: no se vuelven a subir.", "datos-locales");
         }
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
         const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
         const firestore = obtenerFirestore();
 
-        if (!usuario) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
+        if (!usuario || usuario.isAnonymous) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
         if (!idDistribuidora) {
             throw errorMigracion("Tu distribuidora en la nube todavía no está lista.", "datos-locales");
         }
@@ -1395,100 +1292,154 @@
             throw new Error("Primero subí tus datos y esperá que coincidan los totales.");
         }
 
+        // Los datos de este celular ya están en la nube: no se vuelven a ofrecer (T16c).
+        marcarMigracionResuelta();
         await vaciarCopiaDeLaNube();
 
         localStorage.setItem(DB_MODO_NUBE, JSON.stringify(migracionVerificada));
         window.location.reload();
     }
 
-    // Para los demás celulares (T12): pasan a la nube sin subir sus propios
-    // datos (por ejemplo, las listas de ejemplo). Solo se permite si la nube
-    // ya tiene datos subidos desde el celular principal. localStorage no se toca.
-    async function usarNubeSinSubir() {
+    // Solo nube (T16c): el dueño entra a la nube de su distribuidora sin subir
+    // nada desde este celular. Se usa al registrarse o ingresar sin datos
+    // propios, al abrir la app con sesión y con "No subirlos y usar la nube".
+    // Los datos de este celular quedan resueltos (no se vuelve a ofrecer
+    // subirlos) y guardados tal cual: localStorage no se toca.
+    async function usarNube() {
         if (migracionEnCurso) throw errorMigracion("Esperá a que termine la subida.", "datos-locales");
-        if (modo) {
-            throw errorMigracion(
-                modo === "prueba" ? "Primero apagá el modo prueba." : "Tus datos ya salen de la nube.",
-                "datos-locales"
-            );
-        }
-
-        const usuario = window.cuentaVendeFrio?.usuarioActual();
-        const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
-        const firestore = obtenerFirestore();
-
-        if (!usuario) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
-        if (!idDistribuidora) {
-            throw errorMigracion("Tu distribuidora en la nube todavía no está lista.", "datos-locales");
-        }
-        if (!firestore) throw errorMigracion("La nube no está disponible en este momento.", "datos-locales");
-        if (!navigator.onLine) throw errorMigracion("Hace falta internet para revisar la nube.", "datos-locales");
-
-        let tieneDatos = false;
-
-        try {
-            const ref = firestore.collection("distribuidoras").doc(idDistribuidora);
-
-            for (const grupo of GRUPOS_MIGRACION) {
-                const foto = await esperarNube(ref.collection(grupo.subcoleccion).limit(1).get({ source: "server" }));
-                if (!foto.empty) {
-                    tieneDatos = true;
-                    break;
-                }
-            }
-        } catch (error) {
-            console.error("No se pudo revisar la nube.", error);
-            throw errorMigracion(
-                error && error.code === "permission-denied"
-                    ? "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas."
-                    : "No se pudo revisar la nube. Revisá la señal y probá de nuevo.",
-                "datos-locales"
-            );
-        }
-
-        if (!tieneDatos) {
-            throw errorMigracion(
-                "Tu distribuidora en la nube está vacía. Primero subí los datos desde el celular principal con \"Subir mis datos\".",
-                "datos-locales"
-            );
-        }
-
-        await vaciarCopiaDeLaNube();
-
-        localStorage.setItem(DB_MODO_NUBE, JSON.stringify({ uid: usuario.uid, distribuidora: idDistribuidora }));
-        window.location.reload();
-    }
-
-    // Registro (T13): la distribuidora recién creada arranca vacía y este
-    // celular no tiene datos propios, así que se usa la nube directamente,
-    // sin subir nada. localStorage no se toca.
-    async function usarNubeNueva() {
-        if (migracionEnCurso) throw errorMigracion("Esperá a que termine la subida.", "datos-locales");
-        if (modo) {
-            throw errorMigracion(
-                modo === "prueba" ? "Primero apagá el modo prueba." : "Tus datos ya salen de la nube.",
-                "datos-locales"
-            );
-        }
+        if (modo) throw errorMigracion("Tus datos ya salen de la nube.", "datos-locales");
 
         const usuario = window.cuentaVendeFrio?.usuarioActual();
         const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
 
-        if (!usuario) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
+        if (!usuario || usuario.isAnonymous) throw errorMigracion("Primero ingresá a tu cuenta.", "datos-locales");
         if (!idDistribuidora || idDistribuidora !== usuario.uid) {
             throw errorMigracion("Tu distribuidora en la nube todavía no está lista.", "datos-locales");
         }
+        if (!obtenerFirestore()) throw errorMigracion("La nube no está disponible en este momento.", "datos-locales");
 
+        marcarMigracionResuelta();
         await vaciarCopiaDeLaNube();
 
         localStorage.setItem(DB_MODO_NUBE, JSON.stringify({ uid: usuario.uid, distribuidora: idDistribuidora }));
         window.location.reload();
     }
 
-    // Vuelve a los datos de este celular. Lo de la nube queda guardado allá.
-    function desactivarNube() {
-        localStorage.removeItem(DB_MODO_NUBE);
+    // -------------------------------------------------
+    // Salir (T16c)
+    // -------------------------------------------------
+    // Se sale siempre a la pantalla de inicio, nunca a los datos de este
+    // celular: se olvida el modo nube y "Continuar sin iniciar sesión" (son
+    // anotaciones, no datos) y se vacía la copia de la nube del celular (no
+    // localStorage), así quien use después el celular no tiene los datos de
+    // la distribuidora.
+
+    let saliendo = false;
+
+    function olvidarModo() {
+        try {
+            localStorage.removeItem(DB_MODO_NUBE);
+            localStorage.removeItem(DB_INICIO_SIN_SESION);
+        } catch (error) {
+            console.warn("No se pudo limpiar el modo nube.", error);
+        }
+    }
+
+    // "Salir de la cuenta" del dueño. Como el empleado (T14), no deja salir
+    // con cambios sin subir, para no perderlos.
+    async function salirDeLaCuenta() {
+        const cuenta = window.cuentaVendeFrio;
+
+        if (!cuenta || !cuenta.disponible()) {
+            throw new Error("La cuenta no está disponible en este momento. Cerrá y volvé a abrir la app con internet.");
+        }
+        if (migracionEnCurso) throw new Error("Esperá a que termine la subida de tus datos.");
+
+        const sinSubir = cantidadSinSubir();
+        if (sinSubir > 0) {
+            throw new Error(
+                "Hay " + sinSubir + " cambio(s) sin subir a la nube. Esperá a tener señal y que diga \"todo subido\" antes de salir."
+            );
+        }
+
+        if (saliendo) return;
+        saliendo = true;
+
+        dejarDeEscuchar();
+        olvidarModo();
+        await vaciarCopiaDeLaNube();
+
+        try {
+            await cuenta.salir();
+        } catch (error) {
+            console.warn("No se pudo cerrar la sesión.", error);
+        }
+
         window.location.reload();
+    }
+
+    // Si se pierde la sesión o entra otra cuenta mientras se usa la nube, se
+    // sale igual que con "Salir". Si ya se está saliendo ("Salir" del dueño o
+    // del empleado), no hace falta.
+    async function dejarLaNube() {
+        if (saliendo || !obtenerModoNubeGuardado()) return;
+        saliendo = true;
+
+        dejarDeEscuchar();
+        olvidarModo();
+        await vaciarCopiaDeLaNube();
+        window.location.reload();
+    }
+
+    // -------------------------------------------------
+    // Reinicio semanal de las etiquetas de visita (T16c)
+    // -------------------------------------------------
+    // Cada semana se sacan las marcas "pendiente" de los comercios. Con la
+    // nube se hace sobre la nube y una sola vez por semana para toda la
+    // distribuidora: config/semana guarda la semana del último reinicio, así
+    // un celular que abre más tarde no borra las marcas que otro puso esa
+    // semana. Solo con "Conectada", para decidir con lo último de la nube.
+
+    let semanaRevisada = "";
+    let revisandoSemana = false;
+
+    async function reiniciarSemanaSiCorresponde() {
+        if (modo !== "nube" || !db || !refDistribuidora) return;
+        if (estado !== "conectada" || !navigator.onLine || revisandoSemana) return;
+
+        const semana = obtenerClaveSemanaActual();
+        if (semanaRevisada === semana) return;
+
+        revisandoSemana = true;
+
+        try {
+            const refSemana = refDistribuidora.collection("config").doc("semana");
+            const foto = await esperarNube(refSemana.get({ source: "server" }));
+            const guardada = foto.exists ? (foto.data() || {}).semana : "";
+
+            if (guardada !== semana) {
+                const comercios = obtenerComercios();
+                let guardado = true;
+
+                if (comercios.some(comercio => comercio.pendienteSemana === true)) {
+                    comercios.forEach(comercio => {
+                        comercio.pendienteSemana = false;
+                    });
+                    guardado = guardarComercios(comercios);
+                    // Las pantallas se redibujan con las etiquetas nuevas.
+                    if (guardado) avisarCambioDatos(["comercios"], true);
+                }
+
+                if (!guardado) return;
+                refSemana.set({ semana }).catch(errorAlEscribir);
+            }
+
+            semanaRevisada = semana;
+        } catch (error) {
+            console.warn("No se pudo revisar el reinicio semanal en la nube.", error);
+        } finally {
+            revisandoSemana = false;
+        }
     }
 
     // -------------------------------------------------
@@ -1515,49 +1466,44 @@
         }
     }
 
-    // tipo: "prueba" (distribuidora de prueba) o "nube" (distribuidora real).
-    function iniciarModo(tipo, uidGuardado, idDistribuidora) {
-        const claveModo = tipo === "prueba" ? DB_MODO_NUBE_PRUEBA : DB_MODO_NUBE;
+    // Con cuenta o con código, los datos salen siempre de la nube (T16c).
+    function iniciarNube(uidGuardado, idDistribuidora) {
         db = obtenerFirestore();
+        const disponible = Boolean(db && window.cuentaVendeFrio && window.cuentaVendeFrio.disponible());
+        if (!disponible) db = null;
 
-        if (!db || !window.cuentaVendeFrio || !window.cuentaVendeFrio.disponible()) {
-            // Sin Firebase no hay modo prueba: se vuelve a los datos de este celular.
-            if (tipo === "prueba") {
-                console.warn("La nube no está disponible: se apaga el modo prueba.");
-                localStorage.removeItem(claveModo);
-                return;
-            }
+        modo = "nube";
+        if (disponible) refDistribuidora = db.collection("distribuidoras").doc(idDistribuidora);
+        cambiarEstado(disponible ? "conectando" : "error");
 
-            // El modo nube no se apaga solo: se avisa y se reintenta al volver a abrir.
-            console.warn("La nube no está disponible: se muestran los datos de este celular.");
-            alCargarPagina(() => mostrarAviso(
-                "La nube no está disponible",
-                "Por ahora estás viendo los datos guardados en este celular, que no son los de la nube. Lo que cargues acá no se sube. Cerrá y volvé a abrir la app."
-            ));
-            return;
-        }
-
-        modo = tipo;
-        refDistribuidora = db.collection("distribuidoras").doc(idDistribuidora);
-        cambiarEstado("conectando");
+        // Siempre el adaptador nube: aunque Firebase no cargue, no se muestran
+        // ni se tocan los datos de este celular.
         usarAdaptadorDatos(adaptadorNube);
         escucharCambiosDatos(redibujarPantallas);
-
-        if (tipo === "prueba") {
-            alCargarPagina(mostrarCartelPrueba);
-        } else {
-            alCargarPagina(mostrarIndicadorNube);
-        }
+        alCargarPagina(mostrarIndicadorNube);
 
         // El indicador sigue el estado de la conexión (T12).
         oyentes.push(() => avisarSincronizacion());
 
-        // Si se sale de la cuenta o entra otra, se vuelve a los datos de este celular.
+        if (!disponible) {
+            console.warn("La nube no está disponible: no se muestran datos.");
+            alCargarPagina(() => mostrarAviso(
+                "La nube no está disponible",
+                "No se pudo cargar la nube en este celular, así que por ahora no se ven tus datos. Siguen guardados en la nube. Cerrá y volvé a abrir la app con internet."
+            ));
+            return;
+        }
+
+        // El reinicio semanal de las etiquetas de visita se hace al conectar.
+        oyentes.push(nuevoEstado => {
+            if (nuevoEstado === "conectada") reiniciarSemanaSiCorresponde();
+        });
+
+        // Si se pierde la sesión o entra otra cuenta, se sale de la nube a la
+        // pantalla de inicio (no a los datos de este celular).
         window.cuentaVendeFrio.escuchar(usuario => {
             if (!usuario || usuario.uid !== uidGuardado) {
-                dejarDeEscuchar();
-                localStorage.removeItem(claveModo);
-                window.location.reload();
+                dejarLaNube();
                 return;
             }
 
@@ -1576,18 +1522,16 @@
     }
 
     window.nubeVendeFrio = {
-        modoPrueba: () => modo === "prueba",
         modoNube: () => modo === "nube",
         estado: () => estado,
-        activarPrueba,
-        desactivarPrueba,
         subirDatos: subirDatosLocales,
         migracionEnCurso: () => migracionEnCurso,
         migracionVerificada: () => Boolean(migracionVerificada),
         activarNube,
-        usarNubeSinSubir,
-        usarNubeNueva,
-        desactivarNube,
+        // Solo nube (T16c).
+        usarNube,
+        salirDeLaCuenta,
+        reiniciarSemanaSiCorresponde,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
@@ -1604,17 +1548,25 @@
         },
         contarRepetidos,
         juntarRepetidos,
-        reintentar: escucharNube,
+        // Si Firebase no cargó, reintentar es volver a abrir la app.
+        reintentar: () => (db ? escucharNube() : window.location.reload()),
         escuchar
     };
 
-    const uidPrueba = obtenerUidModoNubePrueba();
+    // El modo prueba se sacó (T16c): se borra su anotación vieja. Ese celular
+    // tiene sesión, así que inicio.js lo lleva a la nube de su distribuidora.
+    try {
+        if (localStorage.getItem(DB_MODO_NUBE_PRUEBA) !== null) localStorage.removeItem(DB_MODO_NUBE_PRUEBA);
+    } catch (error) {
+        console.warn("No se pudo borrar la anotación del modo prueba.", error);
+    }
+
     const modoNubeGuardado = obtenerModoNubeGuardado();
 
-    if (uidPrueba) {
-        iniciarModo("prueba", uidPrueba, idDistribuidoraPrueba(uidPrueba));
-    } else if (modoNubeGuardado) {
-        iniciarModo("nube", modoNubeGuardado.uid, modoNubeGuardado.distribuidora);
+    if (modoNubeGuardado) {
+        // Los celulares que ya usan la nube se dan por resueltos (T16c).
+        marcarMigracionResuelta();
+        iniciarNube(modoNubeGuardado.uid, modoNubeGuardado.distribuidora);
     }
 
     window.dispatchEvent(new Event("nubeVendeFrioLista"));

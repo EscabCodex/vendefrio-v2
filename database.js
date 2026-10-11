@@ -12,10 +12,18 @@ const DB_ULTIMO_RESPALDO = "vendefrio_ultimo_respaldo";
 const DB_RESPALDO_AUTOMATICO = "vendefrio_respaldo_automatico";
 const DB_ULTIMO_RESPALDO_AUTOMATICO = "vendefrio_ultimo_respaldo_automatico";
 const DB_SEMANA_ACTUAL = "vendefrio_semana_actual";
-// Modo nube de prueba (T9): guarda el uid de la cuenta que lo activ\u00f3.
+// Modo nube de prueba (T9). Se sac\u00f3 en T16c: nube.js solo borra esta
+// anotaci\u00f3n vieja al abrir la app.
 const DB_MODO_NUBE_PRUEBA = "vendefrio_modo_nube_prueba";
 // Modo nube real (T11): guarda { uid, distribuidora } de la cuenta que lo activ\u00f3.
 const DB_MODO_NUBE = "vendefrio_modo_nube";
+// Pantalla de inicio (T13): "1" si se eligi\u00f3 "Continuar sin iniciar sesi\u00f3n".
+// Al salir de la cuenta se olvida (T16c).
+const DB_INICIO_SIN_SESION = "vendefrio_inicio_sin_sesion";
+// Solo nube (T16c): "1" cuando los datos propios de este celular ya se
+// resolvieron (se subieron, se eligi\u00f3 no subirlos o el celular ya usaba la
+// nube). As\u00ed "Subir mis datos a la nube" se ofrece una sola vez por celular.
+const DB_MIGRACION_RESUELTA = "vendefrio_migracion_resuelta";
 // Respaldo de la nube (T16b): fecha de la \u00faltima descarga en este celular y
 // d\u00eda (AAAA-MM-DD) en que se mostr\u00f3 el recordatorio.
 const DB_ULTIMO_RESPALDO_NUBE = "vendefrio_ultimo_respaldo_nube";
@@ -97,6 +105,14 @@ function comercioEstaVisitadoEstaSemana(comercio) {
 }
 
 function asegurarReinicioSemanal() {
+    // Con la nube, el reinicio se hace sobre los datos de la nube (T16c).
+    if (usaNubeReal()) {
+        if (window.nubeVendeFrio && window.nubeVendeFrio.reiniciarSemanaSiCorresponde) {
+            window.nubeVendeFrio.reiniciarSemanaSiCorresponde();
+        }
+        return;
+    }
+
     const semanaActual = obtenerClaveSemanaActual();
     const semanaGuardada = localStorage.getItem(DB_SEMANA_ACTUAL);
 
@@ -146,9 +162,9 @@ function programarReinicioSemanal() {
 // (al abrir la app), que trabajan sobre el texto guardado tal cual. Esas dos funciones trabajan contra una copia en
 // memoria; el "adaptador" es el que sabe d\u00f3nde viven los datos de verdad.
 //
-// Hay dos adaptadores: el local (localStorage, el de siempre) y el nube
-// (Firestore, en nube.js), que por ahora solo se usa en el modo nube de
-// prueba. Los dos cumplen esta misma interfaz:
+// Hay dos adaptadores: el local (localStorage, el de siempre, para el modo
+// sin sesi\u00f3n) y el nube (Firestore, en nube.js), que se usa con cuenta o
+// con c\u00f3digo. Los dos cumplen esta misma interfaz:
 //
 //   nombre                            "local", "nube", etc.
 //   leer(coleccion)                   devuelve los datos guardados, o undefined
@@ -246,8 +262,7 @@ function conectarAdaptadorDatos() {
     dejarDeEscucharAdaptador = typeof dejar === "function" ? dejar : null;
 }
 
-// Cambia de d\u00f3nde salen los datos. Hoy solo la usa nube.js en el modo
-// nube de prueba (T9).
+// Cambia de d\u00f3nde salen los datos. La usa nube.js al usar la nube.
 function usarAdaptadorDatos(adaptador) {
     if (!esAdaptadorValido(adaptador)) {
         console.error("El adaptador de datos no cumple la interfaz.", adaptador);
@@ -265,27 +280,10 @@ function obtenerNombreAdaptadorDatos() {
     return adaptadorDatos.nombre || "";
 }
 
-// --- Modo nube de prueba (T9) ---
-// Con el modo prueba, los datos salen de una distribuidora de prueba en la
-// nube. Los datos reales de este celular (localStorage) no se leen ni se
-// escriben mientras dure: por eso las acciones de respaldo quedan frenadas.
-
-function obtenerUidModoNubePrueba() {
-    try {
-        return localStorage.getItem(DB_MODO_NUBE_PRUEBA) || "";
-    } catch (error) {
-        return "";
-    }
-}
-
-function estaEnModoNubePrueba() {
-    return obtenerUidModoNubePrueba() !== "";
-}
-
 // --- Modo nube real (T11) ---
-// Despu\u00e9s de subir los datos (migraci\u00f3n), los datos salen de la
-// distribuidora real en la nube. Los datos de este celular (localStorage)
-// no se borran: vuelven si se apaga el modo nube.
+// Con cuenta o con c\u00f3digo, los datos salen de la distribuidora en la nube
+// (Solo nube, T16c). Los datos de este celular (localStorage) no se borran:
+// quedan guardados, sin usarse, y vuelven solo en el modo sin sesi\u00f3n.
 
 function obtenerModoNubeGuardado() {
     try {
@@ -311,7 +309,24 @@ function estaEnModoNube() {
 // (dueño o empleado), aunque la nube todavía no haya cargado. Se sabe al
 // abrir la app, antes que nube.js, y también sin internet.
 function usaNubeReal() {
-    return !estaEnModoNubePrueba() && obtenerModoNubeGuardado() !== null;
+    return obtenerModoNubeGuardado() !== null;
+}
+
+// Solo nube (T16c): la migraci\u00f3n de T11 se ofrece una sola vez por celular.
+function migracionResuelta() {
+    try {
+        return localStorage.getItem(DB_MIGRACION_RESUELTA) === "1";
+    } catch (error) {
+        return false;
+    }
+}
+
+function marcarMigracionResuelta() {
+    try {
+        if (!migracionResuelta()) localStorage.setItem(DB_MIGRACION_RESUELTA, "1");
+    } catch (error) {
+        console.warn("No se pudo anotar que los datos del celular ya se resolvieron.", error);
+    }
 }
 
 // El dueño usa la nube de su propia distribuidora (su id es el uid del
@@ -327,17 +342,9 @@ function esDuenoEnLaNube() {
 function frenarSiDatosNoSonLocales() {
     if (obtenerNombreAdaptadorDatos() === "local") return false;
 
-    if (!estaEnModoNubePrueba()) {
-        mostrarAviso(
-            "No disponible en modo nube",
-            "Est\u00e1s usando los datos de la nube. Esta opci\u00f3n todav\u00eda no est\u00e1 disponible en modo nube."
-        );
-        return true;
-    }
-
     mostrarAviso(
-        "No disponible en modo prueba",
-        "Est\u00e1s usando la distribuidora de prueba en la nube. Para usar esta opci\u00f3n, apag\u00e1 el modo prueba en Configuraci\u00f3n > Cuenta."
+        "No disponible en modo nube",
+        "Est\u00e1s usando los datos de la nube. Esta opci\u00f3n todav\u00eda no est\u00e1 disponible en modo nube."
     );
     return true;
 }
@@ -381,6 +388,14 @@ function guardarColeccion(coleccion, datos) {
         memoriaDatos[coleccion] = { existe: true, texto };
     } catch (error) {
         console.error(`No se pudieron guardar los datos de ${coleccion}.`, error);
+
+        if (error && error.code === "nube-no-disponible") {
+            mostrarAviso(
+                "La nube no est\u00e1 disponible",
+                "No se guard\u00f3 el cambio. Cerr\u00e1 y volv\u00e9 a abrir la app con internet."
+            );
+            return false;
+        }
 
         if (error && error.code === "borrado-masivo") {
             mostrarAviso(
@@ -1369,7 +1384,7 @@ function prepararRecordatorioRespaldoNube() {
 }
 
 function guardarRespaldoAutomatico() {
-    // La copia interna es de los datos reales: nunca se pisa con datos de prueba.
+    // La copia interna es de los datos de este celular.
     if (obtenerNombreAdaptadorDatos() !== "local") return false;
     // Con la nube real no se hace (T16b): copiaría los datos viejos del celular.
     if (usaNubeReal()) return false;
@@ -2452,10 +2467,17 @@ function migrarIdsLocales() {
 }
 
 conectarAdaptadorDatos();
-migrarIdsLocales();
-migrarIdsComerciosEnRutas();
-asegurarReinicioSemanal();
+
+// Con la nube (T16c), al abrir la app no se escribe nada en los datos de este
+// celular: ni las listas de ejemplo ni los ids ni la copia interna. El
+// reinicio semanal lo hace nube.js sobre la nube cuando conecta.
+if (!usaNubeReal()) {
+    migrarIdsLocales();
+    migrarIdsComerciosEnRutas();
+    asegurarReinicioSemanal();
+    respaldarAutomaticamenteSiCorresponde();
+}
+
 programarReinicioSemanal();
-respaldarAutomaticamenteSiCorresponde();
 prepararControlesRespaldo();
 prepararRecordatorioRespaldoNube();

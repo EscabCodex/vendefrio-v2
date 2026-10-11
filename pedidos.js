@@ -19,10 +19,9 @@ const pedidoDetalle = document.getElementById("pedidoDetalle");
 const copiarPedido = document.getElementById("copiarPedido");
 const whatsappPedido = document.getElementById("whatsappPedido");
 
-// En el modo nube de prueba (T9) el borrador va aparte, para no pisar el real.
-const DB_BORRADOR_PEDIDO = estaEnModoNubePrueba()
-    ? "vendefrio_borrador_pedido_prueba"
-    : "vendefrio_borrador_pedido";
+// El borrador del pedido queda en cada celular. El del modo prueba (T9, se
+// sacó en T16c) queda guardado en "vendefrio_borrador_pedido_prueba", sin usarse.
+const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;

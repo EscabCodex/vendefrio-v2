@@ -6,10 +6,13 @@
 //   carga su nombre (obligatorio) y sus roles (opcionales). Ver empleados.js.
 // - "Continuar sin iniciar sesión": la app como antes, con los datos de este
 //   celular. El celular recuerda la elección y no vuelve a preguntar.
-// Quien ya tiene sesión no ve la pantalla: la sesión queda guardada en el
-// celular y la app abre sin internet.
+// Solo nube (T16c): con cuenta se entra siempre a la nube de la
+// distribuidora, al ingresar, al registrarse y al abrir la app con sesión.
+// Antes, si el celular tiene datos propios, se pregunta una sola vez si se
+// suben (T11) o no. Quien ya usa la nube no ve la pantalla: la sesión queda
+// guardada en el celular y la app abre sin internet.
 (function () {
-    const CLAVE_SIN_SESION = "vendefrio_inicio_sin_sesion";
+    const CLAVE_SIN_SESION = DB_INICIO_SIN_SESION;
     const LARGO_MINIMO_CONTRASENA = 6;
     // Igual que el límite de firestore.rules.
     const LARGO_MAXIMO_NOMBRE = 80;
@@ -287,8 +290,8 @@
                     <p class="inicioNota" id="inicioEstadoCreando" role="status"></p>
                     <button type="button" class="inicioPrincipal oculto" id="inicioReintentar"
                         data-inicio="reintentar">Reintentar</button>
-                    <button type="button" class="inicioSinSesion oculto" id="inicioSeguirCelular"
-                        data-inicio="seguirCelular">Seguir con los datos de este celular</button>
+                    <button type="button" class="inicioVolver oculto" id="inicioSalirCuenta"
+                        data-inicio="salirCuenta">‹ Salir de la cuenta</button>
                 </div>
 
                 <div data-paso="datosPropios" class="oculto">
@@ -301,9 +304,25 @@
                     <button type="button" class="inicioPrincipal" data-inicio="subirDatos">
                         Subir mis datos a la nube
                     </button>
-                    <button type="button" class="inicioSinSesion" data-inicio="ahoraNo">
-                        Ahora no, seguir con los datos de este celular
+                    <button type="button" class="inicioSinSesion" data-inicio="noSubir">
+                        No subirlos y usar la nube
                     </button>
+                    <button type="button" class="inicioVolver" data-inicio="salirCuenta">‹ Salir de la cuenta</button>
+                </div>
+
+                <div data-paso="confirmarNoSubir" class="oculto">
+                    <h2>¿Usar la nube sin subir tus datos?</h2>
+                    <p class="inicioNota">
+                        Los datos de este celular no se suben ni se borran: quedan
+                        guardados acá, pero la app ya no los muestra. Vas a ver lo que
+                        está en la nube de tu distribuidora. En este celular no se
+                        vuelve a ofrecer subirlos.
+                    </p>
+                    <p class="inicioError oculto" id="inicioErrorNoSubir" role="alert"></p>
+                    <button type="button" class="inicioPrincipal" data-inicio="usarNubeSinSubir">
+                        Sí, usar la nube
+                    </button>
+                    <button type="button" class="inicioVolver" data-inicio="volverDatosPropios">‹ Volver</button>
                 </div>
             </div>
         `;
@@ -374,42 +393,65 @@
         return true;
     }
 
-    // --- Después de registrarse ---
+    // --- Entrar a la nube con cuenta (T13 y T16c) ---
+    // Con cuenta se entra siempre a la nube: al ingresar, al registrarse y al
+    // abrir la app con sesión. Mientras tanto esta pantalla tapa la app, así
+    // no se usan los datos de este celular.
+
+    let uidEntrando = null;
+    // Eligió "Subir mis datos a la nube": sigue con los pasos de T11 en
+    // Configuración > Cuenta, todavía con los datos de este celular.
+    let eligioSubirDatos = false;
+    let registrando = false;
+
+    // La migración de T11 se ofrece una sola vez por celular y solo si tiene
+    // datos propios (no cuentan las listas de ejemplo). La ve solo el dueño:
+    // el empleado entra con su código, sin pasar por acá.
+    function ofrecerSubirDatos() {
+        return !usaNubeReal() && !migracionResuelta() && celularTieneDatosPropios();
+    }
 
     function mostrarEstadoCreando(texto, conError) {
         const estado = document.getElementById("inicioEstadoCreando");
         if (estado) estado.textContent = texto;
 
         document.getElementById("inicioReintentar")?.classList.toggle("oculto", !conError);
-        document.getElementById("inicioSeguirCelular")?.classList.toggle("oculto", !conError);
+        document.getElementById("inicioSalirCuenta")?.classList.toggle("oculto", !conError);
+    }
+
+    function usarLaNube(alFallar) {
+        const nube = window.nubeVendeFrio;
+        if (!nube || !nube.usarNube) {
+            alFallar("La nube no está disponible en este momento.");
+            return;
+        }
+
+        nube.usarNube().catch(error => {
+            alFallar(error.message || "No se pudo abrir la nube. Probá de nuevo.");
+        });
     }
 
     function seguirConLaDistribuidora() {
-        if (celularTieneDatosPropios()) {
+        if (ofrecerSubirDatos()) {
             mostrarPaso("datosPropios");
             return;
         }
 
-        // Sin datos propios: la nube directamente.
+        // Sin datos propios (o ya resueltos): la nube directamente.
+        mostrarPaso("creando");
         mostrarEstadoCreando("Tu distribuidora está lista. Abriendo la nube…", false);
-
-        const nube = window.nubeVendeFrio;
-        if (!nube || !nube.usarNubeNueva) {
-            mostrarEstadoCreando("La nube no está disponible en este momento.", true);
-            return;
-        }
-
-        nube.usarNubeNueva().catch(error => {
-            mostrarEstadoCreando(error.message || "No se pudo abrir la nube. Probá de nuevo.", true);
-        });
+        usarLaNube(texto => mostrarEstadoCreando(texto, true));
     }
 
     // distribuidora.js crea la distribuidora al primer ingreso, como siempre.
     function esperarDistribuidora(uid) {
         const distribuidora = window.distribuidoraVendeFrio;
+        const textoEspera = registrando
+            ? "Creando tu distribuidora en la nube…"
+            : "Preparando tu distribuidora en la nube…";
 
         mostrarPaso("creando");
-        mostrarEstadoCreando("Creando tu distribuidora en la nube…", false);
+        mostrarEstadoCreando(textoEspera, false);
 
         if (!distribuidora) {
             mostrarEstadoCreando("La nube no está disponible en este momento.", true);
@@ -419,9 +461,9 @@
         if (quitarOyenteDistribuidora) quitarOyenteDistribuidora();
 
         const textosDeError = {
-            sinConexion: "No hay conexión. Tu cuenta ya está creada: tocá Reintentar cuando vuelva la señal.",
-            sinPermiso: "La nube no dejó crear tu distribuidora. Revisá que las reglas de seguridad estén publicadas en Firebase.",
-            error: "No se pudo crear tu distribuidora. Probá de nuevo.",
+            sinConexion: "No hay conexión. Tocá Reintentar cuando vuelva la señal.",
+            sinPermiso: "La nube no dejó preparar tu distribuidora. Revisá que las reglas de seguridad estén publicadas en Firebase.",
+            error: "No se pudo preparar tu distribuidora. Probá de nuevo.",
             noDisponible: "La nube no está disponible en este momento."
         };
 
@@ -440,14 +482,47 @@
                 return;
             }
 
-            if (textosDeError[estado]) {
+            if ((estado === "creada" || estado === "lista") && id) {
+                mostrarEstadoCreando("Esta cuenta no es dueña de una distribuidora. Salí y entrá con la cuenta del dueño.", true);
+            } else if (textosDeError[estado]) {
                 mostrarEstadoCreando(textosDeError[estado], true);
             } else {
-                mostrarEstadoCreando("Creando tu distribuidora en la nube…", false);
+                mostrarEstadoCreando(textoEspera, false);
             }
         });
 
         quitarOyenteDistribuidora = quitar;
+    }
+
+    function entrarConCuenta(usuario) {
+        if (!usuario || usuario.isAnonymous) return;
+        // Ya usa la nube (si es otra cuenta, nube.js sale y recarga).
+        if (usaNubeReal()) return;
+        if (eligioSubirDatos || uidEntrando === usuario.uid) return;
+
+        uidEntrando = usuario.uid;
+        crear();
+        esperarDistribuidora(usuario.uid);
+    }
+
+    // "Salir de la cuenta" desde esta pantalla: vuelve al inicio (T16c).
+    function salirDeLaCuenta() {
+        const nube = window.nubeVendeFrio;
+
+        if (quitarOyenteDistribuidora) {
+            quitarOyenteDistribuidora();
+            quitarOyenteDistribuidora = null;
+        }
+
+        mostrarPaso("creando");
+        mostrarEstadoCreando("Saliendo de tu cuenta…", false);
+
+        if (!nube || !nube.salirDeLaCuenta) {
+            mostrarEstadoCreando("La cuenta no está disponible en este momento.", true);
+            return;
+        }
+
+        nube.salirDeLaCuenta().catch(error => mostrarEstadoCreando(error.message, true));
     }
 
     // --- Empleado (T14) ---
@@ -618,16 +693,13 @@
             return;
         }
 
-        if (accion === "seguirCelular") {
-            cerrar();
-            mostrarAviso(
-                "Seguís con los datos de este celular",
-                "Tu cuenta quedó iniciada. Cuando tu distribuidora esté lista, podés pasar a la nube desde Configuración > Cuenta."
-            );
+        if (accion === "salirCuenta") {
+            salirDeLaCuenta();
             return;
         }
 
         if (accion === "subirDatos") {
+            eligioSubirDatos = true;
             cerrar();
             if (!abrirCuentaEnConfiguracion()) {
                 mostrarAviso("Subir mis datos", "Entrá a Configuración > Cuenta y seguí los pasos de \"Subir mis datos a la nube\".");
@@ -635,12 +707,28 @@
             return;
         }
 
-        if (accion === "ahoraNo") {
-            cerrar();
-            mostrarAviso(
-                "Tus datos siguen en este celular",
-                "Tu cuenta y tu distribuidora quedaron listas. Cuando quieras, subí tus datos desde Configuración > Cuenta > \"Subir mis datos a la nube\"."
-            );
+        if (accion === "noSubir") {
+            document.getElementById("inicioErrorNoSubir")?.classList.add("oculto");
+            mostrarPaso("confirmarNoSubir");
+            return;
+        }
+
+        if (accion === "volverDatosPropios") {
+            mostrarPaso("datosPropios");
+            return;
+        }
+
+        if (accion === "usarNubeSinSubir") {
+            const error = document.getElementById("inicioErrorNoSubir");
+            const liberar = ocupar(boton, "Abriendo la nube…");
+
+            error?.classList.add("oculto");
+            usarLaNube(texto => {
+                liberar();
+                if (!error) return;
+                error.textContent = texto;
+                error.classList.remove("oculto");
+            });
         }
     }
 
@@ -678,10 +766,11 @@
             mostrarError(formulario, "");
             const liberar = ocupar(boton, "Ingresando…");
 
+            // Con cuenta se entra a la nube (T16c).
             cuenta.ingresar(email, contrasena)
-                .then(() => {
-                    cerrar();
-                    mostrarToast("Ingresaste a tu cuenta");
+                .then(usuario => {
+                    liberar();
+                    entrarConCuenta(usuario);
                 })
                 .catch(error => {
                     liberar();
@@ -721,10 +810,15 @@
 
             // La distribuidora se crea con este nombre apenas existe la cuenta.
             window.distribuidoraVendeFrio?.prepararNombre(nombre);
+            registrando = true;
 
             cuenta.registrarse(email, contrasena)
-                .then(usuario => esperarDistribuidora(usuario.uid))
+                .then(usuario => {
+                    liberar();
+                    entrarConCuenta(usuario);
+                })
                 .catch(error => {
+                    registrando = false;
                     window.distribuidoraVendeFrio?.prepararNombre(null);
                     liberar();
                     mostrarError(formulario, error.message);
@@ -733,40 +827,49 @@
     }
 
     // --- Arranque ---
-    // Se espera a saber si hay sesión guardada (también sin internet).
+    // Se espera a saber si hay sesión guardada (también sin internet). Con
+    // cuenta se entra a la nube, también si la cuenta se inicia después
+    // (por ejemplo, desde Configuración > Cuenta) (T16c).
     function decidir() {
         // Un empleado que perdió el acceso vuelve a ver la pantalla con el aviso.
         const aviso = window.empleadosVendeFrio?.hayAvisoParaElInicio?.()
             ? window.empleadosVendeFrio.avisoParaElInicio()
             : "";
 
-        if (eligioSinSesion() && !aviso) return;
-
         const cuenta = window.cuentaVendeFrio;
         if (!cuenta || !cuenta.disponible()) return;
 
-        let decidido = false;
+        let primera = true;
 
-        const quitar = cuenta.escuchar(usuario => {
-            if (decidido) return;
-            decidido = true;
-            setTimeout(() => quitar(), 0);
+        cuenta.escuchar(usuario => {
+            const esPrimera = primera;
+            primera = false;
 
-            if (!usuario) {
-                crear();
-                mostrarPaso("elegir");
+            if (usuario && !usuario.isAnonymous) {
+                entrarConCuenta(usuario);
+                return;
+            }
 
-                const nota = document.getElementById("inicioAviso");
-                if (nota && aviso) {
-                    nota.textContent = aviso;
-                    nota.classList.remove("oculto");
-                }
+            if (!esPrimera) return;
+            // El empleado ya entró con su código: lo maneja empleados.js.
+            if (usuario && window.empleadosVendeFrio?.esEmpleado()) return;
+            if (eligioSinSesion() && !aviso) return;
+
+            crear();
+            mostrarPaso("elegir");
+
+            const nota = document.getElementById("inicioAviso");
+            if (nota && aviso) {
+                nota.textContent = aviso;
+                nota.classList.remove("oculto");
             }
         });
     }
 
     window.inicioVendeFrio = {
         tieneDatosPropios: celularTieneDatosPropios,
+        ofrecerSubirDatos,
+        entrarConCuenta,
         pedirDatosEmpleado,
         abrirEmpleado
     };
