@@ -727,6 +727,24 @@
         `;
     }
 
+    // Casillas de permiso de un rol (T19). Se guardan al tocarlas.
+    function htmlPermisosDeRol(rol) {
+        const marcados = new Set(rol.permisos || []);
+
+        return `
+            <fieldset class="rolPermisos">
+                <legend>Permisos</legend>
+                ${window.empleadosVendeFrio.permisos().map(permiso => `
+                    <label class="inicioRol">
+                        <input type="checkbox" class="rolPermiso" data-rol="${escaparTexto(rol.id)}"
+                            value="${escaparTexto(permiso.id)}" ${marcados.has(permiso.id) ? "checked" : ""}>
+                        <span>${escaparTexto(permiso.nombre)}</span>
+                    </label>
+                `).join("")}
+            </fieldset>
+        `;
+    }
+
     function htmlEditorRoles() {
         const empleados = window.empleadosVendeFrio;
 
@@ -747,6 +765,7 @@
                             <button type="button" data-accion="eliminarRol" data-rol="${escaparTexto(rol.id)}"
                                 data-nombre="${escaparTexto(rol.nombre)}" class="empleadoBaja">Eliminar</button>
                         </div>
+                        ${htmlPermisosDeRol(rol)}
                     </li>
                 `).join("")}
             </ul>
@@ -796,7 +815,9 @@
             <div id="listaEmpleados">${htmlListaEmpleados([])}</div>
             <p class="configEstado">
                 <strong>Roles</strong><br>
-                Creá, renombrá o eliminá los roles que pueden elegir tus empleados.
+                Creá, renombrá o eliminá los roles que pueden elegir tus empleados,
+                y marcá qué permite cada uno. Una persona puede lo que permite
+                cualquiera de sus roles. Vos podés todo.
             </p>
             <div id="editorRoles">${htmlEditorRoles()}</div>
         `;
@@ -823,9 +844,32 @@
         if (caja) caja.innerHTML = htmlListaCodigos(lista);
     }
 
+    // Al redibujar (por ejemplo, por un cambio que llega de otro celular)
+    // no se pierde lo que se estaba escribiendo.
     function dibujarEditorRoles() {
         const caja = document.getElementById("editorRoles");
-        if (caja) caja.innerHTML = htmlEditorRoles();
+        if (!caja) return;
+
+        const escritos = new Map();
+        caja.querySelectorAll(".empleadoRolNombre").forEach(campo => {
+            if (campo.value !== campo.defaultValue) escritos.set(campo.dataset.rol, campo.value);
+        });
+        const rolNuevo = document.getElementById("empleadoRolNuevo")?.value || "";
+        const enfocado = document.activeElement && caja.contains(document.activeElement)
+            ? (document.activeElement.id || document.activeElement.dataset.rol || "")
+            : "";
+
+        caja.innerHTML = htmlEditorRoles();
+
+        caja.querySelectorAll(".empleadoRolNombre").forEach(campo => {
+            if (escritos.has(campo.dataset.rol)) campo.value = escritos.get(campo.dataset.rol);
+            if (enfocado && campo.dataset.rol === enfocado) campo.focus();
+        });
+        const campoNuevo = document.getElementById("empleadoRolNuevo");
+        if (campoNuevo) {
+            campoNuevo.value = rolNuevo;
+            if (enfocado === "empleadoRolNuevo") campoNuevo.focus();
+        }
     }
 
     function escucharListaEmpleados() {
@@ -871,12 +915,22 @@
             ?.classList.toggle("oculto", !(empleados && empleados.esDueno()));
     }
 
+    // Permisos del empleado (T19): salen de sus roles; los marca el dueño.
+    function htmlMisPermisos(nombres) {
+        return `
+            <strong>Tus permisos</strong><br>
+            ${nombres.length ? escaparTexto(nombres.join(", ")) : "Ninguno por ahora"}<br>
+            <small>Los da tu encargado según tus roles.</small>
+        `;
+    }
+
     // Cuenta de un empleado (T14): sin migración ni acciones delicadas.
     // Solo su nombre, sus roles, la conexión y salir.
     function htmlCuentaEmpleado() {
         const empleados = window.empleadosVendeFrio;
         const ficha = empleados.miFicha();
         const roles = ficha ? empleados.nombresDeRoles(ficha.roles) : [];
+        const permisos = empleados.nombresDePermisos(empleados.misPermisos());
         const nube = window.nubeVendeFrio;
 
         const textos = {
@@ -897,6 +951,7 @@
                 <strong>${escaparTexto(ficha?.nombre) || "…"}</strong><br>
                 Roles: ${roles.length ? escaparTexto(roles.join(", ")) : "ninguno"}
             </p>
+            <p class="configEstado" id="misPermisos">${htmlMisPermisos(permisos)}</p>
             <button type="button" data-accion="editarDatosEmpleado">Cambiar mi nombre o mis roles</button>
             ${htmlNombreDistribuidora()}
             <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
@@ -1960,6 +2015,18 @@
         guardarCampo(campo, valor);
     });
 
+    // Permisos de un rol (T19): se guardan al tocar la casilla.
+    document.addEventListener("change", event => {
+        const casilla = event.target.closest?.(".rolPermiso");
+        if (!casilla) return;
+
+        window.empleadosVendeFrio.cambiarPermisoDeRol(casilla.dataset.rol, casilla.value, casilla.checked)
+            .catch(error => {
+                casilla.checked = !casilla.checked;
+                mostrarAviso("No se guardó el permiso", error.message);
+            });
+    });
+
     document.addEventListener("input", event => {
         if (event.target.id !== "buscarConfiguracion") return;
 
@@ -2104,6 +2171,15 @@
             if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {
                 detalle("cuenta");
             }
+        });
+
+        // Permisos (T19): si el dueño los cambia, Cuenta se actualiza sola.
+        window.empleadosVendeFrio.escucharPermisos?.(() => {
+            const texto = document.getElementById("misPermisos");
+            if (!texto || !window.empleadosVendeFrio.esEmpleado()) return;
+            texto.innerHTML = htmlMisPermisos(
+                window.empleadosVendeFrio.nombresDePermisos(window.empleadosVendeFrio.misPermisos())
+            );
         });
     }
 
