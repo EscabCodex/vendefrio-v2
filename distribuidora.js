@@ -1,6 +1,8 @@
 // VendeFrío - Alta de la distribuidora en Firestore (T8)
 // Al primer ingreso del dueño se crean, juntas, su distribuidora, su ficha de miembro
 // y su ficha de usuario. Los datos de la app todavía NO pasan por la nube.
+// Nombre del dueño (T18): se guarda en la distribuidora (nombreDueno), para que
+// lo que haga quede a su nombre y no a su email.
 (function () {
     const oyentes = [];
     let estado = "sinCuenta";
@@ -15,6 +17,16 @@
     let idNombre = null;
     let dejarDeEscucharNombre = null;
     const oyentesNombre = [];
+    // Nombre del dueño (T18). "Confirmado" quiere decir que la última lectura
+    // vino de la nube y no solo de la copia del celular: sin internet no se
+    // sabe si ya lo cargó en otro celular, así que no se le pide.
+    const LARGO_MAXIMO_NOMBRE_DUENO = 60;
+    let nombreDueno = "";
+    let nombreDuenoConfirmado = false;
+    // La nube rechazó guardarlo (reglas sin publicar): no se vuelve a pedir
+    // hasta abrir la app de nuevo, para no trabar la entrada.
+    let nombreDuenoRechazado = false;
+    const oyentesNombreDueno = [];
 
     // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible
     // y sinAcceso (cuenta de empleado todavía sin distribuidora, T14).
@@ -48,6 +60,23 @@
         avisarNombre();
     }
 
+    function avisarNombreDueno() {
+        oyentesNombreDueno.forEach(oyente => {
+            try {
+                oyente(nombreDueno, nombreDuenoConfirmado);
+            } catch (error) {
+                console.error("Falló un aviso del nombre del dueño.", error);
+            }
+        });
+    }
+
+    function cambiarNombreDuenoConocido(nuevoNombre, confirmado) {
+        if (nuevoNombre === nombreDueno && confirmado === nombreDuenoConfirmado) return;
+        nombreDueno = nuevoNombre;
+        nombreDuenoConfirmado = confirmado;
+        avisarNombreDueno();
+    }
+
     function escucharNombreEnLaNube(id) {
         if (id === idNombre) return;
 
@@ -60,16 +89,25 @@
 
         if (!idNombre) {
             cambiarNombreConocido("");
+            cambiarNombreDuenoConocido("", false);
             return;
         }
 
         const db = obtenerFirestore();
         if (!db) return;
 
+        // includeMetadataChanges: también avisa cuando la nube confirma lo
+        // que ya estaba en la copia del celular (para saber si falta el
+        // nombre del dueño de verdad).
         dejarDeEscucharNombre = db.collection("distribuidoras").doc(idNombre).onSnapshot(
+            { includeMetadataChanges: true },
             foto => {
                 const datos = foto.exists ? foto.data() : null;
                 cambiarNombreConocido(datos && typeof datos.nombre === "string" ? datos.nombre : "");
+                cambiarNombreDuenoConocido(
+                    datos && typeof datos.nombreDueno === "string" ? datos.nombreDueno : "",
+                    Boolean(datos) && !foto.metadata.fromCache
+                );
             },
             error => {
                 console.warn("No se pudo leer el nombre de la distribuidora.", error);
@@ -109,6 +147,56 @@
                 );
             }
         });
+        return Promise.resolve(limpio);
+    }
+
+    function soyElDueno() {
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        return Boolean(usuario && !usuario.isAnonymous && idDistribuidora && idDistribuidora === usuario.uid);
+    }
+
+    // Nombre del dueño (T18): obligatorio, se pide una sola vez. Solo hay que
+    // pedirlo si la nube confirmó que todavía no lo tiene.
+    function faltaNombreDueno() {
+        return soyElDueno() && nombreDuenoConfirmado && !nombreDueno && !nombreDuenoRechazado;
+    }
+
+    // Solo el dueño escribe su nombre (lo controla firestore.rules). Como el
+    // nombre de la distribuidora, no espera a la nube: sin internet se sube
+    // cuando vuelve la señal.
+    function cambiarNombreDueno(nuevoNombre) {
+        const db = obtenerFirestore();
+        const limpio = String(nuevoNombre || "").trim().replace(/\s+/g, " ").slice(0, LARGO_MAXIMO_NOMBRE_DUENO);
+
+        if (!db || !idDistribuidora) {
+            return Promise.reject(new Error("Tu distribuidora en la nube todavía no está lista."));
+        }
+        if (!soyElDueno()) {
+            return Promise.reject(new Error("Solo el dueño de la distribuidora puede cambiar su nombre acá."));
+        }
+        if (!limpio) {
+            return Promise.reject(new Error("Escribí tu nombre."));
+        }
+
+        const guardado = db.collection("distribuidoras").doc(idDistribuidora).update({ nombreDueno: limpio });
+        guardado.catch(error => {
+            console.error("No se pudo guardar el nombre del dueño.", error);
+            const rechazado = error && error.code === "permission-denied";
+            if (rechazado) {
+                nombreDuenoRechazado = true;
+                avisarNombreDueno();
+            }
+            if (typeof mostrarAviso === "function") {
+                mostrarAviso(
+                    "No se pudo guardar tu nombre",
+                    rechazado
+                        ? "La nube no dejó guardar tu nombre. Revisá que las reglas de seguridad estén publicadas. Mientras tanto podés seguir usando la app."
+                        : "Probá de nuevo desde Configuración > Cuenta."
+                );
+            }
+        });
+
+        cambiarNombreDuenoConocido(limpio, nombreDuenoConfirmado);
         return Promise.resolve(limpio);
     }
 
@@ -260,6 +348,22 @@
             };
         },
         idActual: () => idDistribuidora,
+        // Nombre del dueño (T18)
+        largoMaximoNombreDueno: LARGO_MAXIMO_NOMBRE_DUENO,
+        nombreDuenoActual: () => nombreDueno,
+        faltaNombreDueno,
+        cambiarNombreDueno,
+        escucharNombreDueno(oyente) {
+            if (typeof oyente !== "function") return () => {};
+
+            oyentesNombreDueno.push(oyente);
+            oyente(nombreDueno, nombreDuenoConfirmado);
+
+            return () => {
+                const indice = oyentesNombreDueno.indexOf(oyente);
+                if (indice >= 0) oyentesNombreDueno.splice(indice, 1);
+            };
+        },
         reintentar: revisar,
         escuchar
     };

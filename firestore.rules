@@ -1,15 +1,17 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15)
-// Se publican a mano en la consola de Firebase (tareas M3, M5 y M6; volver a
-// publicar cada vez que cambia este archivo).
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18)
+// Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
+// de cada tarea que lo cambia; volver a publicar cada vez que cambia este
+// archivo).
 //
 // Estructura:
 //   usuarios/{uid}                  a qué distribuidora pertenece cada usuario
 //   codigosAcceso/{codigo}          códigos de ingreso de empleados (T14):
 //                                   sirven una vez y vencen a las 24 horas
 //   distribuidoras/{idDistribuidora}   el id es el uid del dueño, o "prueba-" + uid
-//                                   para la distribuidora de prueba (T9)
+//                                   para la distribuidora de prueba (T9);
+//                                   nombreDueno: el nombre del dueño (T18)
 //     miembros/{uid}                usuarios autorizados (dueño y empleados)
 //     empleados/{idEmpleado}        ficha de cada empleado (T14): la persona,
 //                                   no el celular
@@ -195,11 +197,17 @@ service cloud.firestore {
         && request.resource.data.nombre.size() <= 80
         && existsAfter(rutaMiembro(idDistribuidora, request.auth.uid));
 
-      // El dueño puede cambiar el nombre, nunca quién es el dueño.
+      // El dueño puede cambiar el nombre de la distribuidora y el suyo
+      // (nombreDueno, T18: obligatorio, hasta 60 caracteres), nunca quién es
+      // el dueño.
       allow update: if esDueno(idDistribuidora)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "nombreDueno"])
         && request.resource.data.nombre is string
-        && request.resource.data.nombre.size() <= 80;
+        && request.resource.data.nombre.size() <= 80
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["nombreDueno"])
+          || (request.resource.data.get("nombreDueno", null) is string
+            && request.resource.data.nombreDueno.size() >= 1
+            && request.resource.data.nombreDueno.size() <= 60));
 
       allow delete: if false;
 
