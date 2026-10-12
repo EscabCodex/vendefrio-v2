@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19)
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -21,8 +21,9 @@ rules_version = '2';
 //                                   config/roles (lista de roles con sus
 //                                   permisos y copia por permiso, solo el
 //                                   dueño; T19)
-//     pedidos/{id}
-//       estados/{id}                historial de estados: solo se agrega
+//     pedidos/{id}                  con estado, autor y precios (T20); el
+//                                   historial de estados va adentro, en el
+//                                   campo "estados", y solo se agrega
 //     rutas/{id}
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
@@ -88,6 +89,103 @@ service cloud.firestore {
         && porPermiso.cobra is list && porPermiso.cobra.size() <= 50
         && porPermiso.avisoFaltantes is list && porPermiso.avisoFaltantes.size() <= 50
         && porPermiso.controla is list && porPermiso.controla.size() <= 50;
+    }
+
+    // Pedido completo (T20). Los pedidos guardan quién los cargó y quién
+    // hizo cada cambio de estado como una "persona": { idPersona, nombre,
+    // uid }. idPersona es "dueno" o el id de la ficha del empleado (no cambia
+    // con un reingreso).
+    function estadoDePedidoValido(estado) {
+      return estado in ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto", "entregado", "cancelado"];
+    }
+
+    function miIdPersona(idDistribuidora) {
+      return esDueno(idDistribuidora)
+        ? "dueno"
+        : get(rutaMiembro(idDistribuidora, request.auth.uid)).data.get("idEmpleado", "");
+    }
+
+    // Siempre a nombre de quien escribe, nunca de otro.
+    function personaPropia(idDistribuidora, persona) {
+      return persona is map
+        && persona.keys().hasAll(["idPersona", "nombre", "uid"])
+        && persona.keys().hasOnly(["idPersona", "nombre", "uid"])
+        && persona.uid == request.auth.uid
+        && persona.idPersona == miIdPersona(idDistribuidora)
+        && persona.nombre is string
+        && persona.nombre.size() <= 60;
+    }
+
+    // Una entrada del historial de estados.
+    function entradaDeEstadoValida(idDistribuidora, entrada) {
+      return entrada is map
+        && entrada.keys().hasAll(["estado", "persona", "horaCelular", "nota"])
+        && entrada.keys().hasOnly(["estado", "persona", "horaCelular", "nota"])
+        && estadoDePedidoValido(entrada.estado)
+        && personaPropia(idDistribuidora, entrada.persona)
+        && entrada.horaCelular is number
+        && entrada.nota is string
+        && entrada.nota.size() <= 300;
+    }
+
+    // Sin autor ni historial de estados: los subidos con T11 y los que carga
+    // un celular con una versión vieja de la app. La app los muestra como
+    // "Histórico". Se aceptan para no perder esos pedidos.
+    function pedidoSinEstados(pedido) {
+      return !("autor" in pedido)
+        && !("estados" in pedido)
+        && pedido.get("estado", "historico") == "historico";
+    }
+
+    // Un pedido nuevo nace "Cargado", a nombre de quien lo carga, con una
+    // sola entrada en el historial de estados.
+    function pedidoNuevoPropio(idDistribuidora, pedido) {
+      return pedido.keys().hasAll(["comercio", "productos", "estado", "autor", "estados", "eliminado"])
+        && pedido.keys().hasOnly(["id", "_orden", "fecha", "timestamp", "comercio", "cantidad", "pedido",
+          "productos", "observaciones", "estado", "autor", "estados", "eliminado"])
+        && pedido.comercio is string
+        && pedido.productos is list
+        && pedido.estado == "cargado"
+        && pedido.eliminado == false
+        && personaPropia(idDistribuidora, pedido.autor)
+        && pedido.estados is map
+        && pedido.estados.size() == 1
+        && entradaDeEstadoValida(idDistribuidora, pedido.estados[pedido.estados.keys()[0]])
+        && pedido.estados[pedido.estados.keys()[0]].estado == "cargado"
+        && pedido.estados[pedido.estados.keys()[0]].persona == pedido.autor;
+    }
+
+    // Lo que se pidió (productos, comercio y observaciones, y el texto y las
+    // unidades que salen de ellos) solo lo cambian el autor y el dueño. Un
+    // "Histórico" no tiene autor: solo el dueño.
+    function puedeCambiarLoPedido(idDistribuidora, pedido) {
+      return esDueno(idDistribuidora)
+        || ("autor" in pedido && pedido.autor.idPersona == miIdPersona(idDistribuidora));
+    }
+
+    // El historial de estados solo se agrega: una entrada por cambio, a
+    // nombre de quien escribe, sin tocar las que ya están.
+    function estadoAgregadoValido(idDistribuidora, antes, despues) {
+      let nuevas = despues.estados.keys().removeAll(antes.estados.keys());
+      return despues.estados is map
+        && despues.estados.diff(antes.estados).changedKeys().size() == 0
+        && despues.estados.diff(antes.estados).removedKeys().size() == 0
+        && nuevas.size() == 1
+        && entradaDeEstadoValida(idDistribuidora, despues.estados[nuevas[0]])
+        && estadoDePedidoValido(despues.estado);
+    }
+
+    // Cada cambio se guarda campo por campo. El id, la fecha, el autor y la
+    // marca de eliminado no cambian. El estado cambia solo junto con una
+    // entrada nueva del historial, y un "Histórico" no pasa a tener estados.
+    function cambioDePedidoValido(idDistribuidora, antes, despues) {
+      let cambiados = despues.diff(antes).affectedKeys();
+      return cambiados.hasOnly(["_orden", "estado", "estados", "preparacion", "entrega", "cobro", "ediciones",
+          "productos", "comercio", "observaciones", "pedido", "cantidad"])
+        && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
+          || puedeCambiarLoPedido(idDistribuidora, antes))
+        && (!cambiados.hasAny(["estado", "estados"])
+          || ("estados" in antes && estadoAgregadoValido(idDistribuidora, antes, despues)));
     }
 
     function vigente(datosCodigo) {
@@ -356,14 +454,22 @@ service cloud.firestore {
         allow read, write: if esMiembro(idDistribuidora);
       }
 
+      // Pedidos (T20). El historial de estados va dentro de cada pedido (se
+      // lee junto con él) y reemplaza a la subcolección "estados", que nunca
+      // se usó. El dueño puede crear cualquier pedido (por ejemplo, al
+      // combinar un respaldo). Hasta T26 cualquier miembro borra pedidos.
       match /pedidos/{id} {
-        allow read, write: if esMiembro(idDistribuidora);
+        allow read: if esMiembro(idDistribuidora);
 
-        // Historial de estados: se agrega, nunca se cambia ni se borra.
-        match /estados/{idEstado} {
-          allow read, create: if esMiembro(idDistribuidora);
-          allow update, delete: if false;
-        }
+        allow create: if esMiembro(idDistribuidora)
+          && (pedidoSinEstados(request.resource.data)
+            || pedidoNuevoPropio(idDistribuidora, request.resource.data)
+            || esDueno(idDistribuidora));
+
+        allow update: if esMiembro(idDistribuidora)
+          && cambioDePedidoValido(idDistribuidora, resource.data, request.resource.data);
+
+        allow delete: if esMiembro(idDistribuidora);
       }
     }
   }

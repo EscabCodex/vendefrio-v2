@@ -1,6 +1,7 @@
 // VendeFrío - Adaptador nube (Firestore) (T9), migración "Subir mis datos
 // a la nube" y modo nube (T11), sincronización visible e indicador de
-// conexión (T12), nube directa al registrarse (T13) y Solo nube (T16c).
+// conexión (T12), nube directa al registrarse (T13), Solo nube (T16c) y
+// pedidos campo por campo (T20).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -236,6 +237,49 @@
         return resultado;
     }
 
+    function esMapa(valor) {
+        return Boolean(valor) && typeof valor === "object" && !Array.isArray(valor);
+    }
+
+    // Pedidos (T20): lo que cambió entre dos versiones de un pedido, campo
+    // por campo. Entra en los mapas (por ejemplo, en cada entrada del
+    // historial de estados); las listas y los demás valores van enteros.
+    // Devuelve [{ ruta: ["estados", "est_x"], valor }] y { ruta, borrar: true }.
+    function camposCambiados(antes, despues, ruta, cambios) {
+        const camino = ruta || [];
+        const resultado = cambios || [];
+        const tiene = (objeto, clave) => Object.prototype.hasOwnProperty.call(objeto, clave);
+        const claves = new Set(Object.keys(antes).concat(Object.keys(despues)));
+
+        claves.forEach(clave => {
+            const rutaCampo = camino.concat(clave);
+
+            if (!tiene(despues, clave)) {
+                resultado.push({ ruta: rutaCampo, borrar: true });
+            } else if (tiene(antes, clave) && esMapa(antes[clave]) && esMapa(despues[clave])) {
+                camposCambiados(antes[clave], despues[clave], rutaCampo, resultado);
+            } else if (!tiene(antes, clave) || textoComparable(antes[clave]) !== textoComparable(despues[clave])) {
+                resultado.push({ ruta: rutaCampo, valor: despues[clave] });
+            }
+        });
+
+        return resultado;
+    }
+
+    // Lo que recibe update() de Firestore: ruta, valor, ruta, valor...
+    // Cada ruta va como FieldPath, así sirve con cualquier nombre de campo.
+    function argumentosDeActualizacion(campos) {
+        const FieldPath = window.firebase.firestore.FieldPath;
+        const borrar = window.firebase.firestore.FieldValue.delete();
+        const argumentos = [];
+
+        campos.forEach(campo => {
+            argumentos.push(new FieldPath(...campo.ruta), campo.borrar ? borrar : campo.valor);
+        });
+
+        return argumentos;
+    }
+
     // -------------------------------------------------
     // Adaptador nube
     // -------------------------------------------------
@@ -339,11 +383,21 @@
             const id = item.registro.id;
             const datos = aDocumento(item.registro, { ...item.extras, _orden: ordenes[posicion] });
             const anterior = anteriores.get(id);
+            const ref = refDistribuidora.collection(subcoleccion).doc(id);
 
             nuevos.set(id, datos);
 
-            if (!anterior || textoComparable(anterior) !== textoComparable(datos)) {
-                escrituras.push({ tipo: "guardar", ref: refDistribuidora.collection(subcoleccion).doc(id), datos });
+            if (!anterior) {
+                escrituras.push({ tipo: "guardar", ref, datos });
+            } else if (textoComparable(anterior) !== textoComparable(datos)) {
+                // Un pedido que ya está en la nube nunca se reescribe entero
+                // (T20): se mandan solo los campos que cambiaron.
+                if (subcoleccion === "pedidos") {
+                    const campos = camposCambiados(anterior, datos);
+                    if (campos.length) escrituras.push({ tipo: "actualizar", ref, campos });
+                } else {
+                    escrituras.push({ tipo: "guardar", ref, datos });
+                }
             }
         });
 
@@ -380,6 +434,8 @@
             escrituras.slice(inicio, inicio + MAX_ESCRITURAS_POR_TANDA).forEach(escritura => {
                 if (escritura.tipo === "borrar") {
                     tanda.delete(escritura.ref);
+                } else if (escritura.tipo === "actualizar") {
+                    tanda.update(escritura.ref, ...argumentosDeActualizacion(escritura.campos));
                 } else if (escritura.combinar) {
                     tanda.set(escritura.ref, escritura.datos, { merge: true });
                 } else {
@@ -476,6 +532,103 @@
             };
         }
     };
+
+    // -------------------------------------------------
+    // Pedidos campo por campo (T20)
+    // -------------------------------------------------
+    // Los cambios de un pedido que ya está en la nube se guardan campo por
+    // campo (update), nunca el pedido entero: dos personas que cambian cosas
+    // distintas del mismo pedido no se pisan. Sin señal quedan en el celular
+    // y suben solos al volver. Los usan las tareas que siguen (preparación,
+    // entrega, cobro y ediciones); firestore.rules revisa quién puede qué.
+
+    // Campos que se cambian con cambiarCamposDelPedido. El autor, la fecha y
+    // el id no cambian nunca; el historial de estados tiene su propia función.
+    const CAMPOS_QUE_CAMBIAN_EN_UN_PEDIDO = [
+        "preparacion", "entrega", "cobro", "ediciones",
+        "productos", "comercio", "observaciones", "pedido", "cantidad"
+    ];
+
+    function errorDelPedido(mensaje) {
+        const error = new Error(mensaje);
+        error.code = "pedido";
+        return error;
+    }
+
+    function pedidoEnLaNube(idPedido) {
+        if (!db || !refDistribuidora) throw errorDelPedido("La nube no está disponible en este momento.");
+
+        const id = String(idPedido || "");
+        const datos = documentos.pedidos.get(id);
+
+        if (!datos) throw errorDelPedido("No se encontró ese pedido.");
+        if (typeof datos._json === "string") throw errorDelPedido("Ese pedido no se puede cambiar por partes.");
+
+        return { ref: refDistribuidora.collection("pedidos").doc(id), pedido: deDocumento(id, datos) };
+    }
+
+    // No espera a la nube: la escucha muestra el cambio enseguida, también
+    // sin señal. Si la nube lo rechaza, avisa como cualquier otro cambio.
+    function enviarCambiosDelPedido(ref, campos) {
+        ref.update(...argumentosDeActualizacion(campos)).catch(errorAlEscribir);
+    }
+
+    // cambios: { "preparacion.lin_x": valor, "entrega": valor }. La ruta va
+    // con puntos y undefined borra el campo. Devuelve true si mandó algo.
+    function cambiarCamposDelPedido(idPedido, cambios) {
+        const { ref } = pedidoEnLaNube(idPedido);
+
+        const campos = Object.keys(cambios || {}).map(texto => {
+            const ruta = texto.split(".");
+
+            if (!ruta.every(parte => /^[A-Za-z0-9_]{1,100}$/.test(parte))) {
+                throw errorDelPedido("Ese campo no es válido: " + texto);
+            }
+            if (!CAMPOS_QUE_CAMBIAN_EN_UN_PEDIDO.includes(ruta[0])) {
+                throw errorDelPedido("Ese campo del pedido no se cambia así: " + texto);
+            }
+
+            if (cambios[texto] === undefined) return { ruta, borrar: true };
+
+            const valor = JSON.parse(JSON.stringify(cambios[texto]));
+            if (tieneListasAnidadas(valor, false)) {
+                throw errorDelPedido("La nube no admite listas dentro de listas: " + texto);
+            }
+
+            return { ruta, valor };
+        });
+
+        if (!campos.length) return false;
+
+        enviarCambiosDelPedido(ref, campos);
+        return true;
+    }
+
+    // Suma una entrada al historial de estados (solo se agrega) a nombre de
+    // quien usa este celular, y actualiza la copia del estado actual (el de
+    // la entrada más nueva según la hora en que se hizo). Devuelve el id de
+    // la entrada. Un pedido "Histórico" no cambia de estado.
+    function agregarEstadoAlPedido(idPedido, estado, nota) {
+        const { ref, pedido } = pedidoEnLaNube(idPedido);
+
+        if (!ESTADOS_PEDIDO.some(item => item.id === estado)) throw errorDelPedido("Ese estado no existe: " + estado);
+        if (!pedidoTieneEstados(pedido)) throw errorDelPedido("Un pedido Histórico no cambia de estado.");
+
+        const persona = personaDeEsteCelular();
+        if (!persona) {
+            throw errorDelPedido("La app todavía está reconociendo quién usa este celular. Probá de nuevo en unos segundos.");
+        }
+
+        const [idEntrada, entrada] = nuevaEntradaDeEstado(estado, nota, persona, Date.now());
+        const actual = estadoActualDelPedido({ estados: { ...pedido.estados, [idEntrada]: entrada } });
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["estados", idEntrada], valor: entrada },
+            { ruta: ["estado"], valor: actual }
+        ]);
+
+        return idEntrada;
+    }
 
     // -------------------------------------------------
     // Escucha en tiempo real
@@ -1620,6 +1773,9 @@
         salirDeLaCuenta,
         // Limpieza de los datos viejos del celular (T16e).
         revisarDatosViejos,
+        // Pedidos campo por campo (T20).
+        cambiarCamposDelPedido,
+        agregarEstadoAlPedido,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),

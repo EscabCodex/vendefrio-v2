@@ -59,6 +59,27 @@ function obtenerFechaRegistro(pedido) {
     return null;
 }
 
+function formatearPrecioHistorial(valor) {
+    return "$ " + Number(valor || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+}
+
+// "Cargado por Jere · $ 12.500" (T20). Si algún producto no tenía precio en
+// el catálogo al cargarlo, lo dice.
+function textoAutorYTotalHistorial(pedido) {
+    const nombre = String(pedido.autor.nombre || "").trim() ||
+        (pedido.autor.idPersona === "dueno" ? "el dueño" : "un empleado");
+    const { total, conPrecio, sinPrecio } = totalDelPedido(pedido);
+    let precio = "Sin precio";
+
+    if (conPrecio && sinPrecio) {
+        precio = formatearPrecioHistorial(total) + " (" + sinPrecio + " sin precio)";
+    } else if (conPrecio) {
+        precio = formatearPrecioHistorial(total);
+    }
+
+    return "Cargado por " + nombre + "  ·  " + precio;
+}
+
 function coincidePeriodoHistorial(pedido, periodo) {
     if (periodo === "todos") return true;
 
@@ -949,9 +970,27 @@ function renderizarHistorial() {
 
         informacion.append(titulo, resumen);
 
-        // Pedidos subidos a la nube desde este celular (T11).
-        if (pedido.estado === "historico") {
+        // Pedido completo (T20): quién lo cargó y el total con los precios
+        // guardados al cargarlo.
+        if (pedido.autor && typeof pedido.autor === "object") {
+            informacion.append(crearTextoHistorial("p", textoAutorYTotalHistorial(pedido), "subtitulo autorPedidoHistorial"));
+        }
+
+        // Pedidos subidos a la nube desde este celular (T11) y, en la nube,
+        // los que no tienen historial de estados (T20). Los demás muestran
+        // su estado actual.
+        const estadoActual = estadoActualDelPedido(pedido);
+
+        if (pedido.estado === "historico" || (!estadoActual && usaNubeReal())) {
             informacion.append(crearTextoHistorial("span", "Hist\u00f3rico", "badge badgeHistorico"));
+        } else if (estadoActual) {
+            const etiqueta = crearTextoHistorial(
+                "span",
+                nombreDeEstadoPedido(estadoActual) || estadoActual,
+                "badge badgeEstadoPedido"
+            );
+            etiqueta.dataset.estado = estadoActual;
+            informacion.append(etiqueta);
         }
 
         // Pedido que todav\u00eda no confirm\u00f3 la nube (T12).
