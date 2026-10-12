@@ -1,12 +1,12 @@
 # VendeFrío — Estado del proyecto
 
-**Última actualización:** 2026-10-11
+**Última actualización:** 2026-10-12
 **Repositorio:** `EscabCodex/vendefrio-v2` · rama `main` · fuente de verdad
 **Pruebas:** https://vendefrio-v2.vercel.app/ (Vercel)
 
 ## Estado actual
 
-PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube. Ya existe la migración "Subir mis datos a la nube": copia los datos de este celular a la distribuidora real, verifica los totales y recién ahí pasa a la nube; `localStorage` no se borra. En modo nube, las acciones peligrosas ("Borrar todos los datos", restaurar e importar) ya no pueden vaciar los datos de todos. Al abrir la app sin sesión aparece la pantalla de inicio (T13), con registro de la distribuidora. Los empleados entran con un código que genera el dueño en Configuración > Empleados (T14), y desde ahí el dueño cambia roles, anula códigos, da de baja y edita la lista de roles (T15). Las reglas de T15 ya están publicadas (M6). "Solo nube" (T16) ya está decidida con el dueño (T16a) y dividida en T16b a T16e. Ya están hechas T16b (en la nube, el dueño descarga y combina un respaldo de la nube y no se hace la copia interna) y T16c (con cuenta o con código se entra siempre a la nube; ya no existen "Volver a los datos de este celular" ni el modo prueba) y T16d ("Continuar sin iniciar sesión" es el modo personal: pide nombre y roles y muestra un cartel fijo). La cuenta de prueba ya existe (M7). También está hecha T16e: en la nube, el dueño borra los datos viejos de su celular después de descargarlos en un archivo y revisar qué está en la nube. Con T16e se completa "Solo nube". El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase").
+PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un prototipo funcional pensado para una sola persona: todavía no hay datos compartidos entre usuarios. Ya se eligió el servicio de datos compartidos (Firebase): el inicio de sesión ya está conectado y al primer ingreso se crea la distribuidora en la nube. Ya existe la migración "Subir mis datos a la nube": copia los datos de este celular a la distribuidora real, verifica los totales y recién ahí pasa a la nube; `localStorage` no se borra. En modo nube, las acciones peligrosas ("Borrar todos los datos", restaurar e importar) ya no pueden vaciar los datos de todos. Al abrir la app sin sesión aparece la pantalla de inicio (T13), con registro de la distribuidora. Los empleados entran con un código que genera el dueño en Configuración > Empleados (T14), y desde ahí el dueño cambia roles, anula códigos, da de baja y edita la lista de roles (T15). Las reglas de T15 ya están publicadas (M6). "Solo nube" (T16) ya está decidida con el dueño (T16a) y dividida en T16b a T16e. Ya están hechas T16b (en la nube, el dueño descarga y combina un respaldo de la nube y no se hace la copia interna) y T16c (con cuenta o con código se entra siempre a la nube; ya no existen "Volver a los datos de este celular" ni el modo prueba) y T16d ("Continuar sin iniciar sesión" es el modo personal: pide nombre y roles y muestra un cartel fijo). La cuenta de prueba ya existe (M7). También está hecha T16e: en la nube, el dueño borra los datos viejos de su celular después de descargarlos en un archivo y revisar qué está en la nube. Con T16e se completa "Solo nube". El repo ya fue revisado completo (ver "Diagnóstico del repo") y el plan de conexión está dividido en tareas (ver "Plan de conexión con Firebase"). La Etapa 3 (pedido completo) ya está decidida con el dueño (T17) y dividida en T18 a T29, más M8 y M9 (ver "Bloque F").
 
 **Funciones existentes**
 - Inicio con reparto activo, próxima parada sugerida y último pedido.
@@ -57,10 +57,10 @@ PWA de HTML, CSS y JavaScript puro, con datos locales en `localStorage`. Es un p
 - Público inicial: distribuidoras pequeñas, medianas y mayoristas de barrio con reparto propio.
 - Una cuenta representa a toda la distribuidora; todos los usuarios autorizados ven los mismos datos.
 - El pedido se guarda sin internet y se sincroniza al volver la conexión.
-- Estados del pedido: ingresado → en preparación → preparado → cargado en el vehículo → en reparto → entregado (más incidencia y cancelado). No existe "recibido".
+- Estados del pedido: cargado (antes "ingresado") → en preparación → preparado → cargado en el vehículo → en reparto → entregado (más incidencia y cancelado). No existe "recibido".
 - La preparación es una checklist por producto.
 - Faltantes: se ajusta la cantidad preparada, se deja observación y se avisa al responsable económico; se conserva lo pedido originalmente.
-- Entrega: botón "Marcar como entregado" y foto opcional del comprobante de transferencia.
+- Entrega: botón deslizable "Entregado"; el cobro va aparte, con foto opcional del comprobante de transferencia (detalle en "Pedido completo, Etapa 3").
 - Comprobante futuro: boleta simple imprimible. La factura fiscal queda fuera del primer alcance.
 - Se mantiene la base HTML, CSS y JS puro y la PWA. `localStorage` sigue siendo la fuente de datos hasta completar y verificar la migración a Firebase.
 - Se conserva la dirección visual iniciada: SVG propios, bottom sheets, toasts, transiciones, safe areas y háptica.
@@ -188,6 +188,83 @@ Antes de programar se revisó el código (`nube.js`, `database.js`, `configuraci
 - **Limpieza de los datos viejos del celular (T16e, siempre la última):** solo el dueño, en Configuración > Datos y respaldo, y solo si ese celular tiene datos viejos. El empleado no la ve: su celular suele tener solo las listas de ejemplo que la app escribió sola, y si tuviera datos propios de antes, no estarían en la nube y borrarlos sería perderlos. En modo personal nunca se borra nada.
   - **Si algo falta en la nube (decidido con el dueño el 2026-10-11, antes de T16e):** se muestra qué falta (cantidad y nombres) y se deja borrar igual, solo con el archivo descargado. Lo que falta queda solo en el archivo; si hace falta, se recupera con "Combinar respaldo" (que sube el archivo entero: también vuelve a crear lo que se borró en la nube a propósito). Se descartaron "Subir lo que falta" (volvía a subir lo borrado a propósito, porque la app no distingue eso de lo que nunca se subió) y no dejar borrar (un celular con algo borrado a propósito nunca se podría limpiar).
   - **Claves de modo (decidido con el dueño el mismo día):** la limpieza borra también `vendefrio_subida_empezada` y el borrador del modo prueba (`vendefrio_borrador_pedido_prueba`). `vendefrio_migracion_resuelta` queda: la app la vuelve a escribir cada vez que abre en la nube, así que borrarla no cambiaba nada. `vendefrio_modo_personal` nunca se borra.
+
+### Pedido completo, Etapa 3 (decidido el 2026-10-12, T17)
+
+Antes de planificar se revisó el código que toca pedidos (`pedidos.js`, `historial.js`, `database.js`, `nube.js` y `firestore.rules`) y `ORDER_FLOW.md`. Lo que se encontró:
+- Un pedido es hoy una foto del momento en que se cargó (fecha, comercio, cantidad, texto, productos con marca y cantidad, observaciones): no tiene estado (salvo "histórico"), autor ni precio, y después no se puede editar: solo ver o eliminar.
+- En la nube, el adaptador manda cada registro cambiado **entero** (`set` sin combinar): con dos personas sobre el mismo pedido, la última pisaría a la otra.
+- `firestore.rules` ya tiene la subcolección `estados` (solo agregar), pero la app no la usa. Cualquier miembro puede borrar cualquier pedido desde Historial.
+- Los pedidos cargados en la nube desde T16c no tienen estado. El dueño no tiene nombre en la app (solo email); los empleados sí.
+- Los productos tienen precio en el catálogo, pero el pedido no lo guarda.
+
+Ejemplo que dio el dueño: Jere toma un pedido en Supermercado Omar; Maxi, en el depósito, lo arma.
+
+El primer estado se llama **"Cargado"**, como lo llama el dueño (antes figuraba como "ingresado"); su vista es "Pedidos cargados".
+
+**Dos personas sobre el mismo pedido**
+- Cada cambio se guarda por separado: el tilde de un producto, la cantidad preparada de un producto o el cambio de estado (una línea nueva del historial). Dos personas que tocan cosas distintas no se pisan. Si cambian exactamente lo mismo, queda el último y el historial muestra quién hizo cada cosa.
+- Si dos cambios de estado llegan casi juntos (por ejemplo, uno hecho sin señal), quedan los dos en el historial y el estado actual es el del cambio más nuevo según la hora en que se hizo.
+- Se descartaron el bloqueo (sin señal no se entera y un pedido olvidado abierto queda trabado) y "el último gana" (se pierden tildes sin que nadie lo note).
+
+**Quién edita, elimina y cancela**
+- Solo quien cargó el pedido (y el dueño) lo edita, en **cualquier estado**. Si lo edita cuando otro ya lo está armando, a quien corresponde le llega un aviso con lo que cambió (ver "Avisos"). En el historial queda cada edición.
+- Solo quien cargó el pedido (y el dueño) lo elimina o lo cancela.
+  - **Eliminar** es para errores (por ejemplo, un pedido cargado dos veces): solo mientras está "Cargado". Desaparece de la app, pero queda guardado por dentro como eliminado, para no borrar nunca el historial.
+  - **Cancelar** es para cuando el comercio ya no lo quiere: en cualquier estado antes de "Entregado", con motivo. Queda a la vista como "Cancelado" y no cuenta en las estadísticas.
+  - Los pedidos "Histórico" no tienen autor: solo el dueño los elimina.
+- **El dueño puede hacer todo** y tiene acceso a todo.
+
+**Checklist de preparación**
+- En "En preparación" cada producto tiene una casilla que se tilda a medida que se pone en el cajón. Puede tildar cualquiera, para armar un pedido entre dos.
+- Para bajar el margen de error (las 5 soluciones aprobadas): 1) cada tilde muestra quién lo puso ("✓ Maxi"); 2) los tildes se ven en vivo en todos los celulares; 3) no se puede marcar "Preparado" con productos sin tildar ni marcar como faltante; 4) antes de "Preparado" aparece un resumen ("32 unidades, 12 productos, 1 faltante") y se desliza para confirmar; 5) destildar un producto que tildó otro pide confirmación ("Lo tildó Maxi. ¿Lo destildás?"). No hay revisión por una segunda persona (es un paso más).
+- Faltantes: como ya estaba decidido, se ajusta la cantidad preparada, se escribe una observación y se conserva lo pedido.
+
+**Permisos y quién mueve cada estado**
+- Cada rol tiene casillas de permiso que el dueño marca en Configuración > Empleados > "Editar roles". Una persona puede lo que permite cualquiera de sus roles. El dueño siempre puede todo.
+- Permisos (entre paréntesis, los roles precargados que lo traen marcado; los roles nuevos arrancan sin permisos):
+  - **Prepara pedidos** (Depósito): pasa de "Cargado" a "En preparación", anota faltantes y marca "Preparado".
+  - **Reparte** (Repartidor y Depósito): pasa a "Cargado en el vehículo" y a "En reparto".
+  - **Cobra** (Cobranza): registra el cobro.
+  - **Recibe aviso de faltantes** (Administración).
+  - **Controla pedidos** (Administración): puede hacer cualquier paso de cualquier pedido y resolver incidencias.
+- Sin permiso especial: cargar pedidos, tildar en la checklist, marcar "Entregado" y marcar "Con incidencia" (con motivo).
+- **Corregir un error:** quien tiene el permiso de un paso puede volver ese paso atrás, con motivo. Nunca se borra: en el historial queda, por ejemplo, "Volvió a En preparación — Maxi — se marcó por error".
+- En el equipo del dueño son 4 y se reparten todo: seguramente se pongan todos los roles. Los permisos quedan listos para cuando el equipo crezca.
+- **Supuesto (a validar al probar):** "Con incidencia" se marca encima del estado, no lo reemplaza: el pedido sigue donde estaba y además aparece en "Incidencias" hasta que el dueño o alguien con "Controla pedidos" la resuelve con una nota.
+
+**Avisos y notificaciones**
+- **Avisos dentro de la app**, bien armados: campanita arriba con la cantidad sin leer; al tocarla, la lista; al tocar un aviso se abre el pedido. Se guardan en la nube para cada persona: quien tenía la app cerrada los ve al abrirla.
+- Nadie recibe aviso de lo que hizo él mismo. Cada persona elige en Configuración > Avisos qué avisos recibe y cuáles suenan con la app cerrada.
+- Qué se avisa y a quién:
+  - Pedido nuevo: a quienes tienen "Prepara pedidos".
+  - Pedido preparado: a quienes tienen "Reparte" y a quien lo cargó.
+  - Faltante: a quien cargó el pedido y a quienes tienen "Recibe aviso de faltantes".
+  - Incidencia: a quien cargó el pedido y a quienes tienen "Controla pedidos".
+  - Entregado: a quien lo cargó y, si el cobro quedó pendiente, a quienes tienen "Cobra".
+  - Pedido editado por su autor: a quien corresponde según el estado (quienes tildaron o tienen "Prepara pedidos" mientras se arma; "Reparte" si ya está preparado o en reparto; "Cobra" si ya se entregó). El pedido muestra una franja amarilla con lo que cambió ("Agregó 2 Coca 2L · Quitó Sprite · Fanta: de 3 a 5"), la checklist marca los productos a revisar y se cierra con "Entendido".
+- **Notificaciones con la app cerrada:** sí, y muy bien hechas. Se usa Firebase Cloud Messaging (gratis, sin plan con tarjeta) y una función de Vercel que las manda (gratis). Condiciones: en iPhone solo con la app instalada en la pantalla de inicio y iOS 16.4 o más nuevo; cada persona acepta "Permitir notificaciones"; el plan gratis de Vercel es para uso no comercial (revisar si algún día se vende la app).
+
+**Entrega y cobro**
+- "Entregado" es un botón que se desliza, para cerrar el pedido. Lo puede hacer cualquiera.
+- Por defecto se entrega todo lo preparado. Al lado, "Entregar con cambios" permite ajustar lo entregado de cada producto con motivo (por ejemplo, el comercio rechazó 2 Coca). Una devolución posterior la corrige el autor editando el pedido; el aviso le llega a quien cobra.
+- **Entregar y cobrar son cosas distintas** (opción A). El cobro es un dato aparte del pedido: "Pendiente", "Efectivo" o "Transferencia" (con foto opcional del comprobante). Solo quien tiene "Cobra" lo registra: si quien desliza "Entregado" lo tiene, la app le pregunta "¿Cómo pagó?" ("Efectivo", "Transferencia" o "Todavía no pagó"); si no, queda "Entregado · Cobro pendiente" y aparece en la lista "A cobrar". Si un comercio queda debiendo, queda pendiente (las cuentas corrientes son para después de la 1.0).
+- **Precio:** al cargar el pedido se guarda el precio de cada producto en ese momento (cambiar un precio después no cambia los pedidos viejos). El pedido muestra el total a cobrar con lo entregado; al registrar el cobro el monto viene escrito y se puede corregir. Los pedidos de antes no tienen precio: muestran "Sin precio".
+
+**Pedidos de antes, dueño y modo personal**
+- Los pedidos que ya están en la nube sin estado (cargados desde T16c) se tratan como **"Histórico"**, como en T11: se ven en Historial y Estadísticas, no en las vistas de trabajo. No se escribe nada en la nube: la tarea que agrega los estados (T20) se une a `main` al final de un día sin pedidos pendientes.
+- El dueño carga su nombre una sola vez (como el empleado) y lo cambia en Configuración > Cuenta, para que el historial diga "Jere" y no un email.
+- El modo personal (sin cuenta) queda como está: sin estados, permisos ni avisos.
+
+**Lo que no se decidió (sigue abierto en `ROADMAP.md`)**
+- Diferencia entre pedido, remito, factura y entrega, y qué impresora usar: no hacen falta para la Etapa 3.
+
+**Propuesta técnica (se valida en T20)**
+- Pedido (`pedidos/{id}`): se suman `estado`, `autor` (`idPersona`, nombre y uid), `creado`, un id por línea de producto, `precio` por línea y `eliminado`. Preparación, entrega, cobro y ediciones son campos aparte, escritos campo por campo (`update`), así dos personas no se pisan.
+- Historial de estados: dentro del mismo pedido, como un mapa que solo se agrega (una entrada nueva por cambio, con estado, persona, hora del celular, hora de la nube y nota). Así se lee junto con el pedido (sin lecturas de más en el plan gratis) y las reglas siguen sin dejar cambiar ni borrar entradas. Reemplaza a la subcolección `estados`, que nunca se usó.
+- `idPersona` es el id de la ficha de empleado (así el historial no se corta con un reingreso) o `dueno` para el dueño.
+- Permisos en `config/roles` (cada rol con su lista de permisos) y una copia por permiso con los ids de rol que lo tienen, para que las reglas de la nube también controlen los permisos.
+- Avisos en `avisos/{id}` (destinatarios por `idPersona` y leídos por persona); dispositivos para notificaciones en `dispositivos/{id}`; foto del comprobante en su propio documento (comprimida, como ya estaba decidido), para que la lista de pedidos no descargue fotos.
 
 ### Estructura en Firestore (validada en T8)
 
@@ -394,9 +471,99 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
   - **Riesgos:** es la única que borra datos del celular; si algo falta en la nube (porque se borró allá a propósito o porque el dueño eligió "No subirlos" en T16c), queda solo en el archivo descargado.
   - **Aceptación:** sin el archivo descargado no deja borrar; después de borrar, la app en la nube se ve igual y la nube no cambia; preferencias, borrador y sesión siguen; en el celular de un empleado y en modo personal la limpieza no aparece; el modo personal en ese celular ya no muestra la foto vieja.
 
-### Después del plan
+### Bloque F — Pedido completo (Etapa 3)
 
-- Ciclo de estados del pedido, checklist, faltantes y entrega (Etapa 3 del `ROADMAP.md`), con permisos por rol.
+Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por sesión y en este orden: cada una se apoya en la anterior. Todo lo de este bloque es solo para la nube (con cuenta o con código); el modo personal no cambia. Cada tarea que cambia `firestore.rules` termina con su publicación en la consola de Firebase, que hace el dueño con los pasos de Claude Code (como M5 y M6): sin eso, la nube rechaza lo nuevo. Para probar en la vista previa se usa la cuenta de prueba, con un empleado de prueba en otro celular o en una ventana de incógnito.
+
+- [x] **T17 — Decisiones previas de la Etapa 3.**
+  - Revisar con el dueño, antes de programar, las decisiones abiertas del `ROADMAP.md` que hacen falta para la Etapa 3 y dividirla en tareas chicas.
+  - Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Sin cambios de código.
+- [ ] **T18 — Nombre del dueño y "quién soy".**
+  - **Problema:** para registrar quién hace cada cosa, la app necesita el nombre de cada persona, y el dueño solo tiene email.
+  - **Usuario:** dueño (y, por dentro, todos).
+  - **Resultado esperado:** al entrar a la nube sin nombre cargado, la app le pide al dueño su nombre una sola vez (obligatorio, como al empleado) y lo guarda en la distribuidora; en Configuración > Cuenta lo ve y lo cambia. Una función común dice quién usa el celular (`idPersona`, nombre y roles) para usar en todo lo que sigue. Sin cambios para el empleado ni para el modo personal.
+  - **Archivos:** `distribuidora.js`, `inicio.js`, `configuracion.js`, `empleados.js`, `firestore.rules` (el dueño puede escribir su nombre), `sw.js`.
+  - **Riesgos:** que el paso del nombre trabe la entrada (sin internet tiene que dejar seguir y pedirlo después); reglas nuevas que hay que publicar.
+  - **Aceptación:** el dueño carga su nombre una vez y no se le vuelve a pedir; aparece en otro celular; sin internet la app abre igual; el empleado y el modo personal no cambian; `localStorage` intacto.
+- [ ] **T19 — Permisos por rol.**
+  - **Problema:** los roles son solo nombres; la Etapa 3 necesita saber quién prepara, reparte y cobra.
+  - **Usuario:** dueño (los marca) y todos (los usan).
+  - **Resultado esperado:** "Editar roles" muestra en cada rol las casillas "Prepara pedidos", "Reparte", "Cobra", "Recibe aviso de faltantes" y "Controla pedidos". Los 5 precargados reciben los permisos acordados una sola vez (por su id: si el dueño los renombró, igual; si los borró, nada); los roles nuevos arrancan sin permisos. Una función `puede(permiso)` dice si la persona del celular lo tiene (el dueño, siempre). Cuenta muestra al empleado qué permisos tiene.
+  - **Archivos:** `empleados.js`, `configuracion.js`, `firestore.rules` (solo el dueño cambia permisos; copia por permiso para las reglas), `styles.css`, `sw.js`.
+  - **Riesgos:** completar los permisos de los precargados sin pisar lo que el dueño ya cambió; la copia por permiso tiene que quedar igual a la lista de roles (se escriben en la misma tanda).
+  - **Aceptación:** marcar un permiso en un celular se ve al instante en otro; renombrar o eliminar un rol conserva o quita sus permisos; el empleado no puede cambiar permisos (probado contra las reglas con los emuladores); nada más cambia.
+- [ ] **T20 — Pedido con estado, autor y precio (base).**
+  - **Problema:** el pedido no tiene estado, autor ni precio, y en la nube se guarda entero (dos personas se pisarían).
+  - **Usuario:** todos (por dentro); quien carga pedidos ve su nombre en el pedido.
+  - **Resultado esperado:** en la nube, cada pedido nuevo nace "Cargado", con autor, un id por línea, el precio de cada producto en ese momento y la primera entrada del historial de estados. `nube.js` suma escrituras campo por campo para pedidos (estado, preparación, entrega, cobro, ediciones) y el historial de estados solo agrega entradas. Los pedidos sin estado se ven como "Histórico". Historial muestra el estado y "Cargado por Jere". El texto para WhatsApp, "Repetir pedido", Estadísticas y el modo personal siguen igual.
+  - **Archivos:** `pedidos.js`, `database.js`, `nube.js`, `historial.js`, `firestore.rules` (crear un pedido solo a nombre propio; productos, comercio y observaciones solo los cambia el autor o el dueño; el historial de estados solo agrega), `sw.js`.
+  - **Riesgos:** es la base de toda la etapa; un celular con la versión vieja (sin actualizar) cargaría pedidos sin estado, que se verían como "Histórico": unir al final de un día sin pedidos pendientes y avisar a todos que abran la app para actualizarla; hasta T26 cualquiera sigue pudiendo eliminar.
+  - **Aceptación:** un pedido nuevo aparece "Cargado" con autor y precios en dos celulares; sin internet se guarda y sube al volver; los pedidos de antes se ven como "Histórico" y no cambian en la nube; dos escrituras a la vez sobre campos distintos del mismo pedido no se pisan; reglas probadas con los emuladores; modo personal igual que antes.
+- [ ] **T21 — Pedidos y seguimiento (vistas).**
+  - **Problema:** no hay dónde ver en qué etapa está cada pedido.
+  - **Usuario:** todos.
+  - **Resultado esperado:** en la sección Pedido, una vista "Pedidos" con filtros por etapa (Cargados, En preparación, Preparados, En reparto, Entregados, Incidencias y Cancelados) y la cantidad de cada una; los "Histórico" no aparecen. Al tocar un pedido se abre su ficha: comercio, autor, estado actual, productos con cantidades y precios, observaciones, total, y el seguimiento con fecha, hora y persona de cada cambio (como el seguimiento de un envío). Cada pedido dice si está pendiente de sincronizar. Solo ver: todavía no se cambian estados.
+  - **Archivos:** `index.html`, `pedidos.js` (o un archivo nuevo para la vista, si conviene), `styles.css`, `iconos.js`, `sw.js`.
+  - **Riesgos:** que la sección Pedido quede cargada de botones (cuidar el norte de calidad); rendimiento con muchos pedidos en celulares comunes.
+  - **Aceptación:** un pedido cargado en un celular aparece en "Cargados" del otro al instante; la ficha muestra todo; se ve bien en claro y oscuro y con una mano; cargar un pedido sigue igual.
+- [ ] **T22 — Cambiar de estado.**
+  - **Problema:** el pedido no avanza.
+  - **Usuario:** depósito, reparto y administración.
+  - **Resultado esperado:** desde la ficha, cada persona ve solo los pasos que su permiso le deja: "Empezar a preparar" (Cargado → En preparación), "Cargado en el vehículo" y "En reparto"; "Volver un paso atrás" con motivo obligatorio; "Marcar incidencia" (cualquiera, con motivo) y "Resolver incidencia" (dueño o "Controla pedidos", con nota). Cada cambio suma una entrada al historial con persona y hora; el estado actual es el del cambio más nuevo según la hora en que se hizo. "Preparado" llega con la checklist (T24) y "Entregado" con la entrega (T27).
+  - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, `firestore.rules` (cada paso solo con su permiso), `styles.css`, `sw.js`.
+  - **Riesgos:** dos cambios de estado sin señal que llegan desordenados; botones visibles sin permiso (las reglas igual los rechazarían, pero el error confunde).
+  - **Aceptación:** con dos celulares y roles distintos, cada uno ve solo sus pasos; un cambio se ve al instante en el otro; volver atrás exige motivo y queda en el historial; sin internet el cambio se guarda y sube al volver; un cambio sin permiso lo rechazan las reglas (probado con los emuladores).
+- [ ] **T23 — Avisos en la app.**
+  - **Problema:** nadie se entera de los cambios si no mira la lista.
+  - **Usuario:** todos.
+  - **Resultado esperado:** campanita arriba con la cantidad sin leer; lista de avisos (los más nuevos primero) que abre el pedido al tocarlo; marcar como leído uno o todos; aviso emergente si llega uno con la app abierta. Configuración > Avisos para elegir qué avisos recibir. Nadie recibe aviso de lo que hizo él mismo. Arranca con los avisos que ya existen: pedido nuevo, incidencia y su resolución. Cada tarea siguiente suma los suyos.
+  - **Archivos:** archivo nuevo de avisos, `nube.js`, `index.html`, `configuracion.js`, `styles.css`, `iconos.js`, `firestore.rules` (cada uno lee solo sus avisos y marca solo sus leídos), `sw.js`.
+  - **Riesgos:** demasiados avisos (por eso las preferencias); lecturas y escrituras del plan gratis (con 4 o 5 personas sobra); avisos viejos acumulados (se muestran los últimos y se limpian los leídos viejos).
+  - **Aceptación:** Jere carga un pedido y a Maxi le aparece el aviso al instante; con la app cerrada lo ve al abrir; Jere no recibe su propio aviso; desactivar un tipo en Configuración lo deja de mostrar; claro y oscuro.
+- [ ] **T24 — Checklist de preparación y faltantes.**
+  - **Problema:** hoy no hay forma de asegurar que se armó exactamente lo pedido.
+  - **Usuario:** depósito (y cualquiera que ayude).
+  - **Resultado esperado:** en "En preparación", la checklist muestra comercio, autor y observaciones, y los productos agrupados por marca con cantidad y casilla. Se aplican las 5 soluciones: quién tildó, tildes en vivo, no deja marcar "Preparado" con algo sin tildar ni faltante, resumen final que se desliza para confirmar y confirmación al destildar lo que tildó otro. "Faltante" por producto: cantidad preparada y observación, con aviso a quien cargó el pedido y a "Recibe aviso de faltantes". Avisos de "Preparado".
+  - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules` (cualquiera tilda; "Preparado" solo con permiso), `styles.css`, `sw.js`.
+  - **Riesgos:** dos personas que tildan y destildan el mismo producto sin señal (queda el último y se ve quién); casillas chicas para usar con una mano; el botón deslizable en celulares viejos.
+  - **Aceptación:** dos celulares arman el mismo pedido y se ven los tildes del otro al instante; sin tildar todo no se puede marcar "Preparado"; un faltante conserva lo pedido y lo preparado y avisa; el resumen coincide con lo tildado; sin internet se tilda y sube al volver.
+- [ ] **T25 — Editar el pedido.**
+  - **Problema:** el autor no puede corregir un pedido ya cargado.
+  - **Usuario:** quien cargó el pedido y el dueño.
+  - **Resultado esperado:** "Editar" en la ficha (solo autor o dueño, en cualquier estado) abre el pedido con sus productos y guarda los cambios sin perder los tildes de los productos que no cambiaron. Se guarda qué cambió y aparece la franja amarilla con el detalle; la checklist marca los productos a revisar; "Entendido" la cierra. Aviso a quien corresponde según el estado. La edición queda en el historial.
+  - **Archivos:** `pedidos.js`, `nube.js`, archivo de avisos, `firestore.rules`, `styles.css`, `sw.js`.
+  - **Riesgos:** que editar se confunda con cargar un pedido nuevo (el borrador del pedido nuevo no se tiene que perder); edición sin señal mientras otro tilda.
+  - **Aceptación:** Jere edita mientras Maxi arma y Maxi ve el aviso y la franja con lo que cambió; los tildes de lo que no cambió siguen; nadie más puede editar (probado contra las reglas); el borrador del pedido nuevo sigue intacto.
+- [ ] **T26 — Eliminar y cancelar.**
+  - **Problema:** hoy cualquiera borra cualquier pedido y no existe "Cancelado".
+  - **Usuario:** quien cargó el pedido y el dueño.
+  - **Resultado esperado:** "Eliminar" solo en "Cargado" (queda guardado por dentro como eliminado y desaparece de la app); "Cancelar" antes de "Entregado", con motivo, y queda en "Cancelados". Los "Histórico" solo los elimina el dueño. Historial y Estadísticas no cuentan cancelados ni eliminados. Aviso a quien ya estaba trabajando en el pedido.
+  - **Archivos:** `historial.js`, `pedidos.js`, `estadisticas.js`, `nube.js`, `firestore.rules` (nadie borra un pedido de verdad; marcar eliminado solo el autor o el dueño), `sw.js`.
+  - **Riesgos:** cambia el botón "Eliminar" de Historial que hoy usan todos; Estadísticas tiene que dejar afuera los cancelados sin cambiar las cuentas de antes.
+  - **Aceptación:** un empleado no puede eliminar ni cancelar pedidos de otro (tampoco contra las reglas); un pedido en preparación no se puede eliminar, solo cancelar; un cancelado no suma en Estadísticas; el modo personal sigue igual.
+- [ ] **T27 — Entrega.**
+  - **Problema:** no hay forma de cerrar el pedido ni de anotar una entrega con cambios.
+  - **Usuario:** quien entrega (cualquiera).
+  - **Resultado esperado:** botón deslizable "Entregado" en la ficha (desde "En reparto", o antes si se entrega en el mostrador). "Entregar con cambios" ajusta lo entregado de cada producto con motivo. El pedido muestra el total a cobrar con lo entregado ("Sin precio" en los de antes). Aviso a quien lo cargó. El cobro queda "Pendiente" hasta T28.
+  - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules`, `styles.css`, `sw.js`.
+  - **Riesgos:** deslizar sin querer (el gesto tiene que ser claro y se puede volver atrás con motivo); entregas sin señal en la calle (se guardan y suben al volver).
+  - **Aceptación:** cualquiera entrega desde su celular y el otro lo ve en "Entregados"; entregar con cambios conserva lo pedido, lo preparado y lo entregado; el total coincide con lo entregado; funciona sin internet.
+- [ ] **T28 — Cobro.**
+  - **Problema:** no se sabe qué pedidos se cobraron, cómo ni quién.
+  - **Usuario:** quien tiene "Cobra".
+  - **Resultado esperado:** si quien entrega tiene "Cobra", la app pregunta "¿Cómo pagó?" ("Efectivo", "Transferencia" con foto opcional del comprobante o "Todavía no pagó") con el monto ya escrito y corregible; si no, queda "Entregado · Cobro pendiente" con aviso a "Cobra". Lista "A cobrar" para quien tiene "Cobra". La foto se comprime en el celular y se guarda en su propio documento. Un pedido con cobro registrado no vuelve atrás de "Entregado".
+  - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules` (solo "Cobra" registra; la foto con tamaño máximo), `styles.css`, `sw.js`.
+  - **Riesgos:** fotos pesadas (límite de 1 MB por documento y del plan gratis); subir una foto sin señal (queda pendiente y se ve que falta subir).
+  - **Aceptación:** quien no tiene "Cobra" no ve la pregunta ni puede registrar el cobro (tampoco contra las reglas); la foto se ve en otro celular; "A cobrar" muestra solo los pendientes; el monto corregido queda guardado.
+- [ ] **M8 — Preparar las notificaciones (dueño).** En la consola de Firebase, generar la clave para notificaciones web y la clave de la cuenta de servicio, y cargar esta última como variable de entorno en Vercel (nunca en el repo). Claude Code pasa los pasos.
+- [ ] **T29 — Notificaciones con la app cerrada.**
+  - **Problema:** los avisos solo se ven con la app abierta.
+  - **Usuario:** todos.
+  - **Resultado esperado:** en Configuración > Avisos, "Activar notificaciones en este celular" (pide el permiso; en iPhone explica que hay que instalar la app primero) y qué avisos suenan con la app cerrada. Cuando la app crea un aviso, una función de Vercel nueva revisa que quien lo pide sea miembro y que el aviso exista, y manda la notificación por Firebase Cloud Messaging a los celulares de los destinatarios, según sus preferencias. Al tocar la notificación se abre la app en ese pedido. Al dar de baja a un empleado o salir, ese celular deja de recibirlas.
+  - **Archivos:** SDK de mensajería de Firebase en la carpeta `firebase`, `sw.js` (recibe las notificaciones), archivo de avisos, `configuracion.js`, `firestore.rules` (dispositivos), función nueva en `api`, `package.json` (dependencia para la función), `vercel.json`.
+  - **Riesgos:** la clave de la cuenta de servicio da acceso total a la nube (solo en Vercel); iPhone exige la app instalada e iOS 16.4 o más; notificaciones que se mandan dos veces o a quien ya no es miembro; el plan gratis de Vercel es para uso no comercial.
+  - **Aceptación:** con dos celulares reales (un Android y, si hay, un iPhone instalado), Jere carga un pedido con la app de Maxi cerrada y a Maxi le suena; tocarla abre el pedido; desactivar un tipo de aviso lo deja de mandar; un empleado dado de baja no recibe más; nadie de afuera puede usar la función para mandar notificaciones.
+- [ ] **M9 — Prueba de un día real (dueño).** Usar la Etapa 3 completa un día de trabajo con el equipo y anotar lo que haya que ajustar. Cierra la Etapa 3.
 
 ## Decisiones abiertas de la migración
 
@@ -415,6 +582,8 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 - El buscador de Configuración no oculta las filas que no coinciden (`.configFila` le gana a `.oculto` en `styles.css`). Visto en T14, sin tocar.
 - Rework visual completo. Incluye mover el indicador de conexión de T12 (hoy, cartel chico abajo) arriba a la derecha del nombre "VendeFrío", donde dice "Reparto Activo" (pedido del dueño, 2026-10-09).
 - Leaflet se carga desde internet y no funciona sin conexión (fuera del plan de Firebase).
+- "Repetir último pedido" repite el último pedido del historial, que en la nube puede ser de otra persona del equipo. Visto en T17, sin tocar.
+- Al cargar un pedido, el contador de pedidos del comercio se suma leyendo y reescribiendo el número: si dos personas cargan a la vez un pedido para el mismo comercio, puede sumar uno solo. Visto en T17, sin tocar.
 
 ## Bitácora de sesiones
 
@@ -459,3 +628,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-11 — Claude Code: el dueño confirmó M7 (ya tiene la cuenta de prueba); marcada en el plan. T16d. `inicio.js`: "Continuar sin iniciar sesión" abre el paso "Usar sin cuenta" con el aviso de que los datos no están protegidos, el nombre (obligatorio: sin nombre no avanza ni se recuerda la elección) y los 5 roles precargados (opcionales, con los mismos ids que `empleados.js`); al guardar se anotan en la clave nueva `vendefrio_modo_personal` y recién ahí se recuerda la elección. Quien ya había elegido seguir sin sesión ve ese paso una sola vez al abrir. Cartel fijo (botón) arriba de la barra de abajo con el texto acordado; al tocarlo abre Configuración > Cuenta. Solo aparece en modo personal: con cuenta, con código o en la nube no, y se saca al ingresar. Al ingresar o registrarse como dueño se aplica la regla de T16c (se ofrece subir los datos propios una sola vez); con código no se ofrece. `configuracion.js`: Cuenta, sin sesión, muestra el nombre y los roles con "Cambiar mi nombre y mis roles", y el resumen dice "Modo personal: nombre". `styles.css`: estilos del cartel en claro y oscuro; con el cartel se corren para arriba los avisos, los botones del pedido y el final de cada pantalla (en celulares de menos de 360 px la letra es un poco más chica para que entre). No se tocaron `nube.js`, `database.js`, `empleados.js` ni `firestore.rules`. Service worker con caché `vendefrio-v138`. Probado en navegador (Chromium, celular simulado): 31 pruebas en claro y oscuro (sin nombre no avanza, 5 roles, nombre y roles guardados, texto exacto del cartel, cartel arriba de la barra y debajo de los botones del pedido y de los avisos, al recargar no vuelve a preguntar, usuario viejo que carga el nombre una vez, Cuenta con nombre y roles y cambio desde ahí, nombre escapado, con datos propios se ofrecería subir, en la nube no hay cartel, ningún pedido a Firestore, `localStorage` de datos idéntico, anchos de 320, 360 y 390 px). Los únicos errores de la consola fueron recursos de internet bloqueados en el entorno de prueba (mapas). No se probó con los emuladores de Firebase el ingreso real como dueño o empleado desde el modo personal: ese camino es el de T16c, sin cambios. Próximo paso: probar T16d en la vista previa y después T16e (antes, cerrar la decisión abierta).
 - 2026-10-11 — Claude Code: ajuste de T16d pedido por el dueño al probar la vista previa (anduvo todo). El cartel del modo personal abría Configuración > Cuenta, donde solo se puede ingresar: quien no tiene cuenta no podía registrarse. Ahora abre la pantalla de inicio ("Distribuidora" con "Ingresar" y "Registrarse", "Empleado" y "Continuar sin iniciar sesión", que en ese caso vuelve a la app sin pedir el nombre otra vez). Solo cambió `inicio.js`. Probado en navegador: 39 pruebas (las 31 anteriores más el camino del cartel a ingresar, registrarse, volver y seguir sin sesión), sin errores en la consola. Próximo paso: probar de nuevo en la vista previa, unir T16d y después T16e.
 - 2026-10-11 — Claude Code: T16e. Antes de programar, el dueño cerró las dos decisiones: si algo falta en la nube, se muestra y se deja borrar con el archivo descargado (opción A); la limpieza borra `vendefrio_subida_empezada` y `vendefrio_borrador_pedido_prueba`, y deja `vendefrio_migracion_resuelta` (la app la vuelve a escribir al abrir en la nube) y `vendefrio_modo_personal`. `database.js`: leer los datos viejos directo de `localStorage` (la capa de datos lee la nube), descargar el archivo (formato del respaldo, con la copia interna y lo que no se pudo leer, así no se pierde nada; "Combinar respaldo" lo acepta) y borrar solo con el dueño en la nube. `nube.js`: `revisarDatosViejos`, la verificación de T11 (por id o por nombre, leyendo del servidor) con los nombres de lo que falta; no escribe en la nube. `configuracion.js`: bloque "Datos viejos de este celular" en Datos y respaldo con los tres pasos en orden; si los datos cambian después de descargar, pide descargar de nuevo. `styles.css` (lista de lo que falta) y service worker v139. Probado en navegador (claro y oscuro) con la nube simulada: el archivo tiene todo, la revisión muestra "X de Y" y lo que falta, sin internet avisa y no deja borrar, borrar deja preferencias, borrador, modo personal y sesión; el empleado y el modo personal no ven la limpieza ni pueden borrar. Falta probar con la nube real en la vista previa.
+- 2026-10-12 — Claude Code: T17. Se revisó el código que toca pedidos (`pedidos.js`, `historial.js`, `database.js`, `nube.js`, `firestore.rules`) y `ORDER_FLOW.md`: el pedido no tiene estado, autor ni precio, en la nube se guarda entero (dos personas se pisarían), la subcolección `estados` no se usa, cualquiera borra cualquier pedido, los pedidos cargados desde T16c no tienen estado y el dueño no tiene nombre. El dueño decidió: cada cambio se guarda por separado; solo el autor (y el dueño) edita en cualquier estado, elimina (solo en "Cargado") y cancela (con motivo); checklist que puede tildar cualquiera, con las 5 soluciones contra errores; permisos por rol (Prepara pedidos, Reparte, Cobra, Recibe aviso de faltantes, Controla pedidos) y el dueño puede todo; volver un paso atrás con motivo; avisos en la app con preferencias y notificaciones con la app cerrada (Firebase Cloud Messaging y una función de Vercel, gratis); "Entregado" deslizable para cualquiera, con "Entregar con cambios"; cobro aparte, solo con "Cobra" (opción A); precio guardado al cargar; pedidos sin estado como "Histórico"; nombre del dueño; modo personal sin cambios. Decisiones en "Pedido completo, Etapa 3"; plan en el Bloque F (T18 a T29, M8 y M9). Se cerraron en `ROADMAP.md` "dos personas sobre el mismo pedido" y "quién puede cambiar cada estado", y se actualizaron `ORDER_FLOW.md` y `PRODUCT.md`. Sin cambios de código. Próximo paso: T18.

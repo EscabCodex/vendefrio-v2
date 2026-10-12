@@ -14,7 +14,7 @@ Muchas distribuidoras funcionan con cuadernos, listas impresas, mensajes de What
 
 **Comprador:** el dueño o responsable de la distribuidora.
 
-**Usuarios de una misma cuenta:** preventista o corredor, dueño o encargado, personal que arma pedidos, chofer y ayudante, repartidor, y quien prepara boletas. En la primera versión todos ven los mismos datos; la separación estricta por roles queda para después si hace falta.
+**Usuarios de una misma cuenta:** preventista o corredor, dueño o encargado, personal que arma pedidos, chofer y ayudante, repartidor, y quien prepara boletas. En la primera versión todos ven los mismos datos; cada rol tiene permisos que marca el dueño (quién prepara, reparte y cobra), y el dueño puede todo.
 
 ## Propuesta de valor
 
@@ -34,7 +34,8 @@ Muchas distribuidoras funcionan con cuadernos, listas impresas, mensajes de What
 - Todo lo que la app ya hace hoy (ver `PROJECT_STATE.md`).
 - Datos compartidos entre varios usuarios de una misma cuenta.
 - Ciclo completo del pedido con estados e historial (ver `ORDER_FLOW.md`).
-- Checklist de preparación, manejo de faltantes y confirmación de entrega.
+- Checklist de preparación, manejo de faltantes, confirmación de entrega y registro del cobro.
+- Avisos dentro de la app y notificaciones en el celular.
 - Trabajo sin conexión con sincronización automática al volver internet.
 - Rework visual completo: menos densidad de botones y tarjetas, lectura rápida, uso con una mano, modo claro y oscuro.
 
