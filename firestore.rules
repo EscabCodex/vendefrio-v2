@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18)
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -18,7 +18,9 @@ rules_version = '2';
 //     comercios/{id}
 //     productos/{id}
 //     config/{id}                   config/marcas (orden de marcas) y
-//                                   config/roles (lista de roles, solo el dueño)
+//                                   config/roles (lista de roles con sus
+//                                   permisos y copia por permiso, solo el
+//                                   dueño; T19)
 //     pedidos/{id}
 //       estados/{id}                historial de estados: solo se agrega
 //     rutas/{id}
@@ -71,6 +73,21 @@ service cloud.firestore {
 
     function idValido(id) {
       return id is string && id.matches('^[A-Za-z0-9]{1,40}$');
+    }
+
+    // Permisos por rol (T19). config/roles guarda la lista de roles (cada uno
+    // con sus permisos) y, en el mismo documento, porPermiso: para cada
+    // permiso, los ids de rol que lo tienen. Así las próximas reglas revisan
+    // un permiso sin recorrer la lista.
+    function permisosValidos(porPermiso) {
+      return porPermiso is map
+        && porPermiso.keys().hasAll(["prepara", "reparte", "cobra", "avisoFaltantes", "controla"])
+        && porPermiso.keys().hasOnly(["prepara", "reparte", "cobra", "avisoFaltantes", "controla"])
+        && porPermiso.prepara is list && porPermiso.prepara.size() <= 50
+        && porPermiso.reparte is list && porPermiso.reparte.size() <= 50
+        && porPermiso.cobra is list && porPermiso.cobra.size() <= 50
+        && porPermiso.avisoFaltantes is list && porPermiso.avisoFaltantes.size() <= 50
+        && porPermiso.controla is list && porPermiso.controla.size() <= 50;
     }
 
     function vigente(datosCodigo) {
@@ -316,16 +333,23 @@ service cloud.firestore {
         allow read, write: if esMiembro(idDistribuidora);
       }
 
-      // config/roles (lista de roles) solo la escribe el dueño (T14).
+      // config/roles (lista de roles) solo la escribe el dueño (T14). Desde
+      // T19 lleva siempre los permisos: la lista, la copia por permiso y la
+      // marca de que los precargados ya recibieron los suyos se escriben
+      // juntas, en el mismo documento. Una versión vieja de la app (que
+      // guardaba solo la lista y borraría los permisos) no puede escribirla.
       match /config/{id} {
         allow read: if esMiembro(idDistribuidora);
         allow write: if esMiembro(idDistribuidora) && id != "roles";
 
         allow create, update: if id == "roles"
           && esDueno(idDistribuidora)
-          && request.resource.data.keys().hasOnly(["lista"])
+          && request.resource.data.keys().hasAll(["lista", "porPermiso", "permisosIniciales"])
+          && request.resource.data.keys().hasOnly(["lista", "porPermiso", "permisosIniciales"])
           && request.resource.data.lista is list
-          && request.resource.data.lista.size() <= 50;
+          && request.resource.data.lista.size() <= 50
+          && permisosValidos(request.resource.data.porPermiso)
+          && request.resource.data.permisosIniciales == true;
       }
 
       match /rutas/{id} {

@@ -14,6 +14,8 @@
 //   y editar la lista de roles.
 // - "Quién soy" (T18): quién usa este celular (dueño, empleado o modo
 //   personal), para registrar quién hace cada cosa en la Etapa 3.
+// - Permisos por rol (T19): cada rol tiene sus casillas de permiso, que solo
+//   marca el dueño. puede(permiso) dice si la persona de este celular lo tiene.
 // Los datos de este celular (localStorage) no se leen ni se borran.
 (function () {
     // Este celular es de un empleado: { uid, distribuidora, idEmpleado }.
@@ -37,8 +39,34 @@
         { id: "administracion", nombre: "Administración" }
     ];
 
+    // Permisos de la Etapa 3 (T19). El id no cambia nunca: lo usan las reglas.
+    const PERMISOS = [
+        { id: "prepara", nombre: "Prepara pedidos" },
+        { id: "reparte", nombre: "Reparte" },
+        { id: "cobra", nombre: "Cobra" },
+        { id: "avisoFaltantes", nombre: "Recibe aviso de faltantes" },
+        { id: "controla", nombre: "Controla pedidos" }
+    ];
+    const IDS_PERMISOS = PERMISOS.map(permiso => permiso.id);
+
+    // Los permisos acordados para los roles precargados (por su id, así vale
+    // aunque el dueño los haya renombrado). Vendedor y los roles nuevos
+    // arrancan sin permisos.
+    const PERMISOS_PRECARGADOS = {
+        deposito: ["prepara", "reparte"],
+        repartidor: ["reparte"],
+        cobranza: ["cobra"],
+        administracion: ["avisoFaltantes", "controla"]
+    };
+
     let miFicha = null;
     let roles = null;
+    // La lista de roles de la nube ya recibió los permisos de los
+    // precargados (T19): se hace una sola vez.
+    let permisosIniciales = false;
+    let ultimosRoles = "";
+    let dejarDeEscucharRoles = null;
+    let completandoPermisos = false;
     let empleados = [];
     let codigosSinUsar = [];
     const oyentesMiFicha = [];
@@ -46,7 +74,9 @@
     const oyentesEmpleados = [];
     const oyentesCodigos = [];
     const oyentesQuienSoy = [];
+    const oyentesPermisos = [];
     let ultimoQuienSoy = "null";
+    let ultimosPermisos = "";
     let dejarDeEscucharEmpleados = null;
     let saliendo = false;
 
@@ -377,7 +407,7 @@
     // -------------------------------------------------
 
     function listaDeRoles() {
-        return roles && roles.length ? roles : ROLES_PRECARGADOS;
+        return roles && roles.length ? roles : rolesIniciales();
     }
 
     function guardarMisDatos(nombre, idsRoles) {
@@ -491,11 +521,8 @@
             }
         }, siNoHayPermiso);
 
-        refDistribuidora.collection("config").doc("roles").onSnapshot(foto => {
-            const lista = foto.exists && Array.isArray(foto.data()?.lista) ? foto.data().lista : null;
-            roles = lista;
-            avisarA(oyentesRoles, listaDeRoles());
-        }, error => console.warn("No se pudo leer la lista de roles.", error));
+        refDistribuidora.collection("config").doc("roles")
+            .onSnapshot(recibirRoles, error => console.warn("No se pudo leer la lista de roles.", error));
     }
 
     // "Salir" del empleado: la cuenta anónima no se puede recuperar, así que
@@ -560,7 +587,7 @@
                 if (idEmpleadoReingreso) datos.uidAnterior = uidAnterior;
 
                 tanda.set(db.collection("codigosAcceso").doc(codigo), datos);
-                if (!fotoRoles.exists) tanda.set(refRoles, { lista: ROLES_PRECARGADOS });
+                if (!fotoRoles.exists) tanda.set(refRoles, datosDeRoles(rolesIniciales()));
 
                 try {
                     await esperarNube(tanda.commit());
@@ -622,11 +649,8 @@
             dejarDeEscucharEmpleados = null;
         });
 
-        const quitarRoles = refDistribuidora.collection("config").doc("roles").onSnapshot(foto => {
-            roles = foto.exists && Array.isArray(foto.data()?.lista) ? foto.data().lista : null;
-            avisarA(oyentesRoles, listaDeRoles());
-            avisarA(oyentesEmpleados, empleados);
-        }, error => console.warn("No se pudo leer la lista de roles.", error));
+        // La lista de roles ya la escucha el dueño desde que entra (T19).
+        arrancarEscuchaDeRoles();
 
         // Códigos sin usar (T15): desaparecen solos cuando un empleado los usa.
         const quitarCodigos = db.collection("codigosAcceso")
@@ -647,7 +671,6 @@
 
         dejarDeEscucharEmpleados = () => {
             quitarEmpleados();
-            quitarRoles();
             quitarCodigos();
         };
     }
@@ -782,15 +805,20 @@
         if (repetido) throw errorConTexto("Ya hay un rol que se llama \"" + nombre + "\".");
     }
 
-    // Guarda la lista entera de roles (solo el dueño, ver firestore.rules).
+    // Guarda la lista entera de roles, con sus permisos y la copia por
+    // permiso en el mismo documento (solo el dueño, ver firestore.rules).
     // Sin señal queda en el celular y se sube solo al volver.
     function guardarListaDeRoles(lista, tanda) {
         const { db, refDistribuidora } = refDeMiDistribuidora();
         const lote = tanda || db.batch();
 
-        lote.set(refDistribuidora.collection("config").doc("roles"), {
-            lista: lista.map(rol => ({ id: rol.id, nombre: rol.nombre }))
-        });
+        // La lista ya trae los permisos de los precargados (ver
+        // recibirRoles): si la nube todavía no los tenía, van en esta misma
+        // escritura.
+        const datos = datosDeRoles(lista);
+        lista = datos.lista;
+
+        lote.set(refDistribuidora.collection("config").doc("roles"), datos);
 
         lote.commit().catch(error => {
             console.error("No se pudo guardar la lista de roles.", error);
@@ -801,8 +829,9 @@
 
         // Se ve enseguida en este celular.
         roles = lista;
-        avisarA(oyentesRoles, listaDeRoles());
-        avisarA(oyentesEmpleados, empleados);
+        permisosIniciales = true;
+        ultimosRoles = JSON.stringify([lista, true]);
+        avisarCambioDeRoles();
     }
 
     function crearRol(nombre) {
@@ -821,7 +850,7 @@
                 id = "rol" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             } while (usados.has(id));
 
-            guardarListaDeRoles([...actual, { id, nombre: limpio }]);
+            guardarListaDeRoles([...actual, { id, nombre: limpio, permisos: [] }]);
             return Promise.resolve({ id, nombre: limpio });
         } catch (error) {
             return Promise.reject(error);
@@ -837,7 +866,7 @@
             const actual = listaDeRoles();
             if (!actual.some(rol => rol.id === id)) throw errorConTexto("Ese rol ya no existe.");
 
-            guardarListaDeRoles(actual.map(rol => rol.id === id ? { id, nombre: limpio } : rol));
+            guardarListaDeRoles(actual.map(rol => rol.id === id ? { ...rol, nombre: limpio } : rol));
             return Promise.resolve({ id, nombre: limpio });
         } catch (error) {
             return Promise.reject(error);
@@ -869,6 +898,185 @@
         } catch (error) {
             return Promise.reject(error);
         }
+    }
+
+    // -------------------------------------------------
+    // Permisos por rol (T19)
+    // -------------------------------------------------
+
+    // Solo permisos conocidos, sin repetir y en el orden de PERMISOS.
+    function limpiarPermisos(lista) {
+        const marcados = new Set(Array.isArray(lista) ? lista : []);
+        return IDS_PERMISOS.filter(id => marcados.has(id));
+    }
+
+    function normalizarRol(rol) {
+        if (!rol || typeof rol.id !== "string" || !rol.id) return null;
+        return {
+            id: rol.id,
+            nombre: typeof rol.nombre === "string" ? rol.nombre : "",
+            permisos: limpiarPermisos(rol.permisos)
+        };
+    }
+
+    // Los 5 precargados con sus permisos acordados.
+    function rolesIniciales() {
+        return completarPermisosIniciales(ROLES_PRECARGADOS);
+    }
+
+    // Suma los permisos acordados a los precargados que sigan en la lista
+    // (por su id). No quita ningún permiso ni agrega roles borrados.
+    function completarPermisosIniciales(lista) {
+        return lista.map(rol => {
+            const normal = normalizarRol(rol);
+            if (!normal) return null;
+            const acordados = PERMISOS_PRECARGADOS[normal.id] || [];
+            return { ...normal, permisos: limpiarPermisos([...normal.permisos, ...acordados]) };
+        }).filter(Boolean);
+    }
+
+    // Copia por permiso con los ids de rol que lo tienen, para que las
+    // reglas de la nube puedan revisar los permisos sin recorrer la lista.
+    function copiaPorPermiso(lista) {
+        const copia = {};
+        IDS_PERMISOS.forEach(permiso => {
+            copia[permiso] = lista.filter(rol => rol.permisos.includes(permiso)).map(rol => rol.id);
+        });
+        return copia;
+    }
+
+    // El documento config/roles entero: la lista y la copia van siempre
+    // juntas, así nunca quedan distintas.
+    function datosDeRoles(lista) {
+        const limpia = lista.map(normalizarRol).filter(Boolean);
+        return {
+            lista: limpia,
+            porPermiso: copiaPorPermiso(limpia),
+            permisosIniciales: true
+        };
+    }
+
+    function avisarCambioDeRoles() {
+        avisarA(oyentesRoles, listaDeRoles());
+        if (esDueno()) avisarA(oyentesEmpleados, empleados);
+        avisarPermisos();
+    }
+
+    // Lo que llega de la nube (dueño y empleado). Avisa solo si cambió algo.
+    // Mientras la nube no tiene los permisos de los precargados, el dueño ya
+    // los ve marcados (se guardan con su próximo cambio o al completarlos);
+    // el empleado ve lo que dice la nube, que es lo que van a revisar las
+    // reglas.
+    function recibirRoles(foto) {
+        const datos = foto.exists ? foto.data() || {} : {};
+        let lista = Array.isArray(datos.lista) ? datos.lista.map(normalizarRol).filter(Boolean) : null;
+        permisosIniciales = datos.permisosIniciales === true;
+        if (lista && !permisosIniciales && esDueno()) lista = completarPermisosIniciales(lista);
+
+        const texto = JSON.stringify([lista, permisosIniciales]);
+        roles = lista;
+        if (texto === ultimosRoles) return;
+
+        ultimosRoles = texto;
+        avisarCambioDeRoles();
+    }
+
+    // Una sola vez por distribuidora: los precargados que quedan reciben sus
+    // permisos. Se hace en el celular del dueño, con internet, leyendo la
+    // nube en el momento (así dos celulares del dueño no lo hacen dos veces
+    // ni pisan lo que ya se marcó).
+    function completarPermisosEnLaNube(refRoles) {
+        const db = obtenerFirestore();
+        if (completandoPermisos || !db || !navigator.onLine || !esDueno()) return;
+
+        completandoPermisos = true;
+        db.runTransaction(async transaccion => {
+            const foto = await transaccion.get(refRoles);
+            const datos = foto.exists ? foto.data() || {} : {};
+            if (!foto.exists || datos.permisosIniciales === true) return;
+
+            const lista = Array.isArray(datos.lista) ? datos.lista : [];
+            transaccion.set(refRoles, datosDeRoles(completarPermisosIniciales(lista)));
+        }).catch(error => {
+            console.warn("No se pudieron completar los permisos de los roles precargados.", error);
+        }).finally(() => {
+            completandoPermisos = false;
+        });
+    }
+
+    // El dueño escucha la lista de roles desde que entra a la nube.
+    function arrancarEscuchaDeRoles() {
+        if (dejarDeEscucharRoles || !esDueno()) return;
+
+        const db = obtenerFirestore();
+        if (!db) return;
+
+        const uid = window.cuentaVendeFrio.usuarioActual().uid;
+        const refRoles = db.collection("distribuidoras").doc(uid).collection("config").doc("roles");
+
+        dejarDeEscucharRoles = refRoles.onSnapshot({ includeMetadataChanges: true }, foto => {
+            recibirRoles(foto);
+
+            // Solo con lo que confirma la nube, no con la copia del celular.
+            if (foto.exists && !foto.metadata.fromCache && !permisosIniciales) {
+                completarPermisosEnLaNube(refRoles);
+            }
+        }, error => {
+            console.warn("No se pudo leer la lista de roles.", error);
+            dejarDeEscucharRoles = null;
+        });
+    }
+
+    // Marca o desmarca un permiso de un rol (solo el dueño).
+    function cambiarPermisoDeRol(idRol, permiso, marcado) {
+        try {
+            if (!IDS_PERMISOS.includes(permiso)) throw errorConTexto("Ese permiso no existe.");
+
+            const actual = listaDeRoles();
+            if (!actual.some(rol => rol.id === idRol)) throw errorConTexto("Ese rol ya no existe.");
+
+            guardarListaDeRoles(actual.map(rol => {
+                if (rol.id !== idRol) return rol;
+                const sin = rol.permisos.filter(id => id !== permiso);
+                return { ...rol, permisos: marcado ? [...sin, permiso] : sin };
+            }));
+            return Promise.resolve();
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    // Ids de los permisos que tiene la persona de este celular: el dueño,
+    // todos; el empleado, los de cualquiera de sus roles. En el modo
+    // personal no hay permisos (la Etapa 3 es solo para la nube).
+    function misPermisos() {
+        if (esDueno()) return IDS_PERMISOS.slice();
+        if (!esEmpleado()) return [];
+
+        const misRoles = new Set(miFicha?.roles || []);
+        const tengo = new Set();
+        listaDeRoles().forEach(rol => {
+            if (misRoles.has(rol.id)) rol.permisos.forEach(permiso => tengo.add(permiso));
+        });
+        return IDS_PERMISOS.filter(permiso => tengo.has(permiso));
+    }
+
+    function puede(permiso) {
+        return misPermisos().includes(permiso);
+    }
+
+    function nombresDePermisos(ids) {
+        const porId = new Map(PERMISOS.map(permiso => [permiso.id, permiso.nombre]));
+        return (ids || []).map(id => porId.get(id)).filter(Boolean);
+    }
+
+    // Avisa solo si cambió algo.
+    function avisarPermisos() {
+        const texto = JSON.stringify(misPermisos());
+        if (texto === ultimosPermisos) return;
+
+        ultimosPermisos = texto;
+        avisarA(oyentesPermisos, misPermisos());
     }
 
     // -------------------------------------------------
@@ -971,7 +1179,14 @@
         cantidadConRol: id => empleadosConRol(id).length,
         // Quién usa este celular (T18)
         quienSoy,
-        escucharQuienSoy
+        escucharQuienSoy,
+        // Permisos por rol (T19)
+        permisos: () => PERMISOS.map(permiso => ({ ...permiso })),
+        cambiarPermisoDeRol,
+        puede,
+        misPermisos,
+        nombresDePermisos,
+        escucharPermisos: oyente => sumarOyente(oyentesPermisos, oyente, misPermisos())
     };
 
     // El celular de un empleado arranca a escuchar apenas se sabe la cuenta.
@@ -1015,7 +1230,17 @@
                 empleados = [];
                 codigosSinUsar = [];
             }
+            // Permisos (T19): el dueño escucha la lista de roles desde que
+            // entra, para completar una sola vez los de los precargados.
+            if (esDueno()) {
+                arrancarEscuchaDeRoles();
+            } else if (dejarDeEscucharRoles) {
+                dejarDeEscucharRoles();
+                dejarDeEscucharRoles = null;
+                if (!esEmpleado()) roles = null;
+            }
             avisarQuienSoy();
+            avisarPermisos();
         });
 
         window.distribuidoraVendeFrio.escucharNombreDueno?.(avisarQuienSoy);
@@ -1025,6 +1250,9 @@
     // modo personal (T18).
     oyentesMiFicha.push(avisarQuienSoy);
     window.cuentaVendeFrio?.escuchar(avisarQuienSoy);
+    // Los permisos cambian con los roles del empleado y con la cuenta (T19).
+    oyentesMiFicha.push(avisarPermisos);
+    window.cuentaVendeFrio?.escuchar(avisarPermisos);
     window.addEventListener("modoPersonalVendeFrio", avisarQuienSoy);
     // inicio.js (modo personal) carga después que este archivo.
     window.addEventListener("load", avisarQuienSoy);

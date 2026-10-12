@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v140 - Nombre del dueño)
+// VendeFrío - Service Worker (v141 - Permisos por rol)
 // =====================================================
-const CACHE_NAME = "vendefrio-v140";
+const CACHE_NAME = "vendefrio-v141";
 const ARCHIVOS = [
   "./",
   "./index.html",
