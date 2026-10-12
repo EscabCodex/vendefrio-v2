@@ -46,7 +46,8 @@
     flechaDerecha: '<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
     ojo: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
     cerrarX: '<path d="M6 6l12 12M18 6L6 18"/>',
-    mas: '<path d="M12 5v14M5 12h14"/>'
+    mas: '<path d="M12 5v14M5 12h14"/>',
+    lista: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>'
   };
 
   window.icono = function (nombre, tam, color) {
