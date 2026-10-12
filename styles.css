@@ -3137,6 +3137,10 @@ html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border
 /* Pedidos viejos subidos a la nube (T11) */
 .badgeHistorico{color:var(--texto-sec);margin-top:4px;}
 
+/* Pedido completo (T20): estado actual, autor y total en Historial */
+.badgeEstadoPedido{color:var(--acento);margin-top:4px;}
+.autorPedidoHistorial{margin-top:2px;overflow-wrap:anywhere;}
+
 /* Sincronización visible (T12): pedido sin subir e indicador de conexión */
 .badgeSinSubir{color:var(--pendiente);margin-top:4px;margin-left:8px;}
 .indicadorNube{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font-size:11px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}

@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v141 - Permisos por rol)
+// VendeFrío - Service Worker (v142 - Pedido con estado, autor y precio)
 // =====================================================
-const CACHE_NAME = "vendefrio-v141";
+const CACHE_NAME = "vendefrio-v142";
 const ARCHIVOS = [
   "./",
   "./index.html",

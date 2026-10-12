@@ -2293,6 +2293,170 @@ function eliminarPedidoPorId(id) {
     return guardarHistorial(historial);
 }
 
+// --- Pedido completo (T20) ---
+// Solo en la nube (con cuenta o con código): cada pedido nuevo nace
+// "Cargado", con su autor, un id por línea, el precio de cada producto en ese
+// momento y la primera entrada del historial de estados. El modo personal
+// sigue igual. En la nube, un pedido sin historial de estados (los subidos
+// con T11 y los cargados antes de T20) es "Histórico".
+//
+// Historial de estados (campo "estados"): un mapa que solo se agrega, con
+// una entrada por cambio: { estado, persona: { idPersona, nombre, uid },
+// horaCelular, nota }. El estado actual es el de la entrada más nueva según
+// la hora en que se hizo. El campo "estado" guarda una copia para leerlo
+// rápido: si dos cambios llegan desordenados, manda el historial.
+
+const ESTADOS_PEDIDO = [
+    { id: "cargado", nombre: "Cargado" },
+    { id: "enPreparacion", nombre: "En preparación" },
+    { id: "preparado", nombre: "Preparado" },
+    { id: "enVehiculo", nombre: "Cargado en el vehículo" },
+    { id: "enReparto", nombre: "En reparto" },
+    { id: "entregado", nombre: "Entregado" },
+    { id: "cancelado", nombre: "Cancelado" }
+];
+const ESTADO_PEDIDO_INICIAL = "cargado";
+const PREFIJO_ID_LINEA = "lin";
+const PREFIJO_ID_ESTADO = "est";
+const LARGO_MAXIMO_NOMBRE_PERSONA = 60;
+const LARGO_MAXIMO_NOTA_ESTADO = 300;
+
+function nombreDeEstadoPedido(id) {
+    const estado = ESTADOS_PEDIDO.find(item => item.id === id);
+    return estado ? estado.nombre : "";
+}
+
+function pedidoTieneEstados(pedido) {
+    const estados = pedido && pedido.estados;
+    return Boolean(estados) && typeof estados === "object" && !Array.isArray(estados) &&
+        Object.keys(estados).length > 0;
+}
+
+// Id del estado actual: el de la entrada más nueva según la hora en que se
+// hizo (si empatan, la de id mayor, así da igual en todos los celulares).
+// "" si el pedido no tiene historial de estados.
+function estadoActualDelPedido(pedido) {
+    if (!pedidoTieneEstados(pedido)) return "";
+
+    let elegida = null;
+    let idElegida = "";
+
+    Object.keys(pedido.estados).forEach(id => {
+        const entrada = pedido.estados[id];
+        if (!entrada || typeof entrada !== "object") return;
+
+        const hora = Number(entrada.horaCelular) || 0;
+        const horaElegida = elegida ? Number(elegida.horaCelular) || 0 : -Infinity;
+
+        if (hora > horaElegida || (hora === horaElegida && id > idElegida)) {
+            elegida = entrada;
+            idElegida = id;
+        }
+    });
+
+    return elegida ? String(elegida.estado || "") : "";
+}
+
+function limpiarNombrePersona(nombre) {
+    return String(nombre || "").trim().replace(/\s+/g, " ").slice(0, LARGO_MAXIMO_NOMBRE_PERSONA);
+}
+
+// Quién usa este celular, para guardarlo en el pedido: { idPersona, nombre,
+// uid }, o null si todavía no se sabe. idPersona es el id de la ficha del
+// empleado (no cambia con un reingreso) o "dueno".
+function personaDeEsteCelular() {
+    const yo = window.empleadosVendeFrio?.quienSoy?.();
+
+    if (yo && (yo.tipo === "dueno" || yo.tipo === "empleado") && yo.idPersona && yo.uid) {
+        return { idPersona: String(yo.idPersona), nombre: limpiarNombrePersona(yo.nombre), uid: String(yo.uid) };
+    }
+
+    // Al abrir la app sin señal, la distribuidora puede tardar en saberse: el
+    // dueño se reconoce igual por la nube que usa este celular.
+    const usuario = window.cuentaVendeFrio?.usuarioActual?.();
+    const guardado = obtenerModoNubeGuardado();
+
+    if (usuario && !usuario.isAnonymous && guardado && guardado.uid === usuario.uid && esDuenoEnLaNube()) {
+        return {
+            idPersona: "dueno",
+            nombre: limpiarNombrePersona(window.distribuidoraVendeFrio?.nombreDuenoActual?.()),
+            uid: usuario.uid
+        };
+    }
+
+    return null;
+}
+
+// Devuelve [id, entrada] para el historial de estados.
+function nuevaEntradaDeEstado(estado, nota, persona, horaCelular) {
+    return [
+        generarId(PREFIJO_ID_ESTADO),
+        {
+            estado,
+            persona: { idPersona: persona.idPersona, nombre: persona.nombre, uid: persona.uid },
+            horaCelular,
+            nota: String(nota || "").trim().slice(0, LARGO_MAXIMO_NOTA_ESTADO)
+        }
+    ];
+}
+
+// Precio del producto en el catálogo en este momento, o null si no tiene
+// (el catálogo muestra "Precio no cargado").
+function precioDelCatalogo(marca, nombre, productos) {
+    const marcaReal = Object.keys(productos).find(item => normalizarTexto(item) === normalizarTexto(marca));
+    const lista = marcaReal && Array.isArray(productos[marcaReal]) ? productos[marcaReal] : [];
+    const producto = lista.find(item => item && normalizarTexto(item.nombre) === normalizarTexto(nombre));
+    const precio = Number(producto && producto.precio);
+
+    return Number.isFinite(precio) && precio > 0 ? precio : null;
+}
+
+// Lo que suma un pedido nuevo en la nube: los productos con su id de línea y
+// su precio, y los campos de estado y autor. Devuelve { productos, campos }
+// o null si todavía no se sabe quién usa el celular.
+function prepararPedidoParaLaNube(productos, horaCelular) {
+    const persona = personaDeEsteCelular();
+    if (!persona) return null;
+
+    const catalogo = obtenerProductos();
+    const [idEntrada, entrada] = nuevaEntradaDeEstado(ESTADO_PEDIDO_INICIAL, "", persona, horaCelular);
+
+    return {
+        productos: productos.map(item => ({
+            id: generarId(PREFIJO_ID_LINEA),
+            ...item,
+            precio: precioDelCatalogo(item.marca, item.producto, catalogo)
+        })),
+        campos: {
+            estado: ESTADO_PEDIDO_INICIAL,
+            autor: persona,
+            estados: { [idEntrada]: entrada },
+            eliminado: false
+        }
+    };
+}
+
+// Total del pedido con los precios guardados al cargarlo. Devuelve
+// { total, conPrecio, sinPrecio } (líneas con y sin precio).
+function totalDelPedido(pedido) {
+    const resultado = { total: 0, conPrecio: 0, sinPrecio: 0 };
+
+    (Array.isArray(pedido && pedido.productos) ? pedido.productos : []).forEach(item => {
+        if (!item || typeof item !== "object") return;
+
+        const precio = item.precio === null || item.precio === undefined ? NaN : Number(item.precio);
+
+        if (Number.isFinite(precio)) {
+            resultado.total += precio * (Number(item.cantidad) || 0);
+            resultado.conPrecio += 1;
+        } else {
+            resultado.sinPrecio += 1;
+        }
+    });
+
+    return resultado;
+}
+
 // --- Rutas guardadas ---
 // Cada ruta guarda dos listas paralelas: "comercios" (nombres, para mostrar)
 // e "idsComercios" (el id de cada uno, en la misma posición; "" si ese

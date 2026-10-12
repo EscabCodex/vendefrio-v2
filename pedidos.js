@@ -784,6 +784,24 @@ function generarPedido() {
         return false;
     }
 
+    // Pedido completo (T20): en la nube el pedido nace "Cargado", con su
+    // autor y el precio de cada producto. Sin saber quién usa el celular no
+    // se carga, para que no quede sin autor. El modo personal sigue igual.
+    const timestamp = Date.now();
+    let datosNube = null;
+
+    if (usaNubeReal()) {
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp);
+
+        if (!datosNube) {
+            mostrarAviso(
+                "Esperá un momento",
+                "La app todavía está reconociendo quién usa este celular. Probá de nuevo en unos segundos: el pedido no se perdió. Si sigue igual, cerrá y volvé a abrir la app."
+            );
+            return false;
+        }
+    }
+
     const fechaTexto = new Date().toLocaleDateString("es-AR");
     const emojiComercio = String.fromCodePoint(0x1F3EA);
     const emojiResumen = String.fromCodePoint(0x1F4E6);
@@ -841,12 +859,13 @@ function generarPedido() {
 
     agregarPedidoConId({
         fecha,
-        timestamp: Date.now(),
+        timestamp,
         comercio: cliente,
         cantidad: cantidadProductos,
         pedido: ultimoPedidoTexto,
-        productos: productosEstructurados,
-        observaciones
+        productos: datosNube ? datosNube.productos : productosEstructurados,
+        observaciones,
+        ...(datosNube ? datosNube.campos : {})
     });
 
     actualizarEstadoBotonRepetir();
