@@ -14,9 +14,10 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Pasar los módulos de `localStorage` a datos compartidos, sin perder lo que ya está cargado. Al final, con cuenta o con código la app usa solo la nube; sin sesión queda el modo personal, con los datos solo en ese celular (T16 "Solo nube").
 - Respaldo y recuperación de datos.
 
-**Etapa 3 — Pedido completo**
-- Ciclo de estados con historial y responsables.
-- Checklist de preparación, faltantes y entrega con foto opcional.
+**Etapa 3 — Pedido completo** (decidida el 2026-10-12; tareas T18 a T29 en el Bloque F de `PROJECT_STATE.md`)
+- Ciclo de estados con historial, responsables y permisos por rol.
+- Checklist de preparación, faltantes, entrega y cobro con foto opcional.
+- Avisos dentro de la app y notificaciones con la app cerrada.
 - Trabajo sin conexión con sincronización automática.
 
 **Etapa 4 — Pulido y cierre**
@@ -46,9 +47,9 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 
 ## Decisiones abiertas
 
-- ¿Qué pasa si dos personas modifican el mismo pedido a la vez?
-- ¿Quién puede cambiar cada estado?
-- ¿Qué datos mínimos necesita el depósito para preparar?
+Cerradas el 2026-10-12 (T17): qué pasa si dos personas modifican el mismo pedido y quién puede cambiar cada estado. Ver "Pedido completo, Etapa 3" en `PROJECT_STATE.md`.
+
+- ¿Qué datos mínimos necesita el depósito para preparar? Propuesta en T24 (comercio, autor, observaciones y productos por marca con cantidad); se confirma al probarla.
 - ¿Qué diferencia hay entre pedido, remito, factura y entrega?
 - ¿Qué impresora o dispositivo se usará más adelante?
 
