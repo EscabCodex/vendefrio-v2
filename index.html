@@ -137,6 +137,13 @@
   </header>
 
   <main class="container">
+    <!-- Pedidos y seguimiento (T21): solo en la nube. seguimiento.js la muestra. -->
+    <div id="vistaPedidos" class="vistaPedidos oculto">
+      <div id="filtrosEtapaPedidos" class="filtrosEtapaPedidos" role="tablist" aria-label="Etapas del pedido"></div>
+      <p id="resumenVistaPedidos" class="resumenVistaPedidos" aria-live="polite"></p>
+      <div id="listaVistaPedidos"></div>
+    </div>
+
     <div id="resumenPedido" class="resumenPedido" aria-live="polite">
       <span>Unidades: <strong id="totalUnidadesPedido">0</strong></span>
       <span>Productos: <strong id="totalTiposPedido">0</strong></span>
@@ -520,6 +527,8 @@
 <script src="comerciosAdmin.js"></script>
 <script src="productosAdmin.js"></script>
 <script src="historial.js"></script>
+<!-- Pedidos y seguimiento (T21): después de pedidos.js y historial.js. -->
+<script src="seguimiento.js"></script>
 <script src="rutas.js"></script>
 
 <script>

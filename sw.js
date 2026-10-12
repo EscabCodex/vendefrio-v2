@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v142 - Pedido con estado, autor y precio)
+// VendeFrío - Service Worker (v143 - Pedidos y seguimiento)
 // =====================================================
-const CACHE_NAME = "vendefrio-v142";
+const CACHE_NAME = "vendefrio-v143";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -19,6 +19,7 @@ const ARCHIVOS = [
   "./comercioFicha.js",
   "./productosAdmin.js",
   "./historial.js",
+  "./seguimiento.js",
   "./rutas.js",
   "./navegacion3d.js",
   "./navegacion3d.css",

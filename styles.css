@@ -3251,3 +3251,95 @@ html.conCartelPersonal #contenedorToasts{bottom:calc(122px + env(safe-area-inset
 html.conCartelPersonal #pantallaPedido footer{bottom:calc(72px + var(--alto-cartel-personal) + env(safe-area-inset-bottom)) !important;}
 html.conCartelPersonal #pantallaPedido main.container{padding-bottom:calc(158px + var(--alto-cartel-personal) + env(safe-area-inset-bottom)) !important;}
 @media (max-width:359px){.cartelModoPersonal{padding:2px 8px;font-size:11px;line-height:1.2;}}
+
+/* Pedidos y seguimiento (T21): vista "Pedidos" de la sección Pedido y ficha del pedido */
+#pantallaPedido[data-vista="pedidos"] main.container>:not(#vistaPedidos),
+#pantallaPedido[data-vista="pedidos"] footer{display:none !important;}
+.botonNuevoPedido{position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));z-index:950;display:flex;align-items:center;justify-content:center;width:60px;height:60px;border:none;border-radius:50%;background:var(--acento);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s ease;}
+.botonNuevoPedido:active{transform:scale(.94);}
+.botonNuevoPedido.oculto{display:none;}
+html.conCartelPersonal .botonNuevoPedido{bottom:calc(92px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
+.botonVolverPedidos{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;height:40px;margin-right:-6px;border:none;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;}
+.botonVolverPedidos:active{background:var(--gris-claro);}
+.botonVolverPedidos.oculto{display:none;}
+#pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(170px + env(safe-area-inset-bottom)) !important;}
+.filtrosEtapaPedidos{display:flex;gap:6px;margin:0 -12px 6px;padding:2px 12px 6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.filtrosEtapaPedidos::-webkit-scrollbar{display:none;}
+.filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
+.filtroEtapaCantidad{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--gris-claro);color:var(--texto);font-size:11.5px;text-align:center;}
+.filtroEtapa.activo{border-color:var(--acento);background:var(--acento);color:#fff;}
+.filtroEtapa.activo .filtroEtapaCantidad{background:rgba(255,255,255,.25);color:#fff;}
+.resumenVistaPedidos{margin:0 2px 8px;color:var(--texto-sec);font-size:12px;font-weight:700;}
+.tarjetaSeguimiento{display:flex;align-items:flex-start;gap:11px;margin-bottom:8px;padding:12px;border-radius:12px;cursor:pointer;}
+.tarjetaSeguimiento:active{transform:scale(.99);}
+.tarjetaSeguimiento .avatar{width:40px;height:40px;font-size:13px;}
+.infoSeguimiento{flex:1;min-width:0;}
+.filaSeguimientoArriba{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.filaSeguimientoArriba h3{margin:0;font-size:14.5px;line-height:1.25;overflow-wrap:anywhere;}
+.infoSeguimiento .subtitulo{margin-top:3px;font-size:12px;overflow-wrap:anywhere;}
+.sinSubirSeguimiento{margin-left:0;}
+.seguimientoVacio h3{margin-bottom:4px;font-size:14.5px;}
+.seguimientoVacio p{color:var(--texto-sec);font-size:13px;}
+.verMasSeguimiento{width:100%;justify-content:center;}
+.estadoSeguimiento{flex-shrink:0;padding:3px 8px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:11px;font-weight:800;white-space:nowrap;}
+.estadoSeguimiento[data-estado="enPreparacion"]{background:var(--pendiente-bg);color:var(--pendiente);}
+.estadoSeguimiento[data-estado="preparado"],.estadoSeguimiento[data-estado="entregado"]{background:var(--visitado-bg);color:var(--visitado);}
+.estadoSeguimiento[data-estado="enVehiculo"],.estadoSeguimiento[data-estado="enReparto"]{background:#E6EEFA;color:#1D4F91;}
+.estadoSeguimiento[data-estado="cancelado"]{background:var(--peligro-bg);color:var(--peligro);}
+.fichaPedido h2{margin-bottom:8px;}
+.etiquetasFichaPedido{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;}
+.etiquetasFichaPedido .badgeSinSubir{margin:0;}
+.datosFichaPedido{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);}
+.datoFichaPedido{display:flex;justify-content:space-between;gap:10px;font-size:13px;}
+.datoFichaPedido span{color:var(--texto-sec);}
+.datoFichaPedido strong{text-align:right;overflow-wrap:anywhere;}
+.seccionFichaPedido{margin-top:16px;}
+.seccionFichaPedido>h3{margin-bottom:6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--texto-sec);}
+.marcaFichaPedido{margin:10px 0 2px;color:var(--acento-oscuro);font-size:12px;font-weight:800;}
+.productoFichaPedido{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);}
+.productoFichaNombre{display:flex;flex-direction:column;min-width:0;}
+.productoFichaNombre strong{font-size:13.5px;overflow-wrap:anywhere;}
+.productoFichaNombre small{color:var(--texto-sec);font-size:12px;}
+.productoFichaSubtotal{flex-shrink:0;font-size:13px;font-weight:700;}
+.totalFichaPedido{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:10px;font-size:15px;}
+.totalFichaPedido strong{font-size:16px;}
+.observacionesFichaPedido{padding:10px 12px;border-radius:var(--radius-md);background:var(--fondo);font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;}
+.lineaSeguimiento{list-style:none;margin:4px 0 0;padding:0;}
+.pasoSeguimiento{position:relative;padding:0 0 14px 24px;}
+.pasoSeguimiento::before{content:"";position:absolute;left:5px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--borde);}
+.pasoSeguimiento::after{content:"";position:absolute;left:9px;top:18px;bottom:0;width:2px;background:var(--borde);}
+.pasoSeguimiento:last-child{padding-bottom:0;}
+.pasoSeguimiento:last-child::after{display:none;}
+.pasoSeguimiento.actual::before{left:3px;top:3px;width:14px;height:14px;background:var(--acento);box-shadow:0 0 0 3px var(--acento-bg);}
+.pasoSeguimiento strong{display:block;font-size:14px;}
+.pasoSeguimiento small{display:block;margin-top:1px;color:var(--texto-sec);font-size:12px;}
+.notaSeguimiento{margin-top:4px;font-size:12.5px;font-style:italic;color:var(--texto-sec);overflow-wrap:anywhere;}
+/* Modo oscuro: la regla general deja todos los textos blancos (con !important). */
+html[data-tema="oscuro"] .filtroEtapa{background:#1f2937;border-color:#374151;}
+html[data-tema="oscuro"] .filtroEtapa.activo{background:var(--acento);border-color:var(--acento);}
+html[data-tema="oscuro"] .filtroEtapaCantidad{background:#374151;}
+html[data-tema="oscuro"] .filtroEtapa.activo .filtroEtapaCantidad{background:rgba(255,255,255,.25);}
+html[data-tema="oscuro"] .resumenVistaPedidos,
+html[data-tema="oscuro"] .datoFichaPedido span,
+html[data-tema="oscuro"] .productoFichaNombre small,
+html[data-tema="oscuro"] .pasoSeguimiento small,
+html[data-tema="oscuro"] .notaSeguimiento,
+html[data-tema="oscuro"] .seccionFichaPedido>h3,
+html[data-tema="oscuro"] .seguimientoVacio p{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .estadoSeguimiento{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="enPreparacion"]{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="preparado"],
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="entregado"]{color:var(--visitado) !important;}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="enVehiculo"],
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="enReparto"]{background:#1B2B45;color:#8DB4F0 !important;}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="cancelado"]{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .sinSubirSeguimiento{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .marcaFichaPedido{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .datosFichaPedido,
+html[data-tema="oscuro"] .observacionesFichaPedido{background:#111827;border-color:#374151;}
+html[data-tema="oscuro"] .productoFichaPedido{border-color:#374151;}
+html[data-tema="oscuro"] .pasoSeguimiento::before,
+html[data-tema="oscuro"] .pasoSeguimiento::after{background:#4b5563;}
+html[data-tema="oscuro"] .pasoSeguimiento.actual::before{background:var(--acento);box-shadow:0 0 0 3px var(--acento-bg);}
+html[data-tema="oscuro"] .botonVolverPedidos{color:#f9fafb;}
+html[data-tema="oscuro"] .botonVolverPedidos:active{background:#374151;}
