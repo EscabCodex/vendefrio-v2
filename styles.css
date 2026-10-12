@@ -3131,6 +3131,8 @@ html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border
 .migracionResumen li{padding:2px 0;font-weight:700;}
 .migracionResumen .migracionOk{color:var(--visitado);}
 .migracionResumen .migracionFalta,.migracionError{color:var(--peligro) !important;}
+/* Limpieza de los datos viejos del celular (T16e): nombres de lo que falta en la nube. */
+.migracionResumen .limpiezaFaltan{display:block;font-weight:500;line-height:1.4;overflow-wrap:anywhere;}
 
 /* Pedidos viejos subidos a la nube (T11) */
 .badgeHistorico{color:var(--texto-sec);margin-top:4px;}

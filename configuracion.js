@@ -408,6 +408,104 @@
         `;
     }
 
+    // --- Limpieza de los datos viejos del celular (T16e) ---
+    // Solo el dueño en la nube y solo si el celular tiene datos viejos.
+    // 1) descargar un archivo con todo; 2) revisar con internet qué está en
+    // la nube; 3) borrar con confirmación. Si algo falta en la nube, se
+    // muestra y se deja borrar igual: queda en el archivo (decidido con el
+    // dueño el 2026-10-11).
+    const MAX_FALTANTES_A_MOSTRAR = 10;
+    const limpieza = {
+        firma: null,
+        descargado: null,
+        revision: null,
+        revisando: false,
+        error: ""
+    };
+
+    function reiniciarLimpieza() {
+        limpieza.firma = null;
+        limpieza.descargado = null;
+        limpieza.revision = null;
+        limpieza.revisando = false;
+        limpieza.error = "";
+    }
+
+    function htmlFaltantes(total) {
+        if (!total.faltan.length) return "";
+
+        const nombres = total.faltan.slice(0, MAX_FALTANTES_A_MOSTRAR).map(escaparTexto).join(", ");
+        const resto = total.faltan.length - MAX_FALTANTES_A_MOSTRAR;
+
+        return `<small class="limpiezaFaltan">Faltan: ${nombres}${resto > 0 ? ` y ${resto} más` : ""}.</small>`;
+    }
+
+    function htmlRevisionLimpieza() {
+        const revision = limpieza.revision;
+        if (!revision) return "";
+
+        const filas = revision.totales.map(total => {
+            const coincide = !total.faltan.length;
+            return `<li class="${coincide ? "migracionOk" : "migracionFalta"}">
+                ${total.nombre}: ${total.enLaNube} de ${total.enEsteCelular} ${coincide ? "✓" : "✗"}
+                ${htmlFaltantes(total)}
+            </li>`;
+        }).join("");
+
+        const titulo = revision.completo
+            ? "Todo está en la nube."
+            : "Faltan datos en la nube. Si borrás, quedan solo en el archivo que descargaste.";
+
+        return `
+            <div class="configEstado migracionResumen">
+                <strong>${titulo}</strong>
+                <ul>${filas}</ul>
+            </div>
+        `;
+    }
+
+    function htmlLimpiezaDatosViejos() {
+        if (!puedeLimpiarDatosViejos() || !celularTieneDatosViejos()) return "";
+
+        const descargado = Boolean(limpieza.descargado);
+        const textoDescargar = descargado
+            ? `✓ Archivo descargado a las ${horaCorta(limpieza.descargado)}`
+            : "1. Descargar archivo";
+        const textoRevisar = limpieza.revisando
+            ? "Revisando la nube…"
+            : limpieza.revision || limpieza.error
+                ? "Revisar de nuevo"
+                : "2. Revisar en la nube";
+
+        return `
+            <div class="configMigracion" id="configLimpiezaDatosViejos">
+                <p class="configEstado">
+                    <strong>Datos viejos de este celular</strong><br>
+                    Este celular todavía guarda los datos de antes de usar la
+                    nube: comercios, productos, pedidos, rutas y la copia
+                    interna. La app ya no los usa. Podés borrarlos en tres
+                    pasos. La nube no se toca.
+                </p>
+                <button type="button" data-accion="limpiezaDescargar" ${limpieza.revisando ? "disabled" : ""}>
+                    ${textoDescargar}
+                </button>
+                <button type="button" data-accion="limpiezaRevisar"
+                    ${limpieza.revisando || !descargado ? "disabled" : ""}>
+                    ${textoRevisar}
+                </button>
+                ${limpieza.error ? `<p class="configEstado migracionError" role="alert">${escaparTexto(limpieza.error)}</p>` : ""}
+                ${htmlRevisionLimpieza()}
+                <button type="button" data-accion="limpiezaBorrar" class="configPeligro"
+                    ${limpieza.revisando || !descargado || !limpieza.revision ? "disabled" : ""}>
+                    ${window.icono("tacho",14)} 3. Borrar datos viejos
+                </button>
+                <p class="configEstado">
+                    Quedan tus preferencias, el borrador del pedido y tu sesión.
+                </p>
+            </div>
+        `;
+    }
+
     // Se cambian solo los textos, sin redibujar la sección.
     function actualizarRespaldoNube() {
         const ultimo = document.getElementById("configUltimoRespaldoNube");
@@ -989,7 +1087,7 @@
                 </p>
             `;
         } else if (seccion === "respaldo" && usaNubeReal()) {
-            caja.innerHTML += htmlRespaldoNube();
+            caja.innerHTML += htmlRespaldoNube() + htmlLimpiezaDatosViejos();
         } else if (seccion === "respaldo") {
             const ultima = localStorage.getItem(
                 "vendefrio_ultimo_respaldo_automatico"
@@ -1138,6 +1236,89 @@
         if (accion === "exportar") {
             document.getElementById("exportarRespaldo")?.click();
             actualizarRespaldoNube();
+        }
+
+        // Limpieza de los datos viejos del celular (T16e).
+        if (accion === "limpiezaDescargar") {
+            const firma = descargarDatosViejosDelCelular();
+            if (!firma) return;
+
+            // Si los datos cambiaron desde la última revisión, se revisa de nuevo.
+            if (limpieza.firma !== firma) limpieza.revision = null;
+            limpieza.firma = firma;
+            limpieza.descargado = new Date();
+            detalle("respaldo");
+            mostrarAviso(
+                "Archivo descargado",
+                "Guardalo en un lugar seguro, como Google Drive. Tiene todos los datos viejos de este celular, también los que no estén en la nube."
+            );
+        }
+
+        if (accion === "limpiezaRevisar") {
+            const nube = window.nubeVendeFrio;
+            if (!nube?.revisarDatosViejos || limpieza.revisando || !limpieza.descargado) return;
+
+            const viejos = leerDatosViejosDelCelular();
+            limpieza.revisando = true;
+            limpieza.revision = null;
+            limpieza.error = "";
+            detalle("respaldo");
+
+            nube.revisarDatosViejos(viejos.datos)
+                .then(revision => {
+                    limpieza.revision = { ...revision, firma: viejos.firma };
+                })
+                .catch(error => {
+                    limpieza.error = error.message;
+                })
+                .finally(() => {
+                    limpieza.revisando = false;
+                    const caja = document.getElementById("configDetalle");
+                    if (seccionAbierta === "respaldo" && caja && !caja.classList.contains("oculto")) {
+                        detalle("respaldo");
+                    }
+                });
+        }
+
+        if (accion === "limpiezaBorrar") {
+            const revision = limpieza.revision;
+            if (!limpieza.descargado || !revision || limpieza.revisando) return;
+
+            // Sin el archivo de estos mismos datos no se borra.
+            const firma = leerDatosViejosDelCelular().firma;
+            if (firma !== limpieza.firma || firma !== revision.firma) {
+                reiniciarLimpieza();
+                detalle("respaldo");
+                return mostrarAviso(
+                    "Los datos cambiaron",
+                    "Los datos viejos de este celular cambiaron desde que descargaste el archivo. Descargalo de nuevo y volvé a revisar."
+                );
+            }
+
+            const unidades = { comercios: "comercio(s)", productos: "producto(s)", pedidos: "pedido(s)", rutas: "ruta(s)" };
+            const faltan = revision.totales
+                .filter(total => total.faltan.length)
+                .map(total => total.faltan.length + " " + unidades[total.clave]);
+
+            abrirConfirmacion(
+                "Borrar datos viejos",
+                (faltan.length
+                    ? "Faltan en la nube: " + faltan.join(", ") + ". Después de borrar, quedan solo en el archivo que descargaste: si los necesitás, los recuperás con \"Combinar respaldo\". "
+                    : "Todo está en la nube. ") +
+                    "Se borran de este celular los comercios, productos, marcas, pedidos, rutas y la copia interna viejos. La nube no se toca.",
+                () => {
+                    if (!borrarDatosViejosDelCelular()) {
+                        return mostrarAviso("No se pudo borrar", "Los datos viejos de este celular quedaron como estaban.");
+                    }
+
+                    reiniciarLimpieza();
+                    detalle("respaldo");
+                    mostrarAviso(
+                        "Datos viejos borrados",
+                        "Este celular ya no guarda los datos de antes. Tus datos siguen en la nube, como siempre."
+                    );
+                }
+            );
         }
 
         if (accion === "importar") {

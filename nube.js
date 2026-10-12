@@ -1090,6 +1090,84 @@
     }
 
     // -------------------------------------------------
+    // Limpieza de los datos viejos del celular (T16e)
+    // -------------------------------------------------
+    // Revisa con internet cuántos de los datos viejos del celular están en
+    // la nube, igual que la verificación de T11 (por id o, en comercios,
+    // productos y rutas, por nombre). No escribe nada en la nube.
+    // Devuelve { completo, totales: [{ clave, nombre, enEsteCelular, enLaNube, faltan }] }.
+
+    function nombreParaMostrar(clave, registro, marca) {
+        if (clave === "pedidos") {
+            const comercio = String(registro.comercio || "Sin comercio");
+            return registro.fecha ? comercio + " (" + registro.fecha + ")" : comercio;
+        }
+
+        const nombre = String(registro.nombre || "Sin nombre");
+        return clave === "productos" ? marca + " · " + nombre : nombre;
+    }
+
+    async function revisarDatosViejos(datos) {
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const idDistribuidora = window.distribuidoraVendeFrio?.idActual();
+        const firestore = obtenerFirestore();
+
+        if (!usuario || usuario.isAnonymous || !idDistribuidora || idDistribuidora !== usuario.uid || !firestore) {
+            throw errorMigracion("La nube no está disponible en este momento.", "datos-locales");
+        }
+        if (!navigator.onLine) {
+            throw errorMigracion("Hace falta internet para revisar la nube. Tocá de nuevo cuando vuelva la señal.", "datos-locales");
+        }
+
+        const esRegistro = registro => Boolean(registro) && typeof registro === "object" && !Array.isArray(registro);
+        const productos = [];
+
+        Object.keys(datos.productos).forEach(marca => {
+            datos.productos[marca].filter(esRegistro).forEach(registro => {
+                productos.push({ registro, extras: { _marca: marca } });
+            });
+        });
+
+        const grupos = {
+            comercios: datos.comercios.filter(esRegistro).map(registro => ({ registro, extras: {} })),
+            productos,
+            pedidos: datos.historial.filter(esRegistro).map(registro => ({ registro, extras: {} })),
+            rutas: datos.rutasGuardadas.filter(esRegistro).map(registro => ({ registro, extras: {} }))
+        };
+
+        let enNube;
+
+        try {
+            enNube = await leerIdsEnNube(firestore.collection("distribuidoras").doc(idDistribuidora));
+        } catch (error) {
+            console.error("No se pudo revisar la nube.", error);
+            throw errorMigracion(
+                error && error.code === "permission-denied"
+                    ? "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas."
+                    : "No se pudo revisar la nube. Revisá la señal y probá de nuevo.",
+                "datos-locales"
+            );
+        }
+
+        const totales = GRUPOS_MIGRACION.map(grupo => {
+            const items = grupos[grupo.clave];
+            const faltan = items
+                .filter(item => !estaEnNube(enNube[grupo.clave], grupo.clave, item))
+                .map(item => nombreParaMostrar(grupo.clave, item.registro, item.extras._marca));
+
+            return {
+                clave: grupo.clave,
+                nombre: grupo.nombre,
+                enEsteCelular: items.length,
+                enLaNube: items.length - faltan.length,
+                faltan
+            };
+        });
+
+        return { completo: totales.every(total => !total.faltan.length), totales };
+    }
+
+    // -------------------------------------------------
     // Juntar comercios y productos repetidos (arreglo de T11)
     // -------------------------------------------------
     // Si la migración se corrió desde dos lugares (por ejemplo la vista previa
@@ -1540,6 +1618,8 @@
         usarNube,
         datosDelCelularEnLaNube,
         salirDeLaCuenta,
+        // Limpieza de los datos viejos del celular (T16e).
+        revisarDatosViejos,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),

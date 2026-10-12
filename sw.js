@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v138 - Modo personal)
+// VendeFrío - Service Worker (v139 - Limpieza de datos viejos)
 // =====================================================
-const CACHE_NAME = "vendefrio-v138";
+const CACHE_NAME = "vendefrio-v139";
 const ARCHIVOS = [
   "./",
   "./index.html",
