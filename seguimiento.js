@@ -241,6 +241,27 @@
         actualizarBotonNuevo();
     }).observe(pantalla, { attributes: true, attributeFilter: ["class"] });
 
+    // Después de "Generar Pedido" se vuelve solo a la lista, en "Cargados".
+    // El pedido se sigue copiando al portapapeles y la ventana "Pedido
+    // generado" (con WhatsApp) queda arriba, como antes. Se reconoce porque
+    // esa ventana se abre con la sección Pedido a la vista.
+    const ventanaPedidoGenerado = document.getElementById("modalPedido");
+    if (ventanaPedidoGenerado) {
+        let ventanaOculta = ventanaPedidoGenerado.classList.contains("oculto");
+
+        new MutationObserver(() => {
+            const oculta = ventanaPedidoGenerado.classList.contains("oculto");
+
+            if (ventanaOculta && !oculta && enLaNube() && vistaActual === "nuevo" && !pantalla.classList.contains("oculto")) {
+                etapaActual = "cargados";
+                cambiarVista("pedidos");
+                window.scrollTo(0, 0);
+            }
+
+            ventanaOculta = oculta;
+        }).observe(ventanaPedidoGenerado, { attributes: true, attributeFilter: ["class"] });
+    }
+
     // -------------------------------------------------
     // Lista de pedidos por etapa
     // -------------------------------------------------
