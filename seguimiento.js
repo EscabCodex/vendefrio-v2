@@ -1,20 +1,20 @@
 // =====================================================
 // VendeFrío - seguimiento.js
-// Pedidos y seguimiento (T21): dentro de la sección Pedido, la vista
-// "Pedidos" con filtros por etapa y la ficha de cada pedido, con el
+// Pedidos y seguimiento (T21): la sección Pedido abre la lista "Pedidos",
+// con filtros por etapa, un botón flotante para cargar uno nuevo y la ficha
+// de cada pedido, con el
 // seguimiento de sus estados. Solo en la nube (con cuenta o con código): el
 // modo personal sigue igual. Solo ver: los cambios de estado llegan en T22.
 // =====================================================
 
 (function () {
     const pantalla = document.getElementById("pantallaPedido");
-    const selector = document.getElementById("selectorVistaPedido");
     const vista = document.getElementById("vistaPedidos");
     const filtros = document.getElementById("filtrosEtapaPedidos");
     const resumen = document.getElementById("resumenVistaPedidos");
     const lista = document.getElementById("listaVistaPedidos");
 
-    if (!pantalla || !selector || !vista || !filtros || !resumen || !lista) return;
+    if (!pantalla || !vista || !filtros || !resumen || !lista) return;
 
     const tituloPantalla = pantalla.querySelector("header h1");
     const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo Pedido";
@@ -164,21 +164,38 @@
     }
 
     // -------------------------------------------------
-    // Cambiar de vista: "Nuevo pedido" o "Pedidos"
+    // Cambiar de vista: la lista "Pedidos" o el formulario "Nuevo pedido"
     // -------------------------------------------------
+    // En la nube, la barra de abajo abre la lista y el botón flotante abre el
+    // formulario (la flecha del encabezado vuelve a la lista). Los demás
+    // accesos ("Ir a pedido" de un comercio, "Agregar al pedido" del
+    // catálogo) abren el formulario, como antes. En el modo personal no hay
+    // lista: la sección es el formulario de siempre.
+
+    const botonNuevo = crear("button", "botonNuevoPedido oculto");
+    botonNuevo.type = "button";
+    botonNuevo.setAttribute("aria-label", "Nuevo pedido");
+    botonNuevo.title = "Nuevo pedido";
+    botonNuevo.innerHTML = window.icono ? window.icono("notaLapiz", 26) : "+";
+    document.body.appendChild(botonNuevo);
+
+    const botonVolver = crear("button", "botonVolverPedidos oculto");
+    botonVolver.type = "button";
+    botonVolver.setAttribute("aria-label", "Volver a Pedidos");
+    botonVolver.title = "Volver a Pedidos";
+    botonVolver.innerHTML = window.icono ? window.icono("flechaIzquierda", 22) : "←";
+    const encabezado = pantalla.querySelector("header");
+    if (encabezado) encabezado.insertBefore(botonVolver, encabezado.firstChild);
 
     function cambiarVista(nueva) {
-        vistaActual = enLaNube() && nueva === "pedidos" ? "pedidos" : "nuevo";
+        const nube = enLaNube();
+        vistaActual = nube && nueva === "pedidos" ? "pedidos" : "nuevo";
 
         pantalla.dataset.vista = vistaActual;
         vista.classList.toggle("oculto", vistaActual !== "pedidos");
         if (tituloPantalla) tituloPantalla.textContent = vistaActual === "pedidos" ? "Pedidos" : TITULO_NUEVO;
-
-        selector.querySelectorAll("button[data-vista]").forEach(boton => {
-            const activo = boton.dataset.vista === vistaActual;
-            boton.classList.toggle("activo", activo);
-            boton.setAttribute("aria-selected", activo ? "true" : "false");
-        });
+        botonVolver.classList.toggle("oculto", !nube || vistaActual !== "nuevo");
+        actualizarBotonNuevo();
 
         if (vistaActual === "pedidos") {
             mostrando = TANDA;
@@ -186,33 +203,42 @@
         }
     }
 
-    function mostrarSelectorSiCorresponde() {
-        const mostrar = enLaNube();
-        selector.classList.toggle("oculto", !mostrar);
-        if (!mostrar && vistaActual !== "nuevo") cambiarVista("nuevo");
+    function actualizarBotonNuevo() {
+        botonNuevo.classList.toggle("oculto", !vistaVisible());
     }
 
-    selector.addEventListener("click", evento => {
-        const boton = evento.target.closest("button[data-vista]");
-        if (!boton || boton.dataset.vista === vistaActual) return;
-
-        cambiarVista(boton.dataset.vista);
+    botonNuevo.addEventListener("click", () => {
+        cambiarVista("nuevo");
         window.scrollTo(0, 0);
     });
 
-    // Al entrar a la sección Pedido (desde la barra de abajo o desde otra
-    // pantalla) se abre siempre "Nuevo pedido", como antes.
+    botonVolver.addEventListener("click", () => {
+        cambiarVista("pedidos");
+        window.scrollTo(0, 0);
+    });
+
+    // Se anota en la captura, antes de que menu.js cambie de pantalla.
+    let entrarPorLaBarra = false;
+    document.querySelectorAll('.nav-item[data-pantalla="pedido"]').forEach(boton => {
+        boton.addEventListener("click", () => {
+            entrarPorLaBarra = true;
+        }, true);
+    });
+
     let pantallaOculta = pantalla.classList.contains("oculto");
 
     new MutationObserver(() => {
         const oculta = pantalla.classList.contains("oculto");
 
-        if (pantallaOculta && !oculta) {
-            mostrarSelectorSiCorresponde();
+        if (!oculta && entrarPorLaBarra) {
+            cambiarVista("pedidos");
+        } else if (pantallaOculta && !oculta) {
             cambiarVista("nuevo");
         }
 
+        entrarPorLaBarra = false;
         pantallaOculta = oculta;
+        actualizarBotonNuevo();
     }).observe(pantalla, { attributes: true, attributeFilter: ["class"] });
 
     // -------------------------------------------------
@@ -554,6 +580,5 @@
     // "Pendiente de sincronizar" se va cuando la nube confirma el pedido.
     window.nubeVendeFrio?.escucharSincronizacion?.(() => dibujar());
 
-    mostrarSelectorSiCorresponde();
-    cambiarVista("nuevo");
+    cambiarVista(pantalla.classList.contains("oculto") ? "nuevo" : "pedidos");
 })();

@@ -3253,12 +3253,16 @@ html.conCartelPersonal #pantallaPedido main.container{padding-bottom:calc(158px 
 @media (max-width:359px){.cartelModoPersonal{padding:2px 8px;font-size:11px;line-height:1.2;}}
 
 /* Pedidos y seguimiento (T21): vista "Pedidos" de la sección Pedido y ficha del pedido */
-#pantallaPedido[data-vista="pedidos"] main.container>:not(#selectorVistaPedido):not(#vistaPedidos),
+#pantallaPedido[data-vista="pedidos"] main.container>:not(#vistaPedidos),
 #pantallaPedido[data-vista="pedidos"] footer{display:none !important;}
-.selectorVistaPedido{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 0 8px;padding:4px;border:1px solid var(--borde);border-radius:12px;background:var(--superficie);}
-.selectorVistaPedido.oculto{display:none;}
-.selectorVistaPedido button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;border:none;border-radius:9px;background:transparent;color:var(--texto-sec);font-size:13px;font-weight:800;cursor:pointer;}
-.selectorVistaPedido button.activo{background:var(--acento);color:#fff;}
+.botonNuevoPedido{position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));z-index:950;display:flex;align-items:center;justify-content:center;width:60px;height:60px;border:none;border-radius:50%;background:var(--acento);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s ease;}
+.botonNuevoPedido:active{transform:scale(.94);}
+.botonNuevoPedido.oculto{display:none;}
+html.conCartelPersonal .botonNuevoPedido{bottom:calc(92px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
+.botonVolverPedidos{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;height:40px;margin-right:-6px;border:none;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;}
+.botonVolverPedidos:active{background:var(--gris-claro);}
+.botonVolverPedidos.oculto{display:none;}
+#pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(170px + env(safe-area-inset-bottom)) !important;}
 .filtrosEtapaPedidos{display:flex;gap:6px;margin:0 -12px 6px;padding:2px 12px 6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .filtrosEtapaPedidos::-webkit-scrollbar{display:none;}
 .filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
@@ -3311,8 +3315,6 @@ html.conCartelPersonal #pantallaPedido main.container{padding-bottom:calc(158px 
 .pasoSeguimiento small{display:block;margin-top:1px;color:var(--texto-sec);font-size:12px;}
 .notaSeguimiento{margin-top:4px;font-size:12.5px;font-style:italic;color:var(--texto-sec);overflow-wrap:anywhere;}
 /* Modo oscuro: la regla general deja todos los textos blancos (con !important). */
-html[data-tema="oscuro"] .selectorVistaPedido button{color:#cbd5e1;}
-html[data-tema="oscuro"] .selectorVistaPedido button.activo{color:#fff;}
 html[data-tema="oscuro"] .filtroEtapa{background:#1f2937;border-color:#374151;}
 html[data-tema="oscuro"] .filtroEtapa.activo{background:var(--acento);border-color:var(--acento);}
 html[data-tema="oscuro"] .filtroEtapaCantidad{background:#374151;}
@@ -3339,3 +3341,5 @@ html[data-tema="oscuro"] .productoFichaPedido{border-color:#374151;}
 html[data-tema="oscuro"] .pasoSeguimiento::before,
 html[data-tema="oscuro"] .pasoSeguimiento::after{background:#4b5563;}
 html[data-tema="oscuro"] .pasoSeguimiento.actual::before{background:var(--acento);box-shadow:0 0 0 3px var(--acento-bg);}
+html[data-tema="oscuro"] .botonVolverPedidos{color:#f9fafb;}
+html[data-tema="oscuro"] .botonVolverPedidos:active{background:#374151;}
