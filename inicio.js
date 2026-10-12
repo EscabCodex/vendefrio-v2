@@ -14,6 +14,9 @@
 // Antes, si el celular tiene datos propios, se pregunta una sola vez si se
 // suben (T11) o no. Quien ya usa la nube no ve la pantalla: la sesión queda
 // guardada en el celular y la app abre sin internet.
+// Nombre del dueño (T18): ya en la nube, si la nube confirma que el dueño
+// todavía no cargó su nombre, se le pide una sola vez (obligatorio). Sin
+// internet no se pide: la app abre igual y se pide al volver la señal.
 (function () {
     const CLAVE_SIN_SESION = DB_INICIO_SIN_SESION;
     const LARGO_MINIMO_CONTRASENA = 6;
@@ -122,6 +125,10 @@
 
     function largoNombreEmpleado() {
         return window.empleadosVendeFrio?.largoMaximoNombre || 60;
+    }
+
+    function largoNombreDueno() {
+        return window.distribuidoraVendeFrio?.largoMaximoNombreDueno || 60;
     }
 
     function escapar(texto) {
@@ -387,6 +394,21 @@
                         de Safari &gt; "Agregar a inicio". Si no la instalás, el celular
                         puede borrar los datos de la app y vas a necesitar un código nuevo.
                     </p>
+                    <p class="inicioError oculto" role="alert"></p>
+                    <button type="submit" class="inicioPrincipal">Guardar y entrar</button>
+                </form>
+
+                <form data-paso="duenoDatos" class="inicioFormulario oculto" id="inicioFormDatosDueno" novalidate>
+                    <h2>Tu nombre</h2>
+                    <p class="inicioAclaracion">
+                        Así te ven tus empleados y así va a figurar quién hizo cada
+                        cosa en los pedidos. Se pide una sola vez: después lo cambiás
+                        en Configuración &gt; Cuenta.
+                    </p>
+                    <label>Tu nombre
+                        <input type="text" id="inicioNombreDueno" autocomplete="name"
+                            maxlength="${largoNombreDueno()}" placeholder="Por ejemplo: Juan Pérez" required>
+                    </label>
                     <p class="inicioError oculto" role="alert"></p>
                     <button type="submit" class="inicioPrincipal">Guardar y entrar</button>
                 </form>
@@ -746,6 +768,62 @@
             });
     }
 
+    // --- Nombre del dueño (T18) ---
+
+    function pasoAbierto(nombre) {
+        return Boolean(pantalla && !pantalla.querySelector(`[data-paso="${nombre}"]`)?.classList.contains("oculto"));
+    }
+
+    // Se revisa cada vez que cambia lo que se sabe del nombre del dueño. Solo
+    // con la nube: antes de entrar (migración, registro) no se pide. Si ya lo
+    // cargó en otro celular mientras la pantalla estaba abierta, se cierra.
+    function revisarNombreDueno() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!distribuidora || !distribuidora.faltaNombreDueno) return;
+
+        const falta = usaNubeReal() && distribuidora.faltaNombreDueno();
+        const abierta = pasoAbierto("duenoDatos");
+
+        if (!falta) {
+            if (abierta && distribuidora.nombreDuenoActual()) cerrar();
+            return;
+        }
+
+        if (abierta) return;
+        // Otra pantalla de inicio en curso (por ejemplo, entrando a la nube).
+        if (pantalla) return;
+
+        crear();
+        mostrarPaso("duenoDatos");
+    }
+
+    function enviarDatosDueno(formulario, boton) {
+        const distribuidora = window.distribuidoraVendeFrio;
+        const nombre = (document.getElementById("inicioNombreDueno")?.value || "").trim();
+
+        if (!nombre) {
+            mostrarError(formulario, "Escribí tu nombre.");
+            return;
+        }
+        if (!distribuidora || !distribuidora.cambiarNombreDueno) {
+            mostrarError(formulario, "La nube no está disponible en este momento.");
+            return;
+        }
+
+        mostrarError(formulario, "");
+        const liberar = ocupar(boton, "Guardando…");
+
+        distribuidora.cambiarNombreDueno(nombre)
+            .then(guardado => {
+                cerrar();
+                mostrarToast("¡Hola, " + escapar(guardado) + "!");
+            })
+            .catch(error => {
+                liberar();
+                mostrarError(formulario, error.message);
+            });
+    }
+
     // --- Modo personal (T16d) ---
 
     let personalDesdeConfiguracion = false;
@@ -968,6 +1046,11 @@
             return;
         }
 
+        if (formulario.id === "inicioFormDatosDueno") {
+            enviarDatosDueno(formulario, boton);
+            return;
+        }
+
         if (formulario.id === "inicioFormIngresar") {
             const email = document.getElementById("inicioEmail")?.value || "";
             const contrasena = document.getElementById("inicioContrasena")?.value || "";
@@ -1101,4 +1184,11 @@
     };
 
     decidir();
+
+    // Nombre del dueño (T18): distribuidora.js avisa cuando la nube confirma
+    // si ya lo tiene.
+    if (window.distribuidoraVendeFrio?.escucharNombreDueno) {
+        window.distribuidoraVendeFrio.escucharNombreDueno(revisarNombreDueno);
+        window.distribuidoraVendeFrio.escuchar(revisarNombreDueno);
+    }
 }());

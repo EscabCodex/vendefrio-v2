@@ -12,6 +12,8 @@
 //   acceso y vuelve al inicio.
 // - Panel del dueño (T15): cambiar roles, anular códigos sin usar, dar de baja
 //   y editar la lista de roles.
+// - "Quién soy" (T18): quién usa este celular (dueño, empleado o modo
+//   personal), para registrar quién hace cada cosa en la Etapa 3.
 // Los datos de este celular (localStorage) no se leen ni se borran.
 (function () {
     // Este celular es de un empleado: { uid, distribuidora, idEmpleado }.
@@ -43,6 +45,8 @@
     const oyentesRoles = [];
     const oyentesEmpleados = [];
     const oyentesCodigos = [];
+    const oyentesQuienSoy = [];
+    let ultimoQuienSoy = "null";
     let dejarDeEscucharEmpleados = null;
     let saliendo = false;
 
@@ -868,6 +872,71 @@
     }
 
     // -------------------------------------------------
+    // Quién usa este celular (T18)
+    // -------------------------------------------------
+
+    // Devuelve { tipo, idPersona, nombre, roles, uid } o null si todavía no
+    // se sabe (por ejemplo, en la pantalla de inicio):
+    // - "dueno": idPersona "dueno", su nombre (puede estar vacío mientras no
+    //   lo cargó) y sin roles: el dueño siempre puede todo.
+    // - "empleado": idPersona es el id de su ficha (no cambia con un
+    //   reingreso), con su nombre y sus roles.
+    // - "personal": modo personal (sin cuenta), sin idPersona ni uid. La
+    //   Etapa 3 no lo usa: queda como está.
+    function quienSoy() {
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+
+        if (esEmpleado()) {
+            const guardado = leerGuardado();
+            return {
+                tipo: "empleado",
+                idPersona: guardado.idEmpleado,
+                nombre: miFicha?.nombre || "",
+                roles: (miFicha?.roles || []).slice(),
+                uid: usuario.uid
+            };
+        }
+
+        if (esDueno()) {
+            return {
+                tipo: "dueno",
+                idPersona: "dueno",
+                nombre: window.distribuidoraVendeFrio?.nombreDuenoActual?.() || "",
+                roles: [],
+                uid: usuario.uid
+            };
+        }
+
+        const inicio = window.inicioVendeFrio;
+        const personal = inicio?.usaModoPersonal?.() ? inicio.datosPersonales() : null;
+        if (personal) {
+            return {
+                tipo: "personal",
+                idPersona: null,
+                nombre: personal.nombre,
+                roles: personal.roles.slice(),
+                uid: null
+            };
+        }
+
+        return null;
+    }
+
+    // Avisa solo si cambió algo.
+    function avisarQuienSoy() {
+        const actual = quienSoy();
+        const texto = JSON.stringify(actual);
+        if (texto === ultimoQuienSoy) return;
+
+        ultimoQuienSoy = texto;
+        avisarA(oyentesQuienSoy, actual);
+    }
+
+    function escucharQuienSoy(oyente) {
+        return sumarOyente(oyentesQuienSoy, oyente, quienSoy());
+    }
+
+    // -------------------------------------------------
     // Arranque
     // -------------------------------------------------
 
@@ -899,7 +968,10 @@
         crearRol,
         renombrarRol,
         eliminarRol,
-        cantidadConRol: id => empleadosConRol(id).length
+        cantidadConRol: id => empleadosConRol(id).length,
+        // Quién usa este celular (T18)
+        quienSoy,
+        escucharQuienSoy
     };
 
     // El celular de un empleado arranca a escuchar apenas se sabe la cuenta.
@@ -943,8 +1015,19 @@
                 empleados = [];
                 codigosSinUsar = [];
             }
+            avisarQuienSoy();
         });
+
+        window.distribuidoraVendeFrio.escucharNombreDueno?.(avisarQuienSoy);
     }
+
+    // "Quién soy" cambia también con la ficha del empleado, la cuenta y el
+    // modo personal (T18).
+    oyentesMiFicha.push(avisarQuienSoy);
+    window.cuentaVendeFrio?.escuchar(avisarQuienSoy);
+    window.addEventListener("modoPersonalVendeFrio", avisarQuienSoy);
+    // inicio.js (modo personal) carga después que este archivo.
+    window.addEventListener("load", avisarQuienSoy);
 
     window.dispatchEvent(new Event("empleadosVendeFrioLista"));
 }());

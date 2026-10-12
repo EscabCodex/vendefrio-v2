@@ -184,6 +184,42 @@
         `;
     }
 
+    // --- Nombre del dueño (T18) ---
+    // Solo para el dueño de la distribuidora: así figura en lo que hace,
+    // en vez de su email.
+    let editandoNombreDueno = false;
+
+    function htmlNombreDueno() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        if (!distribuidora || !distribuidora.nombreDuenoActual || !usuario || usuario.isAnonymous) return "";
+        if (!distribuidora.idActual() || distribuidora.idActual() !== usuario.uid) return "";
+
+        const nombre = distribuidora.nombreDuenoActual();
+
+        if (editandoNombreDueno) {
+            return `
+                <form class="configCuentaFormulario" id="formNombreDueno" novalidate>
+                    <label>${window.icono("persona",15)} Tu nombre
+                        <input type="text" id="nombreDuenoNuevo" autocomplete="name"
+                            maxlength="${distribuidora.largoMaximoNombreDueno}" value="${escaparTexto(nombre)}" required>
+                    </label>
+                    <p class="configCuentaError oculto" id="nombreDuenoError" role="alert"></p>
+                    <button type="submit" class="configCuentaIngresar">Guardar mi nombre</button>
+                    <button type="button" data-accion="cancelarNombreDueno">Cancelar</button>
+                </form>
+            `;
+        }
+
+        return `
+            <p class="configEstado">
+                Tu nombre (dueño)<br>
+                <strong id="cuentaNombreDueno">${escaparTexto(nombre) || "Todavía sin cargar"}</strong>
+            </p>
+            <button type="button" data-accion="editarNombreDueno">Cambiar mi nombre</button>
+        `;
+    }
+
     function htmlDistribuidora() {
         const estado = window.distribuidoraVendeFrio?.estado() || "noDisponible";
 
@@ -928,6 +964,7 @@
                     Sesión iniciada como<br>
                     <strong>${escaparTexto(usuario.email)}</strong>
                 </p>
+                ${htmlNombreDueno()}
                 ${htmlNombreDistribuidora()}
                 ${htmlDistribuidora()}
                 ${enLaNube ? "" : `
@@ -1696,6 +1733,21 @@
             detalle("cuenta");
         }
 
+        if (accion === "editarNombreDueno") {
+            editandoNombreDueno = true;
+            detalle("cuenta");
+            const campo = document.getElementById("nombreDuenoNuevo");
+            if (campo) {
+                campo.focus();
+                campo.select();
+            }
+        }
+
+        if (accion === "cancelarNombreDueno") {
+            editandoNombreDueno = false;
+            detalle("cuenta");
+        }
+
         if (accion === "reintentarDistribuidora") {
             window.distribuidoraVendeFrio?.reintentar();
         }
@@ -1812,6 +1864,37 @@
         window.distribuidoraVendeFrio.cambiarNombre(nombre)
             .then(() => {
                 editandoNombre = false;
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Nombre guardado" : "Nombre guardado. Se sube cuando vuelva la señal");
+            })
+            .catch(fallo => {
+                if (error) {
+                    error.textContent = fallo.message;
+                    error.classList.remove("oculto");
+                }
+            });
+    });
+
+    // Nombre del dueño (T18).
+    document.addEventListener("submit", event => {
+        if (event.target.id !== "formNombreDueno") return;
+
+        event.preventDefault();
+
+        const nombre = (document.getElementById("nombreDuenoNuevo")?.value || "").trim();
+        const error = document.getElementById("nombreDuenoError");
+
+        if (!nombre) {
+            if (error) {
+                error.textContent = "Escribí tu nombre.";
+                error.classList.remove("oculto");
+            }
+            return;
+        }
+
+        window.distribuidoraVendeFrio.cambiarNombreDueno(nombre)
+            .then(() => {
+                editandoNombreDueno = false;
                 if (seccionAbierta === "cuenta") detalle("cuenta");
                 mostrarToast(navigator.onLine ? "Nombre guardado" : "Nombre guardado. Se sube cuando vuelva la señal");
             })
@@ -1972,6 +2055,12 @@
 
             const texto = document.getElementById("cuentaNombreDistribuidora");
             if (texto) texto.textContent = nombre || "…";
+        });
+
+        // Nombre del dueño (T18): también solo el texto.
+        window.distribuidoraVendeFrio.escucharNombreDueno?.(nombreDueno => {
+            const texto = document.getElementById("cuentaNombreDueno");
+            if (texto) texto.textContent = nombreDueno || "Todavía sin cargar";
         });
     }
 
