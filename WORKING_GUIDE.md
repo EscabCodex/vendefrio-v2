@@ -48,7 +48,7 @@ Cada chat de Claude parte de cero y no garantiza recordar los anteriores. La app
 ## Rutina de cada sesión
 
 1. **Abrir una sesión nueva de Claude Code** sobre el repo `EscabCodex/vendefrio-v2`. Claude Code lee `CLAUDE.md` solo y, desde ahí, los demás documentos.
-2. **Pedir una sola tarea** del plan en un mensaje (por ejemplo "hacé solo T1, tal como está en `PROJECT_STATE.md`").
+2. **Pedir una sola tarea** del plan en un mensaje (por ejemplo "hacé solo T1, tal como está en `PROJECT_STATE.md`"). Antes, elegir en la sesión el **esfuerzo recomendado** que figura en esa tarea del plan (Medio, Alto o Extra). Si una tarea no lo tiene, Claude Code lo recomienda al empezar.
 3. **Esperar el pull request** que abre Claude Code en una rama nueva, con la tarea marcada y la línea de la bitácora.
 4. **Probar la vista previa de Vercel** en el celular (ver "Revisar un pull request y probar").
 5. **Unir el pull request a `main`** solo si todo funciona. Si algo falla, avisarle a Claude Code en la misma sesión.

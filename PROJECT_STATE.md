@@ -478,7 +478,7 @@ Reglas completas en "Usuarios y acceso" (Decisiones tomadas).
 
 ### Bloque F — Pedido completo (Etapa 3)
 
-Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por sesión y en este orden: cada una se apoya en la anterior. Todo lo de este bloque es solo para la nube (con cuenta o con código); el modo personal no cambia. Cada tarea que cambia `firestore.rules` termina con su publicación en la consola de Firebase, que hace el dueño con los pasos de Claude Code (como M5 y M6): sin eso, la nube rechaza lo nuevo. Para probar en la vista previa se usa la cuenta de prueba, con un empleado de prueba en otro celular o en una ventana de incógnito.
+Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por sesión y en este orden: cada una se apoya en la anterior. Todo lo de este bloque es solo para la nube (con cuenta o con código); el modo personal no cambia. Cada tarea que cambia `firestore.rules` termina con su publicación en la consola de Firebase, que hace el dueño con los pasos de Claude Code (como M5 y M6): sin eso, la nube rechaza lo nuevo. Para probar en la vista previa se usa la cuenta de prueba, con un empleado de prueba en otro celular o en una ventana de incógnito. Cada tarea dice el **esfuerzo recomendado** para la sesión de Claude Code (cuánto piensa antes de actuar: Medio, Alto o Extra), según el riesgo: más alto cuando toca reglas, datos de la nube real o el trabajo sin señal. No hace falta Max ni ultracode (muchos agentes a la vez): gastan mucho más límite de uso para un repo de este tamaño.
 
 - [x] **T17 — Decisiones previas de la Etapa 3.**
   - Revisar con el dueño, antes de programar, las decisiones abiertas del `ROADMAP.md` que hacen falta para la Etapa 3 y dividirla en tareas chicas.
@@ -504,6 +504,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js`, `database.js`, `nube.js`, `historial.js`, `firestore.rules` (crear un pedido solo a nombre propio; productos, comercio y observaciones solo los cambia el autor o el dueño; el historial de estados solo agrega), `sw.js`.
   - **Riesgos:** es la base de toda la etapa; un celular con la versión vieja (sin actualizar) cargaría pedidos sin estado, que se verían como "Histórico": unir al final de un día sin pedidos pendientes y avisar a todos que abran la app para actualizarla; hasta T26 cualquiera sigue pudiendo eliminar.
   - **Aceptación:** un pedido nuevo aparece "Cargado" con autor y precios en dos celulares; sin internet se guarda y sube al volver; los pedidos de antes se ven como "Histórico" y no cambian en la nube; dos escrituras a la vez sobre campos distintos del mismo pedido no se pisan; reglas probadas con los emuladores; modo personal igual que antes.
+  - **Esfuerzo recomendado:** Extra (es la base de toda la etapa: cambia cómo se guardan los pedidos en la nube real, suma reglas y tiene que andar sin señal).
 - [ ] **T21 — Pedidos y seguimiento (vistas).**
   - **Problema:** no hay dónde ver en qué etapa está cada pedido.
   - **Usuario:** todos.
@@ -511,6 +512,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `index.html`, `pedidos.js` (o un archivo nuevo para la vista, si conviene), `styles.css`, `iconos.js`, `sw.js`.
   - **Riesgos:** que la sección Pedido quede cargada de botones (cuidar el norte de calidad); rendimiento con muchos pedidos en celulares comunes.
   - **Aceptación:** un pedido cargado en un celular aparece en "Cargados" del otro al instante; la ficha muestra todo; se ve bien en claro y oscuro y con una mano; cargar un pedido sigue igual.
+  - **Esfuerzo recomendado:** Medio (solo pantalla, sin cambiar datos).
 - [ ] **T22 — Cambiar de estado.**
   - **Problema:** el pedido no avanza.
   - **Usuario:** depósito, reparto y administración.
@@ -518,6 +520,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, `firestore.rules` (cada paso solo con su permiso), `styles.css`, `sw.js`.
   - **Riesgos:** dos cambios de estado sin señal que llegan desordenados; botones visibles sin permiso (las reglas igual los rechazarían, pero el error confunde).
   - **Aceptación:** con dos celulares y roles distintos, cada uno ve solo sus pasos; un cambio se ve al instante en el otro; volver atrás exige motivo y queda en el historial; sin internet el cambio se guarda y sube al volver; un cambio sin permiso lo rechazan las reglas (probado con los emuladores).
+  - **Esfuerzo recomendado:** Alto (reglas por permiso y cambios de estado sin señal).
 - [ ] **T23 — Avisos en la app.**
   - **Problema:** nadie se entera de los cambios si no mira la lista.
   - **Usuario:** todos.
@@ -525,6 +528,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** archivo nuevo de avisos, `nube.js`, `index.html`, `configuracion.js`, `styles.css`, `iconos.js`, `firestore.rules` (cada uno lee solo sus avisos y marca solo sus leídos), `sw.js`.
   - **Riesgos:** demasiados avisos (por eso las preferencias); lecturas y escrituras del plan gratis (con 4 o 5 personas sobra); avisos viejos acumulados (se muestran los últimos y se limpian los leídos viejos).
   - **Aceptación:** Jere carga un pedido y a Maxi le aparece el aviso al instante; con la app cerrada lo ve al abrir; Jere no recibe su propio aviso; desactivar un tipo en Configuración lo deja de mostrar; claro y oscuro.
+  - **Esfuerzo recomendado:** Alto (archivo nuevo, reglas nuevas y varias pantallas).
 - [ ] **T24 — Checklist de preparación y faltantes.**
   - **Problema:** hoy no hay forma de asegurar que se armó exactamente lo pedido.
   - **Usuario:** depósito (y cualquiera que ayude).
@@ -532,6 +536,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules` (cualquiera tilda; "Preparado" solo con permiso), `styles.css`, `sw.js`.
   - **Riesgos:** dos personas que tildan y destildan el mismo producto sin señal (queda el último y se ve quién); casillas chicas para usar con una mano; el botón deslizable en celulares viejos.
   - **Aceptación:** dos celulares arman el mismo pedido y se ven los tildes del otro al instante; sin tildar todo no se puede marcar "Preparado"; un faltante conserva lo pedido y lo preparado y avisa; el resumen coincide con lo tildado; sin internet se tilda y sube al volver.
+  - **Esfuerzo recomendado:** Extra (dos personas tildando el mismo pedido a la vez, también sin señal).
 - [ ] **T25 — Editar el pedido.**
   - **Problema:** el autor no puede corregir un pedido ya cargado.
   - **Usuario:** quien cargó el pedido y el dueño.
@@ -539,6 +544,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js`, `nube.js`, archivo de avisos, `firestore.rules`, `styles.css`, `sw.js`.
   - **Riesgos:** que editar se confunda con cargar un pedido nuevo (el borrador del pedido nuevo no se tiene que perder); edición sin señal mientras otro tilda.
   - **Aceptación:** Jere edita mientras Maxi arma y Maxi ve el aviso y la franja con lo que cambió; los tildes de lo que no cambió siguen; nadie más puede editar (probado contra las reglas); el borrador del pedido nuevo sigue intacto.
+  - **Esfuerzo recomendado:** Alto (no perder tildes ni el borrador del pedido nuevo).
 - [ ] **T26 — Eliminar y cancelar.**
   - **Problema:** hoy cualquiera borra cualquier pedido y no existe "Cancelado".
   - **Usuario:** quien cargó el pedido y el dueño.
@@ -546,6 +552,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `historial.js`, `pedidos.js`, `estadisticas.js`, `nube.js`, `firestore.rules` (nadie borra un pedido de verdad; marcar eliminado solo el autor o el dueño), `sw.js`.
   - **Riesgos:** cambia el botón "Eliminar" de Historial que hoy usan todos; Estadísticas tiene que dejar afuera los cancelados sin cambiar las cuentas de antes.
   - **Aceptación:** un empleado no puede eliminar ni cancelar pedidos de otro (tampoco contra las reglas); un pedido en preparación no se puede eliminar, solo cancelar; un cancelado no suma en Estadísticas; el modo personal sigue igual.
+  - **Esfuerzo recomendado:** Alto (cambia el botón "Eliminar" que hoy usan todos y las cuentas de Estadísticas).
 - [ ] **T27 — Entrega.**
   - **Problema:** no hay forma de cerrar el pedido ni de anotar una entrega con cambios.
   - **Usuario:** quien entrega (cualquiera).
@@ -553,6 +560,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules`, `styles.css`, `sw.js`.
   - **Riesgos:** deslizar sin querer (el gesto tiene que ser claro y se puede volver atrás con motivo); entregas sin señal en la calle (se guardan y suben al volver).
   - **Aceptación:** cualquiera entrega desde su celular y el otro lo ve en "Entregados"; entregar con cambios conserva lo pedido, lo preparado y lo entregado; el total coincide con lo entregado; funciona sin internet.
+  - **Esfuerzo recomendado:** Alto (reglas y entregas sin señal en la calle).
 - [ ] **T28 — Cobro.**
   - **Problema:** no se sabe qué pedidos se cobraron, cómo ni quién.
   - **Usuario:** quien tiene "Cobra".
@@ -560,7 +568,8 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** `pedidos.js` (o el archivo de la vista), `nube.js`, archivo de avisos, `firestore.rules` (solo "Cobra" registra; la foto con tamaño máximo), `styles.css`, `sw.js`.
   - **Riesgos:** fotos pesadas (límite de 1 MB por documento y del plan gratis); subir una foto sin señal (queda pendiente y se ve que falta subir).
   - **Aceptación:** quien no tiene "Cobra" no ve la pregunta ni puede registrar el cobro (tampoco contra las reglas); la foto se ve en otro celular; "A cobrar" muestra solo los pendientes; el monto corregido queda guardado.
-- [ ] **M8 — Preparar las notificaciones (dueño).** En la consola de Firebase, generar la clave para notificaciones web y la clave de la cuenta de servicio, y cargar esta última como variable de entorno en Vercel (nunca en el repo). Claude Code pasa los pasos.
+  - **Esfuerzo recomendado:** Alto (fotos con tamaño máximo y reglas).
+- [ ] **M8 — Preparar las notificaciones (dueño).** En la consola de Firebase, generar la clave para notificaciones web y la clave de la cuenta de servicio, y cargar esta última como variable de entorno en Vercel (nunca en el repo). Claude Code pasa los pasos. **Esfuerzo recomendado:** Medio (son pasos para el dueño, sin código).
 - [ ] **T29 — Notificaciones con la app cerrada.**
   - **Problema:** los avisos solo se ven con la app abierta.
   - **Usuario:** todos.
@@ -568,6 +577,7 @@ Decisiones en "Pedido completo, Etapa 3" (Decisiones tomadas). Una tarea por ses
   - **Archivos:** SDK de mensajería de Firebase en la carpeta `firebase`, `sw.js` (recibe las notificaciones), archivo de avisos, `configuracion.js`, `firestore.rules` (dispositivos), función nueva en `api`, `package.json` (dependencia para la función), `vercel.json`.
   - **Riesgos:** la clave de la cuenta de servicio da acceso total a la nube (solo en Vercel); iPhone exige la app instalada e iOS 16.4 o más; notificaciones que se mandan dos veces o a quien ya no es miembro; el plan gratis de Vercel es para uso no comercial.
   - **Aceptación:** con dos celulares reales (un Android y, si hay, un iPhone instalado), Jere carga un pedido con la app de Maxi cerrada y a Maxi le suena; tocarla abre el pedido; desactivar un tipo de aviso lo deja de mandar; un empleado dado de baja no recibe más; nadie de afuera puede usar la función para mandar notificaciones.
+  - **Esfuerzo recomendado:** Extra (maneja la clave de la cuenta de servicio, que da acceso total a la nube).
 - [ ] **M9 — Prueba de un día real (dueño).** Usar la Etapa 3 completa un día de trabajo con el equipo y anotar lo que haya que ajustar. Cierra la Etapa 3.
 
 ## Decisiones abiertas de la migración
@@ -637,3 +647,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-12 — Claude Code: T17. Se revisó el código que toca pedidos (`pedidos.js`, `historial.js`, `database.js`, `nube.js`, `firestore.rules`) y `ORDER_FLOW.md`: el pedido no tiene estado, autor ni precio, en la nube se guarda entero (dos personas se pisarían), la subcolección `estados` no se usa, cualquiera borra cualquier pedido, los pedidos cargados desde T16c no tienen estado y el dueño no tiene nombre. El dueño decidió: cada cambio se guarda por separado; solo el autor (y el dueño) edita en cualquier estado, elimina (solo en "Cargado") y cancela (con motivo); checklist que puede tildar cualquiera, con las 5 soluciones contra errores; permisos por rol (Prepara pedidos, Reparte, Cobra, Recibe aviso de faltantes, Controla pedidos) y el dueño puede todo; volver un paso atrás con motivo; avisos en la app con preferencias y notificaciones con la app cerrada (Firebase Cloud Messaging y una función de Vercel, gratis); "Entregado" deslizable para cualquiera, con "Entregar con cambios"; cobro aparte, solo con "Cobra" (opción A); precio guardado al cargar; pedidos sin estado como "Histórico"; nombre del dueño; modo personal sin cambios. Decisiones en "Pedido completo, Etapa 3"; plan en el Bloque F (T18 a T29, M8 y M9). Se cerraron en `ROADMAP.md` "dos personas sobre el mismo pedido" y "quién puede cambiar cada estado", y se actualizaron `ORDER_FLOW.md` y `PRODUCT.md`. Sin cambios de código. Próximo paso: T18.
 - 2026-10-12 — Claude Code: T18. `distribuidora.js` guarda el nombre del dueño en la distribuidora (`nombreDueno`, hasta 60 caracteres) y lo escucha junto con el nombre de la distribuidora, ahora también cuando la nube confirma lo que ya estaba en la copia del celular. `inicio.js`: ya en la nube, si la nube confirma que el dueño no tiene nombre, la pantalla "Tu nombre" tapa la app (obligatorio, sin nombre no avanza); sin internet no se pide (no se sabe si ya lo cargó en otro celular) y se pide al volver la señal; si otro celular lo carga mientras está abierta, se cierra sola; si la nube lo rechaza (reglas sin publicar) avisa y no se vuelve a pedir hasta reabrir, para no trabar la entrada. `configuracion.js`: Cuenta del dueño muestra "Tu nombre (dueño)" con "Cambiar mi nombre". `empleados.js`: `quienSoy()` y `escucharQuienSoy()` (dueño: `idPersona` "dueno", sin roles porque puede todo; empleado: id de su ficha, nombre y roles; modo personal: sin `idPersona` ni uid). `firestore.rules`: el dueño puede cambiar `nombreDueno` (texto de 1 a 60 caracteres, no se puede borrar); empleados y otras cuentas no; lo demás sigue igual. Service worker con caché `vendefrio-v140`. Probado con los emuladores de Firebase: 17 pruebas de reglas y 43 pruebas en navegador con siete celulares simulados (registro y pedido del nombre una vez, vacío o con espacios no avanza, otro celular no lo pide y lo ve, cambio en Cuenta que llega al otro al instante, empleado sin cambios que lee el nombre y no lo puede cambiar, modo personal sin cambios, sin internet abre sin pedirlo y lo pide al volver, se cierra si otro celular lo carga, con las reglas viejas avisa y no traba, `localStorage` de datos idéntico, claro y oscuro). Próximo paso: el dueño publica las reglas nuevas en la consola de Firebase, prueba en la vista previa con la cuenta de prueba y después T19.
 - 2026-10-12 — Claude Code: T19. `empleados.js`: los 5 permisos (`prepara`, `reparte`, `cobra`, `avisoFaltantes`, `controla`) y los acordados para los precargados (Depósito: Prepara y Reparte; Repartidor: Reparte; Cobranza: Cobra; Administración: aviso de faltantes y Controla; Vendedor y los roles nuevos, ninguno). Cada rol de `config/roles` guarda `permisos`; en el mismo documento van `porPermiso` (copia por permiso para las reglas) y `permisosIniciales`. El dueño escucha la lista de roles desde que entra y, la primera vez que la nube confirma que falta la marca, una transacción completa los permisos de los precargados que quedan (por id: renombrados igual, borrados no vuelven) sin tocar nada si otro celular ya lo hizo. `cambiarPermisoDeRol`, `puede`, `misPermisos`, `nombresDePermisos` y `escucharPermisos` (el dueño puede todo; el modo personal, nada). `configuracion.js`: casillas de permiso en cada rol de "Editar roles" (se guardan al tocarlas; al redibujar no se pierde lo que se estaba escribiendo) y "Tus permisos" en la Cuenta del empleado, que se actualiza sola. `firestore.rules`: `config/roles` exige lista, copia por permiso con los 5 permisos y la marca; solo el dueño la escribe. `styles.css` (casillas en claro y oscuro) y service worker `vendefrio-v141`. Probado con los emuladores de Firebase: 27 pruebas de reglas y 38 en navegador con cuatro celulares simulados (lista vieja con Depósito renombrado, Cobranza borrada y un rol nuevo: recibe los permisos una sola vez y no vuelven al reabrir; marcar Cobra llega al empleado y a su Cuenta al instante; renombrar conserva y eliminar quita los permisos; el empleado no puede cambiarlos ni desde la app ni contra las reglas; modo personal sin permisos; sin errores en la consola; 360 px sin scroll de costado; claro y oscuro). Visto y anotado en Pendientes: el empleado puede elegir sus propios roles, y con ellos sus permisos. Próximo paso: el dueño publica las reglas nuevas, abre la app como dueño con internet (completa los permisos), prueba en la vista previa con la cuenta de prueba y después T20.
+- 2026-10-12 — Claude Code: el dueño publicó las reglas de T19 y unió T19 a `main` (la primera vista previa falló en Vercel y la segunda salió bien). A pedido del dueño, cada tarea pendiente del Bloque F tiene "Esfuerzo recomendado" (Medio, Alto o Extra según el riesgo) y `WORKING_GUIDE.md` lo suma a la rutina de cada sesión. Sin cambios de código. Próximo paso: T20, con esfuerzo Extra, unida al final de un día sin pedidos pendientes.
