@@ -23,8 +23,8 @@ Muchas distribuidoras funcionan con cuadernos, listas impresas, mensajes de What
 ## Pilares
 
 - **Venta:** carga rápida, catálogo y precios confiables, comercios y visitas, repetición de pedidos habituales.
-- **Operación:** pedidos compartidos, estados, responsables, preparación, reparto, entrega e incidencias.
-- **Administración (después):** stock, cuentas, comprobantes e impresión.
+- **Operación:** pedidos compartidos, estados, responsables, preparación, reparto, entrega, ticket impreso e incidencias.
+- **Administración (después):** stock, cuentas y comprobantes.
 - **Inteligencia (después):** reposición, clientes sin visitar, evolución de ventas.
 
 ## Alcance de la versión 1.0

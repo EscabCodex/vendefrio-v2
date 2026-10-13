@@ -17,6 +17,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 **Etapa 3 — Pedido completo** (decidida el 2026-10-12; tareas T18 a T29 en el Bloque F de `PROJECT_STATE.md`)
 - Ciclo de estados con historial, responsables y permisos por rol.
 - Checklist de preparación, faltantes, entrega y cobro con foto opcional.
+- Ticket impreso del pedido por Bluetooth, solo Android (T28b).
 - Avisos dentro de la app y notificaciones con la app cerrada.
 - Trabajo sin conexión con sincronización automática.
 
@@ -30,7 +31,7 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 ## Después de la 1.0
 
 1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.
-2. **Operación comercial:** cuentas corrientes, comprobantes simples, impresión de boletas.
+2. **Operación comercial:** cuentas corrientes y comprobantes simples (el ticket impreso del pedido ya entra en la 1.0, T28b).
 3. **Facturación** fiscal e integraciones contables, según el país.
 4. **Inteligencia comercial:** comercios sin visitar, pedidos inusuales, productos de baja rotación, resúmenes accionables.
 5. **Producto comercializable:** multiempresa, planes de pago, panel para distribuidoras, soporte y documentación.
