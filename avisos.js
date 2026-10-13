@@ -15,8 +15,8 @@
 //   celular, y quien hace un cambio no le deja aviso a quien lo apagó.
 // - Arranca con los avisos que ya existen: pedido nuevo, incidencia y su
 //   resolución. Cada tarea siguiente suma los suyos: pedido preparado y
-//   faltante (T24), pedido editado (T25), pedido cancelado (T26) y pedido
-//   entregado (T27).
+//   faltante (T24), pedido editado (T25), pedido cancelado (T26), pedido
+//   entregado (T27) y, si el cobro quedó pendiente, también a "Cobra" (T28).
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -43,7 +43,7 @@
         {
             id: "entregado",
             nombre: "Pedido entregado",
-            quien: "Le llega a quien cargó el pedido.",
+            quien: "Le llega a quien cargó el pedido y, si el cobro quedó pendiente, a quien cobra.",
             icono: "check",
             hecho: "Entregado por"
         },
@@ -340,8 +340,18 @@
             dejarAvisos("pedidoCancelado", pedido, accion.motivo, [autor, ...quienesTrabajanEnElPedido(pedido, accion.estado)]);
         } else if (accion.accion === "entregado") {
             // T27: "15 unidades · $ 12.500 · Con cambios: …". A quien lo
-            // cargó; a "Cobra", si el cobro quedó pendiente, llega con T28.
-            dejarAvisos("entregado", pedido, accion.resumen, [autor]);
+            // cargó y, si el cobro quedó pendiente (quien entregó no tiene
+            // "Cobra"), también a "Cobra" (T28).
+            if (accion.cobroPendiente) {
+                dejarAvisos("entregado", pedido, "Cobro pendiente · " + accion.resumen, [autor, ...personasConPermiso("cobra")]);
+            } else {
+                dejarAvisos("entregado", pedido, accion.resumen, [autor]);
+            }
+        } else if (accion.accion === "cobroPendiente") {
+            // T28: quien entregó tenía "Cobra" y el comercio todavía no pagó:
+            // a los demás de "Cobra" (quien cargó el pedido ya recibió el de
+            // la entrega).
+            dejarAvisos("entregado", pedido, accion.resumen, personasConPermiso("cobra").filter(id => id !== autor));
         }
     }
 

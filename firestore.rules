@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27)
+// T22, T23, T24, T25, T26, T27, T28)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -37,7 +37,11 @@ rules_version = '2';
 //                                   marca como eliminado y cancelar es un
 //                                   estado más, los dos solo del autor o el
 //                                   dueño (T26); "Entregado" va junto con
-//                                   lo entregado en "entrega" (T27)
+//                                   lo entregado en "entrega" (T27); el
+//                                   cobro, solo "Cobra" (T28)
+//     comprobantes/{id}             foto del comprobante de una
+//                                   transferencia, en su propio documento
+//                                   (T28)
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
@@ -408,6 +412,41 @@ service cloud.firestore {
         && personaPropia(idDistribuidora, entrega.persona);
     }
 
+    // Cobro (T28): "cobro" es { forma, monto, comprobante, persona,
+    // horaCelular } o null ("Todavía no pagó": pendiente). Solo "Cobra" (y
+    // el dueño), a nombre propio, sobre un pedido entregado (según la copia
+    // del estado) y sin cambiar el estado en la misma escritura. forma es
+    // "efectivo" o "transferencia"; el monto, un número desde 0. comprobante
+    // es el id de la foto (solo en transferencia), que tiene que existir.
+    function rutaComprobante(idDistribuidora, idComprobante) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/comprobantes/$(idComprobante);
+    }
+
+    function idComprobanteValido(id) {
+      return id is string && id.matches('^comp_[A-Za-z0-9_]{1,80}$');
+    }
+
+    function cobroValido(idDistribuidora, antes, despues) {
+      let cobro = despues.cobro;
+      return antes.get("estado", "") == "entregado"
+        && !despues.diff(antes).affectedKeys().hasAny(["estado", "estados"])
+        && tienePermiso(idDistribuidora, "cobra")
+        && (cobro == null
+          || (cobro is map
+            && cobro.keys().hasAll(["forma", "monto", "comprobante", "persona", "horaCelular"])
+            && cobro.keys().hasOnly(["forma", "monto", "comprobante", "persona", "horaCelular"])
+            && cobro.forma in ["efectivo", "transferencia"]
+            && cobro.monto is number
+            && cobro.monto >= 0
+            && cobro.monto <= 1000000000
+            && cobro.horaCelular is number
+            && (cobro.comprobante == null
+              || (cobro.forma == "transferencia"
+                && idComprobanteValido(cobro.comprobante)
+                && exists(rutaComprobante(idDistribuidora, cobro.comprobante))))
+            && personaPropia(idDistribuidora, cobro.persona)));
+    }
+
     // Eliminar (T26): el pedido no se borra nunca. Queda guardado por dentro
     // con eliminado: true y "eliminacion": { persona, horaCelular } (quién y
     // cuándo), en una escritura sola. Solo quien lo cargó o el dueño, y solo
@@ -433,7 +472,9 @@ service cloud.firestore {
     // "Histórico" no pasa a tener estados, incidencias, checklist,
     // ediciones ni entrega. En un pedido con estados, lo pedido cambia solo
     // junto con una edición nueva (T25), y lo entregado solo junto con
-    // "Entregado" (T27). El cobro sigue abierto hasta T28.
+    // "Entregado" (T27). El cobro lo registra solo "Cobra" y, con el cobro
+    // registrado, el pedido ya no cambia de estado (no vuelve atrás de
+    // "Entregado", T28).
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
@@ -459,7 +500,12 @@ service cloud.firestore {
         && (!cambiados.hasAny(["faltantes"])
           || ("estados" in antes && faltanteAgregadoValido(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["entrega"])
-          || ("estados" in antes && entregaValida(idDistribuidora, antes, despues)));
+          || ("estados" in antes && entregaValida(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["cobro"])
+          || ("estados" in antes && cobroValido(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["estado", "estados"])
+          || antes.get("estado", "") != "entregado"
+          || antes.get("cobro", null) == null);
     }
 
     // Avisos dentro de la app (T23). Cada persona tiene su buzón:
@@ -775,6 +821,33 @@ service cloud.firestore {
           && cambioDePedidoValido(idDistribuidora, resource.data, request.resource.data);
 
         allow delete: if false;
+      }
+
+      // Comprobantes de las transferencias (T28): la foto, comprimida en el
+      // celular, en su propio documento ({ idPedido, foto, persona,
+      // horaCelular }), así la lista de pedidos no descarga fotos. La lee
+      // cualquier miembro; la sube solo "Cobra" (y el dueño), a nombre
+      // propio, sobre un pedido que existe, como imagen JPEG de hasta 700.000
+      // letras (Firestore guarda hasta 1 MB por documento). No se cambia ni
+      // se borra: al corregir el cobro con otra foto, se sube una nueva.
+      match /comprobantes/{idComprobante} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && idComprobanteValido(idComprobante)
+          && request.resource.data.keys().hasAll(["idPedido", "foto", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idPedido", "foto", "persona", "horaCelular"])
+          && request.resource.data.idPedido is string
+          && request.resource.data.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
+          && request.resource.data.foto is string
+          && request.resource.data.foto.size() <= 700000
+          && request.resource.data.foto.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona)
+          && tienePermiso(idDistribuidora, "cobra")
+          && exists(rutaPedido(idDistribuidora, request.resource.data.idPedido));
+
+        allow update, delete: if false;
       }
 
       // Avisos (T23): el buzón de cada persona ("dueno" o el id de la ficha
