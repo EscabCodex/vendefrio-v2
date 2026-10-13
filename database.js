@@ -2436,6 +2436,12 @@ function prepararPedidoParaLaNube(productos, horaCelular) {
     };
 }
 
+// Número corto del pedido (T28b): los últimos 6 caracteres del id, en
+// mayúsculas. Es el que sale en el ticket impreso y en la ficha.
+function numeroCortoDelPedido(pedido) {
+    return String(pedido && pedido.id || "").slice(-6).toUpperCase();
+}
+
 // Total del pedido con los precios guardados al cargarlo. Devuelve
 // { total, conPrecio, sinPrecio } (líneas con y sin precio).
 function totalDelPedido(pedido) {

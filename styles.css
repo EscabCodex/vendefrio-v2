@@ -3705,3 +3705,15 @@ html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitad
 .botonImprimirTicket:disabled{opacity:.6;cursor:default;transform:none;}
 .impresionPedido h2{margin-bottom:8px;}
 .impresionPedido .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
+/* Cuántas copias (T28b) y la opción en "Pedido generado". */
+.opcionesCopias{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 4px;}
+.opcionCopias{display:grid;gap:4px;min-height:72px;padding:10px 8px;border:2px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);color:var(--texto);text-align:center;cursor:pointer;}
+.opcionCopias strong{font-size:15px;}
+.opcionCopias small{font-size:12px;color:var(--texto-sec);line-height:1.3;}
+.opcionCopias:active{transform:scale(.97);border-color:var(--acento);background:var(--acento-bg);}
+.copiasTicket h2{margin-bottom:8px;}
+.copiasTicket .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
+.botonImprimirGenerado{justify-content:center;width:100%;min-height:46px;margin-top:14px;}
+html[data-tema="oscuro"] .opcionCopias{background:#111827;border-color:#4b5563;color:#f9fafb;}
+html[data-tema="oscuro"] .opcionCopias small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .opcionCopias:active{background:var(--acento-bg);border-color:var(--acento);}

@@ -479,7 +479,9 @@
             "subtitulo",
             textoCuando(horaDelPedido(pedido)) + "  ·  " + textoUnidades(unidadesDelPedido(pedido)) + "  ·  " + textoTotal(pedido)
         );
-        const autor = crear("p", "subtitulo autorSeguimiento", "Cargado por " + nombrePersona(pedido.autor));
+        // Número corto (T28b): el mismo del ticket impreso.
+        const numero = numeroCortoDelPedido(pedido);
+        const autor = crear("p", "subtitulo autorSeguimiento", "Cargado por " + nombrePersona(pedido.autor) + (numero ? "  ·  N° " + numero : ""));
 
         info.append(arriba, detalle, autor);
 
@@ -930,6 +932,8 @@
             .filter(item => item && (Number(item.cantidad) || 0) > 0).length;
 
         const filasDatos = [
+            // Número corto (T28b): el mismo del ticket impreso.
+            ["Pedido N°", numeroCortoDelPedido(pedido)],
             ["Cargado por", nombrePersona(pedido.autor)],
             ["Fecha", hora ? textoFecha(hora) + " " + textoHora(hora) : String(pedido.fecha || "Sin fecha")],
             ["Unidades", unidadesDelPedido(pedido) + "  ·  " + productos + (productos === 1 ? " producto" : " productos")]
@@ -1477,7 +1481,7 @@
         else if (boton.dataset.accion === "entregarConCambios") abrirEntrega(id, true);
         else if (boton.dataset.accion === "cobrar") abrirCobro(id, false);
         else if (boton.dataset.accion === "verComprobante") abrirComprobante(id);
-        else if (boton.dataset.accion === "imprimir") window.impresionVendeFrio?.imprimirPedido(id);
+        else if (boton.dataset.accion === "imprimir") window.impresionVendeFrio?.elegirCopias(id);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -2155,6 +2159,8 @@
         try {
             window.nubeVendeFrio.marcarPreparado(id);
             mostrarToast("Pedido preparado");
+            // Ticket (T28b): terminado de armar, pregunta si se imprime.
+            window.impresionVendeFrio?.preguntarSiImprimir?.(id);
         } catch (error) {
             avisarError(error);
         }
