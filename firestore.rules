@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23)
+// T22, T23, T24)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -27,7 +27,9 @@ rules_version = '2';
 //                                   campo "estados", y solo se agrega; cada
 //                                   estado, solo con su permiso, y las
 //                                   incidencias en "incidencias" e
-//                                   "incidenciasResueltas" (T22)
+//                                   "incidenciasResueltas" (T22); la
+//                                   checklist en "preparacion" y
+//                                   "faltantes" (T24), que solo se agregan
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
@@ -252,14 +254,63 @@ service cloud.firestore {
         && tienePermiso(idDistribuidora, "controla");
     }
 
+    // Checklist de preparación (T24). Cada tilde o destilde es una entrada
+    // nueva de "preparacion": { linea, tildado, persona, horaCelular }.
+    // Cada faltante (o su corrección) es una entrada nueva de "faltantes":
+    // { linea, preparada, observacion, persona, horaCelular }; preparada
+    // null (con observación vacía) quita el faltante. Las dos solo se
+    // agregan, de a una por escritura y a nombre propio: dos personas que
+    // arman el mismo pedido no se pisan y siempre se ve quién hizo qué. No
+    // se revisa el estado del pedido (un tilde hecho sin señal puede llegar
+    // después de "Preparado"): eso lo cuida la app.
+    function lineaValida(linea) {
+      return linea is string && linea.matches('^[A-Za-z0-9_]{1,100}$');
+    }
+
+    // Cualquier miembro tilda y destilda.
+    function tildeAgregadoValido(idDistribuidora, antes, despues) {
+      let previas = antes.get("preparacion", {});
+      let nuevas = despues.preparacion.keys().removeAll(previas.keys());
+      let tilde = despues.preparacion[nuevas[0]];
+      return despues.preparacion.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && tilde is map
+        && tilde.keys().hasAll(["linea", "tildado", "persona", "horaCelular"])
+        && tilde.keys().hasOnly(["linea", "tildado", "persona", "horaCelular"])
+        && lineaValida(tilde.linea)
+        && tilde.tildado is bool
+        && tilde.horaCelular is number
+        && personaPropia(idDistribuidora, tilde.persona);
+    }
+
+    // Faltantes: solo "Prepara pedidos" (y "Controla pedidos" y el dueño).
+    // Lo preparado es un número entero desde 0, con observación obligatoria.
+    function faltanteAgregadoValido(idDistribuidora, antes, despues) {
+      let previas = antes.get("faltantes", {});
+      let nuevas = despues.faltantes.keys().removeAll(previas.keys());
+      let faltante = despues.faltantes[nuevas[0]];
+      return despues.faltantes.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && faltante is map
+        && faltante.keys().hasAll(["linea", "preparada", "observacion", "persona", "horaCelular"])
+        && faltante.keys().hasOnly(["linea", "preparada", "observacion", "persona", "horaCelular"])
+        && lineaValida(faltante.linea)
+        && ((faltante.preparada == null && faltante.observacion == "")
+          || (faltante.preparada is int && faltante.preparada >= 0 && faltante.preparada <= 100000
+            && textoObligatorio(faltante.observacion)))
+        && faltante.horaCelular is number
+        && personaPropia(idDistribuidora, faltante.persona)
+        && (tienePermiso(idDistribuidora, "prepara") || tienePermiso(idDistribuidora, "controla"));
+    }
+
     // Cada cambio se guarda campo por campo. El id, la fecha, el autor y la
     // marca de eliminado no cambian. El estado cambia solo junto con una
-    // entrada nueva del historial, y un "Histórico" no pasa a tener estados
-    // ni incidencias.
+    // entrada nueva del historial, y un "Histórico" no pasa a tener estados,
+    // incidencias ni checklist.
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
-          "entrega", "cobro", "ediciones", "productos", "comercio", "observaciones", "pedido", "cantidad"])
+          "faltantes", "entrega", "cobro", "ediciones", "productos", "comercio", "observaciones", "pedido", "cantidad"])
         && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
           || puedeCambiarLoPedido(idDistribuidora, antes))
         && (!cambiados.hasAny(["estado", "estados"])
@@ -267,7 +318,11 @@ service cloud.firestore {
         && (!cambiados.hasAny(["incidencias"])
           || ("estados" in antes && incidenciaAgregadaValida(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["incidenciasResueltas"])
-          || ("estados" in antes && resolucionAgregadaValida(idDistribuidora, antes, despues)));
+          || ("estados" in antes && resolucionAgregadaValida(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["preparacion"])
+          || ("estados" in antes && tildeAgregadoValido(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["faltantes"])
+          || ("estados" in antes && faltanteAgregadoValido(idDistribuidora, antes, despues)));
     }
 
     // Avisos dentro de la app (T23). Cada persona tiene su buzón:
@@ -286,7 +341,7 @@ service cloud.firestore {
     function avisoNuevoValido(idDistribuidora, aviso) {
       return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
         && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
-        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta"]
+        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante"]
         && aviso.idPedido is string
         && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
         && aviso.comercio is string

@@ -1,7 +1,8 @@
 // VendeFrío - Adaptador nube (Firestore) (T9), migración "Subir mis datos
 // a la nube" y modo nube (T11), sincronización visible e indicador de
 // conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
-// pedidos campo por campo (T20) y lo que necesitan los avisos (T23).
+// pedidos campo por campo (T20), lo que necesitan los avisos (T23) y la
+// checklist de preparación con sus faltantes (T24).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -583,7 +584,7 @@
     // Campos que se cambian con cambiarCamposDelPedido. El autor, la fecha y
     // el id no cambian nunca; el historial de estados tiene su propia función.
     const CAMPOS_QUE_CAMBIAN_EN_UN_PEDIDO = [
-        "preparacion", "entrega", "cobro", "ediciones",
+        "preparacion", "faltantes", "entrega", "cobro", "ediciones",
         "productos", "comercio", "observaciones", "pedido", "cantidad"
     ];
 
@@ -686,10 +687,10 @@
         return limpio;
     }
 
-    function pedidoConEstadosYPersona(idPedido) {
+    function pedidoConEstadosYPersona(idPedido, siEsHistorico) {
         const { ref, pedido } = pedidoEnLaNube(idPedido);
 
-        if (!pedidoTieneEstados(pedido)) throw errorDelPedido("Un pedido Histórico no tiene incidencias.");
+        if (!pedidoTieneEstados(pedido)) throw errorDelPedido(siEsHistorico || "Un pedido Histórico no tiene incidencias.");
 
         const persona = personaDeEsteCelular();
         if (!persona) {
@@ -740,6 +741,246 @@
 
         if (abiertas.length) avisarAccionDePedido({ accion: "incidenciaResuelta", pedido, nota: texto, persona, incidencias: abiertas });
         return abiertas.length;
+    }
+
+    // -------------------------------------------------
+    // Checklist de preparación y faltantes (T24)
+    // -------------------------------------------------
+    // Cada tilde o destilde es una entrada nueva del mapa "preparacion" del
+    // pedido: { linea, tildado, persona, horaCelular }. Cada faltante (o su
+    // corrección) es una entrada nueva de "faltantes": { linea, preparada,
+    // observacion, persona, horaCelular }; preparada null quita el faltante.
+    // Los dos solo se agregan, de a una entrada por escritura (campo por
+    // campo): dos personas que arman el mismo pedido no se pisan, también sin
+    // señal. Lo que vale de cada producto es su entrada más nueva según la
+    // hora en que se hizo (como el estado), y siempre se ve quién la puso.
+    // Lo pedido (cantidad de cada producto) no se toca: se conserva.
+
+    const LARGO_MAXIMO_OBSERVACION_FALTANTE = 300;
+
+    // Id de cada producto del pedido: el de su línea (T20) o, si no tiene,
+    // su posición en el pedido.
+    function claveDeLinea(item, posicion) {
+        const id = String(item && item.id || "");
+        return /^[A-Za-z0-9_]{1,100}$/.test(id) ? id : "pos_" + posicion;
+    }
+
+    // La entrada más nueva de una lista [{ id, ...entrada }] (si empatan, la
+    // de id mayor, así da igual en todos los celulares).
+    function entradaMasNueva(entradas) {
+        let elegida = null;
+
+        entradas.forEach(entrada => {
+            const hora = Number(entrada.horaCelular) || 0;
+            const horaElegida = elegida ? Number(elegida.horaCelular) || 0 : -Infinity;
+            if (hora > horaElegida || (hora === horaElegida && entrada.id > elegida.id)) elegida = entrada;
+        });
+
+        return elegida;
+    }
+
+    function entradasPorLinea(mapa) {
+        const porLinea = new Map();
+        if (!esMapa(mapa)) return porLinea;
+
+        Object.keys(mapa).forEach(id => {
+            const entrada = mapa[id];
+            if (!esMapa(entrada) || typeof entrada.linea !== "string") return;
+
+            if (!porLinea.has(entrada.linea)) porLinea.set(entrada.linea, []);
+            porLinea.get(entrada.linea).push({ id, ...entrada });
+        });
+
+        return porLinea;
+    }
+
+    // Cómo va la checklist de un pedido:
+    // { lineas: [{ clave, item, cantidad, tilde, faltante, lista, preparada }],
+    //   productos, listos, pendientes, faltantes, unidadesPedidas,
+    //   unidadesPreparadas, completa }.
+    // tilde: la entrada más nueva de ese producto (tildado o destildado), o
+    // null. faltante: el faltante vigente, o null. Un producto está listo si
+    // está tildado o tiene faltante; preparada es lo que se puso en el cajón.
+    function preparacionDelPedido(pedido) {
+        const tildes = entradasPorLinea(pedido && pedido.preparacion);
+        const faltantes = entradasPorLinea(pedido && pedido.faltantes);
+        const productos = Array.isArray(pedido && pedido.productos) ? pedido.productos : [];
+        const lineas = [];
+
+        productos.forEach((item, posicion) => {
+            const cantidad = Number(item && item.cantidad) || 0;
+            if (!esMapa(item) || cantidad <= 0) return;
+
+            const clave = claveDeLinea(item, posicion);
+            const tilde = entradaMasNueva(tildes.get(clave) || []);
+            const ultimoFaltante = entradaMasNueva(faltantes.get(clave) || []);
+            const preparadaFaltante = ultimoFaltante && ultimoFaltante.preparada !== null && ultimoFaltante.preparada !== undefined
+                ? Number(ultimoFaltante.preparada)
+                : NaN;
+            const faltante = Number.isFinite(preparadaFaltante) ? { ...ultimoFaltante, preparada: preparadaFaltante } : null;
+            const tildado = Boolean(tilde && tilde.tildado === true);
+            const lista = Boolean(faltante) || tildado;
+
+            lineas.push({
+                clave,
+                item,
+                cantidad,
+                tilde,
+                faltante,
+                lista,
+                preparada: faltante ? faltante.preparada : tildado ? cantidad : null
+            });
+        });
+
+        const listos = lineas.filter(linea => linea.lista).length;
+
+        return {
+            lineas,
+            productos: lineas.length,
+            listos,
+            pendientes: lineas.length - listos,
+            faltantes: lineas.filter(linea => linea.faltante).length,
+            unidadesPedidas: lineas.reduce((total, linea) => total + linea.cantidad, 0),
+            unidadesPreparadas: lineas.reduce((total, linea) => total + (linea.preparada || 0), 0),
+            completa: listos === lineas.length
+        };
+    }
+
+    // El pedido, quién usa el celular y el producto, solo mientras el pedido
+    // está "En preparación".
+    function lineaParaPreparar(idPedido, clave) {
+        const datos = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se prepara con la checklist.");
+
+        if (estadoActualDelPedido(datos.pedido) !== "enPreparacion") {
+            throw errorDelPedido("El pedido ya no está en preparación.");
+        }
+
+        const linea = preparacionDelPedido(datos.pedido).lineas.find(item => item.clave === String(clave || ""));
+        if (!linea) throw errorDelPedido("Ese producto ya no está en el pedido.");
+
+        return { ...datos, linea };
+    }
+
+    // Hora de una entrada nueva: la del celular, pero siempre después de la
+    // última de ese producto que se ve acá. Si otro celular tiene la hora
+    // adelantada, lo que se toca ahora igual queda como lo más nuevo.
+    function horaParaNuevaEntrada(anterior) {
+        return Math.max(Date.now(), anterior ? (Number(anterior.horaCelular) || 0) + 1 : 0);
+    }
+
+    function ultimaEntradaDeLinea(mapa, clave) {
+        return entradaMasNueva(entradasPorLinea(mapa).get(clave) || []);
+    }
+
+    // Tilda o destilda un producto. Puede cualquiera. Devuelve el id de la
+    // entrada nueva.
+    function tildarProducto(idPedido, clave, tildado) {
+        const { ref, pedido, persona, linea } = lineaParaPreparar(idPedido, clave);
+        const id = generarId("prep");
+        const entrada = {
+            linea: linea.clave,
+            tildado: Boolean(tildado),
+            persona,
+            horaCelular: horaParaNuevaEntrada(ultimaEntradaDeLinea(pedido.preparacion, linea.clave))
+        };
+
+        enviarCambiosDelPedido(ref, [{ ruta: ["preparacion", id], valor: entrada }]);
+        return id;
+    }
+
+    // Anota (o corrige) un faltante: cuánto se preparó (menos de lo pedido) y
+    // por qué. Solo "Prepara pedidos" (las reglas lo revisan). Avisa a quien
+    // cargó el pedido y a "Recibe aviso de faltantes".
+    function marcarFaltante(idPedido, clave, preparada, observacion) {
+        const texto = String(observacion || "").trim().slice(0, LARGO_MAXIMO_OBSERVACION_FALTANTE);
+        if (!texto) throw errorDelPedido("Escribí una observación.");
+
+        const cantidad = Number(preparada);
+        const { ref, pedido, persona, linea } = lineaParaPreparar(idPedido, clave);
+
+        if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad >= linea.cantidad) {
+            throw errorDelPedido("La cantidad preparada tiene que ser de 0 a " + (linea.cantidad - 1) + ".");
+        }
+
+        const id = generarId("fal");
+        const entrada = {
+            linea: linea.clave,
+            preparada: cantidad,
+            observacion: texto,
+            persona,
+            horaCelular: horaParaNuevaEntrada(ultimaEntradaDeLinea(pedido.faltantes, linea.clave))
+        };
+
+        enviarCambiosDelPedido(ref, [{ ruta: ["faltantes", id], valor: entrada }]);
+
+        avisarAccionDePedido({
+            accion: "faltante",
+            pedido,
+            producto: String(linea.item.producto || "").trim(),
+            pedida: linea.cantidad,
+            preparada: cantidad,
+            observacion: texto,
+            persona
+        });
+        return id;
+    }
+
+    // Quita el faltante de un producto (por ejemplo, apareció lo que
+    // faltaba). Vuelve a valer su tilde. Devuelve false si no tenía.
+    function quitarFaltante(idPedido, clave) {
+        const { ref, pedido, persona, linea } = lineaParaPreparar(idPedido, clave);
+        if (!linea.faltante) return false;
+
+        enviarCambiosDelPedido(ref, [{
+            ruta: ["faltantes", generarId("fal")],
+            valor: {
+                linea: linea.clave,
+                preparada: null,
+                observacion: "",
+                persona,
+                horaCelular: horaParaNuevaEntrada(ultimaEntradaDeLinea(pedido.faltantes, linea.clave))
+            }
+        }]);
+        return true;
+    }
+
+    function textoUnidades(cantidad) {
+        return cantidad === 1 ? "1 unidad" : cantidad + " unidades";
+    }
+
+    // "12 productos · 32 unidades · 1 faltante" (y lo pedido, si cambia).
+    function textoResumenDePreparacion(resumen) {
+        const partes = [
+            resumen.productos === 1 ? "1 producto" : resumen.productos + " productos",
+            resumen.unidadesPreparadas === resumen.unidadesPedidas
+                ? textoUnidades(resumen.unidadesPreparadas)
+                : resumen.unidadesPreparadas + " de " + textoUnidades(resumen.unidadesPedidas)
+        ];
+
+        if (resumen.faltantes) partes.push(resumen.faltantes === 1 ? "1 faltante" : resumen.faltantes + " faltantes");
+        return partes.join(" · ");
+    }
+
+    // "Preparado": solo con todos los productos tildados o con faltante. El
+    // resumen queda como nota en el seguimiento. Avisa a "Reparte" y a quien
+    // cargó el pedido.
+    function marcarPreparado(idPedido) {
+        const { pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se prepara con la checklist.");
+
+        if (estadoActualDelPedido(pedido) !== "enPreparacion") throw errorDelPedido("El pedido ya no está en preparación.");
+
+        const resumen = preparacionDelPedido(pedido);
+        if (!resumen.completa) {
+            throw errorDelPedido(resumen.pendientes === 1
+                ? "Falta 1 producto: tildalo o marcalo como faltante."
+                : "Faltan " + resumen.pendientes + " productos: tildalos o marcalos como faltante.");
+        }
+
+        const texto = textoResumenDePreparacion(resumen);
+        const idEntrada = agregarEstadoAlPedido(idPedido, "preparado", texto);
+
+        avisarAccionDePedido({ accion: "preparado", pedido, resumen: texto, persona });
+        return idEntrada;
     }
 
     // -------------------------------------------------
@@ -1892,6 +2133,13 @@
         incidenciasAbiertas,
         marcarIncidencia,
         resolverIncidencias,
+        // Checklist de preparación y faltantes (T24).
+        preparacionDelPedido,
+        textoResumenDePreparacion,
+        tildarProducto,
+        marcarFaltante,
+        quitarFaltante,
+        marcarPreparado,
         // Avisos (T23).
         escucharAccionesDePedidos,
         // Sincronización visible (T12).
