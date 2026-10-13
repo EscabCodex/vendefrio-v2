@@ -184,9 +184,12 @@ function actualizarUltimoPedidoDashboard(historial) {
     contenedor.setAttribute("tabindex", "0");
     contenedor.setAttribute("title", "Abrir este pedido en el historial");
 
+    // Historial usa la posición en la lista completa (con eliminados y
+    // cancelados, T26).
     const abrirPedidoEnHistorial = () => {
         if (typeof abrirHistorialDePedido === "function") {
-            abrirHistorialDePedido(0);
+            const indice = obtenerHistorial().findIndex(pedido => pedido.id === ultimo.id);
+            if (indice >= 0) abrirHistorialDePedido(indice);
         }
     };
 
@@ -215,7 +218,8 @@ function actualizarUbicacionDashboard(forzar = false) {
 function actualizarDashboard() {
     actualizarUbicacionDashboard();
     const comercios = obtenerComercios();
-    const historial = obtenerHistorial();
+    // Eliminados y cancelados no cuentan (T26), como en Historial.
+    const historial = obtenerPedidosQueCuentan();
     const resumenProductos = obtenerResumenProductos();
 
     const pedidosHoy = historial.filter(pedido => {

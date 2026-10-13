@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25)
+// T22, T23, T24, T25, T26)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -33,7 +33,10 @@ rules_version = '2';
 //                                   las ediciones del autor o el dueño en
 //                                   "ediciones" y quién las vio en
 //                                   "edicionesVistas" (T25), que solo se
-//                                   agregan
+//                                   agregan; nunca se borra: eliminar lo
+//                                   marca como eliminado y cancelar es un
+//                                   estado más, los dos solo del autor o el
+//                                   dueño (T26)
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
@@ -185,6 +188,16 @@ service cloud.firestore {
             .data.porPermiso.get(permiso, []));
     }
 
+    // Cancelar (T26): solo quien cargó el pedido o el dueño, con motivo y
+    // antes de "Entregado". Para saber si ya se entregó se usa la copia del
+    // estado (la del último cambio que llegó): un cancelado hecho sin señal
+    // que llega después de la entrega se rechaza, como corresponde.
+    function cancelacionValida(idDistribuidora, antes, entrada) {
+      return puedeCambiarLoPedido(idDistribuidora, antes)
+        && textoObligatorio(entrada.nota)
+        && antes.get("estado", "") != "entregado";
+    }
+
     // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
     // del que viene: dos cambios hechos sin señal pueden llegar desordenados
     // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
@@ -192,12 +205,14 @@ service cloud.firestore {
     //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
     //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
     //   "Controla pedidos" y el dueño: todos.
-    // "Entregado" y "Cancelado" los limitan T27 y T26.
-    function puedePonerEstado(idDistribuidora, estado) {
-      return estado in ["entregado", "cancelado"]
-        || tienePermiso(idDistribuidora, "controla")
-        || (estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
-        || (estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"));
+    // "Cancelado", solo el autor o el dueño (T26). "Entregado" lo limita T27.
+    function puedePonerEstado(idDistribuidora, antes, entrada) {
+      return entrada.estado == "cancelado"
+        ? cancelacionValida(idDistribuidora, antes, entrada)
+        : (entrada.estado == "entregado"
+          || tienePermiso(idDistribuidora, "controla")
+          || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
+          || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte")));
     }
 
     // El historial de estados solo se agrega: una entrada por cambio, a
@@ -211,7 +226,7 @@ service cloud.firestore {
         && nuevas.size() == 1
         && entradaDeEstadoValida(idDistribuidora, despues.estados[nuevas[0]])
         && estadoDePedidoValido(despues.estado)
-        && puedePonerEstado(idDistribuidora, despues.estados[nuevas[0]].estado);
+        && puedePonerEstado(idDistribuidora, antes, despues.estados[nuevas[0]]);
     }
 
     // Incidencias (T22): se marcan encima del estado, sin reemplazarlo. Cada
@@ -353,16 +368,38 @@ service cloud.firestore {
         && personaPropia(idDistribuidora, vista.persona);
     }
 
-    // Cada cambio se guarda campo por campo. El id, la fecha, el autor y la
-    // marca de eliminado no cambian. El estado cambia solo junto con una
-    // entrada nueva del historial, y un "Histórico" no pasa a tener estados,
-    // incidencias, checklist ni ediciones. En un pedido con estados, lo
-    // pedido cambia solo junto con una edición nueva (T25).
+    // Eliminar (T26): el pedido no se borra nunca. Queda guardado por dentro
+    // con eliminado: true y "eliminacion": { persona, horaCelular } (quién y
+    // cuándo), en una escritura sola. Solo quien lo cargó o el dueño, y solo
+    // mientras está "Cargado" (según la copia del estado, como al cancelar).
+    // Un "Histórico" no tiene autor: solo el dueño.
+    function eliminacionValida(idDistribuidora, antes, despues) {
+      return despues.diff(antes).affectedKeys().hasOnly(["eliminado", "eliminacion"])
+        && despues.eliminado == true
+        && despues.eliminacion is map
+        && despues.eliminacion.keys().hasAll(["persona", "horaCelular"])
+        && despues.eliminacion.keys().hasOnly(["persona", "horaCelular"])
+        && despues.eliminacion.horaCelular is number
+        && personaPropia(idDistribuidora, despues.eliminacion.persona)
+        && (("estados" in antes)
+          ? (antes.get("estado", "") == "cargado" && puedeCambiarLoPedido(idDistribuidora, antes))
+          : esDueno(idDistribuidora));
+    }
+
+    // Cada cambio se guarda campo por campo. El id, la fecha y el autor no
+    // cambian, y la marca de eliminado solo pasa a true al eliminar (T26).
+    // Un pedido eliminado ya no cambia (salvo su lugar en la lista). El
+    // estado cambia solo junto con una entrada nueva del historial, y un
+    // "Histórico" no pasa a tener estados, incidencias, checklist ni
+    // ediciones. En un pedido con estados, lo pedido cambia solo junto con
+    // una edición nueva (T25).
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
           "faltantes", "entrega", "cobro", "ediciones", "edicionesVistas", "productos", "comercio", "observaciones",
-          "pedido", "cantidad"])
+          "pedido", "cantidad", "eliminado", "eliminacion"])
+        && (antes.get("eliminado", false) != true || cambiados.hasOnly(["_orden"]))
+        && (!cambiados.hasAny(["eliminado", "eliminacion"]) || eliminacionValida(idDistribuidora, antes, despues))
         && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
           || (puedeCambiarLoPedido(idDistribuidora, antes)
             && (!("estados" in antes) || cambiados.hasAny(["ediciones"]))))
@@ -398,7 +435,8 @@ service cloud.firestore {
     function avisoNuevoValido(idDistribuidora, aviso) {
       return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
         && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
-        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante", "pedidoEditado"]
+        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante", "pedidoEditado",
+          "pedidoCancelado"]
         && aviso.idPedido is string
         && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
         && aviso.comercio is string
@@ -680,7 +718,8 @@ service cloud.firestore {
       // Pedidos (T20). El historial de estados va dentro de cada pedido (se
       // lee junto con él) y reemplaza a la subcolección "estados", que nunca
       // se usó. El dueño puede crear cualquier pedido (por ejemplo, al
-      // combinar un respaldo). Hasta T26 cualquier miembro borra pedidos.
+      // combinar un respaldo). Desde T26 nadie borra un pedido de verdad:
+      // eliminar lo marca como eliminado (ver eliminacionValida).
       match /pedidos/{id} {
         allow read: if esMiembro(idDistribuidora);
 
@@ -692,7 +731,7 @@ service cloud.firestore {
         allow update: if esMiembro(idDistribuidora)
           && cambioDePedidoValido(idDistribuidora, resource.data, request.resource.data);
 
-        allow delete: if esMiembro(idDistribuidora);
+        allow delete: if false;
       }
 
       // Avisos (T23): el buzón de cada persona ("dueno" o el id de la ficha
