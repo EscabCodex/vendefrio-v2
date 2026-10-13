@@ -18,6 +18,11 @@ function mostrarPantalla(nombre) {
         abrirMenuMas();
         return;
     }
+    // Historial dentro de Pedidos (T27b): en la nube no se abre la pantalla
+    // Historial de antes, sino el filtro "Historial" de la sección Pedido.
+    if (nombre === "historial" && usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial?.({})) {
+        return;
+    }
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
         pantalla.classList.add("oculto");
     });
@@ -254,6 +259,11 @@ function actualizarDashboard() {
 
     actualizarUltimoPedidoDashboard(historial);
 
+    // En la nube, Historial está dentro de Pedido (T27b): sin acceso rápido.
+    document.querySelectorAll(".accesoHistorial").forEach(boton => {
+        boton.classList.toggle("oculto", usaNubeReal());
+    });
+
     const contenedor = document.getElementById("dashProximaParada");
     if (!contenedor) return;
 
@@ -392,7 +402,11 @@ function abrirMenuMas() {
         panel = document.createElement("div");
         panel.id = "menuMasMovil";
         panel.className = "menuMasMovil";
-        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas"><span>${window.icono("mapa", 18)}</span><strong>Rutas</strong><b>›</b></button><button data-mas="estadisticas"><span>${window.icono("grafico", 18)}</span><strong>Estadísticas</strong><b>›</b></button><button data-mas="historial"><span>${window.icono("historial", 18)}</span><strong>Historial</strong><b>›</b></button><button data-mas="configuracion"><span>${window.icono("engranaje", 18)}</span><strong>Configuración</strong><b>›</b></button><button data-mas="productos"><span>${window.icono("etiqueta", 18)}</span><strong>Productos y marcas</strong><b>›</b></button></div>`;
+        // En la nube, Historial está dentro de Pedido (T27b).
+        const botonHistorialMas = usaNubeReal()
+            ? ""
+            : `<button data-mas="historial"><span>${window.icono("historial", 18)}</span><strong>Historial</strong><b>›</b></button>`;
+        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas"><span>${window.icono("mapa", 18)}</span><strong>Rutas</strong><b>›</b></button><button data-mas="estadisticas"><span>${window.icono("grafico", 18)}</span><strong>Estadísticas</strong><b>›</b></button>${botonHistorialMas}<button data-mas="configuracion"><span>${window.icono("engranaje", 18)}</span><strong>Configuración</strong><b>›</b></button><button data-mas="productos"><span>${window.icono("etiqueta", 18)}</span><strong>Productos y marcas</strong><b>›</b></button></div>`;
         document.body.appendChild(panel);
         panel.addEventListener("click", event => { if (event.target === panel || event.target.closest(".menuMasCerrar")) { panel.remove(); return; } const boton = event.target.closest("[data-mas]"); if (!boton) return; panel.remove(); const destino = boton.dataset.mas; if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas(); else if (destino === "configuracion" && typeof window.abrirConfiguracion === "function") window.abrirConfiguracion(); else mostrarPantalla(destino); });
     }

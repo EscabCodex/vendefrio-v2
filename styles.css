@@ -3717,3 +3717,8 @@ html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitad
 html[data-tema="oscuro"] .opcionCopias{background:#111827;border-color:#4b5563;color:#f9fafb;}
 html[data-tema="oscuro"] .opcionCopias small{color:#cbd5e1 !important;}
 html[data-tema="oscuro"] .opcionCopias:active{background:var(--acento-bg);border-color:var(--acento);}
+/* Historial dentro de Pedidos (T27b) */
+.filtrosHistorialPedidos{margin-bottom:8px;padding:10px;}
+.filtrosHistorialPedidos.oculto{display:none;}
+.estadoSeguimiento[data-estado="historico"]{background:var(--gris-claro);color:var(--texto-sec);}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:#374151;color:#e5e7eb !important;}

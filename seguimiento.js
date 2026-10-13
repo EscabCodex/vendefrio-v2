@@ -22,7 +22,9 @@
 // transferencia con foto opcional del comprobante o "Todavía no pagó"), al
 // entregar o después desde "A cobrar" (T28). Cualquiera imprime el ticket
 // del pedido por Bluetooth, desde "Cargado" en adelante (T28b, con
-// impresion.js).
+// impresion.js). En la nube, Historial es el filtro "Historial" de esta
+// lista (T27b): los entregados y los "Histórico", con buscador, filtro por
+// fecha y el filtro de un comercio o de un pedido.
 // =====================================================
 
 (function () {
@@ -45,7 +47,10 @@
         { id: "enPreparacion", nombre: "En preparación", estados: ["enPreparacion"] },
         { id: "preparados", nombre: "Preparados", estados: ["preparado"] },
         { id: "enReparto", nombre: "En reparto", estados: ["enVehiculo", "enReparto"] },
-        { id: "entregados", nombre: "Entregados", estados: ["entregado"] },
+        // Historial (T27b): reemplaza a "Entregados" y a la sección
+        // Historial. Lleva los entregados y los "Histórico" (los de antes,
+        // sin estados), sin eliminados ni cancelados (pedidosDelHistorial).
+        { id: "historial", nombre: "Historial", estados: [] },
         // Cobro (T28): los entregados sin cobro registrado. Solo lo ve quien
         // tiene "Cobra" (y el dueño).
         { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true },
@@ -53,7 +58,7 @@
         { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"] }
     ];
 
-    // Con muchos pedidos (por ejemplo, Entregados) se dibujan de a tandas.
+    // Con muchos pedidos (por ejemplo, Historial) se dibujan de a tandas.
     const TANDA = 40;
 
     // Pasos que se hacen desde la ficha (T22), con el permiso que los deja
@@ -81,6 +86,12 @@
     let etapaActual = "cargados";
     let mostrando = TANDA;
     let idFichaAbierta = "";
+
+    // Filtros del Historial (T27b), como en la sección Historial de antes.
+    let busquedaHistorial = "";
+    let periodoHistorial = "todos";
+    let comercioHistorial = "";
+    let idPedidoHistorial = "";
 
     // -------------------------------------------------
     // Datos
@@ -225,6 +236,37 @@
             .filter(registro => registro.estado !== "");
     }
 
+    // Historial (T27b): los mismos pedidos que la sección Historial de antes
+    // (pedidoEstaEnHistorial). Los "Histórico" no tienen estado: se marcan
+    // como "historico".
+    function pedidosDelHistorial() {
+        return obtenerHistorial()
+            .filter(pedidoEstaEnHistorial)
+            .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
+    }
+
+    function hayFiltrosDelHistorial() {
+        return Boolean(busquedaHistorial.trim() || periodoHistorial !== "todos" || comercioHistorial || idPedidoHistorial);
+    }
+
+    // Buscador (comercio, texto del pedido o N°), fecha y, si se entró desde
+    // un comercio o desde "Último pedido", solo ese comercio o ese pedido.
+    function coincideConElHistorial(registro) {
+        const pedido = registro.pedido;
+        if (idPedidoHistorial) return String(pedido.id || "") === idPedidoHistorial;
+
+        const comercio = normalizarTexto(pedido.comercio);
+        if (comercioHistorial && comercio !== normalizarTexto(comercioHistorial)) return false;
+
+        const texto = normalizarTexto(busquedaHistorial);
+        const coincideTexto = !texto ||
+            comercio.includes(texto) ||
+            normalizarTexto(pedido.pedido).includes(texto) ||
+            normalizarTexto(numeroCortoDelPedido(pedido)).includes(texto);
+
+        return coincideTexto && coincidePeriodoHistorial(pedido, periodoHistorial);
+    }
+
     function esDeLaEtapa(registro, etapa) {
         if (etapa.id === "incidencias") return tieneIncidencia(registro.pedido);
         if (etapa.id === "aCobrar") return cobroPendiente(registro.pedido);
@@ -234,6 +276,14 @@
     function horaDelPedido(pedido) {
         const hora = Number(pedido && pedido.timestamp);
         return Number.isFinite(hora) && hora > 0 ? hora : 0;
+    }
+
+    // Para ordenar: los "Histórico" muy viejos pueden tener solo la fecha.
+    function horaParaOrdenar(pedido) {
+        const hora = horaDelPedido(pedido);
+        if (hora || typeof obtenerFechaRegistro !== "function") return hora;
+        const fecha = obtenerFechaRegistro(pedido);
+        return fecha ? fecha.getTime() : 0;
     }
 
     function sinSubir(pedido) {
@@ -310,8 +360,15 @@
         const guardada = Number(pedido.cantidad);
         if (Number.isFinite(guardada) && guardada > 0) return guardada;
 
-        return (Array.isArray(pedido.productos) ? pedido.productos : [])
+        const unidades = (Array.isArray(pedido.productos) ? pedido.productos : [])
             .reduce((total, item) => total + (Number(item && item.cantidad) || 0), 0);
+
+        // Historial (T27b): un "Histórico" muy viejo puede tener solo el
+        // texto del pedido; se cuentan como en Historial.
+        if (!unidades && typeof obtenerUnidadesAnaliticasHistorial === "function") {
+            return obtenerUnidadesAnaliticasHistorial(pedido);
+        }
+        return unidades;
     }
 
     function crear(tag, clase, texto) {
@@ -322,7 +379,8 @@
     }
 
     function etiquetaEstado(estado) {
-        const etiqueta = crear("span", "estadoSeguimiento", nombreDeEstadoPedido(estado) || estado);
+        const nombre = estado === "historico" ? "Histórico" : nombreDeEstadoPedido(estado) || estado;
+        const etiqueta = crear("span", "estadoSeguimiento", nombre);
         etiqueta.dataset.estado = estado;
         return etiqueta;
     }
@@ -440,11 +498,74 @@
         return ETAPAS.filter(etapa => !etapa.soloCobra || cobra);
     }
 
-    function dibujarFiltros(registros) {
+    // Historial (T27b): buscador, filtro por fecha y el aviso del filtro de
+    // un comercio o de un pedido, con "Ver todos". Solo en "Historial".
+    const barraHistorial = crear("div", "card filtrosHistorial filtrosHistorialPedidos oculto");
+
+    const buscadorHistorial = document.createElement("input");
+    buscadorHistorial.type = "search";
+    buscadorHistorial.placeholder = "Buscar por comercio, pedido o N°...";
+    buscadorHistorial.setAttribute("aria-label", "Buscar en el historial");
+
+    const fechaHistorial = document.createElement("select");
+    fechaHistorial.setAttribute("aria-label", "Filtrar historial por fecha");
+    [["todos", "Todos los pedidos"], ["hoy", "Solo los de hoy"], ["semana", "Esta semana"]].forEach(([valor, texto]) => {
+        const opcion = document.createElement("option");
+        opcion.value = valor;
+        opcion.textContent = texto;
+        fechaHistorial.appendChild(opcion);
+    });
+
+    const avisoFiltroHistorial = crear("div", "filtroHistorialActivo oculto");
+    const textoAvisoHistorial = crear("span", "");
+    const verTodosHistorial = crear("button", "btnAccion secundario", "Ver todos");
+    verTodosHistorial.type = "button";
+    avisoFiltroHistorial.append(textoAvisoHistorial, verTodosHistorial);
+
+    barraHistorial.append(buscadorHistorial, fechaHistorial, avisoFiltroHistorial);
+    filtros.after(barraHistorial);
+
+    buscadorHistorial.addEventListener("input", () => {
+        busquedaHistorial = buscadorHistorial.value;
+        mostrando = TANDA;
+        dibujarLista();
+    });
+
+    fechaHistorial.addEventListener("change", () => {
+        periodoHistorial = fechaHistorial.value;
+        mostrando = TANDA;
+        dibujarLista();
+    });
+
+    verTodosHistorial.addEventListener("click", () => {
+        comercioHistorial = "";
+        idPedidoHistorial = "";
+        busquedaHistorial = "";
+        mostrando = TANDA;
+        dibujarLista();
+    });
+
+    function dibujarBarraHistorial(visible) {
+        barraHistorial.classList.toggle("oculto", !visible);
+        if (!visible) return;
+
+        if (buscadorHistorial.value !== busquedaHistorial) buscadorHistorial.value = busquedaHistorial;
+        fechaHistorial.value = periodoHistorial;
+
+        const aviso = idPedidoHistorial
+            ? "Mostrando solamente el pedido seleccionado"
+            : comercioHistorial ? "Mostrando solamente pedidos de: " + comercioHistorial : "";
+        textoAvisoHistorial.textContent = aviso;
+        avisoFiltroHistorial.classList.toggle("oculto", !aviso);
+    }
+
+    function dibujarFiltros(registros, historial) {
         filtros.innerHTML = "";
 
         etapasVisibles().forEach(etapa => {
-            const cantidad = registros.filter(registro => esDeLaEtapa(registro, etapa)).length;
+            const cantidad = etapa.id === "historial"
+                ? historial.length
+                : registros.filter(registro => esDeLaEtapa(registro, etapa)).length;
             const boton = crear("button", "filtroEtapa");
             boton.type = "button";
             boton.setAttribute("role", "tab");
@@ -463,6 +584,7 @@
 
         const tarjeta = crear("div", "card tarjetaSeguimiento");
         tarjeta.dataset.id = String(pedido.id || "");
+        const hora = horaDelPedido(pedido);
         tarjeta.setAttribute("role", "button");
         tarjeta.tabIndex = 0;
         tarjeta.setAttribute("aria-label", "Ver el pedido de " + comercio);
@@ -477,13 +599,18 @@
         const detalle = crear(
             "p",
             "subtitulo",
-            textoCuando(horaDelPedido(pedido)) + "  ·  " + textoUnidades(unidadesDelPedido(pedido)) + "  ·  " + textoTotal(pedido)
+            (hora ? textoCuando(hora) : String(pedido.fecha || "Sin fecha")) + "  ·  " + textoUnidades(unidadesDelPedido(pedido)) + "  ·  " + textoTotal(pedido)
         );
-        // Número corto (T28b): el mismo del ticket impreso.
+        // Número corto (T28b): el mismo del ticket impreso. Un "Histórico"
+        // puede no tener autor (T27b).
         const numero = numeroCortoDelPedido(pedido);
-        const autor = crear("p", "subtitulo autorSeguimiento", "Cargado por " + nombrePersona(pedido.autor) + (numero ? "  ·  N° " + numero : ""));
+        const conAutor = Boolean(pedido.autor && typeof pedido.autor === "object");
+        const textoAutor = [conAutor ? "Cargado por " + nombrePersona(pedido.autor) : "", numero ? "N° " + numero : ""]
+            .filter(Boolean)
+            .join("  ·  ");
 
-        info.append(arriba, detalle, autor);
+        info.append(arriba, detalle);
+        if (textoAutor) info.append(crear("p", "subtitulo autorSeguimiento", textoAutor));
 
         // Checklist (T24): cuánto lleva armado y si hay faltantes.
         if (registro.estado === "enPreparacion" || ESTADOS_PREPARADOS.includes(registro.estado)) {
@@ -517,22 +644,39 @@
 
     function dibujarLista() {
         const registros = pedidosDeTrabajo();
+        const historial = pedidosDelHistorial();
         // Si a esta persona le sacaron "Cobra" mientras miraba "A cobrar",
         // vuelve a la primera etapa.
         const visibles = etapasVisibles();
         if (!visibles.some(item => item.id === etapaActual)) etapaActual = visibles[0].id;
         const etapa = visibles.find(item => item.id === etapaActual) || visibles[0];
-        const deLaEtapa = registros
-            .filter(registro => esDeLaEtapa(registro, etapa))
-            .sort((a, b) => horaDelPedido(b.pedido) - horaDelPedido(a.pedido));
+        const enHistorial = etapa.id === "historial";
+        const deLaEtapa = (enHistorial
+            ? historial.filter(coincideConElHistorial)
+            : registros.filter(registro => esDeLaEtapa(registro, etapa)))
+            .sort((a, b) => horaParaOrdenar(b.pedido) - horaParaOrdenar(a.pedido));
 
-        dibujarFiltros(registros);
+        dibujarFiltros(registros, historial);
+        dibujarBarraHistorial(enHistorial);
         lista.innerHTML = "";
 
         const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
         resumen.textContent = deLaEtapa.length === 1
             ? "1 pedido  ·  " + textoUnidades(unidades)
             : deLaEtapa.length + " pedidos  ·  " + textoUnidades(unidades);
+
+        if (deLaEtapa.length === 0 && enHistorial) {
+            const vacio = crear("div", "card seguimientoVacio");
+            const conFiltros = hayFiltrosDelHistorial();
+            vacio.append(
+                crear("h3", "", conFiltros ? "Sin coincidencias" : "Todavía no hay pedidos en Historial"),
+                crear("p", "", conFiltros
+                    ? "Probá con otro comercio o período."
+                    : "Acá van a aparecer los pedidos entregados y los de antes (Histórico).")
+            );
+            lista.appendChild(vacio);
+            return;
+        }
 
         if (deLaEtapa.length === 0) {
             const vacio = crear("div", "card seguimientoVacio");
@@ -897,11 +1041,19 @@
 
         const pedido = buscarPedido(idFichaAbierta);
         const estado = pedido ? estadoActualDelPedido(pedido) : "";
+        // Historial (T27b): un "Histórico" (sin estados) tiene su ficha, más
+        // simple.
+        const historico = Boolean(pedido) && !estado && pedidoEstaEnHistorial(pedido);
 
         // Si el pedido ya no está (por ejemplo, lo eliminaron en otro
         // celular), se cierra la ficha.
-        if (!pedido || !estado || pedido.eliminado === true) {
+        if (!pedido || (!estado && !historico) || pedido.eliminado === true) {
             cerrarFicha();
+            return;
+        }
+
+        if (historico) {
+            dibujarFichaHistorica(cuerpo, pedido);
             return;
         }
 
@@ -1009,6 +1161,75 @@
             const igual = cuerpo.querySelector(selector);
             if (igual) igual.focus({ preventScroll: true });
         }
+    }
+
+    // Ficha de un "Histórico" (T27b): sin seguimiento ni pasos. Se ve el
+    // pedido, se reenvía su mensaje y el dueño lo elimina (T26).
+    function dibujarFichaHistorica(cuerpo, pedido) {
+        cuerpo.innerHTML = "";
+
+        const titulo = crear("h2", "", String(pedido.comercio || "SIN NOMBRE").trim());
+        titulo.id = "tituloFichaPedido";
+
+        const etiquetas = crear("div", "etiquetasFichaPedido");
+        etiquetas.appendChild(etiquetaEstado("historico"));
+        if (sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
+
+        const acciones = crear("div", "accionesFichaPedido");
+        acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
+        if (puedeEliminar(pedido)) {
+            const peligro = crear("div", "accionesSecundariasPedido");
+            peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
+            acciones.appendChild(peligro);
+        }
+
+        const datos = crear("div", "datosFichaPedido");
+        const hora = horaDelPedido(pedido);
+        const filasDatos = [
+            ["Pedido N°", numeroCortoDelPedido(pedido)],
+            pedido.autor && typeof pedido.autor === "object" ? ["Cargado por", nombrePersona(pedido.autor)] : null,
+            ["Fecha", hora ? textoFecha(hora) + " " + textoHora(hora) : String(pedido.fecha || "Sin fecha")],
+            ["Unidades", textoUnidades(unidadesDelPedido(pedido))]
+        ].filter(fila => fila && fila[1]);
+        filasDatos.forEach(([nombre, valor]) => {
+            const fila = crear("div", "datoFichaPedido");
+            fila.append(crear("span", "", nombre), crear("strong", "", valor));
+            datos.appendChild(fila);
+        });
+
+        cuerpo.append(titulo, etiquetas, acciones, datos);
+
+        // Los "Histórico" muy viejos tienen solo el texto del pedido.
+        const conProductos = (Array.isArray(pedido.productos) ? pedido.productos : [])
+            .some(item => item && typeof item === "object" && (Number(item.cantidad) || 0) > 0);
+        if (conProductos) {
+            cuerpo.appendChild(dibujarProductos(pedido, ""));
+        } else {
+            const seccion = seccionFicha("Pedido");
+            seccion.appendChild(crear("p", "observacionesFichaPedido", String(pedido.pedido || "Este pedido no tiene productos.")));
+            cuerpo.appendChild(seccion);
+        }
+
+        const observaciones = String(pedido.observaciones || "").trim();
+        if (observaciones) {
+            const seccion = seccionFicha("Observaciones");
+            seccion.appendChild(crear("p", "observacionesFichaPedido", observaciones));
+            cuerpo.appendChild(seccion);
+        }
+
+        cuerpo.appendChild(crear("p", "pistaChecklist", "Pedido de antes de los estados: no tiene seguimiento."));
+    }
+
+    // "Ver mensaje del pedido" (T27b): la ventana de siempre con el mensaje
+    // y "Enviar por WhatsApp", como "Ver pedido" del Historial de antes.
+    function verMensajeDelPedido(id) {
+        const pedido = buscarPedido(id);
+        if (!pedido || typeof mostrarPedidoGuardado !== "function") return;
+
+        cerrarFicha();
+        mostrarPedidoGuardado(pedido);
+        // El ticket que se imprime desde esa ventana es el de este pedido.
+        if (typeof mostrarImprimirPedidoGenerado === "function") mostrarImprimirPedidoGenerado(String(pedido.id || ""));
     }
 
     // -------------------------------------------------
@@ -1132,7 +1353,7 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado && !imprimir) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado && !imprimir && estado !== "entregado") return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
@@ -1179,6 +1400,9 @@
         if (entregar && estado !== "enReparto") {
             acciones.appendChild(crearBoton("btnAccion secundario botonEntregarMostrador", "Entregar en el mostrador", "entregar"));
         }
+
+        // Historial (T27b): el mensaje del pedido, para reenviarlo.
+        if (estado === "entregado") acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
 
         if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
         if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
@@ -1436,10 +1660,13 @@
 
     // Eliminar (T26): solo en "Cargado", para errores (por ejemplo, un pedido
     // cargado dos veces). Desaparece de la app, pero queda guardado por dentro.
+    // Un "Histórico" (sin estado), solo el dueño, como en Historial (T27b).
     function eliminarPedido(id, estado) {
         abrirConfirmacion({
             titulo: "Eliminar pedido",
-            mensaje: "Es para errores, por ejemplo un pedido cargado dos veces. Desaparece de la app para todos. Si el comercio ya no lo quiere, mejor cancelalo.",
+            mensaje: estado
+                ? "Es para errores, por ejemplo un pedido cargado dos veces. Desaparece de la app para todos. Si el comercio ya no lo quiere, mejor cancelalo."
+                : "Desaparece de la app para todos, pero queda guardado por dentro. ¿Lo eliminás?",
             boton: "Eliminar",
             alConfirmar: () => {
                 if (!pedidoSigueEn(id, estado)) {
@@ -1482,6 +1709,7 @@
         else if (boton.dataset.accion === "cobrar") abrirCobro(id, false);
         else if (boton.dataset.accion === "verComprobante") abrirComprobante(id);
         else if (boton.dataset.accion === "imprimir") window.impresionVendeFrio?.elegirCopias(id);
+        else if (boton.dataset.accion === "verMensaje") verMensajeDelPedido(id);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -3110,6 +3338,31 @@
             if (!pedido || pedido.eliminado === true || !estadoActualDelPedido(pedido)) return false;
 
             abrirFicha(String(id));
+            return true;
+        },
+
+        // Historial (T27b): abre la sección Pedido en "Historial", con el
+        // período, el comercio o el pedido pedidos. Es lo que abren "Pedidos
+        // hoy", "Pedidos semana" y "Último pedido" de Inicio, "Historial" de
+        // un comercio e "Ir a historial". Devuelve false en el modo personal.
+        abrirHistorial({ periodo = "todos", comercio = "", idPedido = "" } = {}) {
+            if (!enLaNube()) return false;
+
+            etapaActual = "historial";
+            comercioHistorial = String(comercio || "").trim();
+            idPedidoHistorial = String(idPedido || "");
+            // Como antes: el buscador muestra el comercio elegido.
+            busquedaHistorial = comercioHistorial;
+            periodoHistorial = ["hoy", "semana"].includes(periodo) ? periodo : "todos";
+            if (idFichaAbierta) cerrarFicha();
+
+            if (pantalla.classList.contains("oculto")) {
+                entrarPorLaBarra = true;
+                mostrarPantalla("pedido");
+            } else {
+                cambiarVista("pedidos");
+                window.scrollTo(0, 0);
+            }
             return true;
         }
     };
