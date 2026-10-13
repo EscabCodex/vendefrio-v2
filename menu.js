@@ -218,8 +218,9 @@ function actualizarUbicacionDashboard(forzar = false) {
 function actualizarDashboard() {
     actualizarUbicacionDashboard();
     const comercios = obtenerComercios();
-    // Eliminados y cancelados no cuentan (T26), como en Historial.
-    const historial = obtenerPedidosQueCuentan();
+    // Como en Historial: sin eliminados ni cancelados (T26) y, en la nube,
+    // solo los entregados y los "Histórico" (T27).
+    const historial = obtenerPedidosDelHistorial();
     const resumenProductos = obtenerResumenProductos();
 
     const pedidosHoy = historial.filter(pedido => {

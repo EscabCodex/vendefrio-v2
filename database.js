@@ -2484,6 +2484,25 @@ function obtenerPedidosQueCuentan() {
     return obtenerHistorial().filter(pedidoCuentaEnHistorial);
 }
 
+// --- Entrega (T27) ---
+// En la nube, un pedido pasa a Historial recién cuando terminó todo el
+// proceso: al quedar "Entregado". Mientras tanto se sigue en "Pedidos".
+// Historial, Estadísticas e Inicio ("Pedidos hoy", "Pedidos semana" y
+// "Último pedido") cuentan solo los entregados y los "Histórico" (los de
+// antes, sin estados), sin eliminados ni cancelados. En el modo personal no
+// hay estados: cuentan todos, como siempre.
+
+function pedidoEstaEnHistorial(pedido) {
+    if (!pedidoCuentaEnHistorial(pedido)) return false;
+    if (!usaNubeReal() || !pedidoTieneEstados(pedido)) return true;
+    return estadoActualDelPedido(pedido) === "entregado";
+}
+
+// Los pedidos de Historial, en el mismo orden que obtenerHistorial().
+function obtenerPedidosDelHistorial() {
+    return obtenerHistorial().filter(pedidoEstaEnHistorial);
+}
+
 // --- Rutas guardadas ---
 // Cada ruta guarda dos listas paralelas: "comercios" (nombres, para mostrar)
 // e "idsComercios" (el id de cada uno, en la misma posición; "" si ese
