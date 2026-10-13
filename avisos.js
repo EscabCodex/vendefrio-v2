@@ -15,7 +15,7 @@
 //   celular, y quien hace un cambio no le deja aviso a quien lo apagó.
 // - Arranca con los avisos que ya existen: pedido nuevo, incidencia y su
 //   resolución. Cada tarea siguiente suma los suyos: pedido preparado y
-//   faltante (T24).
+//   faltante (T24) y pedido editado (T25).
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -45,6 +45,13 @@
             quien: "Le llega a quien cargó el pedido y a quien recibe aviso de faltantes.",
             icono: "alerta",
             hecho: "Anotado por"
+        },
+        {
+            id: "pedidoEditado",
+            nombre: "Pedido editado",
+            quien: "Le llega a quien cargó el pedido y a quien está trabajando en él: quien lo prepara, quien reparte o quien cobra, según la etapa.",
+            icono: "notaLapiz",
+            hecho: "Editado por"
         },
         {
             id: "incidencia",
@@ -231,6 +238,24 @@
         return Array.from(lista);
     }
 
+    // Pedido editado (T25): a quien está trabajando en el pedido según su
+    // etapa. Mientras se arma, quienes ya tildaron o anotaron faltantes y
+    // "Prepara pedidos"; preparado o en reparto, "Reparte"; entregado,
+    // "Cobra". En "Cargado" todavía nadie lo trabaja: solo le llega a quien
+    // lo cargó (si lo editó el dueño).
+    function quienesTrabajanEnElPedido(pedido, estado) {
+        if (estado === "enPreparacion") {
+            const armaron = ["preparacion", "faltantes"].flatMap(campo => {
+                const mapa = pedido[campo] && typeof pedido[campo] === "object" ? pedido[campo] : {};
+                return Object.values(mapa).map(entrada => entrada && entrada.persona && entrada.persona.idPersona);
+            });
+            return [...armaron, ...personasConPermiso("prepara")];
+        }
+        if (["preparado", "enVehiculo", "enReparto"].includes(estado)) return personasConPermiso("reparte");
+        if (estado === "entregado") return personasConPermiso("cobra");
+        return [];
+    }
+
     function dejarAvisos(tipo, pedido, detalle, candidatos) {
         const db = obtenerFirestore();
         const persona = typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
@@ -291,6 +316,9 @@
             // T24: "Coca 2L: 8 de 10 · no había más".
             const detalle = accion.producto + ": " + accion.preparada + " de " + accion.pedida + " · " + accion.observacion;
             dejarAvisos("faltante", pedido, detalle, [autor, ...personasConPermiso("avisoFaltantes")]);
+        } else if (accion.accion === "pedidoEditado") {
+            // T25: "Agregó 2 Coca 2L · Quitó Sprite · Fanta: de 3 a 5".
+            dejarAvisos("pedidoEditado", pedido, accion.texto, [autor, ...quienesTrabajanEnElPedido(pedido, accion.estado)]);
         }
     }
 
@@ -661,7 +689,7 @@
             const vacio = crear("div", "avisosVacio");
             vacio.append(
                 crear("strong", "", estado === "cargando" ? "Buscando tus avisos…" : "No tenés avisos"),
-                crear("p", "", "Acá aparecen los pedidos nuevos, los preparados, los faltantes y las incidencias. Nunca te llega aviso de lo que hacés vos.")
+                crear("p", "", "Acá aparecen los pedidos nuevos, los preparados, los faltantes, las incidencias y los pedidos editados. Nunca te llega aviso de lo que hacés vos.")
             );
             cuerpo.appendChild(vacio);
             return;

@@ -1,8 +1,8 @@
 // VendeFrío - Adaptador nube (Firestore) (T9), migración "Subir mis datos
 // a la nube" y modo nube (T11), sincronización visible e indicador de
 // conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
-// pedidos campo por campo (T20), lo que necesitan los avisos (T23) y la
-// checklist de preparación con sus faltantes (T24).
+// pedidos campo por campo (T20), lo que necesitan los avisos (T23), la
+// checklist de preparación con sus faltantes (T24) y editar el pedido (T25).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -462,7 +462,8 @@
     }
 
     // Avisos (T23): lo que este celular hace sobre los pedidos (pedido
-    // nuevo, incidencia y su resolución), para que avisos.js les deje un
+    // nuevo, incidencia y su resolución; desde T24, faltante y preparado, y
+    // desde T25, pedido editado), para que avisos.js les deje un
     // aviso a quienes corresponde. Se avisa después de mandar el cambio: un
     // aviso que falla nunca frena el pedido.
     const oyentesAccionesDePedidos = [];
@@ -981,6 +982,144 @@
 
         avisarAccionDePedido({ accion: "preparado", pedido, resumen: texto, persona });
         return idEntrada;
+    }
+
+    // -------------------------------------------------
+    // Editar el pedido (T25)
+    // -------------------------------------------------
+    // Solo quien cargó el pedido y el dueño lo editan, en cualquier estado
+    // menos "Cancelado". Lo pedido (productos, comercio, observaciones, texto
+    // para WhatsApp y unidades) cambia en una sola escritura campo por campo,
+    // junto con una entrada nueva de "ediciones": { texto, revisar, estado,
+    // persona, horaCelular }. La checklist no se toca: los tildes van por id
+    // de línea, así que los productos que no cambiaron los conservan; un
+    // producto nuevo o con otra cantidad lleva un id de línea nuevo y vuelve
+    // a quedar sin tildar ("revisar" lo marca). Cada persona cierra la franja
+    // amarilla de las ediciones de otro con "Entendido": una entrada nueva de
+    // "edicionesVistas" { edicion, persona, horaCelular }. Las dos solo se
+    // agregan.
+
+    const LARGO_MAXIMO_TEXTO_EDICION = 1000;
+    const MAXIMO_PRODUCTOS_A_REVISAR = 200;
+    const CAMPOS_DE_LO_PEDIDO = ["productos", "comercio", "observaciones", "pedido", "cantidad"];
+
+    function esAutorODueno(pedido, persona) {
+        return Boolean(persona) && (persona.idPersona === "dueno" ||
+            Boolean(pedido && pedido.autor && pedido.autor.idPersona === persona.idPersona));
+    }
+
+    // Si la persona de este celular puede editar el pedido.
+    function puedeEditarElPedido(pedido) {
+        return pedidoTieneEstados(pedido) &&
+            estadoActualDelPedido(pedido) !== "cancelado" &&
+            esAutorODueno(pedido, personaDeEsteCelular());
+    }
+
+    // datos: { productos, comercio, observaciones, pedido, cantidad, texto,
+    // revisar }. "texto" es lo que cambió ("Agregó 2 Coca 2L · Quitó
+    // Sprite") y "revisar", { idLinea: "Nuevo" o "Antes x3" }. Avisa a quien
+    // corresponde según el estado. Devuelve el id de la edición.
+    function editarPedido(idPedido, datos) {
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se edita.");
+        const estado = estadoActualDelPedido(pedido);
+
+        if (estado === "cancelado") throw errorDelPedido("Un pedido cancelado no se edita.");
+        if (!esAutorODueno(pedido, persona)) throw errorDelPedido("Solo quien cargó el pedido o el dueño lo edita.");
+
+        const productos = (Array.isArray(datos && datos.productos) ? datos.productos : [])
+            .filter(item => esMapa(item) && (Number(item.cantidad) || 0) > 0);
+        if (!productos.length) throw errorDelPedido("Dejá al menos un producto en el pedido.");
+
+        const comercio = String(datos.comercio || "").trim();
+        if (!comercio) throw errorDelPedido("Escribí el comercio.");
+
+        const texto = String(datos.texto || "").trim().slice(0, LARGO_MAXIMO_TEXTO_EDICION);
+        if (!texto) throw errorDelPedido("No cambiaste nada.");
+
+        const revisar = {};
+        Object.keys(esMapa(datos.revisar) ? datos.revisar : {})
+            .filter(linea => /^[A-Za-z0-9_]{1,100}$/.test(linea))
+            .slice(0, MAXIMO_PRODUCTOS_A_REVISAR)
+            .forEach(linea => {
+                revisar[linea] = String(datos.revisar[linea] || "").slice(0, 40);
+            });
+
+        const nuevo = JSON.parse(JSON.stringify({
+            productos,
+            comercio,
+            observaciones: String(datos.observaciones || "").trim(),
+            pedido: String(datos.pedido || ""),
+            cantidad: Number(datos.cantidad) || 0
+        }));
+        if (tieneListasAnidadas(nuevo, false)) throw errorDelPedido("La nube no admite listas dentro de listas.");
+
+        const campos = CAMPOS_DE_LO_PEDIDO
+            .filter(campo => textoComparable(pedido[campo]) !== textoComparable(nuevo[campo]))
+            .map(campo => ({ ruta: [campo], valor: nuevo[campo] }));
+        if (!campos.length) throw errorDelPedido("No cambiaste nada.");
+
+        const id = generarId("ed");
+        campos.push({ ruta: ["ediciones", id], valor: { texto, revisar, estado, persona, horaCelular: Date.now() } });
+        enviarCambiosDelPedido(ref, campos);
+
+        avisarAccionDePedido({ accion: "pedidoEditado", pedido: { ...pedido, comercio }, estado, texto, persona });
+        return id;
+    }
+
+    // Quién vio cada edición: idEdicion -> [persona].
+    function quienesVieronLasEdiciones(pedido) {
+        const vistas = esMapa(pedido && pedido.edicionesVistas) ? pedido.edicionesVistas : {};
+        const resultado = new Map();
+
+        Object.keys(vistas).forEach(id => {
+            const vista = vistas[id];
+            if (!esMapa(vista) || typeof vista.edicion !== "string" || !esMapa(vista.persona)) return;
+
+            const lista = resultado.get(vista.edicion) || [];
+            if (!lista.some(persona => persona.idPersona === vista.persona.idPersona)) lista.push(vista.persona);
+            resultado.set(vista.edicion, lista);
+        });
+
+        return resultado;
+    }
+
+    // Las ediciones de otro que esta persona todavía no cerró con
+    // "Entendido", la más nueva primero: [{ id, texto, revisar, estado,
+    // persona, horaCelular }].
+    function edicionesSinVer(pedido) {
+        const persona = personaDeEsteCelular();
+        const ediciones = esMapa(pedido && pedido.ediciones) ? pedido.ediciones : {};
+        if (!persona) return [];
+
+        const vistas = quienesVieronLasEdiciones(pedido);
+
+        return Object.keys(ediciones)
+            .filter(id => esMapa(ediciones[id]))
+            .filter(id => !(ediciones[id].persona && ediciones[id].persona.idPersona === persona.idPersona))
+            .filter(id => !(vistas.get(id) || []).some(vio => vio.idPersona === persona.idPersona))
+            .map(id => ({ id, ...ediciones[id] }))
+            .sort((a, b) => {
+                const diferencia = (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0);
+                if (diferencia !== 0) return diferencia;
+                return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+            });
+    }
+
+    // "Entendido": cierra para esta persona las ediciones sin ver (de a una
+    // escritura por edición, como piden las reglas). Devuelve cuántas.
+    function marcarEdicionesVistas(idPedido) {
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido);
+        const sinVer = edicionesSinVer(pedido);
+        const hora = Date.now();
+
+        sinVer.forEach(edicion => {
+            enviarCambiosDelPedido(ref, [{
+                ruta: ["edicionesVistas", generarId("vis")],
+                valor: { edicion: edicion.id, persona, horaCelular: hora }
+            }]);
+        });
+
+        return sinVer.length;
     }
 
     // -------------------------------------------------
@@ -2140,6 +2279,12 @@
         marcarFaltante,
         quitarFaltante,
         marcarPreparado,
+        // Editar el pedido (T25).
+        puedeEditarElPedido,
+        editarPedido,
+        edicionesSinVer,
+        quienesVieronLasEdiciones,
+        marcarEdicionesVistas,
         // Avisos (T23).
         escucharAccionesDePedidos,
         // Sincronización visible (T12).
