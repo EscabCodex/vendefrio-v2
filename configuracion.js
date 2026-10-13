@@ -48,6 +48,12 @@
                         <small>Códigos de ingreso para tus empleados</small></span><b>›</b>
                     </button>
 
+                    <button class="configFila oculto" data-config-seccion="avisos" id="configFilaAvisos">
+                        <span class="configIcono">${window.icono("campana",20)}</span>
+                        <span><strong>Avisos</strong>
+                        <small>Elegí qué avisos recibir</small></span><b>›</b>
+                    </button>
+
                     <button class="configFila" data-config-seccion="apariencia">
                         <span class="configIcono">${window.icono("paleta",20)}</span>
                         <span><strong>Apariencia</strong>
@@ -913,6 +919,60 @@
         const empleados = window.empleadosVendeFrio;
         document.getElementById("configFilaEmpleados")
             ?.classList.toggle("oculto", !(empleados && empleados.esDueno()));
+        // Avisos (T23): solo en la nube, con cuenta o con código.
+        document.getElementById("configFilaAvisos")
+            ?.classList.toggle("oculto", !window.avisosVendeFrio?.disponible?.());
+    }
+
+    // --- Avisos (T23): qué avisos recibe cada persona ---
+    function htmlAvisos() {
+        const avisos = window.avisosVendeFrio;
+
+        if (!avisos || !avisos.disponible()) {
+            return `
+                <p class="configEstado">
+                    Los avisos son para el equipo de la distribuidora:
+                    hace falta entrar con tu cuenta o con el código de tu encargado.
+                </p>
+            `;
+        }
+
+        const empleados = window.empleadosVendeFrio;
+        const nombresPermisos = empleados?.permisos?.() || [];
+        const casillas = avisos.tipos().map(tipo => {
+            const permiso = nombresPermisos.find(item => item.id === tipo.permiso);
+            const sinPermiso = permiso && !empleados.puede(tipo.permiso)
+                ? `<br><em>Hoy no te llega: no tenés el permiso "${escaparTexto(permiso.nombre)}".</em>`
+                : "";
+
+            return `
+                <label class="configSwitch configAviso">
+                    <input type="checkbox" class="casillaAviso" value="${escaparTexto(tipo.id)}"
+                        ${avisos.recibe(tipo.id) ? "checked" : ""}>
+                    <span><strong>${escaparTexto(tipo.nombre)}</strong><br>
+                    <small>${escaparTexto(tipo.quien)}${sinPermiso}</small></span>
+                </label>
+            `;
+        }).join("");
+
+        const problema = ["sinPermiso", "error"].includes(avisos.estado())
+            ? `<p class="configEstado configAvisoProblema">
+                No se pudieron leer tus avisos.
+                ${avisos.estado() === "sinPermiso"
+                    ? "Si sos el dueño, revisá que las reglas nuevas estén publicadas en Firebase."
+                    : "Revisá la señal y volvé a abrir la app."}
+            </p>`
+            : "";
+
+        return `
+            ${problema}
+            ${casillas}
+            <p class="configEstado">
+                Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda
+                en la nube: vale en cualquier celular donde entres.
+            </p>
+            <button type="button" data-accion="verAvisos">Ver mis avisos</button>
+        `;
     }
 
     // Permisos del empleado (T19): salen de sus roles; los marca el dueño.
@@ -1114,6 +1174,7 @@
                 ? "Tu cuenta de empleado"
                 : "Ingresá con tu email y contraseña"],
             empleados: ["Empleados", "Códigos, fichas, roles y bajas de tus empleados"],
+            avisos: ["Avisos", "Elegí qué avisos recibir"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
@@ -1138,6 +1199,10 @@
             escucharListaEmpleados();
         } else {
             dejarDeEscucharListaEmpleados();
+        }
+
+        if (seccion === "avisos") {
+            caja.innerHTML += htmlAvisos();
         }
 
         if (seccion === "apariencia") {
@@ -2069,6 +2134,27 @@
     }
 
     window.abrirConfiguracion = abrir;
+    // Avisos (T23): "Elegir qué avisos recibir" abre directo esa sección.
+    window.abrirConfiguracionEn = seccion => {
+        abrir();
+        detalle(seccion);
+    };
+
+    document.addEventListener("change", event => {
+        const casilla = event.target.closest?.(".casillaAviso");
+        if (!casilla || !window.avisosVendeFrio) return;
+
+        window.avisosVendeFrio.cambiarPreferencia(casilla.value, casilla.checked)
+            .catch(error => {
+                casilla.checked = !casilla.checked;
+                mostrarAviso("No se guardó el cambio", error.message);
+            });
+    });
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest?.('[data-accion="verAvisos"]')) return;
+        window.avisosVendeFrio?.abrirLista?.();
+    });
 
     aplicar();
     crear();
@@ -2187,6 +2273,34 @@
         conectarEmpleados();
     } else {
         window.addEventListener("empleadosVendeFrioLista", conectarEmpleados, { once: true });
+    }
+
+    // Avisos (T23): la fila aparece cuando se sabe quién usa el celular y la
+    // sección se actualiza si cambian las preferencias en otro celular.
+    function conectarAvisos() {
+        let ultimo = "";
+        window.avisosVendeFrio.escuchar(() => {
+            actualizarFilasSegunCuenta();
+
+            const avisos = window.avisosVendeFrio;
+            const texto = JSON.stringify([avisos.disponible(), avisos.estado(), avisos.tipos().map(tipo => avisos.recibe(tipo.id))]);
+            if (texto === ultimo) return;
+            ultimo = texto;
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "avisos" && caja && !caja.classList.contains("oculto")) {
+                detalle("avisos");
+            }
+        });
+        actualizarFilasSegunCuenta();
+    }
+
+    if (window.avisosVendeFrio) {
+        conectarAvisos();
+    } else {
+        window.addEventListener("load", () => {
+            if (window.avisosVendeFrio) conectarAvisos();
+        }, { once: true });
     }
 
     if (window.nubeVendeFrio) {

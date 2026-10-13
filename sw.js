@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v144 - Cambiar de estado)
+// VendeFrío - Service Worker (v145 - Avisos en la app)
 // =====================================================
-const CACHE_NAME = "vendefrio-v144";
+const CACHE_NAME = "vendefrio-v145";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -20,6 +20,7 @@ const ARCHIVOS = [
   "./productosAdmin.js",
   "./historial.js",
   "./seguimiento.js",
+  "./avisos.js",
   "./rutas.js",
   "./navegacion3d.js",
   "./navegacion3d.css",
