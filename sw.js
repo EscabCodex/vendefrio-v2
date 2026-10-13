@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v143 - Pedidos y seguimiento)
+// VendeFrío - Service Worker (v144 - Cambiar de estado)
 // =====================================================
-const CACHE_NAME = "vendefrio-v143";
+const CACHE_NAME = "vendefrio-v144";
 const ARCHIVOS = [
   "./",
   "./index.html",

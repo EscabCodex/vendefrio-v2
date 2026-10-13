@@ -631,6 +631,78 @@
     }
 
     // -------------------------------------------------
+    // Incidencias (T22)
+    // -------------------------------------------------
+    // Se marcan encima del estado, sin reemplazarlo. Cada una es una entrada
+    // del mapa "incidencias" del pedido: { motivo, persona, horaCelular }. Al
+    // resolverla se suma, con el mismo id, una entrada en
+    // "incidenciasResueltas": { nota, persona, horaCelular }. Las dos solo se
+    // agregan (nunca se cambian ni se borran) y cada cambio va campo por
+    // campo, así dos personas no se pisan.
+
+    const LARGO_MAXIMO_TEXTO_INCIDENCIA = 300;
+
+    function textoDeIncidencia(texto, queFalta) {
+        const limpio = String(texto || "").trim().slice(0, LARGO_MAXIMO_TEXTO_INCIDENCIA);
+        if (!limpio) throw errorDelPedido("Escribí " + queFalta + ".");
+        return limpio;
+    }
+
+    function pedidoConEstadosYPersona(idPedido) {
+        const { ref, pedido } = pedidoEnLaNube(idPedido);
+
+        if (!pedidoTieneEstados(pedido)) throw errorDelPedido("Un pedido Histórico no tiene incidencias.");
+
+        const persona = personaDeEsteCelular();
+        if (!persona) {
+            throw errorDelPedido("La app todavía está reconociendo quién usa este celular. Probá de nuevo en unos segundos.");
+        }
+
+        return { ref, pedido, persona: { idPersona: persona.idPersona, nombre: persona.nombre, uid: persona.uid } };
+    }
+
+    // Las incidencias sin resolver: [{ id, motivo, persona, horaCelular }].
+    function incidenciasAbiertas(pedido) {
+        const incidencias = esMapa(pedido && pedido.incidencias) ? pedido.incidencias : {};
+        const resueltas = esMapa(pedido && pedido.incidenciasResueltas) ? pedido.incidenciasResueltas : {};
+
+        return Object.keys(incidencias)
+            .filter(id => esMapa(incidencias[id]) && !resueltas[id])
+            .map(id => ({ id, ...incidencias[id] }));
+    }
+
+    // Devuelve el id de la incidencia nueva.
+    function marcarIncidencia(idPedido, motivo) {
+        const texto = textoDeIncidencia(motivo, "el motivo");
+        const { ref, persona } = pedidoConEstadosYPersona(idPedido);
+        const id = generarId("inc");
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["incidencias", id], valor: { motivo: texto, persona, horaCelular: Date.now() } }
+        ]);
+
+        return id;
+    }
+
+    // Resuelve todas las incidencias abiertas del pedido con la misma nota
+    // (de a una escritura por incidencia, como piden las reglas). Devuelve
+    // cuántas resolvió.
+    function resolverIncidencias(idPedido, nota) {
+        const texto = textoDeIncidencia(nota, "una nota");
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido);
+        const abiertas = incidenciasAbiertas(pedido);
+        const hora = Date.now();
+
+        abiertas.forEach(incidencia => {
+            enviarCambiosDelPedido(ref, [
+                { ruta: ["incidenciasResueltas", incidencia.id], valor: { nota: texto, persona, horaCelular: hora } }
+            ]);
+        });
+
+        return abiertas.length;
+    }
+
+    // -------------------------------------------------
     // Escucha en tiempo real
     // -------------------------------------------------
 
@@ -1776,6 +1848,10 @@
         // Pedidos campo por campo (T20).
         cambiarCamposDelPedido,
         agregarEstadoAlPedido,
+        // Incidencias (T22).
+        incidenciasAbiertas,
+        marcarIncidencia,
+        resolverIncidencias,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),

@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20)
+// VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
+// T22)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -23,7 +24,10 @@ rules_version = '2';
 //                                   dueño; T19)
 //     pedidos/{id}                  con estado, autor y precios (T20); el
 //                                   historial de estados va adentro, en el
-//                                   campo "estados", y solo se agrega
+//                                   campo "estados", y solo se agrega; cada
+//                                   estado, solo con su permiso, y las
+//                                   incidencias en "incidencias" e
+//                                   "incidenciasResueltas" (T22)
 //     rutas/{id}
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
@@ -163,8 +167,34 @@ service cloud.firestore {
         || ("autor" in pedido && pedido.autor.idPersona == miIdPersona(idDistribuidora));
     }
 
+    // Permisos de quien escribe (T22). El dueño tiene todos. El empleado,
+    // los de cualquiera de sus roles, según la copia por permiso de
+    // config/roles (T19).
+    function tienePermiso(idDistribuidora, permiso) {
+      return esDueno(idDistribuidora)
+        || get(rutaEmpleado(idDistribuidora, miIdPersona(idDistribuidora))).data.get("roles", [])
+          .hasAny(get(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/roles)
+            .data.porPermiso.get(permiso, []));
+    }
+
+    // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
+    // del que viene: dos cambios hechos sin señal pueden llegar desordenados
+    // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
+    // quien tiene su permiso, y el mismo permiso lo vuelve atrás:
+    //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
+    //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
+    //   "Controla pedidos" y el dueño: todos.
+    // "Entregado" y "Cancelado" los limitan T27 y T26.
+    function puedePonerEstado(idDistribuidora, estado) {
+      return estado in ["entregado", "cancelado"]
+        || tienePermiso(idDistribuidora, "controla")
+        || (estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
+        || (estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"));
+    }
+
     // El historial de estados solo se agrega: una entrada por cambio, a
-    // nombre de quien escribe, sin tocar las que ya están.
+    // nombre de quien escribe, sin tocar las que ya están, y con el permiso
+    // de ese estado (T22).
     function estadoAgregadoValido(idDistribuidora, antes, despues) {
       let nuevas = despues.estados.keys().removeAll(antes.estados.keys());
       return despues.estados is map
@@ -172,20 +202,70 @@ service cloud.firestore {
         && despues.estados.diff(antes.estados).removedKeys().size() == 0
         && nuevas.size() == 1
         && entradaDeEstadoValida(idDistribuidora, despues.estados[nuevas[0]])
-        && estadoDePedidoValido(despues.estado);
+        && estadoDePedidoValido(despues.estado)
+        && puedePonerEstado(idDistribuidora, despues.estados[nuevas[0]].estado);
+    }
+
+    // Incidencias (T22): se marcan encima del estado, sin reemplazarlo. Cada
+    // una es una entrada del mapa "incidencias": { motivo, persona,
+    // horaCelular }. Al resolverla se suma, con el mismo id, una entrada en
+    // "incidenciasResueltas": { nota, persona, horaCelular }. Las dos solo se
+    // agregan: nunca se cambian ni se borran.
+    function textoObligatorio(texto) {
+      return texto is string && texto.size() >= 1 && texto.size() <= 300;
+    }
+
+    // Una incidencia nueva: una sola entrada agregada, sin tocar las demás.
+    // Cualquier miembro la marca, con motivo y a nombre propio.
+    function incidenciaAgregadaValida(idDistribuidora, antes, despues) {
+      let previas = antes.get("incidencias", {});
+      let nuevas = despues.incidencias.keys().removeAll(previas.keys());
+      let incidencia = despues.incidencias[nuevas[0]];
+      return despues.incidencias.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && incidencia is map
+        && incidencia.keys().hasAll(["motivo", "persona", "horaCelular"])
+        && incidencia.keys().hasOnly(["motivo", "persona", "horaCelular"])
+        && textoObligatorio(incidencia.motivo)
+        && incidencia.horaCelular is number
+        && personaPropia(idDistribuidora, incidencia.persona);
+    }
+
+    // Resolver una incidencia que existe: una sola entrada agregada, con el
+    // mismo id. Solo el dueño o "Controla pedidos", con nota y a nombre
+    // propio.
+    function resolucionAgregadaValida(idDistribuidora, antes, despues) {
+      let previas = antes.get("incidenciasResueltas", {});
+      let nuevas = despues.incidenciasResueltas.keys().removeAll(previas.keys());
+      let resolucion = despues.incidenciasResueltas[nuevas[0]];
+      return despues.incidenciasResueltas.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && nuevas[0] in despues.get("incidencias", {})
+        && resolucion is map
+        && resolucion.keys().hasAll(["nota", "persona", "horaCelular"])
+        && resolucion.keys().hasOnly(["nota", "persona", "horaCelular"])
+        && textoObligatorio(resolucion.nota)
+        && resolucion.horaCelular is number
+        && personaPropia(idDistribuidora, resolucion.persona)
+        && tienePermiso(idDistribuidora, "controla");
     }
 
     // Cada cambio se guarda campo por campo. El id, la fecha, el autor y la
     // marca de eliminado no cambian. El estado cambia solo junto con una
-    // entrada nueva del historial, y un "Histórico" no pasa a tener estados.
+    // entrada nueva del historial, y un "Histórico" no pasa a tener estados
+    // ni incidencias.
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
-      return cambiados.hasOnly(["_orden", "estado", "estados", "preparacion", "entrega", "cobro", "ediciones",
-          "productos", "comercio", "observaciones", "pedido", "cantidad"])
+      return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
+          "entrega", "cobro", "ediciones", "productos", "comercio", "observaciones", "pedido", "cantidad"])
         && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
           || puedeCambiarLoPedido(idDistribuidora, antes))
         && (!cambiados.hasAny(["estado", "estados"])
-          || ("estados" in antes && estadoAgregadoValido(idDistribuidora, antes, despues)));
+          || ("estados" in antes && estadoAgregadoValido(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["incidencias"])
+          || ("estados" in antes && incidenciaAgregadaValida(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["incidenciasResueltas"])
+          || ("estados" in antes && resolucionAgregadaValida(idDistribuidora, antes, despues)));
     }
 
     function vigente(datosCodigo) {
