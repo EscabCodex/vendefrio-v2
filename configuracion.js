@@ -54,6 +54,12 @@
                         <small>Elegí qué avisos recibir</small></span><b>›</b>
                     </button>
 
+                    <button class="configFila oculto" data-config-seccion="impresora" id="configFilaImpresora">
+                        <span class="configIcono">${window.icono("impresora",20)}</span>
+                        <span><strong>Impresora</strong>
+                        <small>Impresora Bluetooth para los tickets</small></span><b>›</b>
+                    </button>
+
                     <button class="configFila" data-config-seccion="apariencia">
                         <span class="configIcono">${window.icono("paleta",20)}</span>
                         <span><strong>Apariencia</strong>
@@ -922,6 +928,37 @@
         // Avisos (T23): solo en la nube, con cuenta o con código.
         document.getElementById("configFilaAvisos")
             ?.classList.toggle("oculto", !window.avisosVendeFrio?.disponible?.());
+        // Impresora (T28b): solo en la nube y con Web Bluetooth (no en iPhone).
+        document.getElementById("configFilaImpresora")
+            ?.classList.toggle("oculto", !window.impresionVendeFrio?.disponible?.());
+    }
+
+    // --- Impresora (T28b): la guardada en este celular y "Cambiar impresora" ---
+    function htmlImpresora() {
+        const impresion = window.impresionVendeFrio;
+
+        if (!impresion || !impresion.disponible()) {
+            return `
+                <p class="configEstado">
+                    Los tickets se imprimen por Bluetooth desde un celular Android con Chrome,
+                    con tu cuenta o con el código de tu encargado.
+                </p>
+            `;
+        }
+
+        const guardada = impresion.impresoraGuardada();
+
+        return `
+            <p class="configEstado">
+                ${guardada
+                    ? `Impresora guardada: <strong>${escaparTexto(guardada.nombre)}</strong>`
+                    : "Todavía no elegiste una impresora: se elige la primera vez que tocás «Imprimir ticket» en un pedido."}
+            </p>
+            <p class="configEstado">
+                Se conecta recién al imprimir, nunca al abrir la app. Vale solo para este celular.
+            </p>
+            <button type="button" data-accion="cambiarImpresora">${guardada ? "Cambiar impresora" : "Elegir impresora"}</button>
+        `;
     }
 
     // --- Avisos (T23): qué avisos recibe cada persona ---
@@ -1175,6 +1212,7 @@
                 : "Ingresá con tu email y contraseña"],
             empleados: ["Empleados", "Códigos, fichas, roles y bajas de tus empleados"],
             avisos: ["Avisos", "Elegí qué avisos recibir"],
+            impresora: ["Impresora", "Impresora Bluetooth para los tickets de los pedidos"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
@@ -1203,6 +1241,10 @@
 
         if (seccion === "avisos") {
             caja.innerHTML += htmlAvisos();
+        }
+
+        if (seccion === "impresora") {
+            caja.innerHTML += htmlImpresora();
         }
 
         if (seccion === "apariencia") {
@@ -2154,6 +2196,17 @@
     document.addEventListener("click", event => {
         if (!event.target.closest?.('[data-accion="verAvisos"]')) return;
         window.avisosVendeFrio?.abrirLista?.();
+    });
+
+    // Impresora (T28b): abre la lista de Chrome y guarda la elegida.
+    document.addEventListener("click", event => {
+        if (!event.target.closest?.('[data-accion="cambiarImpresora"]')) return;
+        window.impresionVendeFrio?.cambiarImpresora?.().then(cambio => {
+            if (!cambio) return;
+            mostrarToast("Impresora guardada");
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "impresora" && caja && !caja.classList.contains("oculto")) detalle("impresora");
+        });
     });
 
     aplicar();

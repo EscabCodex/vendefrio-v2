@@ -859,7 +859,7 @@ function generarPedido() {
     void copiarTexto(ultimoPedidoTexto);
     registrarPedido(cliente);
 
-    agregarPedidoConId({
+    const idPedidoNuevo = agregarPedidoConId({
         fecha,
         timestamp,
         comercio: cliente,
@@ -876,6 +876,7 @@ function generarPedido() {
     if (pedidoCliente) pedidoCliente.textContent = cliente;
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
+    mostrarImprimirPedidoGenerado(idPedidoNuevo);
     if (modalPedido) modalPedido.classList.remove("oculto");
     if (navigator.vibrate) navigator.vibrate(35);
 
@@ -1022,6 +1023,29 @@ if (modalPedido) {
         if (event.target === modalPedido) modalPedido.classList.add("oculto");
     });
 }
+
+// Imprimir ticket (T28b): en "Pedido generado", la opción de imprimir el
+// pedido recién cargado (solo en la nube y con Web Bluetooth). Elige las
+// copias e imprime; si no se toca, se sigue como siempre.
+let idUltimoPedidoGenerado = "";
+
+function mostrarImprimirPedidoGenerado(id) {
+    idUltimoPedidoGenerado = id || "";
+    const boton = document.getElementById("imprimirPedidoGenerado");
+    if (!boton) return;
+
+    const pedido = id ? obtenerHistorial().find(item => item.id === id) : null;
+    const puede = Boolean(pedido && window.impresionVendeFrio?.puedeImprimir?.(pedido));
+    boton.classList.toggle("oculto", !puede);
+    if (puede && window.icono && !boton.querySelector("svg")) {
+        boton.insertAdjacentHTML("afterbegin", window.icono("impresora", 18));
+    }
+}
+
+document.getElementById("imprimirPedidoGenerado")?.addEventListener("click", () => {
+    if (!idUltimoPedidoGenerado) return;
+    window.impresionVendeFrio?.elegirCopias?.(idUltimoPedidoGenerado);
+});
 
 // -----------------------------------------------------
 // EDITAR UN PEDIDO (T25)

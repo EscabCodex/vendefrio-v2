@@ -51,6 +51,7 @@
     flechaIzquierda: '<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>',
     lista: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
     campana: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+    impresora: '<path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="1.6"/><path d="M7 14h10v6.5H7z"/><path d="M17 12h.01"/>',
     alerta: '<path d="M12 3.8 2.8 19.6h18.4z"/><path d="M12 10v4.4M12 17.2h.01"/>'
   };
 

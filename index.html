@@ -494,6 +494,11 @@
 
     <div id="pedidoDetalle" class="detallePedido"></div>
 
+    <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
+    <button id="imprimirPedidoGenerado" class="btnAccion secundario botonImprimirGenerado oculto" type="button">
+      Imprimir ticket
+    </button>
+
     <div class="modalBotones">
       <button id="whatsappPedido" class="btnModalWhatsapp">
         Enviar por WhatsApp
@@ -527,6 +532,8 @@
 <script src="comerciosAdmin.js"></script>
 <script src="productosAdmin.js"></script>
 <script src="historial.js"></script>
+<!-- Imprimir ticket (T28b): antes de seguimiento.js, que muestra el botón. -->
+<script src="impresion.js"></script>
 <!-- Pedidos y seguimiento (T21): después de pedidos.js y historial.js. -->
 <script src="seguimiento.js"></script>
 <!-- Avisos en la app (T23): después de nube.js, empleados.js y seguimiento.js. -->
