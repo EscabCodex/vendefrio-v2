@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26)
+// T22, T23, T24, T25, T26, T27)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -36,7 +36,8 @@ rules_version = '2';
 //                                   agregan; nunca se borra: eliminar lo
 //                                   marca como eliminado y cancelar es un
 //                                   estado más, los dos solo del autor o el
-//                                   dueño (T26)
+//                                   dueño (T26); "Entregado" va junto con
+//                                   lo entregado en "entrega" (T27)
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
@@ -198,6 +199,23 @@ service cloud.firestore {
         && antes.get("estado", "") != "entregado";
     }
 
+    // Entregado (T27): cualquier miembro, pero no un pedido cancelado, y
+    // siempre junto con lo entregado (el campo "entrega", en la misma
+    // escritura). Se usa la copia del estado, como al cancelar.
+    function entregadoValido(antes, despues) {
+      return antes.get("estado", "") != "cancelado"
+        && despues.diff(antes).affectedKeys().hasAny(["entrega"]);
+    }
+
+    // Volver atrás un pedido entregado por error (T27): como entregar, lo
+    // hace cualquier miembro, con motivo, hacia un estado anterior. Se usa
+    // la copia del estado para saber que estaba entregado.
+    function vueltaDeEntregaValida(antes, entrada) {
+      return antes.get("estado", "") == "entregado"
+        && entrada.estado in ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto"]
+        && textoObligatorio(entrada.nota);
+    }
+
     // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
     // del que viene: dos cambios hechos sin señal pueden llegar desordenados
     // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
@@ -205,14 +223,17 @@ service cloud.firestore {
     //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
     //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
     //   "Controla pedidos" y el dueño: todos.
-    // "Cancelado", solo el autor o el dueño (T26). "Entregado" lo limita T27.
-    function puedePonerEstado(idDistribuidora, antes, entrada) {
+    // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera, y
+    // volver atrás desde "Entregado", también (T27).
+    function puedePonerEstado(idDistribuidora, antes, despues, entrada) {
       return entrada.estado == "cancelado"
         ? cancelacionValida(idDistribuidora, antes, entrada)
         : (entrada.estado == "entregado"
-          || tienePermiso(idDistribuidora, "controla")
-          || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
-          || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte")));
+          ? entregadoValido(antes, despues)
+          : (vueltaDeEntregaValida(antes, entrada)
+            || tienePermiso(idDistribuidora, "controla")
+            || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
+            || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))));
     }
 
     // El historial de estados solo se agrega: una entrada por cambio, a
@@ -226,7 +247,7 @@ service cloud.firestore {
         && nuevas.size() == 1
         && entradaDeEstadoValida(idDistribuidora, despues.estados[nuevas[0]])
         && estadoDePedidoValido(despues.estado)
-        && puedePonerEstado(idDistribuidora, antes, despues.estados[nuevas[0]]);
+        && puedePonerEstado(idDistribuidora, antes, despues, despues.estados[nuevas[0]]);
     }
 
     // Incidencias (T22): se marcan encima del estado, sin reemplazarlo. Cada
@@ -368,6 +389,25 @@ service cloud.firestore {
         && personaPropia(idDistribuidora, vista.persona);
     }
 
+    // Entrega (T27): "entrega" es { cambios, persona, horaCelular }. cambios
+    // tiene lo entregado de cada producto que se entregó distinto de lo
+    // preparado: { idLinea: { entregada, motivo } }. Se escribe solo junto
+    // con una entrada nueva "Entregado" del historial, a nombre propio (al
+    // entregar de nuevo, después de volver atrás, se reemplaza).
+    function entregaValida(idDistribuidora, antes, despues) {
+      let nuevas = despues.get("estados", {}).keys().removeAll(antes.get("estados", {}).keys());
+      let entrega = despues.entrega;
+      return nuevas.size() == 1
+        && despues.estados[nuevas[0]].estado == "entregado"
+        && entrega is map
+        && entrega.keys().hasAll(["cambios", "persona", "horaCelular"])
+        && entrega.keys().hasOnly(["cambios", "persona", "horaCelular"])
+        && entrega.cambios is map
+        && entrega.cambios.size() <= 200
+        && entrega.horaCelular is number
+        && personaPropia(idDistribuidora, entrega.persona);
+    }
+
     // Eliminar (T26): el pedido no se borra nunca. Queda guardado por dentro
     // con eliminado: true y "eliminacion": { persona, horaCelular } (quién y
     // cuándo), en una escritura sola. Solo quien lo cargó o el dueño, y solo
@@ -390,9 +430,10 @@ service cloud.firestore {
     // cambian, y la marca de eliminado solo pasa a true al eliminar (T26).
     // Un pedido eliminado ya no cambia (salvo su lugar en la lista). El
     // estado cambia solo junto con una entrada nueva del historial, y un
-    // "Histórico" no pasa a tener estados, incidencias, checklist ni
-    // ediciones. En un pedido con estados, lo pedido cambia solo junto con
-    // una edición nueva (T25).
+    // "Histórico" no pasa a tener estados, incidencias, checklist,
+    // ediciones ni entrega. En un pedido con estados, lo pedido cambia solo
+    // junto con una edición nueva (T25), y lo entregado solo junto con
+    // "Entregado" (T27). El cobro sigue abierto hasta T28.
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
@@ -416,7 +457,9 @@ service cloud.firestore {
         && (!cambiados.hasAny(["preparacion"])
           || ("estados" in antes && tildeAgregadoValido(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["faltantes"])
-          || ("estados" in antes && faltanteAgregadoValido(idDistribuidora, antes, despues)));
+          || ("estados" in antes && faltanteAgregadoValido(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["entrega"])
+          || ("estados" in antes && entregaValida(idDistribuidora, antes, despues)));
     }
 
     // Avisos dentro de la app (T23). Cada persona tiene su buzón:
@@ -436,7 +479,7 @@ service cloud.firestore {
       return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
         && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
         && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante", "pedidoEditado",
-          "pedidoCancelado"]
+          "pedidoCancelado", "entregado"]
         && aviso.idPedido is string
         && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
         && aviso.comercio is string

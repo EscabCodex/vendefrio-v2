@@ -64,11 +64,15 @@ function formatearPrecioHistorial(valor) {
 }
 
 // "Cargado por Jere · $ 12.500" (T20). Si algún producto no tenía precio en
-// el catálogo al cargarlo, lo dice.
+// el catálogo al cargarlo, lo dice. Entregado (T27): el total a cobrar con
+// lo entregado.
 function textoAutorYTotalHistorial(pedido) {
     const nombre = String(pedido.autor.nombre || "").trim() ||
         (pedido.autor.idPersona === "dueno" ? "el dueño" : "un empleado");
-    const { total, conPrecio, sinPrecio } = totalDelPedido(pedido);
+    const entrega = estadoActualDelPedido(pedido) === "entregado"
+        ? window.nubeVendeFrio?.entregaDelPedido?.(pedido)
+        : null;
+    const { total, conPrecio, sinPrecio } = entrega ? entrega.total : totalDelPedido(pedido);
     let precio = "Sin precio";
 
     if (conPrecio && sinPrecio) {
@@ -223,11 +227,12 @@ function obtenerPedidosFiltrados() {
         ? filtroFechaHistorial.value
         : "todos";
 
-    // Eliminados y cancelados no cuentan (T26). El índice es el de la lista
+    // Eliminados y cancelados no cuentan (T26) y, en la nube, solo los
+    // entregados y los "Histórico" (T27). El índice es el de la lista
     // completa, como antes.
     return obtenerHistorial()
         .map((pedido, indice) => ({ pedido, indice }))
-        .filter(registro => pedidoCuentaEnHistorial(registro.pedido))
+        .filter(registro => pedidoEstaEnHistorial(registro.pedido))
         .filter(registro => {
             const comercio = normalizarTexto(registro.pedido.comercio);
             const detalle = normalizarTexto(registro.pedido.pedido);
@@ -360,7 +365,7 @@ function abrirHistorialDePedido(indice) {
 // -----------------------------------------------------
 
 function obtenerEstadisticasComerciales() {
-    const historial = obtenerPedidosQueCuentan();
+    const historial = obtenerPedidosDelHistorial();
     const comercios = new Map();
     const productos = new Map();
     const marcas = new Map();
@@ -845,7 +850,7 @@ function crearAlertasComerciales(perfiles) {
 
 function crearPanelInteligenciaComercial() {
     const estadisticas = obtenerEstadisticasComerciales();
-    const historialCompleto = obtenerPedidosQueCuentan();
+    const historialCompleto = obtenerPedidosDelHistorial();
     const hayDatos = estadisticas.comercios.length > 0 ||
         estadisticas.productos.length > 0 ||
         estadisticas.marcas.length > 0;

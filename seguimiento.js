@@ -14,6 +14,10 @@
 // marca los productos a revisar y "Entendido" la cierra (T25). Quien cargó
 // el pedido y el dueño lo eliminan (solo en "Cargado") o lo cancelan con
 // motivo (antes de "Entregado"); el cancelado queda en "Cancelados" (T26).
+// Cualquiera lo entrega deslizando "Entregado" (desde "En reparto", o antes
+// en el mostrador) o con "Entregar con cambios" (lo entregado de cada
+// producto, con motivo); la ficha muestra el total a cobrar con lo
+// entregado y, si se entregó por error, se vuelve un paso atrás (T27).
 // =====================================================
 
 (function () {
@@ -47,8 +51,8 @@
     // Pasos que se hacen desde la ficha (T22), con el permiso que los deja
     // hacer. El mismo permiso vuelve el paso atrás, con motivo. "Controla
     // pedidos" y el dueño pueden todos. "Preparado" se marca con la
-    // checklist completa y su resumen (T24). "Entregado" llega con la entrega
-    // (T27): acá solo se vuelve atrás.
+    // checklist completa y su resumen (T24). "Entregado" se marca con la
+    // entrega (T27), que tiene sus propios botones y su vuelta atrás.
     const PASOS = [
         { desde: "cargado", hacia: "enPreparacion", permiso: "prepara", boton: "Empezar a preparar", hecho: "Pedido en preparación" },
         { desde: "enPreparacion", hacia: "preparado", permiso: "prepara", boton: "Marcar preparado", conChecklist: true },
@@ -129,6 +133,19 @@
 
     function puedeCancelar(pedido) {
         return Boolean(window.nubeVendeFrio?.puedeCancelarElPedido?.(pedido));
+    }
+
+    // Entrega (T27): lo entregado de cada producto y el total a cobrar.
+    function entregaDe(pedido, cambios) {
+        return window.nubeVendeFrio?.entregaDelPedido?.(pedido, cambios) || null;
+    }
+
+    function puedeEntregar(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeEntregarElPedido?.(pedido));
+    }
+
+    function puedeVolverDeEntregado(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeVolverDeEntregado?.(pedido));
     }
 
     // La persona de este celular hizo esa entrada.
@@ -242,12 +259,16 @@
         return persona && persona.idPersona === "dueno" ? "el dueño" : "un empleado";
     }
 
-    function textoTotal(pedido) {
-        const { total, conPrecio, sinPrecio } = totalDelPedido(pedido);
-
+    function textoMonto({ total, conPrecio, sinPrecio }) {
         if (conPrecio && sinPrecio) return textoPrecio(total) + " (" + sinPrecio + " sin precio)";
         if (conPrecio) return textoPrecio(total);
         return "Sin precio";
+    }
+
+    // Entregado (T27): el total a cobrar sale de lo entregado.
+    function textoTotal(pedido) {
+        const entrega = estadoActualDelPedido(pedido) === "entregado" ? entregaDe(pedido) : null;
+        return textoMonto(entrega ? entrega.total : totalDelPedido(pedido));
     }
 
     function textoUnidades(cantidad) {
@@ -434,6 +455,11 @@
             if (preparacion.faltantes) info.append(crear("span", "badge faltanteSeguimiento", textoFaltantes(preparacion.faltantes)));
         }
 
+        // Entrega (T27): si se entregó distinto de lo preparado.
+        if (registro.estado === "entregado" && (entregaDe(pedido)?.cambios || 0) > 0) {
+            info.append(crear("span", "badge entregaSeguimiento", "Entregado con cambios"));
+        }
+
         if (tieneIncidencia(pedido)) info.append(crear("span", "badge incidenciaSeguimiento", "Con incidencia"));
         if (edicionesSinVer(pedido).length) info.append(crear("span", "badge edicionSeguimiento", "Editado"));
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
@@ -550,11 +576,12 @@
         const modal = document.getElementById("modalFichaPedido");
         if (modal) modal.classList.add("oculto");
 
-        // Las ventanas de la checklist (T24) y la de editar (T25) son de
-        // esta ficha.
+        // Las ventanas de la checklist (T24), la de editar (T25) y la de la
+        // entrega (T27) son de esta ficha.
         cerrarResumen();
         cerrarFaltante();
         cerrarConfirmacion();
+        cerrarEntrega();
         window.cerrarEdicionPedido?.();
     }
 
@@ -606,6 +633,23 @@
             }
         }
 
+        // Entregado (T27): lo entregado de cada producto (si cambió, con su
+        // motivo) y el total a cobrar con lo entregado.
+        const entrega = estado === "entregado" ? entregaDe(pedido) : null;
+        const lineasEntregadas = new Map();
+        if (entrega) {
+            entrega.lineas.forEach(linea => lineasEntregadas.set(linea.item, linea));
+
+            if (entrega.cambios) {
+                seccion.appendChild(crear(
+                    "p",
+                    "resumenEntregaFicha",
+                    "Se entregaron " + entrega.unidadesEntregadas + " de " + textoUnidades(entrega.unidadesPreparadas) +
+                        "  ·  " + (entrega.cambios === 1 ? "1 cambio" : entrega.cambios + " cambios")
+                ));
+            }
+        }
+
         // Agrupados por marca, en el orden en que se cargaron.
         const marcas = [];
         productos.forEach(item => {
@@ -648,14 +692,23 @@
                     );
                 }
 
-                const subtotal = crear("span", "productoFichaSubtotal", Number.isFinite(precio) ? textoPrecio(precio * cantidad) : "—");
+                const entregada = lineasEntregadas.get(item);
+                if (entregada && entregada.cambio) {
+                    izquierda.append(
+                        crear("small", "cambioEntregaFicha", "Entregado: " + entregada.entregada + " de " + entregada.preparada),
+                        crear("small", "observacionFaltante", entregada.motivo)
+                    );
+                }
+
+                const unidades = entregada ? entregada.entregada : cantidad;
+                const subtotal = crear("span", "productoFichaSubtotal", Number.isFinite(precio) ? textoPrecio(precio * unidades) : "—");
                 fila.append(izquierda, subtotal);
                 seccion.appendChild(fila);
             });
         });
 
         const total = crear("div", "totalFichaPedido");
-        total.append(crear("span", "", "Total"), crear("strong", "", textoTotal(pedido)));
+        total.append(crear("span", "", entrega ? "Total a cobrar" : "Total"), crear("strong", "", textoTotal(pedido)));
         seccion.appendChild(total);
 
         return seccion;
@@ -761,9 +814,18 @@
         return seccion;
     }
 
+    let redibujoPendiente = 0;
+
     function dibujarFicha() {
         const cuerpo = document.getElementById("cuerpoFichaPedido");
         if (!cuerpo || !idFichaAbierta) return;
+
+        // No se corta un deslizamiento a medias (T27): se redibuja al soltar.
+        clearTimeout(redibujoPendiente);
+        if (cuerpo.querySelector(".deslizador.arrastrando")) {
+            redibujoPendiente = setTimeout(dibujarFicha, 300);
+            return;
+        }
 
         const pedido = buscarPedido(idFichaAbierta);
         const estado = pedido ? estadoActualDelPedido(pedido) : "";
@@ -807,6 +869,16 @@
             ["Unidades", unidadesDelPedido(pedido) + "  ·  " + productos + (productos === 1 ? " producto" : " productos")]
         ];
         if (enChecklist) filasDatos.push(["Total", textoTotal(pedido)]);
+
+        // Entregado (T27): quién lo entregó y el cobro, que queda pendiente
+        // hasta que se registre (T28).
+        if (estado === "entregado") {
+            const entrega = entregaDe(pedido);
+            if (entrega && entrega.persona) {
+                filasDatos.push(["Entregado por", nombrePersona(entrega.persona) + "  ·  " + textoCuando(entrega.horaCelular)]);
+            }
+            filasDatos.push(["Cobro", "Pendiente"]);
+        }
 
         filasDatos.forEach(([nombre, valor]) => {
             const fila = crear("div", "datoFichaPedido");
@@ -951,11 +1023,13 @@
     // Botones de la ficha: solo los pasos que esta persona puede hacer.
     function dibujarAcciones(pedido, estado) {
         const siguiente = pasoSiguiente(estado);
-        const anterior = pasoAnterior(estado);
+        // Entregado (T27): vuelve al estado que tenía antes de la entrega.
+        const anterior = estado === "entregado" ? puedeVolverDeEntregado(pedido) : pasoAnterior(estado);
         const marcar = estado !== "cancelado" && !tieneIncidencia(pedido);
         const editar = puedeEditar(pedido);
         const cancelar = puedeCancelar(pedido);
         const eliminar = puedeEliminar(pedido);
+        const entregar = puedeEntregar(pedido);
 
         // "Marcar preparado" (T24) se puede tocar solo con la checklist
         // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
@@ -965,9 +1039,20 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
+
+        // Entrega (T27): en "En reparto", el botón que se desliza y, al
+        // lado, "Entregar con cambios". Antes (en el mostrador), un botón
+        // que abre la entrega con su resumen.
+        if (entregar && estado === "enReparto") {
+            const id = String(pedido.id || "");
+            acciones.append(
+                crearDeslizador("Deslizá para marcar Entregado", () => entregarSinCambios(id, estado)),
+                crearBoton("btnAccion secundario botonEntregarConCambios", "Entregar con cambios", "entregarConCambios")
+            );
+        }
 
         if (siguiente) {
             const boton = crearBoton("btnAccion pasoSiguientePedido", siguiente.boton, "siguiente");
@@ -983,6 +1068,10 @@
 
         // Editar (T25): solo quien cargó el pedido y el dueño.
         if (editar) acciones.appendChild(crearBoton("btnAccion secundario botonEditarPedido", "Editar pedido", "editar"));
+
+        if (entregar && estado !== "enReparto") {
+            acciones.appendChild(crearBoton("btnAccion secundario botonEntregarMostrador", "Entregar en el mostrador", "entregar"));
+        }
 
         const secundarias = crear("div", "accionesSecundariasPedido");
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
@@ -1133,6 +1222,11 @@
     }
 
     function volverAtras(id, estado) {
+        if (estado === "entregado") {
+            volverDeEntregado(id);
+            return;
+        }
+
         const paso = pasoAnterior(estado);
         if (!paso) return;
 
@@ -1273,6 +1367,8 @@
         else if (boton.dataset.accion === "entendido") entendido(id);
         else if (boton.dataset.accion === "cancelar") cancelarPedido(id, estado);
         else if (boton.dataset.accion === "eliminar") eliminarPedido(id, estado);
+        else if (boton.dataset.accion === "entregar") abrirEntrega(id, false);
+        else if (boton.dataset.accion === "entregarConCambios") abrirEntrega(id, true);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -1956,6 +2052,368 @@
     }
 
     // -------------------------------------------------
+    // Entrega (T27)
+    // -------------------------------------------------
+    // "Entregado" lo marca cualquiera. En "En reparto" se desliza desde la
+    // ficha; antes (por ejemplo, en el mostrador), "Entregar en el
+    // mostrador" abre la ventana de la entrega, con el resumen y el mismo
+    // botón que se desliza. Por defecto se entrega todo lo preparado;
+    // "Entregar con cambios" deja ajustar lo entregado de cada producto, con
+    // motivo. Lo pedido y lo preparado se conservan.
+
+    function avisarEntregado(resultado) {
+        mostrarToast(resultado && resultado.cambios ? "Pedido entregado con cambios" : "Pedido entregado");
+        if (navigator.vibrate) navigator.vibrate(30);
+    }
+
+    // El botón deslizable de la ficha: entrega todo lo preparado.
+    function entregarSinCambios(id, estado) {
+        if (!pedidoSigueEn(id, estado)) {
+            mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá el estado nuevo y probá de nuevo si hace falta.");
+            return;
+        }
+
+        try {
+            window.nubeVendeFrio.entregarPedido(id, {});
+            avisarEntregado(null);
+        } catch (error) {
+            avisarError(error);
+        }
+    }
+
+    // Si se entregó por error: vuelve al estado que tenía antes de la
+    // entrega, con motivo. Sale de Historial y vuelve a "Pedidos".
+    function volverDeEntregado(id) {
+        const pedido = buscarPedido(id);
+        if (!pedido || !puedeVolverDeEntregado(pedido)) return;
+
+        const hacia = nombreDeEstadoPedido(window.nubeVendeFrio.estadoAntesDeLaEntrega(pedido));
+
+        abrirModalTexto({
+            titulo: "Volver un paso atrás",
+            explicacion: "El pedido pasa de \u00abEntregado\u00bb a \u00ab" + hacia + "\u00bb: sale de Historial y vuelve a \u00abPedidos\u00bb. Queda en el seguimiento con tu nombre y el motivo.",
+            etiqueta: "¿Por qué vuelve atrás?",
+            falta: "el motivo",
+            boton: "Volver a " + hacia,
+            peligro: true,
+            alConfirmar: motivo => {
+                if (!pedidoSigueEn(id, "entregado")) {
+                    mostrarAviso("El pedido cambió", "Otra persona lo cambió mientras escribías. Revisá el estado nuevo y probá de nuevo si hace falta.");
+                    return;
+                }
+
+                try {
+                    const estado = window.nubeVendeFrio.volverDeEntregado(id, motivo);
+                    mostrarToast("Volvió a " + nombreDeEstadoPedido(estado));
+                } catch (error) {
+                    avisarError(error);
+                }
+            }
+        });
+    }
+
+    // La ventana de la entrega: { id, estado, firma, conCambios, cantidades,
+    // motivos }. cantidades y motivos van por id de línea. "firma" dice qué
+    // productos y cantidades preparadas tenía el pedido al abrirla: si
+    // cambian (por ejemplo, el autor lo editó), se cierra y avisa.
+    let entregaAbierta = null;
+
+    function firmaDeEntrega(entrega) {
+        return JSON.stringify(entrega.lineas.map(linea => [linea.clave, linea.pedida, linea.preparada]));
+    }
+
+    // Los productos que se entregan distinto de lo preparado.
+    function cambiosDeLaEntrega(entrega) {
+        const cambios = {};
+        if (!entregaAbierta || !entregaAbierta.conCambios) return cambios;
+
+        entrega.lineas.forEach(linea => {
+            const cantidad = entregaAbierta.cantidades[linea.clave];
+            if (cantidad === undefined || cantidad === linea.preparada) return;
+            cambios[linea.clave] = { entregada: cantidad, motivo: String(entregaAbierta.motivos[linea.clave] || "").trim() };
+        });
+
+        return cambios;
+    }
+
+    function crearModalEntrega() {
+        let modal = document.getElementById("modalEntregaPedido");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalEntregaPedido";
+
+        const contenido = crear("div", "modalContenido entregaPedido");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloEntregaPedido");
+
+        const titulo = crear("h2", "", "Entregar pedido");
+        titulo.id = "tituloEntregaPedido";
+
+        const cuerpo = crear("div", "cuerpoEntregaPedido");
+        cuerpo.id = "cuerpoEntregaPedido";
+
+        const botones = crear("div", "modalBotones");
+        const volver = crear("button", "btnModalCancelar", "Volver");
+        volver.type = "button";
+        botones.appendChild(volver);
+
+        contenido.append(titulo, cuerpo, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        volver.addEventListener("click", cerrarEntrega);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarEntrega();
+        });
+
+        cuerpo.addEventListener("click", evento => {
+            const boton = evento.target.closest("button[data-entrega]");
+            if (!boton || !entregaAbierta) return;
+
+            if (boton.dataset.entrega === "conCambios") {
+                entregaAbierta.conCambios = !entregaAbierta.conCambios;
+                entregaAbierta.error = "";
+                dibujarEntrega();
+                return;
+            }
+
+            const pedido = buscarPedido(entregaAbierta.id);
+            const linea = pedido ? entregaDe(pedido)?.lineas.find(item => item.clave === boton.dataset.linea) : null;
+            if (!linea) return;
+
+            const actual = entregaAbierta.cantidades[linea.clave] ?? linea.preparada;
+            const nueva = Math.min(linea.pedida, Math.max(0, actual + Number(boton.dataset.entrega)));
+            entregaAbierta.cantidades[linea.clave] = nueva;
+            entregaAbierta.error = "";
+            dibujarEntrega();
+        });
+
+        // El motivo se escribe sin redibujar (no se pierde lo que se tipea).
+        cuerpo.addEventListener("input", evento => {
+            const campo = evento.target.closest("input[data-motivo]");
+            if (!campo || !entregaAbierta) return;
+
+            entregaAbierta.motivos[campo.dataset.motivo] = campo.value;
+            campo.closest(".filaEntrega")?.classList.remove("sinMotivo");
+            const error = document.getElementById("errorEntregaPedido");
+            if (error) error.classList.add("oculto");
+        });
+
+        return modal;
+    }
+
+    function abrirEntrega(id, conCambios) {
+        const pedido = buscarPedido(id);
+        if (!pedido || !puedeEntregar(pedido)) return;
+
+        const entrega = entregaDe(pedido);
+        if (!entrega) return;
+
+        entregaAbierta = {
+            id,
+            estado: estadoActualDelPedido(pedido),
+            firma: firmaDeEntrega(entrega),
+            conCambios: Boolean(conCambios),
+            cantidades: {},
+            motivos: {},
+            error: ""
+        };
+
+        const modal = crearModalEntrega();
+        dibujarEntrega();
+        modal.classList.remove("oculto");
+
+        const contenido = modal.querySelector(".modalContenido");
+        if (contenido) contenido.scrollTop = 0;
+    }
+
+    function cerrarEntrega() {
+        entregaAbierta = null;
+        const modal = document.getElementById("modalEntregaPedido");
+        if (modal) modal.classList.add("oculto");
+    }
+
+    // Con los cambios de otro celular: si el pedido ya no se puede entregar
+    // o cambiaron sus productos, se cierra y avisa. Si no, sigue como está
+    // (no se pierde lo que se está escribiendo).
+    function revisarEntrega() {
+        const pedido = buscarPedido(entregaAbierta.id);
+        const entrega = pedido ? entregaDe(pedido) : null;
+
+        if (!pedido || !entrega || !puedeEntregar(pedido) || estadoActualDelPedido(pedido) !== entregaAbierta.estado) {
+            cerrarEntrega();
+            mostrarAviso("El pedido cambió", "Otra persona cambió el estado del pedido mientras lo entregabas. Revisá la ficha.");
+            return;
+        }
+
+        if (firmaDeEntrega(entrega) !== entregaAbierta.firma) {
+            cerrarEntrega();
+            mostrarAviso("El pedido cambió", "Mientras lo entregabas cambiaron sus productos. Revisá la ficha y probá de nuevo.");
+        }
+    }
+
+    function crearFilaEntrega(linea, conCambios) {
+        const fila = crear("div", "filaEntrega");
+        fila.dataset.clave = linea.clave;
+        if (linea.cambio) fila.classList.add("conCambio");
+
+        const textos = crear("div", "textoFilaEntrega");
+        const nombre = String(linea.item.producto || "Sin producto");
+        textos.appendChild(crear("strong", "", nombre));
+
+        const detalles = [];
+        if (linea.preparada !== linea.pedida) detalles.push("Se prepararon " + linea.preparada + " de " + linea.pedida);
+        if (linea.cambio) detalles.push("Antes: " + linea.preparada);
+        if (detalles.length) textos.appendChild(crear("small", "", detalles.join("  ·  ")));
+
+        const arriba = crear("div", "filaEntregaArriba");
+        arriba.appendChild(textos);
+
+        if (conCambios) {
+            const contador = crear("div", "contadorEntrega");
+            const menos = crear("button", "pasoContadorEntrega", "−");
+            menos.type = "button";
+            menos.dataset.entrega = "-1";
+            menos.dataset.linea = linea.clave;
+            menos.setAttribute("aria-label", "Una menos de " + nombre);
+            const mas = crear("button", "pasoContadorEntrega", "+");
+            mas.type = "button";
+            mas.dataset.entrega = "1";
+            mas.dataset.linea = linea.clave;
+            mas.setAttribute("aria-label", "Una más de " + nombre);
+            contador.append(menos, crear("span", "cantidadEntrega", String(linea.entregada)), mas);
+            arriba.appendChild(contador);
+        } else {
+            arriba.appendChild(crear("span", "cantidadEntrega", "x" + linea.entregada));
+        }
+
+        fila.appendChild(arriba);
+
+        if (conCambios && linea.cambio) {
+            const campo = document.createElement("input");
+            campo.type = "text";
+            campo.className = "motivoEntrega";
+            campo.dataset.motivo = linea.clave;
+            campo.maxLength = LARGO_MAXIMO_MOTIVO;
+            campo.placeholder = "Motivo (por ejemplo: rechazó 2)";
+            campo.setAttribute("aria-label", "Motivo del cambio de " + nombre);
+            campo.value = String(entregaAbierta.motivos[linea.clave] || "");
+            fila.appendChild(campo);
+        }
+
+        return fila;
+    }
+
+    function dibujarEntrega() {
+        const cuerpo = document.getElementById("cuerpoEntregaPedido");
+        if (!cuerpo || !entregaAbierta) return;
+
+        const pedido = buscarPedido(entregaAbierta.id);
+        if (!pedido) {
+            cerrarEntrega();
+            return;
+        }
+
+        const entrega = entregaDe(pedido, cambiosDeLaEntrega(entregaDe(pedido)));
+        const conCambios = entregaAbierta.conCambios;
+        cuerpo.innerHTML = "";
+
+        cuerpo.appendChild(crear(
+            "p",
+            "explicacionTextoPedido",
+            String(pedido.comercio || "SIN NOMBRE").trim() + ". " + (conCambios
+                ? "Ajustá lo entregado de cada producto. Cada cambio pide un motivo; lo pedido y lo preparado se conservan."
+                : "Se entrega todo lo preparado. Si el comercio no recibió algo, tocá \u00abEntregar con cambios\u00bb.")
+        ));
+
+        const numeros = crear("div", "numerosResumen");
+        [
+            [String(entrega.lineas.length), entrega.lineas.length === 1 ? "producto" : "productos", ""],
+            [String(entrega.unidadesEntregadas), entrega.unidadesEntregadas === 1 ? "unidad" : "unidades", ""],
+            [String(entrega.cambios), entrega.cambios === 1 ? "cambio" : "cambios", entrega.cambios ? "conFaltantes" : ""]
+        ].forEach(([valor, nombre, clase]) => {
+            const numero = crear("div", "numeroResumen " + clase);
+            numero.append(crear("strong", "", valor), crear("span", "", nombre));
+            numeros.appendChild(numero);
+        });
+        cuerpo.appendChild(numeros);
+
+        const total = crear("div", "totalFichaPedido totalEntrega");
+        total.append(crear("span", "", "Total a cobrar"), crear("strong", "", textoMonto(entrega.total)));
+        cuerpo.appendChild(total);
+
+        // Agrupados por marca, en el orden en que se cargaron.
+        const lista = crear("div", "listaEntrega");
+        let marcaAnterior = null;
+        entrega.lineas.forEach(linea => {
+            const marca = String(linea.item.marca || "Sin marca").trim() || "Sin marca";
+            if (marca !== marcaAnterior) {
+                lista.appendChild(crear("p", "marcaFichaPedido", marca));
+                marcaAnterior = marca;
+            }
+            lista.appendChild(crearFilaEntrega(linea, conCambios));
+        });
+        cuerpo.appendChild(lista);
+
+        const alternar = crear(
+            "button",
+            "btnAccion secundario alternarEntrega",
+            conCambios ? "Sin cambios: entregar todo lo preparado" : "Entregar con cambios"
+        );
+        alternar.type = "button";
+        alternar.dataset.entrega = "conCambios";
+        cuerpo.appendChild(alternar);
+
+        const error = crear("p", "errorTextoPedido" + (entregaAbierta.error ? "" : " oculto"), entregaAbierta.error || "");
+        error.id = "errorEntregaPedido";
+        error.setAttribute("role", "alert");
+        cuerpo.appendChild(error);
+
+        cuerpo.appendChild(crearDeslizador(
+            entrega.cambios ? "Deslizá para entregar con cambios" : "Deslizá para marcar Entregado",
+            confirmarEntrega
+        ));
+    }
+
+    function confirmarEntrega() {
+        if (!entregaAbierta) return;
+
+        const { id, estado } = entregaAbierta;
+        const pedido = buscarPedido(id);
+        if (!pedido || !pedidoSigueEn(id, estado)) {
+            cerrarEntrega();
+            mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá el estado nuevo y probá de nuevo si hace falta.");
+            return;
+        }
+
+        const cambios = cambiosDeLaEntrega(entregaDe(pedido));
+        const sinMotivo = Object.keys(cambios).filter(clave => !cambios[clave].motivo);
+        if (sinMotivo.length) {
+            entregaAbierta.error = sinMotivo.length === 1
+                ? "Escribí el motivo del cambio para seguir."
+                : "Escribí el motivo de cada cambio para seguir.";
+            dibujarEntrega();
+            sinMotivo.forEach(clave => {
+                document.querySelector('#cuerpoEntregaPedido .filaEntrega[data-clave="' + clave.replace(/["\\]/g, "") + '"]')?.classList.add("sinMotivo");
+            });
+            document.querySelector('#cuerpoEntregaPedido input[data-motivo="' + sinMotivo[0].replace(/["\\]/g, "") + '"]')?.focus();
+            return;
+        }
+
+        try {
+            window.nubeVendeFrio.entregarPedido(id, cambios);
+            cerrarEntrega();
+            avisarEntregado({ cambios: Object.keys(cambios).length });
+        } catch (error) {
+            entregaAbierta.error = error && error.code === "pedido" ? error.message : "No se pudo entregar. Probá de nuevo en unos segundos.";
+            console.error("No se pudo entregar el pedido.", error);
+            dibujarEntrega();
+        }
+    }
+
+    // -------------------------------------------------
     // Redibujar solo
     // -------------------------------------------------
 
@@ -1967,6 +2425,7 @@
         if (vistaVisible()) dibujarLista();
         if (idFichaAbierta) dibujarFicha();
         if (idResumenAbierto) dibujarResumen();
+        if (entregaAbierta) revisarEntrega();
     }
 
     // Un pedido cargado en otro celular (o en este) aparece al instante.

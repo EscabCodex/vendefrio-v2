@@ -15,7 +15,8 @@
 //   celular, y quien hace un cambio no le deja aviso a quien lo apagó.
 // - Arranca con los avisos que ya existen: pedido nuevo, incidencia y su
 //   resolución. Cada tarea siguiente suma los suyos: pedido preparado y
-//   faltante (T24), pedido editado (T25) y pedido cancelado (T26).
+//   faltante (T24), pedido editado (T25), pedido cancelado (T26) y pedido
+//   entregado (T27).
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -38,6 +39,13 @@
             quien: "Le llega a quien cargó el pedido y a quien reparte.",
             icono: "check",
             hecho: "Preparado por"
+        },
+        {
+            id: "entregado",
+            nombre: "Pedido entregado",
+            quien: "Le llega a quien cargó el pedido.",
+            icono: "check",
+            hecho: "Entregado por"
         },
         {
             id: "faltante",
@@ -330,6 +338,10 @@
             // T26: el motivo. A quien ya trabajaba en el pedido según la
             // etapa en que estaba (en "Cargado", nadie todavía).
             dejarAvisos("pedidoCancelado", pedido, accion.motivo, [autor, ...quienesTrabajanEnElPedido(pedido, accion.estado)]);
+        } else if (accion.accion === "entregado") {
+            // T27: "15 unidades · $ 12.500 · Con cambios: …". A quien lo
+            // cargó; a "Cobra", si el cobro quedó pendiente, llega con T28.
+            dejarAvisos("entregado", pedido, accion.resumen, [autor]);
         }
     }
 

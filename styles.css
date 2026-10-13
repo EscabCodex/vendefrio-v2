@@ -3619,3 +3619,42 @@ html[data-tema="oscuro"] .vistoSeguimiento{color:#cbd5e1 !important;}
 .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
 html[data-tema="oscuro"] [data-tipo="pedidoEditado"] .iconoAviso{background:#3A3113;color:#FACC15;}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
+/* Entrega (T27): botón que se desliza en la ficha, "Entregar con cambios", ventana de la entrega y lo entregado en la ficha */
+.accionesFichaPedido .deslizador{margin-top:0;}
+.accionesFichaPedido .botonEntregarConCambios,.accionesFichaPedido .botonEntregarMostrador{justify-content:center;width:100%;min-height:44px;}
+.entregaSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
+.resumenEntregaFicha,.cambioEntregaFicha{color:var(--pendiente) !important;font-weight:700;}
+.resumenEntregaFicha{margin-bottom:4px;font-size:13px;}
+.productoFichaNombre .cambioEntregaFicha{font-size:12px;}
+.entregaPedido h2{margin-bottom:8px;}
+.totalEntrega{margin:4px 0 6px;padding:10px 12px;border-radius:var(--radius-md);background:var(--acento-bg);}
+.listaEntrega{display:grid;}
+.filaEntrega{display:grid;gap:6px;padding:8px 0;border-bottom:1px solid var(--borde);}
+.filaEntregaArriba{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;}
+.textoFilaEntrega{display:flex;flex-direction:column;min-width:0;}
+.textoFilaEntrega strong{font-size:14px;overflow-wrap:anywhere;}
+.textoFilaEntrega small{color:var(--texto-sec);font-size:12px;}
+.cantidadEntrega{min-width:34px;font-size:17px;font-weight:800;text-align:center;white-space:nowrap;}
+.contadorEntrega{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.pasoContadorEntrega{width:44px;height:44px;border:none;border-radius:var(--radius-md);background:var(--gris-claro);color:var(--texto);font-size:22px;font-weight:700;cursor:pointer;}
+.pasoContadorEntrega:active{transform:scale(.95);}
+.filaEntrega.conCambio{padding-left:8px;padding-right:4px;background:var(--pendiente-bg);box-shadow:inset 3px 0 0 var(--pendiente);}
+.filaEntrega.conCambio .cantidadEntrega{color:var(--pendiente);}
+.filaEntrega .motivoEntrega{min-height:44px;padding:10px 12px;font-size:15px;}
+.filaEntrega.sinMotivo .motivoEntrega{border-color:var(--peligro);box-shadow:0 0 0 2px var(--peligro-bg);}
+.alternarEntrega{justify-content:center;width:100%;min-height:44px;margin-top:14px;}
+.entregaPedido .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
+[data-tipo="entregado"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
+.emergenteAviso[data-tipo="entregado"]{border-left-color:var(--visitado);}
+/* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
+html[data-tema="oscuro"] .entregaSeguimiento,
+html[data-tema="oscuro"] .resumenEntregaFicha,
+html[data-tema="oscuro"] .productoFichaNombre .cambioEntregaFicha,
+html[data-tema="oscuro"] .filaEntrega.conCambio .cantidadEntrega{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .textoFilaEntrega small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .filaEntrega{border-color:#374151;}
+html[data-tema="oscuro"] .filaEntrega.conCambio{background:#3A2415;}
+html[data-tema="oscuro"] .pasoContadorEntrega{background:#334049;color:#f9fafb;}
+html[data-tema="oscuro"] .totalEntrega{background:#111827;}
+html[data-tema="oscuro"] [data-tipo="entregado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="entregado"]{border-left-color:var(--visitado);}

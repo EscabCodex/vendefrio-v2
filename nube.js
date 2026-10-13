@@ -2,8 +2,8 @@
 // a la nube" y modo nube (T11), sincronización visible e indicador de
 // conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
 // pedidos campo por campo (T20), lo que necesitan los avisos (T23), la
-// checklist de preparación con sus faltantes (T24), editar el pedido (T25) y
-// eliminar y cancelar (T26).
+// checklist de preparación con sus faltantes (T24), editar el pedido (T25),
+// eliminar y cancelar (T26) y la entrega (T27).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -464,8 +464,8 @@
 
     // Avisos (T23): lo que este celular hace sobre los pedidos (pedido
     // nuevo, incidencia y su resolución; desde T24, faltante y preparado;
-    // desde T25, pedido editado, y desde T26, pedido cancelado), para que
-    // avisos.js les deje un
+    // desde T25, pedido editado; desde T26, pedido cancelado, y desde T27,
+    // pedido entregado), para que avisos.js les deje un
     // aviso a quienes corresponde. Se avisa después de mandar el cambio: un
     // aviso que falla nunca frena el pedido.
     const oyentesAccionesDePedidos = [];
@@ -1232,6 +1232,231 @@
 
         avisarAccionDePedido({ accion: "pedidoCancelado", pedido, estado, motivo: texto, persona });
         return idEntrada;
+    }
+
+    // -------------------------------------------------
+    // Entrega (T27)
+    // -------------------------------------------------
+    // "Entregado" lo marca cualquiera, deslizando, desde "En reparto" o antes
+    // si se entrega en el mostrador. Es una entrada nueva del historial de
+    // estados y, en la misma escritura, el campo "entrega": { cambios,
+    // persona, horaCelular }. Por defecto se entrega todo lo preparado: lo
+    // pedido o, si el producto tuvo faltante, lo que se preparó. "Entregar con
+    // cambios" anota en "cambios" lo entregado de cada producto que cambia,
+    // con motivo: { idLinea: { entregada, motivo } }. Lo pedido y lo
+    // preparado se conservan. El total a cobrar sale de lo entregado.
+    // Si se entregó por error, cualquiera lo vuelve un paso atrás (al estado
+    // que tenía antes de la entrega), con motivo; al entregarlo de nuevo,
+    // "entrega" se reemplaza. Las reglas revisan "Cancelado" y "Entregado"
+    // con la copia del estado, como al cancelar (T26). El cobro queda
+    // "Pendiente" hasta T28.
+
+    const ESTADOS_QUE_SE_ENTREGAN = ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto"];
+    const LARGO_MAXIMO_MOTIVO_ENTREGA = 300;
+    const MAXIMO_CAMBIOS_DE_ENTREGA = 200;
+
+    function textoPrecioEntrega(valor) {
+        return "$ " + Number(valor || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+    }
+
+    // Hora para una entrada que tiene que quedar como el estado actual: la
+    // del celular, pero siempre después de la última del historial (aunque
+    // otro celular tenga la hora adelantada).
+    function horaDespuesDeLaUltima(pedido) {
+        const ultima = Object.values(pedido.estados || {})
+            .reduce((maxima, entrada) => Math.max(maxima, Number(entrada && entrada.horaCelular) || 0), 0);
+        return Math.max(Date.now(), ultima + 1);
+    }
+
+    // Cómo queda (o quedó) la entrega de un pedido:
+    // { lineas: [{ clave, item, pedida, preparada, entregada, motivo, cambio }],
+    //   unidadesPedidas, unidadesPreparadas, unidadesEntregadas, cambios,
+    //   total: { total, conPrecio, sinPrecio }, persona, horaCelular }.
+    // Solo un pedido "Entregado" usa los cambios guardados; antes de
+    // entregarlo, todo va por defecto (lo preparado), salvo los cambios que
+    // se pasan (los de una entrega que se está por hacer).
+    function entregaDelPedido(pedido, cambiosPorHacer) {
+        const entregado = estadoActualDelPedido(pedido) === "entregado";
+        const entrega = entregado && esMapa(pedido && pedido.entrega) ? pedido.entrega : {};
+        const cambios = esMapa(cambiosPorHacer) ? cambiosPorHacer : esMapa(entrega.cambios) ? entrega.cambios : {};
+        const total = { total: 0, conPrecio: 0, sinPrecio: 0 };
+
+        const lineas = preparacionDelPedido(pedido).lineas.map(linea => {
+            const preparada = linea.faltante ? linea.faltante.preparada : linea.cantidad;
+            const anotado = esMapa(cambios[linea.clave]) ? cambios[linea.clave] : null;
+            const numero = anotado ? Number(anotado.entregada) : NaN;
+            const entregada = Number.isInteger(numero) && numero >= 0 ? numero : preparada;
+            const cambio = entregada !== preparada;
+            const precio = linea.item.precio === null || linea.item.precio === undefined ? NaN : Number(linea.item.precio);
+
+            if (Number.isFinite(precio)) {
+                total.total += precio * entregada;
+                total.conPrecio += 1;
+            } else {
+                total.sinPrecio += 1;
+            }
+
+            return {
+                clave: linea.clave,
+                item: linea.item,
+                pedida: linea.cantidad,
+                preparada,
+                entregada,
+                motivo: cambio && anotado ? String(anotado.motivo || "") : "",
+                cambio
+            };
+        });
+
+        return {
+            lineas,
+            unidadesPedidas: lineas.reduce((suma, linea) => suma + linea.pedida, 0),
+            unidadesPreparadas: lineas.reduce((suma, linea) => suma + linea.preparada, 0),
+            unidadesEntregadas: lineas.reduce((suma, linea) => suma + linea.entregada, 0),
+            cambios: lineas.filter(linea => linea.cambio).length,
+            total,
+            persona: esMapa(entrega.persona) ? entrega.persona : null,
+            horaCelular: Number(entrega.horaCelular) || 0
+        };
+    }
+
+    // Si la persona de este celular puede entregar el pedido (cualquiera).
+    function puedeEntregarElPedido(pedido) {
+        if (!pedidoTieneEstados(pedido) || esPedidoEliminado(pedido)) return false;
+
+        return ESTADOS_QUE_SE_ENTREGAN.includes(estadoActualDelPedido(pedido)) &&
+            pedido.estado !== "cancelado" &&
+            Boolean(personaDeEsteCelular());
+    }
+
+    // "Coca 2L: 8 de 10 (rechazó 2) · Sprite: 0 de 3 (cerrado)".
+    function textoCambiosDeEntrega(lineas) {
+        return lineas
+            .filter(linea => linea.cambio)
+            .map(linea => String(linea.item.producto || "Sin producto").trim() + ": " + linea.entregada + " de " +
+                linea.preparada + (linea.motivo ? " (" + linea.motivo + ")" : ""))
+            .join(" · ");
+    }
+
+    // "15 unidades · $ 12.500" (y lo que cambió, si cambió algo).
+    function textoResumenDeEntrega(resumen) {
+        const { total, conPrecio, sinPrecio } = resumen.total;
+        let precio = "Sin precio";
+        if (conPrecio && sinPrecio) precio = textoPrecioEntrega(total) + " (" + sinPrecio + " sin precio)";
+        else if (conPrecio) precio = textoPrecioEntrega(total);
+
+        const partes = [textoUnidades(resumen.unidadesEntregadas), precio];
+        if (resumen.cambios) partes.push("Con cambios: " + textoCambiosDeEntrega(resumen.lineas));
+        return partes.join(" · ");
+    }
+
+    // Marca el pedido como entregado. cambios: { idLinea: { entregada, motivo } }
+    // solo de los productos que se entregan distinto de lo preparado (vacío
+    // para entregar todo). Avisa a quien cargó el pedido. Devuelve el id de
+    // la entrada.
+    function entregarPedido(idPedido, cambiosPedidos) {
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se entrega.");
+        const estado = estadoActualDelPedido(pedido);
+
+        if (esPedidoEliminado(pedido)) throw errorDelPedido("Ese pedido fue eliminado.");
+        if (estado === "entregado") throw errorDelPedido("El pedido ya estaba entregado.");
+        if (estado === "cancelado" || pedido.estado === "cancelado") throw errorDelPedido("Un pedido cancelado no se entrega.");
+        if (!ESTADOS_QUE_SE_ENTREGAN.includes(estado)) throw errorDelPedido("Ese pedido no se puede entregar.");
+
+        const porDefecto = entregaDelPedido(pedido);
+        const pedidos = esMapa(cambiosPedidos) ? cambiosPedidos : {};
+        const cambios = {};
+
+        Object.keys(pedidos).forEach(clave => {
+            const linea = porDefecto.lineas.find(item => item.clave === clave);
+            if (!linea) throw errorDelPedido("Un producto ya no está en el pedido. Revisá la entrega.");
+
+            const nombre = String(linea.item.producto || "un producto").trim();
+            const entregada = Number(pedidos[clave] && pedidos[clave].entregada);
+            if (!Number.isInteger(entregada) || entregada < 0 || entregada > linea.pedida) {
+                throw errorDelPedido("Lo entregado de " + nombre + " tiene que ser de 0 a " + linea.pedida + ".");
+            }
+            if (entregada === linea.preparada) return;
+
+            const motivo = String(pedidos[clave].motivo || "").trim().slice(0, LARGO_MAXIMO_MOTIVO_ENTREGA);
+            if (!motivo) throw errorDelPedido("Escribí por qué cambia lo entregado de " + nombre + ".");
+
+            cambios[clave] = { entregada, motivo };
+        });
+
+        if (Object.keys(cambios).length > MAXIMO_CAMBIOS_DE_ENTREGA) {
+            throw errorDelPedido("Son demasiados cambios para una sola entrega.");
+        }
+
+        const resumen = entregaDelPedido(pedido, cambios);
+        const hora = horaDespuesDeLaUltima(pedido);
+        const [idEntrada, entrada] = nuevaEntradaDeEstado(
+            "entregado",
+            resumen.cambios ? "Con cambios: " + textoCambiosDeEntrega(resumen.lineas) : "",
+            persona,
+            hora
+        );
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["estados", idEntrada], valor: entrada },
+            { ruta: ["estado"], valor: "entregado" },
+            { ruta: ["entrega"], valor: { cambios, persona, horaCelular: hora } }
+        ]);
+
+        avisarAccionDePedido({ accion: "entregado", pedido, resumen: textoResumenDeEntrega(resumen), persona });
+        return idEntrada;
+    }
+
+    // El estado que tenía el pedido antes de entregarlo (al que vuelve si se
+    // entregó por error), o "" si no está entregado.
+    function estadoAntesDeLaEntrega(pedido) {
+        if (estadoActualDelPedido(pedido) !== "entregado") return "";
+
+        const entradas = Object.keys(pedido.estados || {})
+            .filter(id => esMapa(pedido.estados[id]))
+            .map(id => ({ id, ...pedido.estados[id] }))
+            .sort((a, b) => {
+                const diferencia = (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0);
+                if (diferencia !== 0) return diferencia;
+                return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+            });
+
+        const anterior = entradas.find(entrada => ESTADOS_QUE_SE_ENTREGAN.includes(entrada.estado));
+        return anterior ? anterior.estado : "enReparto";
+    }
+
+    // Si la persona de este celular puede volver atrás un pedido entregado
+    // (cualquiera, como al entregarlo).
+    function puedeVolverDeEntregado(pedido) {
+        if (!pedidoTieneEstados(pedido) || esPedidoEliminado(pedido)) return false;
+
+        return estadoActualDelPedido(pedido) === "entregado" &&
+            pedido.estado === "entregado" &&
+            Boolean(personaDeEsteCelular());
+    }
+
+    // Vuelve un pedido entregado (por error) al estado que tenía antes, con
+    // motivo (obligatorio). Vuelve a "Pedidos" y sale de Historial. Devuelve
+    // el estado al que volvió.
+    function volverDeEntregado(idPedido, motivo) {
+        const texto = String(motivo || "").trim().slice(0, LARGO_MAXIMO_MOTIVO_ENTREGA);
+        if (!texto) throw errorDelPedido("Escribí el motivo.");
+
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no cambia de estado.");
+
+        if (esPedidoEliminado(pedido)) throw errorDelPedido("Ese pedido fue eliminado.");
+        if (estadoActualDelPedido(pedido) !== "entregado" || pedido.estado !== "entregado") {
+            throw errorDelPedido("El pedido ya no está entregado.");
+        }
+
+        const hacia = estadoAntesDeLaEntrega(pedido);
+        const [idEntrada, entrada] = nuevaEntradaDeEstado(hacia, texto, persona, horaDespuesDeLaUltima(pedido));
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["estados", idEntrada], valor: entrada },
+            { ruta: ["estado"], valor: hacia }
+        ]);
+
+        return hacia;
     }
 
     // -------------------------------------------------
@@ -2402,6 +2627,14 @@
         puedeCancelarElPedido,
         eliminarPedido,
         cancelarPedido,
+        // Entrega (T27).
+        entregaDelPedido,
+        textoResumenDeEntrega,
+        puedeEntregarElPedido,
+        entregarPedido,
+        estadoAntesDeLaEntrega,
+        puedeVolverDeEntregado,
+        volverDeEntregado,
         // Avisos (T23).
         escucharAccionesDePedidos,
         // Sincronización visible (T12).
