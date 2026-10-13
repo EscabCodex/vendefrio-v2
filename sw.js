@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v145 - Avisos en la app)
+// VendeFrío - Service Worker (v146 - Checklist de preparación y faltantes)
 // =====================================================
-const CACHE_NAME = "vendefrio-v145";
+const CACHE_NAME = "vendefrio-v146";
 const ARCHIVOS = [
   "./",
   "./index.html",

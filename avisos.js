@@ -14,7 +14,8 @@
 //   en la nube (preferenciasAvisos/{idPersona}), así vale en cualquier
 //   celular, y quien hace un cambio no le deja aviso a quien lo apagó.
 // - Arranca con los avisos que ya existen: pedido nuevo, incidencia y su
-//   resolución. Cada tarea siguiente suma los suyos.
+//   resolución. Cada tarea siguiente suma los suyos: pedido preparado y
+//   faltante (T24).
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -30,6 +31,20 @@
             permiso: "prepara",
             icono: "paquete",
             hecho: "Cargado por"
+        },
+        {
+            id: "preparado",
+            nombre: "Pedido preparado",
+            quien: "Le llega a quien cargó el pedido y a quien reparte.",
+            icono: "check",
+            hecho: "Preparado por"
+        },
+        {
+            id: "faltante",
+            nombre: "Faltante",
+            quien: "Le llega a quien cargó el pedido y a quien recibe aviso de faltantes.",
+            icono: "alerta",
+            hecho: "Anotado por"
         },
         {
             id: "incidencia",
@@ -269,6 +284,13 @@
         } else if (accion.accion === "incidenciaResuelta") {
             const marcaron = (accion.incidencias || []).map(incidencia => incidencia.persona && incidencia.persona.idPersona);
             dejarAvisos("incidenciaResuelta", pedido, accion.nota, [autor, ...marcaron, ...personasConPermiso("controla")]);
+        } else if (accion.accion === "preparado") {
+            // T24: "12 productos · 32 unidades · 1 faltante".
+            dejarAvisos("preparado", pedido, accion.resumen, [autor, ...personasConPermiso("reparte")]);
+        } else if (accion.accion === "faltante") {
+            // T24: "Coca 2L: 8 de 10 · no había más".
+            const detalle = accion.producto + ": " + accion.preparada + " de " + accion.pedida + " · " + accion.observacion;
+            dejarAvisos("faltante", pedido, detalle, [autor, ...personasConPermiso("avisoFaltantes")]);
         }
     }
 
@@ -639,7 +661,7 @@
             const vacio = crear("div", "avisosVacio");
             vacio.append(
                 crear("strong", "", estado === "cargando" ? "Buscando tus avisos…" : "No tenés avisos"),
-                crear("p", "", "Acá aparecen los pedidos nuevos y las incidencias. Nunca te llega aviso de lo que hacés vos.")
+                crear("p", "", "Acá aparecen los pedidos nuevos, los preparados, los faltantes y las incidencias. Nunca te llega aviso de lo que hacés vos.")
             );
             cuerpo.appendChild(vacio);
             return;

@@ -6,7 +6,10 @@
 // seguimiento de sus estados. Solo en la nube (con cuenta o con código): el
 // modo personal sigue igual. Desde la ficha se cambia de estado, se vuelve un
 // paso atrás y se marcan y resuelven incidencias, según los permisos de cada
-// persona (T22). Los avisos abren la ficha de su pedido (T23).
+// persona (T22). Los avisos abren la ficha de su pedido (T23). En "En
+// preparación" la ficha muestra la checklist: cualquiera tilda, "Prepara
+// pedidos" anota faltantes y marca "Preparado" con un resumen que se desliza
+// para confirmar (T24).
 // =====================================================
 
 (function () {
@@ -39,16 +42,24 @@
 
     // Pasos que se hacen desde la ficha (T22), con el permiso que los deja
     // hacer. El mismo permiso vuelve el paso atrás, con motivo. "Controla
-    // pedidos" y el dueño pueden todos. "Preparado" llega con la checklist
-    // (T24) y "Entregado" con la entrega (T27): acá solo se vuelven atrás.
+    // pedidos" y el dueño pueden todos. "Preparado" se marca con la
+    // checklist completa y su resumen (T24). "Entregado" llega con la entrega
+    // (T27): acá solo se vuelve atrás.
     const PASOS = [
         { desde: "cargado", hacia: "enPreparacion", permiso: "prepara", boton: "Empezar a preparar", hecho: "Pedido en preparación" },
-        { desde: "enPreparacion", hacia: "preparado", permiso: "prepara" },
+        { desde: "enPreparacion", hacia: "preparado", permiso: "prepara", boton: "Marcar preparado", conChecklist: true },
         { desde: "preparado", hacia: "enVehiculo", permiso: "reparte", boton: "Cargar en el vehículo", hecho: "Pedido cargado en el vehículo" },
         { desde: "enVehiculo", hacia: "enReparto", permiso: "reparte", boton: "Salir a repartir", hecho: "Pedido en reparto" }
     ];
 
     const LARGO_MAXIMO_MOTIVO = 300;
+
+    // Estados en los que el pedido ya pasó por la checklist (T24): la ficha
+    // muestra sus faltantes.
+    const ESTADOS_PREPARADOS = ["preparado", "enVehiculo", "enReparto", "entregado"];
+
+    // Tilde de la casilla (dibujado acá para que se vea igual en todos lados).
+    const SVG_TILDE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
     let vistaActual = "nuevo";
     let etapaActual = "cargados";
@@ -70,6 +81,24 @@
 
     function tieneIncidencia(pedido) {
         return incidenciasAbiertas(pedido).length > 0;
+    }
+
+    // Checklist (T24): cómo va la preparación del pedido.
+    function preparacionDe(pedido) {
+        return window.nubeVendeFrio?.preparacionDelPedido?.(pedido) || {
+            lineas: [], productos: 0, listos: 0, pendientes: 0, faltantes: 0,
+            unidadesPedidas: 0, unidadesPreparadas: 0, completa: true
+        };
+    }
+
+    function textoFaltantes(cantidad) {
+        return cantidad === 1 ? "1 faltante" : cantidad + " faltantes";
+    }
+
+    // La persona de este celular hizo esa entrada.
+    function esMio(persona) {
+        const yo = typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+        return Boolean(yo && persona && persona.idPersona === yo.idPersona);
     }
 
     // -------------------------------------------------
@@ -97,6 +126,11 @@
 
     function puedeResolverIncidencias() {
         return puede("controla");
+    }
+
+    // Faltantes (T24): "Prepara pedidos" (y "Controla pedidos" y el dueño).
+    function puedeAnotarFaltantes() {
+        return puede("prepara");
     }
 
     // Los pedidos de trabajo: con historial de estados, sin "Histórico" ni
@@ -354,6 +388,16 @@
         const autor = crear("p", "subtitulo autorSeguimiento", "Cargado por " + nombrePersona(pedido.autor));
 
         info.append(arriba, detalle, autor);
+
+        // Checklist (T24): cuánto lleva armado y si hay faltantes.
+        if (registro.estado === "enPreparacion" || ESTADOS_PREPARADOS.includes(registro.estado)) {
+            const preparacion = preparacionDe(pedido);
+            if (registro.estado === "enPreparacion") {
+                info.append(crear("p", "subtitulo progresoTarjeta", "Checklist: " + preparacion.listos + " de " + preparacion.productos + " listos"));
+            }
+            if (preparacion.faltantes) info.append(crear("span", "badge faltanteSeguimiento", textoFaltantes(preparacion.faltantes)));
+        }
+
         if (tieneIncidencia(pedido)) info.append(crear("span", "badge incidenciaSeguimiento", "Con incidencia"));
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
 
@@ -468,6 +512,11 @@
         idFichaAbierta = "";
         const modal = document.getElementById("modalFichaPedido");
         if (modal) modal.classList.add("oculto");
+
+        // Las ventanas de la checklist (T24) son de esta ficha.
+        cerrarResumen();
+        cerrarFaltante();
+        cerrarConfirmacion();
     }
 
     function abrirFicha(id) {
@@ -488,7 +537,7 @@
         return seccion;
     }
 
-    function dibujarProductos(pedido) {
+    function dibujarProductos(pedido, estado) {
         const seccion = seccionFicha("Productos");
         const productos = (Array.isArray(pedido.productos) ? pedido.productos : [])
             .filter(item => item && typeof item === "object" && (Number(item.cantidad) || 0) > 0);
@@ -496,6 +545,23 @@
         if (productos.length === 0) {
             seccion.appendChild(crear("p", "subtitulo", "Este pedido no tiene productos."));
             return seccion;
+        }
+
+        // Ya preparado (T24): lo preparado y los faltantes, con quién los
+        // anotó. Lo pedido y su precio se conservan.
+        const lineasPreparadas = new Map();
+        if (ESTADOS_PREPARADOS.includes(estado)) {
+            const preparacion = preparacionDe(pedido);
+            preparacion.lineas.forEach(linea => lineasPreparadas.set(linea.item, linea));
+
+            if (preparacion.faltantes) {
+                seccion.appendChild(crear(
+                    "p",
+                    "resumenFaltantesFicha",
+                    "Se prepararon " + preparacion.unidadesPreparadas + " de " + textoUnidades(preparacion.unidadesPedidas) +
+                        "  ·  " + textoFaltantes(preparacion.faltantes)
+                ));
+            }
         }
 
         // Agrupados por marca, en el orden en que se cargaron.
@@ -525,6 +591,14 @@
                         ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u"
                         : "x" + cantidad + "  ·  Sin precio")
                 );
+
+                const faltante = lineasPreparadas.get(item)?.faltante;
+                if (faltante) {
+                    izquierda.append(
+                        crear("small", "faltanteFichaPedido", "Faltante: se prepararon " + faltante.preparada + " de " + cantidad + "  ·  " + nombrePersona(faltante.persona)),
+                        crear("small", "observacionFaltante", String(faltante.observacion || ""))
+                    );
+                }
 
                 const subtotal = crear("span", "productoFichaSubtotal", Number.isFinite(precio) ? textoPrecio(precio * cantidad) : "—");
                 fila.append(izquierda, subtotal);
@@ -633,6 +707,13 @@
             return;
         }
 
+        // Al redibujar (por ejemplo, con un tilde de otro celular) se
+        // conserva el botón que tenía el foco.
+        const activo = document.activeElement;
+        const enfoque = activo && cuerpo.contains(activo) && activo.dataset && activo.dataset.accion
+            ? { accion: activo.dataset.accion, linea: activo.dataset.linea || "" }
+            : null;
+
         cuerpo.innerHTML = "";
 
         const titulo = crear("h2", "", String(pedido.comercio || "SIN NOMBRE").trim());
@@ -642,16 +723,24 @@
         etiquetas.appendChild(etiquetaEstado(estado));
         if (sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
 
+        // En preparación (T24) la ficha es la checklist: comercio, autor y
+        // observaciones arriba, los productos con su casilla y, al final,
+        // "Marcar preparado".
+        const enChecklist = estado === "enPreparacion";
+
         const datos = crear("div", "datosFichaPedido");
         const hora = horaDelPedido(pedido);
         const productos = (Array.isArray(pedido.productos) ? pedido.productos : [])
             .filter(item => item && (Number(item.cantidad) || 0) > 0).length;
 
-        [
+        const filasDatos = [
             ["Cargado por", nombrePersona(pedido.autor)],
             ["Fecha", hora ? textoFecha(hora) + " " + textoHora(hora) : String(pedido.fecha || "Sin fecha")],
             ["Unidades", unidadesDelPedido(pedido) + "  ·  " + productos + (productos === 1 ? " producto" : " productos")]
-        ].forEach(([nombre, valor]) => {
+        ];
+        if (enChecklist) filasDatos.push(["Total", textoTotal(pedido)]);
+
+        filasDatos.forEach(([nombre, valor]) => {
             const fila = crear("div", "datoFichaPedido");
             fila.append(crear("span", "", nombre), crear("strong", "", valor));
             datos.appendChild(fila);
@@ -663,9 +752,10 @@
         if (incidencia) cuerpo.appendChild(incidencia);
 
         const acciones = dibujarAcciones(pedido, estado);
-        if (acciones) cuerpo.appendChild(acciones);
+        if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
-        cuerpo.append(datos, dibujarProductos(pedido));
+        cuerpo.append(datos);
+        if (!enChecklist) cuerpo.appendChild(dibujarProductos(pedido, estado));
 
         const observaciones = String(pedido.observaciones || "").trim();
         if (observaciones) {
@@ -674,7 +764,19 @@
             cuerpo.appendChild(seccion);
         }
 
+        if (enChecklist) {
+            cuerpo.appendChild(dibujarChecklist(pedido));
+            if (acciones) cuerpo.appendChild(acciones);
+        }
+
         cuerpo.appendChild(dibujarSeguimiento(pedido));
+
+        if (enfoque) {
+            const selector = '[data-accion="' + enfoque.accion + '"]' +
+                (enfoque.linea ? '[data-linea="' + enfoque.linea.replace(/["\\]/g, "") + '"]' : "");
+            const igual = cuerpo.querySelector(selector);
+            if (igual) igual.focus({ preventScroll: true });
+        }
     }
 
     // -------------------------------------------------
@@ -721,15 +823,29 @@
         const anterior = pasoAnterior(estado);
         const marcar = estado !== "cancelado" && !tieneIncidencia(pedido);
 
-        if (!siguiente && !anterior && !marcar) return null;
+        // "Marcar preparado" (T24) se puede tocar solo con la checklist
+        // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
+        // lo hace.
+        const preparacion = estado === "enPreparacion" ? preparacionDe(pedido) : null;
+        let pista = "";
+        if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
+        else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
+
+        if (!siguiente && !anterior && !marcar && !pista) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
         if (siguiente) {
             const boton = crearBoton("btnAccion pasoSiguientePedido", siguiente.boton, "siguiente");
             boton.dataset.estado = siguiente.hacia;
+            if (siguiente.conChecklist && !preparacion.completa) {
+                boton.classList.add("incompleto");
+                boton.setAttribute("aria-disabled", "true");
+            }
             acciones.appendChild(boton);
         }
+
+        if (pista) acciones.appendChild(crear("p", "pistaChecklist", pista));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
@@ -756,6 +872,12 @@
     function avanzar(id, estado) {
         const paso = pasoSiguiente(estado);
         if (!paso || !pedidoSigueEn(id, estado)) return;
+
+        // "Preparado" (T24): primero el resumen, que se desliza para confirmar.
+        if (paso.conChecklist) {
+            abrirResumen(id);
+            return;
+        }
 
         try {
             window.nubeVendeFrio.agregarEstadoAlPedido(id, paso.hacia, "");
@@ -946,7 +1068,667 @@
         else if (boton.dataset.accion === "atras") volverAtras(id, estado);
         else if (boton.dataset.accion === "incidencia") marcarIncidencia(id);
         else if (boton.dataset.accion === "resolver") resolverIncidencia(id);
+        else if (boton.dataset.accion === "tildar") tocarProducto(id, boton.dataset.linea, boton);
+        else if (boton.dataset.accion === "faltante") abrirFaltante(id, boton.dataset.linea);
     });
+
+    // -------------------------------------------------
+    // Checklist de preparación y faltantes (T24)
+    // -------------------------------------------------
+    // En "En preparación" cada producto tiene su casilla. Para no
+    // equivocarse: cada tilde dice quién lo puso, los tildes se ven en vivo
+    // en todos los celulares, "Marcar preparado" pide todo tildado o con
+    // faltante, antes se ve un resumen que se desliza para confirmar y
+    // destildar lo que tildó otro pide confirmación.
+
+    function textoPendientes(cantidad) {
+        return cantidad === 1
+            ? "Falta 1 producto: tildalo o marcalo como faltante."
+            : "Faltan " + cantidad + " productos: tildalos o marcalos como faltante.";
+    }
+
+    function crearFilaChecklist(linea, conFaltantes) {
+        const estado = linea.faltante ? "faltante" : linea.lista ? "lista" : "pendiente";
+        const nombre = String(linea.item.producto || "Sin producto");
+
+        const fila = crear("div", "lineaChecklist");
+        fila.dataset.estado = estado;
+        fila.dataset.clave = linea.clave;
+
+        const casilla = crearBoton("casillaChecklist", undefined, "tildar");
+        casilla.dataset.linea = linea.clave;
+        casilla.setAttribute("role", "checkbox");
+        casilla.setAttribute("aria-checked", linea.lista ? "true" : "false");
+
+        const cuadro = crear("span", "cuadroChecklist");
+        cuadro.setAttribute("aria-hidden", "true");
+        if (estado === "faltante") cuadro.textContent = "!";
+        else cuadro.innerHTML = SVG_TILDE;
+
+        const textos = crear("span", "textoChecklist");
+        textos.appendChild(crear("strong", "", nombre));
+
+        // Quién hizo lo último sobre este producto.
+        const tilde = linea.tilde;
+        if (linea.faltante) {
+            const faltante = linea.faltante;
+            textos.append(
+                crear("small", "quienChecklist", "Faltante: " + faltante.preparada + " de " + linea.cantidad + "  ·  " +
+                    nombrePersona(faltante.persona) + " " + textoHora(Number(faltante.horaCelular) || 0)),
+                crear("small", "observacionFaltante", String(faltante.observacion || ""))
+            );
+        } else if (tilde && tilde.tildado) {
+            textos.appendChild(crear("small", "quienChecklist", "✓ " + nombrePersona(tilde.persona) + " " + textoHora(Number(tilde.horaCelular) || 0)));
+        } else if (tilde) {
+            textos.appendChild(crear("small", "quienChecklist", "Lo destildó " + nombrePersona(tilde.persona) + " " + textoHora(Number(tilde.horaCelular) || 0)));
+        }
+
+        const cantidad = crear("span", "cantidadChecklist", linea.faltante ? linea.faltante.preparada + "/" + linea.cantidad : "x" + linea.cantidad);
+
+        casilla.append(cuadro, textos, cantidad);
+        fila.appendChild(casilla);
+
+        if (conFaltantes) {
+            const boton = crearBoton("botonFaltante", linea.faltante ? "Cambiar" : "Falta", "faltante");
+            boton.dataset.linea = linea.clave;
+            boton.setAttribute("aria-label", (linea.faltante ? "Cambiar el faltante de " : "Anotar un faltante de ") + nombre);
+            fila.appendChild(boton);
+        }
+
+        return fila;
+    }
+
+    function dibujarChecklist(pedido) {
+        const preparacion = preparacionDe(pedido);
+        const seccion = seccionFicha("Checklist");
+        seccion.classList.add("checklistPedido");
+
+        const progreso = crear("div", "progresoChecklist");
+        const texto = preparacion.listos + " de " + preparacion.productos + " listos" +
+            (preparacion.faltantes ? "  ·  " + textoFaltantes(preparacion.faltantes) : "");
+        const barra = crear("div", "barraChecklist");
+        barra.setAttribute("role", "progressbar");
+        barra.setAttribute("aria-label", "Productos listos");
+        barra.setAttribute("aria-valuemin", "0");
+        barra.setAttribute("aria-valuemax", String(preparacion.productos));
+        barra.setAttribute("aria-valuenow", String(preparacion.listos));
+        const relleno = crear("span", "");
+        relleno.style.width = (preparacion.productos ? Math.round(preparacion.listos * 100 / preparacion.productos) : 100) + "%";
+        barra.appendChild(relleno);
+        progreso.append(crear("p", "textoProgresoChecklist", texto), barra);
+        if (preparacion.completa) progreso.classList.add("completa");
+        seccion.appendChild(progreso);
+
+        if (!preparacion.lineas.length) {
+            seccion.appendChild(crear("p", "subtitulo", "Este pedido no tiene productos."));
+            return seccion;
+        }
+
+        // Agrupados por marca, en el orden en que se cargaron.
+        const marcas = [];
+        preparacion.lineas.forEach(linea => {
+            const marca = String(linea.item.marca || "Sin marca").trim() || "Sin marca";
+            let grupo = marcas.find(actual => actual.marca === marca);
+            if (!grupo) {
+                grupo = { marca, lineas: [] };
+                marcas.push(grupo);
+            }
+            grupo.lineas.push(linea);
+        });
+
+        const conFaltantes = puedeAnotarFaltantes();
+        marcas.forEach(grupo => {
+            seccion.appendChild(crear("p", "marcaFichaPedido", grupo.marca));
+            grupo.lineas.forEach(linea => seccion.appendChild(crearFilaChecklist(linea, conFaltantes)));
+        });
+
+        return seccion;
+    }
+
+    function lineaDelPedido(id, clave) {
+        const pedido = buscarPedido(id);
+        if (!pedido || estadoActualDelPedido(pedido) !== "enPreparacion") return null;
+        return preparacionDe(pedido).lineas.find(linea => linea.clave === clave) || null;
+    }
+
+    function tildar(id, clave, tildado) {
+        try {
+            window.nubeVendeFrio.tildarProducto(id, clave, tildado);
+            if (navigator.vibrate) navigator.vibrate(12);
+        } catch (error) {
+            avisarError(error);
+        }
+    }
+
+    // Tocar un producto: lo tilda o lo destilda. Si lo tildó otro, pregunta
+    // antes. Un faltante se cambia desde su ventana.
+    function tocarProducto(id, clave, casilla) {
+        const linea = lineaDelPedido(id, clave);
+        if (!linea) return;
+
+        if (linea.faltante) {
+            if (puedeAnotarFaltantes()) abrirFaltante(id, clave);
+            else mostrarToast("Es un faltante: lo cambia quien prepara pedidos");
+            return;
+        }
+
+        if (!linea.lista) {
+            // Se ve tildado al instante; la nube (o la copia del celular)
+            // confirma enseguida y la ficha se redibuja.
+            casilla?.closest(".lineaChecklist")?.setAttribute("data-estado", "lista");
+            tildar(id, clave, true);
+            return;
+        }
+
+        if (esMio(linea.tilde && linea.tilde.persona)) {
+            casilla?.closest(".lineaChecklist")?.setAttribute("data-estado", "pendiente");
+            tildar(id, clave, false);
+            return;
+        }
+
+        const quien = nombrePersona(linea.tilde && linea.tilde.persona);
+        const idTilde = linea.tilde ? linea.tilde.id : "";
+        abrirConfirmacion({
+            titulo: "¿Lo destildás?",
+            mensaje: "Lo tildó " + quien + ". " + String(linea.item.producto || "Este producto") + " vuelve a quedar sin tildar.",
+            boton: "Destildar",
+            alConfirmar: () => {
+                // Si mientras tanto alguien lo cambió, no se toca.
+                const actual = lineaDelPedido(id, clave);
+                if (!actual || !actual.lista || actual.faltante || (actual.tilde ? actual.tilde.id : "") !== idTilde) {
+                    mostrarAviso("El producto cambió", "Otra persona lo cambió mientras confirmabas. Revisá la checklist.");
+                    return;
+                }
+                tildar(id, clave, false);
+            }
+        });
+    }
+
+    // Ventana de confirmación (sin las del navegador): verde y rojo.
+    let alConfirmarConfirmacion = null;
+
+    function crearModalConfirmacion() {
+        let modal = document.getElementById("modalConfirmarPedido");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalConfirmarPedido";
+
+        const contenido = crear("div", "modalContenido confirmarPedido");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloConfirmarPedido");
+
+        const titulo = crear("h2", "");
+        titulo.id = "tituloConfirmarPedido";
+        const mensaje = crear("p", "explicacionTextoPedido");
+        mensaje.id = "mensajeConfirmarPedido";
+
+        const botones = crear("div", "modalBotones");
+        const cancelar = crear("button", "btnModalConfirmar", "Cancelar");
+        cancelar.type = "button";
+        const confirmar = crear("button", "btnModalPeligro", "Confirmar");
+        confirmar.type = "button";
+        confirmar.id = "botonConfirmarPedido";
+        botones.append(cancelar, confirmar);
+
+        contenido.append(titulo, mensaje, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        cancelar.addEventListener("click", cerrarConfirmacion);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarConfirmacion();
+        });
+        confirmar.addEventListener("click", () => {
+            const accion = alConfirmarConfirmacion;
+            cerrarConfirmacion();
+            if (accion) accion();
+        });
+
+        return modal;
+    }
+
+    function abrirConfirmacion({ titulo, mensaje, boton, alConfirmar }) {
+        const modal = crearModalConfirmacion();
+        document.getElementById("tituloConfirmarPedido").textContent = titulo;
+        document.getElementById("mensajeConfirmarPedido").textContent = mensaje;
+        document.getElementById("botonConfirmarPedido").textContent = boton;
+        alConfirmarConfirmacion = alConfirmar;
+        modal.classList.remove("oculto");
+    }
+
+    function cerrarConfirmacion() {
+        alConfirmarConfirmacion = null;
+        const modal = document.getElementById("modalConfirmarPedido");
+        if (modal) modal.classList.add("oculto");
+    }
+
+    // Ventana del faltante: cuánto se preparó (menos de lo pedido) y una
+    // observación. Lo pedido se conserva.
+    let faltanteAbierto = null;
+
+    function crearModalFaltante() {
+        let modal = document.getElementById("modalFaltantePedido");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalFaltantePedido";
+
+        const contenido = crear("div", "modalContenido faltantePedido");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloFaltantePedido");
+
+        const titulo = crear("h2", "", "Faltante");
+        titulo.id = "tituloFaltantePedido";
+
+        const explicacion = crear("p", "explicacionTextoPedido");
+        explicacion.id = "explicacionFaltantePedido";
+
+        const etiquetaCantidad = crear("label", "", "¿Cuántas preparaste?");
+        etiquetaCantidad.htmlFor = "cantidadFaltantePedido";
+
+        const contador = crear("div", "contadorFaltante");
+        const menos = crear("button", "pasoContadorFaltante", "−");
+        menos.type = "button";
+        menos.dataset.paso = "-1";
+        menos.setAttribute("aria-label", "Una menos");
+        const campoCantidad = document.createElement("input");
+        campoCantidad.id = "cantidadFaltantePedido";
+        campoCantidad.type = "number";
+        campoCantidad.inputMode = "numeric";
+        campoCantidad.min = "0";
+        campoCantidad.step = "1";
+        const mas = crear("button", "pasoContadorFaltante", "+");
+        mas.type = "button";
+        mas.dataset.paso = "1";
+        mas.setAttribute("aria-label", "Una más");
+        contador.append(menos, campoCantidad, mas);
+
+        const etiquetaObservacion = crear("label", "", "Observación");
+        etiquetaObservacion.htmlFor = "observacionFaltantePedido";
+        const campoObservacion = document.createElement("textarea");
+        campoObservacion.id = "observacionFaltantePedido";
+        campoObservacion.maxLength = LARGO_MAXIMO_MOTIVO;
+        campoObservacion.rows = 2;
+        campoObservacion.placeholder = "Por ejemplo: no había más en el depósito";
+
+        const error = crear("p", "errorTextoPedido oculto", "");
+        error.id = "errorFaltantePedido";
+        error.setAttribute("role", "alert");
+
+        const quitar = crear("button", "btnAccion secundario quitarFaltante", "Quitar faltante");
+        quitar.type = "button";
+        quitar.id = "quitarFaltantePedido";
+
+        const botones = crear("div", "modalBotones");
+        const cancelar = crear("button", "btnModalCancelar", "Cancelar");
+        cancelar.type = "button";
+        const guardar = crear("button", "btnModalConfirmar", "Guardar faltante");
+        guardar.type = "button";
+        botones.append(cancelar, guardar);
+
+        contenido.append(titulo, explicacion, etiquetaCantidad, contador, etiquetaObservacion, campoObservacion, error, quitar, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        const ocultarError = () => error.classList.add("oculto");
+        const mostrarError = (texto, campo) => {
+            error.textContent = texto;
+            error.classList.remove("oculto");
+            if (campo) campo.focus();
+        };
+
+        cancelar.addEventListener("click", cerrarFaltante);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarFaltante();
+        });
+        campoCantidad.addEventListener("input", ocultarError);
+        campoObservacion.addEventListener("input", ocultarError);
+
+        contador.addEventListener("click", evento => {
+            const boton = evento.target.closest("button[data-paso]");
+            if (!boton || !faltanteAbierto) return;
+
+            const actual = Number.parseInt(campoCantidad.value, 10);
+            const base = Number.isFinite(actual) ? actual : faltanteAbierto.pedida;
+            const nuevo = Math.min(faltanteAbierto.pedida - 1, Math.max(0, base + Number(boton.dataset.paso)));
+            campoCantidad.value = String(nuevo);
+            ocultarError();
+        });
+
+        guardar.addEventListener("click", () => {
+            if (!faltanteAbierto) return;
+
+            const { id, clave, pedida } = faltanteAbierto;
+            const texto = campoCantidad.value.trim();
+            const cantidad = Number(texto);
+            if (texto === "" || !Number.isInteger(cantidad) || cantidad < 0 || cantidad >= pedida) {
+                mostrarError(pedida === 1
+                    ? "Si no pusiste ninguna, escribí 0."
+                    : "Escribí cuántas pusiste en el cajón: de 0 a " + (pedida - 1) + ".", campoCantidad);
+                return;
+            }
+
+            const observacion = campoObservacion.value.trim();
+            if (!observacion) {
+                mostrarError("Escribí una observación para seguir.", campoObservacion);
+                return;
+            }
+
+            if (!lineaDelPedido(id, clave)) {
+                cerrarFaltante();
+                mostrarAviso("El pedido cambió", "El pedido ya no está en preparación. Revisá su estado.");
+                return;
+            }
+
+            try {
+                window.nubeVendeFrio.marcarFaltante(id, clave, cantidad, observacion);
+                cerrarFaltante();
+                mostrarToast("Faltante anotado");
+            } catch (falla) {
+                avisarError(falla);
+            }
+        });
+
+        quitar.addEventListener("click", () => {
+            if (!faltanteAbierto) return;
+
+            const { id, clave } = faltanteAbierto;
+            try {
+                const quitado = window.nubeVendeFrio.quitarFaltante(id, clave);
+                cerrarFaltante();
+                if (quitado) mostrarToast("Faltante quitado");
+            } catch (falla) {
+                cerrarFaltante();
+                avisarError(falla);
+            }
+        });
+
+        return modal;
+    }
+
+    function abrirFaltante(id, clave) {
+        if (!puedeAnotarFaltantes()) return;
+
+        const linea = lineaDelPedido(id, clave);
+        if (!linea) return;
+
+        const modal = crearModalFaltante();
+        faltanteAbierto = { id, clave, pedida: linea.cantidad };
+
+        document.getElementById("explicacionFaltantePedido").textContent =
+            String(linea.item.producto || "Sin producto") + ": se " + (linea.cantidad === 1 ? "pidió 1" : "pidieron " + linea.cantidad) +
+            ". Lo pedido se conserva y se avisa a quien cargó el pedido y a quien recibe aviso de faltantes.";
+
+        const campoCantidad = document.getElementById("cantidadFaltantePedido");
+        campoCantidad.max = String(linea.cantidad - 1);
+        campoCantidad.value = linea.faltante ? String(linea.faltante.preparada) : "";
+        campoCantidad.placeholder = "De 0 a " + (linea.cantidad - 1);
+
+        document.getElementById("observacionFaltantePedido").value = linea.faltante ? String(linea.faltante.observacion || "") : "";
+        document.getElementById("errorFaltantePedido").classList.add("oculto");
+        document.getElementById("quitarFaltantePedido").classList.toggle("oculto", !linea.faltante);
+
+        modal.classList.remove("oculto");
+        setTimeout(() => campoCantidad.focus(), 50);
+    }
+
+    function cerrarFaltante() {
+        faltanteAbierto = null;
+        const modal = document.getElementById("modalFaltantePedido");
+        if (modal) modal.classList.add("oculto");
+    }
+
+    // Botón que se desliza para confirmar (resumen de la checklist). Sirve
+    // con el dedo y, si el celular es viejo, con eventos táctiles. Con el
+    // teclado se confirma con Enter. Un toque solo no confirma.
+    function crearDeslizador(texto, alCompletar) {
+        const pista = crear("div", "deslizador");
+        const relleno = crear("span", "rellenoDeslizador");
+        const etiqueta = crear("span", "textoDeslizador", texto);
+        etiqueta.setAttribute("aria-hidden", "true");
+        const tirador = crear("button", "tiradorDeslizador");
+        tirador.type = "button";
+        tirador.setAttribute("aria-label", texto + " (Enter para confirmar)");
+        tirador.innerHTML = window.icono ? window.icono("flechaDerecha", 24) : "→";
+        pista.append(relleno, etiqueta, tirador);
+
+        const MARGEN = 4;
+        let inicio = null;
+        let recorrido = 0;
+        let maximo = 0;
+        let completo = false;
+
+        function ubicar(valor) {
+            recorrido = Math.max(0, Math.min(maximo, valor));
+            tirador.style.transform = "translateX(" + recorrido + "px)";
+            relleno.style.width = (recorrido + tirador.offsetWidth + MARGEN * 2) + "px";
+            etiqueta.style.opacity = String(maximo ? Math.max(0, 1 - recorrido / (maximo * 0.6)) : 1);
+        }
+
+        function completar() {
+            if (completo) return;
+            completo = true;
+            maximo = Math.max(0, pista.clientWidth - tirador.offsetWidth - MARGEN * 2);
+            pista.classList.add("completo");
+            ubicar(maximo);
+            if (navigator.vibrate) navigator.vibrate(30);
+            setTimeout(alCompletar, 160);
+        }
+
+        function xDe(evento) {
+            const toque = evento.touches && evento.touches[0] || evento.changedTouches && evento.changedTouches[0];
+            return toque ? toque.clientX : evento.clientX;
+        }
+
+        function empezar(evento) {
+            if (completo) return;
+            inicio = xDe(evento) - recorrido;
+            maximo = Math.max(0, pista.clientWidth - tirador.offsetWidth - MARGEN * 2);
+            pista.classList.add("arrastrando");
+            if (evento.pointerId !== undefined && tirador.setPointerCapture) tirador.setPointerCapture(evento.pointerId);
+        }
+
+        function mover(evento) {
+            if (inicio === null || completo) return;
+            if (evento.cancelable) evento.preventDefault();
+            ubicar(xDe(evento) - inicio);
+        }
+
+        function soltar() {
+            if (inicio === null || completo) return;
+            inicio = null;
+            pista.classList.remove("arrastrando");
+            if (maximo && recorrido >= maximo * 0.9) completar();
+            else ubicar(0);
+        }
+
+        if (window.PointerEvent) {
+            tirador.addEventListener("pointerdown", empezar);
+            tirador.addEventListener("pointermove", mover);
+            tirador.addEventListener("pointerup", soltar);
+            tirador.addEventListener("pointercancel", soltar);
+        } else {
+            tirador.addEventListener("touchstart", empezar, { passive: true });
+            tirador.addEventListener("touchmove", mover, { passive: false });
+            tirador.addEventListener("touchend", soltar);
+            tirador.addEventListener("touchcancel", soltar);
+        }
+
+        // Un toque sin deslizar explica qué hacer.
+        tirador.addEventListener("click", () => {
+            if (completo || recorrido > 0) return;
+            pista.classList.remove("sacudir");
+            void pista.offsetWidth;
+            pista.classList.add("sacudir");
+        });
+
+        tirador.addEventListener("keydown", evento => {
+            if (evento.key !== "Enter" && evento.key !== " ") return;
+            evento.preventDefault();
+            completar();
+        });
+
+        return pista;
+    }
+
+    // Resumen antes de "Preparado": productos, unidades y faltantes. Se
+    // actualiza solo si otro celular cambia la checklist; si deja de estar
+    // completa, se cierra.
+    let idResumenAbierto = "";
+    let textoResumenDibujado = "";
+
+    function crearModalResumen() {
+        let modal = document.getElementById("modalResumenPreparacion");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalResumenPreparacion";
+
+        const contenido = crear("div", "modalContenido resumenPreparacion");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloResumenPreparacion");
+
+        const titulo = crear("h2", "", "Resumen de la preparación");
+        titulo.id = "tituloResumenPreparacion";
+
+        const cuerpo = crear("div", "cuerpoResumenPreparacion");
+        cuerpo.id = "cuerpoResumenPreparacion";
+
+        const botones = crear("div", "modalBotones");
+        const cancelar = crear("button", "btnModalCancelar", "Volver a la checklist");
+        cancelar.type = "button";
+        botones.appendChild(cancelar);
+
+        contenido.append(titulo, cuerpo, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        cancelar.addEventListener("click", cerrarResumen);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarResumen();
+        });
+
+        return modal;
+    }
+
+    // Lleva la ficha al primer producto sin tildar y lo resalta.
+    function mostrarPrimerPendiente() {
+        const fila = document.querySelector('#cuerpoFichaPedido .lineaChecklist[data-estado="pendiente"]');
+        if (!fila) return;
+
+        fila.scrollIntoView?.({ block: "center", behavior: "smooth" });
+        fila.classList.remove("resaltada");
+        void fila.offsetWidth;
+        fila.classList.add("resaltada");
+    }
+
+    function abrirResumen(id) {
+        const pedido = buscarPedido(id);
+        if (!pedido || estadoActualDelPedido(pedido) !== "enPreparacion") return;
+
+        const preparacion = preparacionDe(pedido);
+        if (!preparacion.completa) {
+            mostrarToast(preparacion.pendientes === 1 ? "Falta 1 producto por tildar" : "Faltan " + preparacion.pendientes + " productos por tildar");
+            mostrarPrimerPendiente();
+            return;
+        }
+
+        idResumenAbierto = id;
+        textoResumenDibujado = "";
+        const modal = crearModalResumen();
+        dibujarResumen();
+        if (idResumenAbierto) modal.classList.remove("oculto");
+    }
+
+    function cerrarResumen() {
+        idResumenAbierto = "";
+        textoResumenDibujado = "";
+        const modal = document.getElementById("modalResumenPreparacion");
+        if (modal) modal.classList.add("oculto");
+    }
+
+    function dibujarResumen() {
+        const cuerpo = document.getElementById("cuerpoResumenPreparacion");
+        if (!cuerpo || !idResumenAbierto) return;
+
+        const id = idResumenAbierto;
+        const pedido = buscarPedido(id);
+        const abierto = !document.getElementById("modalResumenPreparacion").classList.contains("oculto");
+
+        if (!pedido || estadoActualDelPedido(pedido) !== "enPreparacion") {
+            cerrarResumen();
+            if (abierto) mostrarAviso("El pedido cambió", "Otra persona cambió el estado del pedido mientras confirmabas. Revisá la ficha.");
+            return;
+        }
+
+        const preparacion = preparacionDe(pedido);
+        if (!preparacion.completa) {
+            cerrarResumen();
+            if (abierto) mostrarAviso("La checklist cambió", "Mientras confirmabas, alguien destildó un producto. Revisá la checklist y probá de nuevo.");
+            return;
+        }
+
+        // Solo se redibuja si cambió lo que muestra (así no se corta un
+        // deslizamiento a medias).
+        const faltantes = preparacion.lineas.filter(linea => linea.faltante);
+        const texto = JSON.stringify([
+            pedido.comercio, preparacion.productos, preparacion.unidadesPedidas, preparacion.unidadesPreparadas,
+            faltantes.map(linea => [linea.clave, linea.faltante.preparada, linea.faltante.observacion])
+        ]);
+        if (texto === textoResumenDibujado) return;
+        textoResumenDibujado = texto;
+
+        cuerpo.innerHTML = "";
+        cuerpo.appendChild(crear("p", "explicacionTextoPedido", String(pedido.comercio || "SIN NOMBRE").trim() + ". Revisá que coincida con lo que armaste."));
+
+        const numeros = crear("div", "numerosResumen");
+        [
+            [preparacion.productos, preparacion.productos === 1 ? "producto" : "productos", ""],
+            [preparacion.unidadesPreparadas, preparacion.unidadesPreparadas === 1 ? "unidad" : "unidades", ""],
+            [preparacion.faltantes, preparacion.faltantes === 1 ? "faltante" : "faltantes", preparacion.faltantes ? "conFaltantes" : ""]
+        ].forEach(([valor, nombre, clase]) => {
+            const numero = crear("div", "numeroResumen " + clase);
+            numero.append(crear("strong", "", String(valor)), crear("span", "", nombre));
+            numeros.appendChild(numero);
+        });
+        cuerpo.appendChild(numeros);
+
+        if (preparacion.unidadesPreparadas !== preparacion.unidadesPedidas) {
+            cuerpo.appendChild(crear("p", "pedidasResumen", "Se pidieron " + textoUnidades(preparacion.unidadesPedidas) + "."));
+        }
+
+        if (faltantes.length) {
+            const lista = crear("ul", "faltantesResumen");
+            faltantes.forEach(linea => {
+                const item = crear("li", "");
+                item.append(
+                    crear("strong", "", String(linea.item.producto || "Sin producto") + ": " + linea.faltante.preparada + " de " + linea.cantidad),
+                    crear("small", "", String(linea.faltante.observacion || ""))
+                );
+                lista.appendChild(item);
+            });
+            cuerpo.appendChild(lista);
+        }
+
+        cuerpo.appendChild(crearDeslizador("Deslizá para marcar Preparado", () => confirmarPreparado(id)));
+    }
+
+    function confirmarPreparado(id) {
+        if (idResumenAbierto !== id) return;
+
+        // Se cierra antes: el cambio de estado redibuja la ficha enseguida.
+        cerrarResumen();
+        try {
+            window.nubeVendeFrio.marcarPreparado(id);
+            mostrarToast("Pedido preparado");
+        } catch (error) {
+            avisarError(error);
+        }
+    }
 
     // -------------------------------------------------
     // Redibujar solo
@@ -959,6 +1741,7 @@
     function dibujar() {
         if (vistaVisible()) dibujarLista();
         if (idFichaAbierta) dibujarFicha();
+        if (idResumenAbierto) dibujarResumen();
     }
 
     // Un pedido cargado en otro celular (o en este) aparece al instante.

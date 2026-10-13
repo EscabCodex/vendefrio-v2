@@ -3444,3 +3444,102 @@ html[data-tema="oscuro"] .emergenteAviso{background:#1f2937;border-color:#374151
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidencia"]{border-left-color:#F87171;}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidenciaResuelta"]{border-left-color:var(--visitado);}
 html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}
+/* Checklist de preparación y faltantes (T24): casillas, faltantes, resumen y botón deslizable */
+.progresoTarjeta{color:var(--acento-oscuro);font-weight:700;}
+.faltanteSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
+.resumenFaltantesFicha{margin-bottom:4px;padding:8px 10px;border-radius:var(--radius-md);background:var(--pendiente-bg);color:var(--pendiente);font-size:13px;font-weight:700;}
+.faltanteFichaPedido{color:var(--pendiente) !important;font-weight:700;}
+.observacionFaltante{font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere;}
+.progresoChecklist{display:grid;gap:6px;margin-bottom:4px;}
+.textoProgresoChecklist{font-size:14px;font-weight:800;}
+.barraChecklist{height:8px;border-radius:999px;background:var(--gris-claro);overflow:hidden;}
+.barraChecklist span{display:block;height:100%;border-radius:999px;background:var(--acento);transition:width .25s ease;}
+.progresoChecklist.completa .barraChecklist span{background:var(--visitado);}
+.lineaChecklist{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--borde);border-radius:var(--radius-sm);}
+.casillaChecklist{flex:1;min-width:0;display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:56px;padding:8px 4px;border:none;background:transparent;color:var(--texto);text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.casillaChecklist:active .cuadroChecklist{transform:scale(.9);}
+.cuadroChecklist{display:grid;place-items:center;width:28px;height:28px;border:2px solid #9AA9A3;border-radius:8px;background:var(--superficie);color:#fff;font-size:17px;font-weight:900;line-height:1;transition:background .12s ease, border-color .12s ease, transform .12s ease;}
+.cuadroChecklist svg{opacity:0;}
+.lineaChecklist[data-estado="lista"] .cuadroChecklist{border-color:var(--acento);background:var(--acento);}
+.lineaChecklist[data-estado="lista"] .cuadroChecklist svg{opacity:1;}
+.lineaChecklist[data-estado="faltante"] .cuadroChecklist{border-color:var(--pendiente);background:var(--pendiente);}
+.textoChecklist{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.textoChecklist strong{font-size:14.5px;overflow-wrap:anywhere;}
+.lineaChecklist[data-estado="lista"] .textoChecklist strong{color:var(--texto-sec);}
+.quienChecklist{color:var(--texto-sec);font-size:12px;overflow-wrap:anywhere;}
+.lineaChecklist[data-estado="lista"] .quienChecklist{color:var(--acento-oscuro);font-weight:700;}
+.lineaChecklist[data-estado="faltante"] .quienChecklist{color:var(--pendiente);font-weight:700;}
+.textoChecklist .observacionFaltante{color:var(--texto-sec);font-size:12px;}
+.cantidadChecklist{min-width:42px;font-size:17px;font-weight:800;text-align:right;white-space:nowrap;}
+.lineaChecklist[data-estado="faltante"] .cantidadChecklist{color:var(--pendiente);}
+.botonFaltante{flex-shrink:0;min-height:40px;padding:0 12px;border:1px solid var(--pendiente);border-radius:999px;background:transparent;color:var(--pendiente);font-size:12.5px;font-weight:700;cursor:pointer;}
+.botonFaltante:active{background:var(--pendiente-bg);}
+.lineaChecklist.resaltada{animation:resaltarLinea 1.4s ease;}
+@keyframes resaltarLinea{0%,60%{background:var(--pendiente-bg);}100%{background:transparent;}}
+.pasoSiguientePedido.incompleto{background:var(--gris-claro);color:var(--texto-sec);}
+.pistaChecklist{color:var(--texto-sec);font-size:12.5px;line-height:1.4;text-align:center;}
+.checklistPedido+.accionesFichaPedido{margin-top:16px;}
+.faltantePedido textarea{min-height:70px;margin-top:2px;border:1px solid var(--borde);background:var(--fondo);color:var(--texto);}
+.contadorFaltante{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:8px;}
+.pasoContadorFaltante{height:52px;border:none;border-radius:var(--radius-md);background:var(--gris-claro);color:var(--texto);font-size:24px;font-weight:700;cursor:pointer;}
+.pasoContadorFaltante:active{transform:scale(.95);}
+.contadorFaltante input{text-align:center;font-size:22px !important;font-weight:800;}
+.quitarFaltante{display:flex;justify-content:center;width:100%;min-height:44px;margin-top:14px;background:var(--peligro-bg) !important;color:var(--peligro) !important;}
+.quitarFaltante.oculto{display:none;}
+.numerosResumen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 8px;}
+.numeroResumen{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);}
+.numeroResumen strong{font-size:26px;font-weight:900;line-height:1.1;}
+.numeroResumen span{color:var(--texto-sec);font-size:12px;}
+.numeroResumen.conFaltantes{border-color:var(--pendiente);background:var(--pendiente-bg);}
+.numeroResumen.conFaltantes strong{color:var(--pendiente);}
+.pedidasResumen{color:var(--texto-sec);font-size:13px;text-align:center;}
+.faltantesResumen{display:grid;gap:6px;margin:10px 0 0;padding:10px 12px;border-radius:var(--radius-md);background:var(--pendiente-bg);list-style:none;}
+.faltantesResumen strong{display:block;color:var(--pendiente);font-size:13.5px;overflow-wrap:anywhere;}
+.faltantesResumen small{display:block;color:var(--texto-sec);font-size:12px;font-style:italic;overflow-wrap:anywhere;}
+.deslizador{position:relative;height:60px;margin-top:16px;border-radius:999px;background:var(--acento-bg);overflow:hidden;user-select:none;-webkit-user-select:none;}
+.rellenoDeslizador{position:absolute;top:0;bottom:0;left:0;width:60px;border-radius:999px;background:var(--acento);opacity:.22;transition:width .25s ease, opacity .2s ease;}
+.textoDeslizador{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 12px 0 60px;color:var(--acento-oscuro);font-size:14.5px;font-weight:800;text-align:center;pointer-events:none;transition:opacity .2s ease;}
+.tiradorDeslizador{position:absolute;top:4px;left:4px;z-index:1;display:grid;place-items:center;width:52px;height:52px;padding:0;border:none;border-radius:50%;background:var(--acento);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.2);cursor:grab;touch-action:none;transition:transform .25s ease;}
+.deslizador.arrastrando .tiradorDeslizador,.deslizador.arrastrando .rellenoDeslizador{transition:none;}
+.deslizador.arrastrando .tiradorDeslizador{cursor:grabbing;}
+.deslizador.completo .rellenoDeslizador{opacity:1;}
+.deslizador.sacudir .tiradorDeslizador{animation:sacudirDeslizador .5s ease;}
+@keyframes sacudirDeslizador{0%,100%{transform:translateX(0);}30%{transform:translateX(16px);}60%{transform:translateX(5px);}}
+[data-tipo="faltante"] .iconoAviso{background:var(--pendiente-bg);color:var(--pendiente);}
+[data-tipo="preparado"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
+.emergenteAviso[data-tipo="faltante"]{border-left-color:var(--pendiente);}
+.emergenteAviso[data-tipo="preparado"]{border-left-color:var(--visitado);}
+@media (prefers-reduced-motion: reduce){
+  .barraChecklist span,.cuadroChecklist,.rellenoDeslizador,.textoDeslizador,.tiradorDeslizador{transition:none;}
+  .lineaChecklist.resaltada,.deslizador.sacudir .tiradorDeslizador{animation:none;}
+}
+/* Modo oscuro: la regla general deja todos los textos blancos (con !important). */
+html[data-tema="oscuro"] .progresoTarjeta{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .faltanteSeguimiento,
+html[data-tema="oscuro"] .resumenFaltantesFicha,
+html[data-tema="oscuro"] .faltanteFichaPedido,
+html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .quienChecklist,
+html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .cantidadChecklist,
+html[data-tema="oscuro"] .numeroResumen.conFaltantes strong,
+html[data-tema="oscuro"] .faltantesResumen strong{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .quienChecklist,
+html[data-tema="oscuro"] .textoDeslizador{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .textoChecklist strong{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .lineaChecklist{border-color:#374151;}
+html[data-tema="oscuro"] .cuadroChecklist{border-color:#6b7280;background:#111827;color:#fff !important;}
+html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .cuadroChecklist{border-color:var(--acento);background:var(--acento);}
+html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .cuadroChecklist{border-color:var(--pendiente);background:var(--pendiente);}
+html[data-tema="oscuro"] .barraChecklist{background:#374151;}
+html[data-tema="oscuro"] .pasoSiguientePedido.incompleto{background:#334049;color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .pistaChecklist,
+html[data-tema="oscuro"] .pedidasResumen,
+html[data-tema="oscuro"] .numeroResumen span{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .numeroResumen{background:#111827;border-color:#374151;}
+html[data-tema="oscuro"] .numeroResumen.conFaltantes{background:var(--pendiente-bg);border-color:var(--pendiente);}
+html[data-tema="oscuro"] .pasoContadorFaltante{background:#334049;color:#f9fafb;}
+html[data-tema="oscuro"] .btnAccion.secundario.quitarFaltante{background:#3B1D1D !important;color:#FCA5A5 !important;}
+html[data-tema="oscuro"] .tiradorDeslizador{color:#fff;}
+html[data-tema="oscuro"] [data-tipo="faltante"] .iconoAviso{background:#3A2415;color:var(--pendiente);}
+html[data-tema="oscuro"] [data-tipo="preparado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="faltante"]{border-left-color:var(--pendiente);}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="preparado"]{border-left-color:var(--visitado);}
