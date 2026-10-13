@@ -3445,7 +3445,7 @@ html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidencia"]{border-left-col
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidenciaResuelta"]{border-left-color:var(--visitado);}
 html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}
 /* Checklist de preparación y faltantes (T24): casillas, faltantes, resumen y botón deslizable */
-.progresoTarjeta{color:var(--acento-oscuro);font-weight:700;}
+.infoSeguimiento .progresoTarjeta{color:var(--acento-oscuro);font-weight:700;}
 .faltanteSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
 .resumenFaltantesFicha{margin-bottom:4px;padding:8px 10px;border-radius:var(--radius-md);background:var(--pendiente-bg);color:var(--pendiente);font-size:13px;font-weight:700;}
 .faltanteFichaPedido{color:var(--pendiente) !important;font-weight:700;}
@@ -3517,7 +3517,7 @@ html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}
 html[data-tema="oscuro"] .progresoTarjeta{color:var(--acento-oscuro) !important;}
 html[data-tema="oscuro"] .faltanteSeguimiento,
 html[data-tema="oscuro"] .resumenFaltantesFicha,
-html[data-tema="oscuro"] .faltanteFichaPedido,
+html[data-tema="oscuro"] .productoFichaNombre .faltanteFichaPedido,
 html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .quienChecklist,
 html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .cantidadChecklist,
 html[data-tema="oscuro"] .numeroResumen.conFaltantes strong,

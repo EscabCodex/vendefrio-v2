@@ -1087,6 +1087,10 @@
             : "Faltan " + cantidad + " productos: tildalos o marcalos como faltante.";
     }
 
+    // El producto sin tildar que se resalta un momento (sigue resaltado
+    // aunque la ficha se redibuje).
+    let resaltado = { clave: "", hasta: 0 };
+
     function crearFilaChecklist(linea, conFaltantes) {
         const estado = linea.faltante ? "faltante" : linea.lista ? "lista" : "pendiente";
         const nombre = String(linea.item.producto || "Sin producto");
@@ -1094,6 +1098,7 @@
         const fila = crear("div", "lineaChecklist");
         fila.dataset.estado = estado;
         fila.dataset.clave = linea.clave;
+        if (estado === "pendiente" && resaltado.clave === linea.clave && Date.now() < resaltado.hasta) fila.classList.add("resaltada");
 
         const casilla = crearBoton("casillaChecklist", undefined, "tildar");
         casilla.dataset.linea = linea.clave;
@@ -1621,6 +1626,7 @@
         if (!fila) return;
 
         fila.scrollIntoView?.({ block: "center", behavior: "smooth" });
+        resaltado = { clave: fila.dataset.clave, hasta: Date.now() + 1400 };
         fila.classList.remove("resaltada");
         void fila.offsetWidth;
         fila.classList.add("resaltada");
