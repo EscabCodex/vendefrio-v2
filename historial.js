@@ -298,7 +298,16 @@ function actualizarFiltroActivoHistorial() {
         "Mostrando solamente pedidos de: " + comercioHistorialActivo;
 }
 
+// Historial dentro de Pedidos (T27b): en la nube, Historial es el filtro
+// "Historial" de la sección Pedido (seguimiento.js). Devuelve true si lo
+// abrió ahí; en el modo personal sigue esta pantalla de siempre.
+function abrirHistorialEnPedidos(opciones) {
+    return usaNubeReal() && Boolean(window.seguimientoVendeFrio?.abrirHistorial?.(opciones));
+}
+
 function abrirHistorialDeComercio(nombre) {
+    if (abrirHistorialEnPedidos({ comercio: nombre })) return;
+
     pedidoHistorialActivo = null;
     comercioHistorialActivo = String(nombre || "").trim();
 
@@ -318,6 +327,8 @@ function abrirHistorialDeComercio(nombre) {
 }
 
 function abrirHistorialPorPeriodo(periodo) {
+    if (abrirHistorialEnPedidos({ periodo })) return;
+
     pedidoHistorialActivo = null;
     comercioHistorialActivo = "";
 
@@ -341,6 +352,7 @@ function abrirHistorialDePedido(indice) {
     const historial = obtenerHistorial();
 
     if (!Number.isInteger(indiceNumerico) || !historial[indiceNumerico]) return;
+    if (abrirHistorialEnPedidos({ idPedido: historial[indiceNumerico].id })) return;
 
     pedidoHistorialActivo = indiceNumerico;
     comercioHistorialActivo = "";
@@ -1066,6 +1078,28 @@ if (limpiarFiltroHistorial) {
 // ACCIONES DEL HISTORIAL
 // -----------------------------------------------------
 
+// "Ver pedido": la ventana del pedido con su mensaje y "Enviar por
+// WhatsApp". También la usa la ficha del pedido en la nube (T27b).
+function mostrarPedidoGuardado(pedido) {
+    ultimoPedidoTexto = String(pedido.pedido || "");
+
+    if (pedidoCliente) {
+        pedidoCliente.textContent = pedido.comercio || "SIN NOMBRE";
+    }
+
+    if (pedidoCantidad) {
+        pedidoCantidad.textContent = String(Number(pedido.cantidad) || 0);
+    }
+
+    if (typeof mostrarVistaPreviaPedido === "function") {
+        mostrarVistaPreviaPedido(ultimoPedidoTexto);
+    } else if (pedidoDetalle) {
+        pedidoDetalle.textContent = ultimoPedidoTexto;
+    }
+
+    if (modalPedido) modalPedido.classList.remove("oculto");
+}
+
 if (pantallaHistorial) {
     pantallaHistorial.addEventListener("click", event => {
         const boton = event.target.closest("button");
@@ -1078,23 +1112,7 @@ if (pantallaHistorial) {
 
             if (!pedido) return;
 
-            ultimoPedidoTexto = String(pedido.pedido || "");
-
-            if (pedidoCliente) {
-                pedidoCliente.textContent = pedido.comercio || "SIN NOMBRE";
-            }
-
-            if (pedidoCantidad) {
-                pedidoCantidad.textContent = String(Number(pedido.cantidad) || 0);
-            }
-
-            if (typeof mostrarVistaPreviaPedido === "function") {
-                mostrarVistaPreviaPedido(ultimoPedidoTexto);
-            } else if (pedidoDetalle) {
-                pedidoDetalle.textContent = ultimoPedidoTexto;
-            }
-
-            if (modalPedido) modalPedido.classList.remove("oculto");
+            mostrarPedidoGuardado(pedido);
             return;
         }
 
