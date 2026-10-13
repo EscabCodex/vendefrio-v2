@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v146 - Checklist de preparación y faltantes)
+// VendeFrío - Service Worker (v147 - Editar el pedido)
 // =====================================================
-const CACHE_NAME = "vendefrio-v146";
+const CACHE_NAME = "vendefrio-v147";
 const ARCHIVOS = [
   "./",
   "./index.html",

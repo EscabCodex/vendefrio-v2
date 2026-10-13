@@ -9,7 +9,9 @@
 // persona (T22). Los avisos abren la ficha de su pedido (T23). En "En
 // preparación" la ficha muestra la checklist: cualquiera tilda, "Prepara
 // pedidos" anota faltantes y marca "Preparado" con un resumen que se desliza
-// para confirmar (T24).
+// para confirmar (T24). Quien cargó el pedido y el dueño lo editan desde la
+// ficha; los demás ven una franja amarilla con lo que cambió, la checklist
+// marca los productos a revisar y "Entendido" la cierra (T25).
 // =====================================================
 
 (function () {
@@ -93,6 +95,29 @@
 
     function textoFaltantes(cantidad) {
         return cantidad === 1 ? "1 faltante" : cantidad + " faltantes";
+    }
+
+    // Ediciones (T25): las de otro que esta persona todavía no cerró con
+    // "Entendido", la más nueva primero.
+    function edicionesSinVer(pedido) {
+        return window.nubeVendeFrio?.edicionesSinVer?.(pedido) || [];
+    }
+
+    // Productos a revisar por esas ediciones: id de línea -> "Nuevo" o
+    // "Antes x3" (vale la edición más nueva).
+    function productosARevisar(pedido) {
+        const revisar = new Map();
+        edicionesSinVer(pedido).forEach(edicion => {
+            const lineas = edicion.revisar && typeof edicion.revisar === "object" ? edicion.revisar : {};
+            Object.keys(lineas).forEach(linea => {
+                if (!revisar.has(linea)) revisar.set(linea, String(lineas[linea] || "Revisar"));
+            });
+        });
+        return revisar;
+    }
+
+    function puedeEditar(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeEditarElPedido?.(pedido));
     }
 
     // La persona de este celular hizo esa entrada.
@@ -399,6 +424,7 @@
         }
 
         if (tieneIncidencia(pedido)) info.append(crear("span", "badge incidenciaSeguimiento", "Con incidencia"));
+        if (edicionesSinVer(pedido).length) info.append(crear("span", "badge edicionSeguimiento", "Editado"));
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
 
         tarjeta.append(avatar, info);
@@ -513,10 +539,12 @@
         const modal = document.getElementById("modalFichaPedido");
         if (modal) modal.classList.add("oculto");
 
-        // Las ventanas de la checklist (T24) son de esta ficha.
+        // Las ventanas de la checklist (T24) y la de editar (T25) son de
+        // esta ficha.
         cerrarResumen();
         cerrarFaltante();
         cerrarConfirmacion();
+        window.cerrarEdicionPedido?.();
     }
 
     function abrirFicha(id) {
@@ -546,6 +574,9 @@
             seccion.appendChild(crear("p", "subtitulo", "Este pedido no tiene productos."));
             return seccion;
         }
+
+        // Editado (T25): lo nuevo o con otra cantidad, hasta "Entendido".
+        const revisar = productosARevisar(pedido);
 
         // Ya preparado (T24): lo preparado y los faltantes, con quién los
         // anotó. Lo pedido y su precio se conservan.
@@ -591,6 +622,12 @@
                         ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u"
                         : "x" + cantidad + "  ·  Sin precio")
                 );
+
+                const aRevisar = revisar.get(String(item.id || ""));
+                if (aRevisar) {
+                    fila.classList.add("aRevisar");
+                    izquierda.appendChild(crear("small", "revisarPedido", "A revisar: " + aRevisar));
+                }
 
                 const faltante = lineasPreparadas.get(item)?.faltante;
                 if (faltante) {
@@ -662,6 +699,25 @@
             }
         });
 
+        // Ediciones (T25): qué cambió, quién y cuándo, y quién la vio.
+        const ediciones = pedido.ediciones && typeof pedido.ediciones === "object" ? pedido.ediciones : {};
+        const vieron = window.nubeVendeFrio?.quienesVieronLasEdiciones?.(pedido) || new Map();
+        Object.keys(ediciones).forEach(id => {
+            const edicion = ediciones[id];
+            if (!edicion || typeof edicion !== "object") return;
+
+            const vistas = (vieron.get(id) || []).map(nombrePersona);
+            entradas.push({
+                id,
+                tipo: "edicion",
+                titulo: "Pedido editado",
+                persona: edicion.persona,
+                hora: Number(edicion.horaCelular) || 0,
+                nota: edicion.texto,
+                extra: vistas.length ? "Lo vio " + vistas.join(", ") : ""
+            });
+        });
+
         entradas.sort((a, b) => {
             const diferencia = b.hora - a.hora;
             if (diferencia !== 0) return diferencia;
@@ -675,7 +731,7 @@
             const hora = entrada.hora;
             const paso = crear("li", "pasoSeguimiento");
             if (entrada === actual) paso.classList.add("actual");
-            if (entrada.tipo !== "estado") paso.classList.add(entrada.tipo === "incidencia" ? "incidencia" : "resuelta");
+            if (entrada.tipo !== "estado") paso.classList.add(entrada.tipo);
             if (entrada.tipo === "estado") paso.dataset.estado = entrada.estado;
 
             paso.append(
@@ -685,6 +741,7 @@
 
             const nota = String(entrada.nota || "").trim();
             if (nota) paso.appendChild(crear("p", "notaSeguimiento", nota));
+            if (entrada.extra) paso.appendChild(crear("small", "vistoSeguimiento", entrada.extra));
 
             linea.appendChild(paso);
         });
@@ -750,6 +807,9 @@
 
         const incidencia = dibujarIncidencias(pedido);
         if (incidencia) cuerpo.appendChild(incidencia);
+
+        const edicion = dibujarEdiciones(pedido);
+        if (edicion) cuerpo.appendChild(edicion);
 
         const acciones = dibujarAcciones(pedido, estado);
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
@@ -817,11 +877,38 @@
         return franja;
     }
 
+    // Franja amarilla (T25): lo que cambió en las ediciones de otro que esta
+    // persona todavía no vio. "Entendido" la cierra (solo para ella).
+    function dibujarEdiciones(pedido) {
+        const sinVer = edicionesSinVer(pedido);
+        if (!sinVer.length) return null;
+
+        const franja = crear("div", "edicionFichaPedido");
+        franja.setAttribute("role", "status");
+        franja.appendChild(crear("strong", "", sinVer.length === 1 ? "Pedido editado" : "Pedido editado " + sinVer.length + " veces"));
+
+        sinVer.forEach(edicion => {
+            const hora = Number(edicion.horaCelular) || 0;
+            franja.append(
+                crear("p", "textoEdicion", String(edicion.texto || "")),
+                crear("small", "", [textoCuando(hora), nombrePersona(edicion.persona)].join("  ·  "))
+            );
+        });
+
+        if (productosARevisar(pedido).size) {
+            franja.appendChild(crear("small", "pistaEdicion", "Los productos nuevos o con otra cantidad están marcados para revisar."));
+        }
+
+        franja.appendChild(crearBoton("btnAccion entendidoEdicion", "Entendido", "entendido"));
+        return franja;
+    }
+
     // Botones de la ficha: solo los pasos que esta persona puede hacer.
     function dibujarAcciones(pedido, estado) {
         const siguiente = pasoSiguiente(estado);
         const anterior = pasoAnterior(estado);
         const marcar = estado !== "cancelado" && !tieneIncidencia(pedido);
+        const editar = puedeEditar(pedido);
 
         // "Marcar preparado" (T24) se puede tocar solo con la checklist
         // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
@@ -831,7 +918,7 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
@@ -846,6 +933,9 @@
         }
 
         if (pista) acciones.appendChild(crear("p", "pistaChecklist", pista));
+
+        // Editar (T25): solo quien cargó el pedido y el dueño.
+        if (editar) acciones.appendChild(crearBoton("btnAccion secundario botonEditarPedido", "Editar pedido", "editar"));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
@@ -1070,7 +1160,18 @@
         else if (boton.dataset.accion === "resolver") resolverIncidencia(id);
         else if (boton.dataset.accion === "tildar") tocarProducto(id, boton.dataset.linea, boton);
         else if (boton.dataset.accion === "faltante") abrirFaltante(id, boton.dataset.linea);
+        else if (boton.dataset.accion === "editar") window.abrirEdicionPedido?.(id);
+        else if (boton.dataset.accion === "entendido") entendido(id);
     });
+
+    // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
+    function entendido(id) {
+        try {
+            window.nubeVendeFrio.marcarEdicionesVistas(id);
+        } catch (error) {
+            avisarError(error);
+        }
+    }
 
     // -------------------------------------------------
     // Checklist de preparación y faltantes (T24)
@@ -1091,7 +1192,7 @@
     // aunque la ficha se redibuje).
     let resaltado = { clave: "", hasta: 0 };
 
-    function crearFilaChecklist(linea, conFaltantes) {
+    function crearFilaChecklist(linea, conFaltantes, aRevisar) {
         const estado = linea.faltante ? "faltante" : linea.lista ? "lista" : "pendiente";
         const nombre = String(linea.item.producto || "Sin producto");
 
@@ -1112,6 +1213,12 @@
 
         const textos = crear("span", "textoChecklist");
         textos.appendChild(crear("strong", "", nombre));
+
+        // Editado (T25): producto nuevo o con otra cantidad, hasta "Entendido".
+        if (aRevisar) {
+            fila.classList.add("aRevisar");
+            textos.appendChild(crear("small", "revisarPedido", "A revisar: " + aRevisar));
+        }
 
         // Quién hizo lo último sobre este producto.
         const tilde = linea.tilde;
@@ -1182,9 +1289,10 @@
         });
 
         const conFaltantes = puedeAnotarFaltantes();
+        const revisar = productosARevisar(pedido);
         marcas.forEach(grupo => {
             seccion.appendChild(crear("p", "marcaFichaPedido", grupo.marca));
-            grupo.lineas.forEach(linea => seccion.appendChild(crearFilaChecklist(linea, conFaltantes)));
+            grupo.lineas.forEach(linea => seccion.appendChild(crearFilaChecklist(linea, conFaltantes, revisar.get(linea.clave))));
         });
 
         return seccion;

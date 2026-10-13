@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24)
+// T22, T23, T24, T25)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -29,7 +29,11 @@ rules_version = '2';
 //                                   incidencias en "incidencias" e
 //                                   "incidenciasResueltas" (T22); la
 //                                   checklist en "preparacion" y
-//                                   "faltantes" (T24), que solo se agregan
+//                                   "faltantes" (T24), que solo se agregan;
+//                                   las ediciones del autor o el dueño en
+//                                   "ediciones" y quién las vio en
+//                                   "edicionesVistas" (T25), que solo se
+//                                   agregan
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
@@ -303,16 +307,69 @@ service cloud.firestore {
         && (tienePermiso(idDistribuidora, "prepara") || tienePermiso(idDistribuidora, "controla"));
     }
 
+    // Editar el pedido (T25). Cada edición es una entrada nueva de
+    // "ediciones": { texto, revisar, estado, persona, horaCelular }. texto es
+    // lo que cambió ("Agregó 2 Coca 2L · Quitó Sprite"), revisar los
+    // productos que la checklist marca para revisar (id de línea -> "Nuevo"
+    // o "Antes x3") y estado, el del pedido al editarlo. Solo el autor y el
+    // dueño, a nombre propio, de a una y sin cambiar ni borrar las
+    // anteriores: la edición queda en el seguimiento.
+    function edicionAgregadaValida(idDistribuidora, antes, despues) {
+      let previas = antes.get("ediciones", {});
+      let nuevas = despues.ediciones.keys().removeAll(previas.keys());
+      let edicion = despues.ediciones[nuevas[0]];
+      return despues.ediciones.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && edicion is map
+        && edicion.keys().hasAll(["texto", "revisar", "estado", "persona", "horaCelular"])
+        && edicion.keys().hasOnly(["texto", "revisar", "estado", "persona", "horaCelular"])
+        && edicion.texto is string
+        && edicion.texto.size() >= 1
+        && edicion.texto.size() <= 1000
+        && edicion.revisar is map
+        && edicion.revisar.size() <= 200
+        && estadoDePedidoValido(edicion.estado)
+        && edicion.horaCelular is number
+        && personaPropia(idDistribuidora, edicion.persona)
+        && puedeCambiarLoPedido(idDistribuidora, antes);
+    }
+
+    // "Entendido" (T25): cada persona cierra la franja amarilla de una
+    // edición con una entrada nueva de "edicionesVistas": { edicion, persona,
+    // horaCelular }. Cualquier miembro, a nombre propio, de a una y sobre una
+    // edición que existe.
+    function vistaAgregadaValida(idDistribuidora, antes, despues) {
+      let previas = antes.get("edicionesVistas", {});
+      let nuevas = despues.edicionesVistas.keys().removeAll(previas.keys());
+      let vista = despues.edicionesVistas[nuevas[0]];
+      return despues.edicionesVistas.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && vista is map
+        && vista.keys().hasAll(["edicion", "persona", "horaCelular"])
+        && vista.keys().hasOnly(["edicion", "persona", "horaCelular"])
+        && vista.edicion is string
+        && vista.edicion in despues.get("ediciones", {})
+        && vista.horaCelular is number
+        && personaPropia(idDistribuidora, vista.persona);
+    }
+
     // Cada cambio se guarda campo por campo. El id, la fecha, el autor y la
     // marca de eliminado no cambian. El estado cambia solo junto con una
     // entrada nueva del historial, y un "Histórico" no pasa a tener estados,
-    // incidencias ni checklist.
+    // incidencias, checklist ni ediciones. En un pedido con estados, lo
+    // pedido cambia solo junto con una edición nueva (T25).
     function cambioDePedidoValido(idDistribuidora, antes, despues) {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
-          "faltantes", "entrega", "cobro", "ediciones", "productos", "comercio", "observaciones", "pedido", "cantidad"])
+          "faltantes", "entrega", "cobro", "ediciones", "edicionesVistas", "productos", "comercio", "observaciones",
+          "pedido", "cantidad"])
         && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
-          || puedeCambiarLoPedido(idDistribuidora, antes))
+          || (puedeCambiarLoPedido(idDistribuidora, antes)
+            && (!("estados" in antes) || cambiados.hasAny(["ediciones"]))))
+        && (!cambiados.hasAny(["ediciones"])
+          || ("estados" in antes && edicionAgregadaValida(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["edicionesVistas"])
+          || ("estados" in antes && vistaAgregadaValida(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["estado", "estados"])
           || ("estados" in antes && estadoAgregadoValido(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["incidencias"])
@@ -341,7 +398,7 @@ service cloud.firestore {
     function avisoNuevoValido(idDistribuidora, aviso) {
       return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
         && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
-        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante"]
+        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante", "pedidoEditado"]
         && aviso.idPedido is string
         && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
         && aviso.comercio is string

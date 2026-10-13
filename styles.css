@@ -3543,3 +3543,69 @@ html[data-tema="oscuro"] [data-tipo="faltante"] .iconoAviso{background:#3A2415;c
 html[data-tema="oscuro"] [data-tipo="preparado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="faltante"]{border-left-color:var(--pendiente);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="preparado"]{border-left-color:var(--visitado);}
+/* Editar el pedido (T25): botón, franja amarilla, productos a revisar y ventana "Editar pedido" */
+.accionesFichaPedido .botonEditarPedido{justify-content:center;width:100%;min-height:44px;}
+.edicionSeguimiento{display:flex;width:max-content;margin-top:4px;color:#A16207;}
+.edicionFichaPedido{display:grid;gap:3px;margin-bottom:14px;padding:12px;border:1px solid #F3DE8A;border-left:4px solid #EAB308;border-radius:var(--radius-md);background:#FEF9E1;}
+.edicionFichaPedido>strong{color:#854D0E;font-size:14px;}
+.textoEdicion{margin-top:4px;font-size:13.5px;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere;}
+.edicionFichaPedido small{color:var(--texto-sec);font-size:12px;}
+.edicionFichaPedido .pistaEdicion{margin-top:6px;font-style:italic;}
+.entendidoEdicion{justify-content:center;width:100%;min-height:44px;margin-top:8px;background:#EAB308;color:#422006;font-weight:800;}
+.revisarPedido{color:#A16207 !important;font-size:12px;font-weight:800;}
+.lineaChecklist.aRevisar,.productoFichaPedido.aRevisar{background:#FEF9E1;}
+.lineaChecklist.aRevisar{box-shadow:inset 3px 0 0 #EAB308;}
+.productoFichaPedido.aRevisar{padding-left:8px;padding-right:8px;box-shadow:inset 3px 0 0 #EAB308;}
+.pasoSeguimiento.edicion::before{background:#EAB308;}
+.vistoSeguimiento{margin-top:2px;font-style:italic;}
+.editarPedido h2{margin-bottom:8px;}
+.editarPedido textarea{width:100%;min-height:70px;padding:12px;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);color:var(--texto);font-size:15px;box-sizing:border-box;}
+.tituloSeccionEditar{margin:16px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--texto-sec);}
+.productosEditarPedido{display:grid;}
+.filaEditarPedido{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;padding:6px 0;border-bottom:1px solid var(--borde);}
+.textoFilaEditar{display:flex;flex-direction:column;min-width:0;}
+.textoFilaEditar strong{font-size:14px;overflow-wrap:anywhere;}
+.textoFilaEditar small{font-size:12px;font-weight:700;color:#A16207;}
+.filaEditarPedido[data-cambio="nuevo"],.filaEditarPedido[data-cambio="cantidad"]{background:#FEF9E1;box-shadow:inset 3px 0 0 #EAB308;padding-left:8px;padding-right:4px;}
+.filaEditarPedido[data-cambio="quitado"] .textoFilaEditar strong{color:var(--texto-sec);text-decoration:line-through;}
+.filaEditarPedido[data-cambio="quitado"] .textoFilaEditar small{color:var(--peligro);}
+.resultadosEditarPedido{display:grid;gap:6px;margin-top:6px;}
+.resultadoEditarPedido{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;min-height:48px;padding:8px 12px;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--superficie);color:var(--texto);text-align:left;cursor:pointer;}
+.resultadoEditarPedido:active{background:var(--acento-bg);}
+.resultadoEditarPedido strong{font-size:14px;overflow-wrap:anywhere;}
+.resultadoEditarPedido small{color:var(--texto-sec);font-size:12px;}
+.resultadosEditarPedido .mensajeBusquedaPedido{margin:0;}
+.cambiosEditarPedido{margin-top:16px;padding:10px 12px;border:1px dashed var(--borde);border-radius:var(--radius-md);color:var(--texto-sec);font-size:13px;}
+.cambiosEditarPedido.conCambios{border:1px solid #F3DE8A;background:#FEF9E1;color:var(--texto);}
+.cambiosEditarPedido strong{display:block;}
+.cambiosEditarPedido.conCambios strong{color:#854D0E;}
+.cambiosEditarPedido p{margin-top:3px;font-size:13.5px;overflow-wrap:anywhere;}
+.editarPedido .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
+/* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
+html[data-tema="oscuro"] .edicionSeguimiento,
+html[data-tema="oscuro"] .revisarPedido,
+html[data-tema="oscuro"] .textoFilaEditar small,
+html[data-tema="oscuro"] .edicionFichaPedido>strong,
+html[data-tema="oscuro"] .cambiosEditarPedido.conCambios strong{color:#FACC15 !important;}
+html[data-tema="oscuro"] .edicionFichaPedido{background:#3A3113;border-color:#6B5A1E;border-left-color:#EAB308;}
+html[data-tema="oscuro"] .edicionFichaPedido small,
+html[data-tema="oscuro"] .tituloSeccionEditar,
+html[data-tema="oscuro"] .resultadoEditarPedido small,
+html[data-tema="oscuro"] .cambiosEditarPedido{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .entendidoEdicion{background:#EAB308;color:#422006 !important;}
+html[data-tema="oscuro"] .lineaChecklist.aRevisar,
+html[data-tema="oscuro"] .productoFichaPedido.aRevisar,
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="nuevo"],
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="cantidad"]{background:#2E2812;}
+html[data-tema="oscuro"] .filaEditarPedido{border-color:#374151;}
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar strong{color:#9ca3af !important;}
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar small{color:#FCA5A5 !important;}
+html[data-tema="oscuro"] .resultadoEditarPedido{background:#1f2937;border-color:#374151;color:#f9fafb;}
+html[data-tema="oscuro"] .cambiosEditarPedido{border-color:#4b5563;}
+html[data-tema="oscuro"] .cambiosEditarPedido.conCambios{background:#3A3113;border-color:#6B5A1E;}
+html[data-tema="oscuro"] .pasoSeguimiento.edicion::before{background:#EAB308;}
+html[data-tema="oscuro"] .vistoSeguimiento{color:#cbd5e1 !important;}
+[data-tipo="pedidoEditado"] .iconoAviso{background:#FEF9E1;color:#A16207;}
+.emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
+html[data-tema="oscuro"] [data-tipo="pedidoEditado"] .iconoAviso{background:#3A3113;color:#FACC15;}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}

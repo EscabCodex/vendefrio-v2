@@ -1020,3 +1020,545 @@ if (modalPedido) {
         if (event.target === modalPedido) modalPedido.classList.add("oculto");
     });
 }
+
+// -----------------------------------------------------
+// EDITAR UN PEDIDO (T25)
+// -----------------------------------------------------
+// Solo en la nube, desde la ficha del pedido (seguimiento.js), para quien lo
+// cargó y el dueño. Es una ventana aparte del formulario "Nuevo pedido": el
+// borrador del pedido nuevo no se toca. Los productos que no cambian
+// conservan su línea (y sus tildes); uno nuevo o con otra cantidad lleva una
+// línea nueva, vuelve a quedar sin tildar y la checklist lo marca para
+// revisar. nube.js guarda la edición y avisa a quien corresponde.
+
+const CANTIDAD_MAXIMA_EDICION = 40;
+const MAXIMO_RESULTADOS_EDICION = 12;
+
+// { id, foto (lo pedido al abrir, para saber si otro lo cambió), comercio,
+//   observaciones, filas: [{ clave, item (línea original o null), marca,
+//   producto, original, cantidad }] }
+let edicionAbierta = null;
+let contadorFilasNuevas = 0;
+
+// El mismo texto para WhatsApp que arma generarPedido, para un pedido que
+// ya existe (con su fecha de carga). Las marcas van en el orden en que
+// aparecen en el pedido.
+function armarTextoDelPedido(cliente, fechaTexto, productos, observaciones) {
+    const emojiComercio = String.fromCodePoint(0x1F3EA);
+    const emojiResumen = String.fromCodePoint(0x1F4E6);
+    const emojiObservaciones = String.fromCodePoint(0x1F50E);
+    const emojisMarcas = [
+        String.fromCodePoint(0x1F535),
+        String.fromCodePoint(0x1F7E2),
+        String.fromCodePoint(0x1F7E3),
+        String.fromCodePoint(0x1F7E0),
+        String.fromCodePoint(0x1F534)
+    ];
+
+    const bloquesMarcas = [];
+    let cantidadProductos = 0;
+
+    productos.forEach(item => {
+        let bloque = bloquesMarcas.find(actual => actual.marca === item.marca);
+        if (!bloque) {
+            bloque = { marca: item.marca, productos: [] };
+            bloquesMarcas.push(bloque);
+        }
+        bloque.productos.push(item);
+        cantidadProductos += Number(item.cantidad) || 0;
+    });
+
+    const detalleProductos = bloquesMarcas
+        .map((bloque, indice) => {
+            const emojiMarca = emojisMarcas[indice % emojisMarcas.length];
+            const lineas = bloque.productos
+                .map(item => "- " + item.producto + " x" + item.cantidad)
+                .join("\n");
+
+            return emojiMarca + " *" + bloque.marca + "*\n" + lineas;
+        })
+        .join("\n\n");
+
+    let mensaje =
+        emojiComercio + " *" + cliente + "*\n" +
+        fechaTexto + "\n\n" +
+        emojiResumen + " *RESUMEN DEL PEDIDO*\n" +
+        "Unidades totales: " + cantidadProductos + "\n" +
+        "Productos diferentes: " + productos.length + "\n\n" +
+        detalleProductos;
+
+    if (observaciones) {
+        mensaje += "\n\n" + emojiObservaciones + " *OBSERVACIONES*\n" + observaciones;
+    }
+
+    return mensaje.trim();
+}
+
+function fotoDeLoPedido(pedido) {
+    return JSON.stringify([
+        Array.isArray(pedido.productos) ? pedido.productos : [],
+        String(pedido.comercio || ""),
+        String(pedido.observaciones || "")
+    ]);
+}
+
+function crearModalEdicionPedido() {
+    let modal = document.getElementById("modalEditarPedido");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "modalEditarPedido";
+    modal.className = "modal oculto";
+    modal.innerHTML = `
+        <div class="modalContenido editarPedido" role="dialog" aria-modal="true" aria-labelledby="tituloEditarPedido">
+            <h2 id="tituloEditarPedido">Editar pedido</h2>
+            <p class="explicacionTextoPedido" id="explicacionEditarPedido"></p>
+            <label for="comercioEditarPedido">Comercio</label>
+            <input id="comercioEditarPedido" type="text" list="listaComercios" autocomplete="off" placeholder="Nombre del comercio">
+            <h3 class="tituloSeccionEditar">Productos</h3>
+            <div id="productosEditarPedido" class="productosEditarPedido"></div>
+            <label for="buscarEditarPedido">Agregar producto</label>
+            <input id="buscarEditarPedido" type="search" autocomplete="off" placeholder="Buscar producto o marca...">
+            <div id="resultadosEditarPedido" class="resultadosEditarPedido"></div>
+            <label for="obsEditarPedido">Observaciones</label>
+            <textarea id="obsEditarPedido" rows="3" placeholder="Observaciones del pedido"></textarea>
+            <div id="cambiosEditarPedido" class="cambiosEditarPedido" aria-live="polite"></div>
+            <p id="errorEditarPedido" class="errorTextoPedido oculto" role="alert"></p>
+            <div class="modalBotones">
+                <button type="button" class="btnModalCancelar" id="cancelarEditarPedido">Cancelar</button>
+                <button type="button" class="btnModalConfirmar" id="guardarEditarPedido">Guardar cambios</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Tocar afuera cierra solo si todavía no se cambió nada.
+    modal.addEventListener("click", event => {
+        if (event.target === modal && cambiosDeLaEdicion().partes.length === 0) cerrarEdicionPedido();
+    });
+
+    document.getElementById("cancelarEditarPedido").addEventListener("click", cerrarEdicionPedido);
+    document.getElementById("guardarEditarPedido").addEventListener("click", guardarEdicionPedido);
+
+    const productos = document.getElementById("productosEditarPedido");
+    productos.addEventListener("click", event => {
+        const boton = event.target.closest("button[data-clave]");
+        if (!boton) return;
+
+        const fila = filaDeEdicion(boton.dataset.clave);
+        if (!fila) return;
+
+        if (boton.classList.contains("botonMenos")) fila.cantidad = Math.max(0, fila.cantidad - 1);
+        else if (boton.classList.contains("botonMas")) fila.cantidad = Math.min(maximoDeFila(fila), fila.cantidad + 1);
+        else if (boton.classList.contains("botonBorrar")) fila.cantidad = 0;
+        else return;
+
+        dibujarFilasEdicion(fila.clave);
+    });
+
+    productos.addEventListener("change", event => {
+        const select = event.target.closest("select[data-clave]");
+        const fila = select ? filaDeEdicion(select.dataset.clave) : null;
+        if (!fila) return;
+
+        fila.cantidad = Math.max(0, Math.min(maximoDeFila(fila), Number(select.value) || 0));
+        dibujarFilasEdicion(fila.clave);
+    });
+
+    const buscador = document.getElementById("buscarEditarPedido");
+    buscador.addEventListener("input", dibujarResultadosEdicion);
+    buscador.addEventListener("keydown", event => {
+        if (event.key === "Enter") event.preventDefault();
+    });
+
+    document.getElementById("resultadosEditarPedido").addEventListener("click", event => {
+        const boton = event.target.closest("button[data-marca]");
+        if (boton) agregarProductoEdicion(boton.dataset.marca, boton.dataset.producto);
+    });
+
+    ["comercioEditarPedido", "obsEditarPedido"].forEach(id => {
+        document.getElementById(id).addEventListener("input", () => {
+            ocultarErrorEdicion();
+            dibujarCambiosEdicion();
+        });
+    });
+
+    return modal;
+}
+
+function filaDeEdicion(clave) {
+    return edicionAbierta ? edicionAbierta.filas.find(fila => fila.clave === clave) || null : null;
+}
+
+function maximoDeFila(fila) {
+    return Math.max(CANTIDAD_MAXIMA_EDICION, fila.original);
+}
+
+function abrirEdicionPedido(id) {
+    const pedido = obtenerHistorial().find(item => String(item.id || "") === String(id || ""));
+    const nube = window.nubeVendeFrio;
+
+    if (!pedido || !nube || typeof nube.puedeEditarElPedido !== "function" || !nube.puedeEditarElPedido(pedido)) {
+        mostrarAviso("No se puede editar", "Solo quien cargó el pedido o el dueño lo edita, y un pedido cancelado no se edita.");
+        return;
+    }
+
+    const modal = crearModalEdicionPedido();
+
+    edicionAbierta = {
+        id: String(pedido.id),
+        foto: fotoDeLoPedido(pedido),
+        comercio: String(pedido.comercio || "").trim(),
+        observaciones: String(pedido.observaciones || "").trim(),
+        filas: (Array.isArray(pedido.productos) ? pedido.productos : [])
+            .filter(item => item && typeof item === "object" && (Number(item.cantidad) || 0) > 0)
+            .map((item, posicion) => ({
+                clave: "lin" + posicion,
+                item,
+                marca: String(item.marca || "").trim(),
+                producto: String(item.producto || "").trim(),
+                original: Number(item.cantidad) || 0,
+                cantidad: Number(item.cantidad) || 0
+            }))
+    };
+
+    const estado = estadoActualDelPedido(pedido);
+    document.getElementById("explicacionEditarPedido").textContent = estado === "cargado"
+        ? "Los cambios quedan en el seguimiento con tu nombre."
+        : "Está «" + nombreDeEstadoPedido(estado) + "». Los productos que no cambies conservan sus tildes; lo nuevo o con otra cantidad queda para revisar y se avisa a quien está trabajando en el pedido.";
+    document.getElementById("comercioEditarPedido").value = edicionAbierta.comercio;
+    document.getElementById("obsEditarPedido").value = edicionAbierta.observaciones;
+    document.getElementById("buscarEditarPedido").value = "";
+
+    actualizarDatalistPedido();
+    ocultarErrorEdicion();
+    dibujarFilasEdicion();
+    dibujarResultadosEdicion();
+
+    modal.classList.remove("oculto");
+    const contenido = modal.querySelector(".modalContenido");
+    if (contenido) contenido.scrollTop = 0;
+}
+
+function cerrarEdicionPedido() {
+    edicionAbierta = null;
+    const modal = document.getElementById("modalEditarPedido");
+    if (modal) modal.classList.add("oculto");
+}
+
+function ocultarErrorEdicion() {
+    const error = document.getElementById("errorEditarPedido");
+    if (error) error.classList.add("oculto");
+}
+
+function mostrarErrorEdicion(texto) {
+    const error = document.getElementById("errorEditarPedido");
+    if (!error) return;
+
+    error.textContent = texto;
+    error.classList.remove("oculto");
+    error.scrollIntoView({ block: "nearest" });
+}
+
+// Productos agrupados por marca, en el orden del pedido. Cada uno con su
+// cantidad y, si cambió, cómo era antes.
+function dibujarFilasEdicion(claveConFoco) {
+    const contenedor = document.getElementById("productosEditarPedido");
+    if (!contenedor || !edicionAbierta) return;
+
+    contenedor.innerHTML = "";
+
+    const marcas = [];
+    edicionAbierta.filas.forEach(fila => {
+        let grupo = marcas.find(actual => actual.marca === fila.marca);
+        if (!grupo) {
+            grupo = { marca: fila.marca, filas: [] };
+            marcas.push(grupo);
+        }
+        grupo.filas.push(fila);
+    });
+
+    marcas.forEach(grupo => {
+        const titulo = document.createElement("p");
+        titulo.className = "marcaFichaPedido";
+        titulo.textContent = grupo.marca || "Sin marca";
+        contenedor.appendChild(titulo);
+
+        grupo.filas.forEach(fila => {
+            const elemento = document.createElement("div");
+            elemento.className = "filaEditarPedido";
+            elemento.dataset.clave = fila.clave;
+
+            let nota = "";
+            if (!fila.item) {
+                elemento.dataset.cambio = "nuevo";
+                nota = fila.cantidad > 0 ? "Nuevo" : "Nuevo · sin cantidad, no se agrega";
+            } else if (fila.cantidad === 0) {
+                elemento.dataset.cambio = "quitado";
+                nota = "Se quita (era x" + fila.original + ")";
+            } else if (fila.cantidad !== fila.original) {
+                elemento.dataset.cambio = "cantidad";
+                nota = "Antes x" + fila.original;
+            }
+
+            const textos = document.createElement("div");
+            textos.className = "textoFilaEditar";
+            const nombre = document.createElement("strong");
+            nombre.textContent = fila.producto;
+            textos.appendChild(nombre);
+            if (nota) {
+                const pequeno = document.createElement("small");
+                pequeno.textContent = nota;
+                textos.appendChild(pequeno);
+            }
+
+            const controles = document.createElement("div");
+            controles.className = "controlesCantidad";
+
+            const menos = crearBotonCantidad("botonCantidad botonMenos", "-", "Una menos de " + fila.producto);
+            const mas = crearBotonCantidad("botonCantidad botonMas", "+", "Una más de " + fila.producto);
+            const borrar = crearBotonCantidad("botonCantidad botonBorrar", "", "Quitar " + fila.producto);
+            borrar.innerHTML = window.icono("tacho", 14);
+            [menos, mas, borrar].forEach(boton => {
+                boton.dataset.clave = fila.clave;
+            });
+
+            const select = document.createElement("select");
+            select.dataset.clave = fila.clave;
+            select.setAttribute("aria-label", "Cantidad de " + fila.producto);
+            for (let cantidad = 0; cantidad <= maximoDeFila(fila); cantidad++) {
+                const option = document.createElement("option");
+                option.value = cantidad;
+                option.textContent = cantidad;
+                select.appendChild(option);
+            }
+            select.value = String(fila.cantidad);
+            select.classList.toggle("activo", fila.cantidad > 0);
+
+            controles.append(menos, select, mas, borrar);
+            elemento.append(textos, controles);
+            contenedor.appendChild(elemento);
+        });
+    });
+
+    if (claveConFoco) {
+        const fila = contenedor.querySelector('.filaEditarPedido[data-clave="' + claveConFoco + '"]');
+        const select = fila ? fila.querySelector("select") : null;
+        if (select) select.focus({ preventScroll: true });
+    }
+
+    ocultarErrorEdicion();
+    dibujarCambiosEdicion();
+}
+
+// Productos del catálogo que coinciden con lo buscado.
+function dibujarResultadosEdicion() {
+    const contenedor = document.getElementById("resultadosEditarPedido");
+    const buscador = document.getElementById("buscarEditarPedido");
+    if (!contenedor || !buscador || !edicionAbierta) return;
+
+    contenedor.innerHTML = "";
+    const termino = normalizarTexto(buscador.value);
+    if (!termino) return;
+
+    const productos = obtenerProductos();
+    const resultados = [];
+
+    obtenerMarcasOrdenadas(productos).forEach(marca => {
+        (Array.isArray(productos[marca]) ? productos[marca] : []).forEach(producto => {
+            if (!producto || !producto.nombre) return;
+            if (normalizarTexto(marca).includes(termino) || normalizarTexto(producto.nombre).includes(termino)) {
+                resultados.push({ marca, producto: String(producto.nombre) });
+            }
+        });
+    });
+
+    if (!resultados.length) {
+        const vacio = document.createElement("p");
+        vacio.className = "mensajeBusquedaPedido";
+        vacio.textContent = "No se encontraron productos con esa búsqueda.";
+        contenedor.appendChild(vacio);
+        return;
+    }
+
+    resultados.slice(0, MAXIMO_RESULTADOS_EDICION).forEach(resultado => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "resultadoEditarPedido";
+        boton.dataset.marca = resultado.marca;
+        boton.dataset.producto = resultado.producto;
+
+        const nombre = document.createElement("strong");
+        nombre.textContent = resultado.producto;
+        const detalle = document.createElement("small");
+        const yaEsta = edicionAbierta.filas.some(fila => mismoProducto(fila, resultado.marca, resultado.producto));
+        detalle.textContent = resultado.marca + (yaEsta ? " · ya está en el pedido" : "");
+        boton.append(nombre, detalle);
+        contenedor.appendChild(boton);
+    });
+
+    if (resultados.length > MAXIMO_RESULTADOS_EDICION) {
+        const mas = document.createElement("p");
+        mas.className = "mensajeBusquedaPedido";
+        mas.textContent = "Hay " + (resultados.length - MAXIMO_RESULTADOS_EDICION) + " más: escribí un poco más para encontrarlo.";
+        contenedor.appendChild(mas);
+    }
+}
+
+function mismoProducto(fila, marca, producto) {
+    return normalizarTexto(fila.marca) === normalizarTexto(marca) &&
+        normalizarTexto(fila.producto) === normalizarTexto(producto);
+}
+
+// Suma un producto del catálogo. Si ya está en el pedido, le suma uno. Lo
+// nuevo va después de los productos de su marca.
+function agregarProductoEdicion(marca, producto) {
+    if (!edicionAbierta) return;
+
+    let fila = edicionAbierta.filas.find(actual => mismoProducto(actual, marca, producto));
+
+    if (fila) {
+        fila.cantidad = Math.min(maximoDeFila(fila), fila.cantidad + 1);
+    } else {
+        contadorFilasNuevas += 1;
+        fila = { clave: "nueva" + contadorFilasNuevas, item: null, marca, producto, original: 0, cantidad: 1 };
+
+        let posicion = -1;
+        edicionAbierta.filas.forEach((actual, indice) => {
+            if (normalizarTexto(actual.marca) === normalizarTexto(marca)) posicion = indice;
+        });
+
+        if (posicion >= 0) edicionAbierta.filas.splice(posicion + 1, 0, fila);
+        else edicionAbierta.filas.push(fila);
+    }
+
+    const buscador = document.getElementById("buscarEditarPedido");
+    if (buscador) buscador.value = "";
+    dibujarResultadosEdicion();
+    dibujarFilasEdicion(fila.clave);
+
+    const elemento = document.querySelector('#productosEditarPedido .filaEditarPedido[data-clave="' + fila.clave + '"]');
+    if (elemento) elemento.scrollIntoView({ block: "center" });
+    mostrarToast(escaparHtmlPedido(producto) + ": x" + fila.cantidad);
+}
+
+// Lo que cambió, en el orden del pedido: "Agregó 2 Coca 2L", "Quitó
+// Sprite", "Fanta: de 3 a 5", y el comercio y las observaciones.
+function cambiosDeLaEdicion() {
+    const partes = [];
+    if (!edicionAbierta) return { partes };
+
+    edicionAbierta.filas.forEach(fila => {
+        if (!fila.item && fila.cantidad > 0) partes.push("Agregó " + fila.cantidad + " " + fila.producto);
+        else if (fila.item && fila.cantidad === 0) partes.push("Quitó " + fila.producto);
+        else if (fila.item && fila.cantidad !== fila.original) partes.push(fila.producto + ": de " + fila.original + " a " + fila.cantidad);
+    });
+
+    const comercio = String(document.getElementById("comercioEditarPedido")?.value || "").trim();
+    if (comercio && comercio !== edicionAbierta.comercio) {
+        partes.push("Comercio: de " + (edicionAbierta.comercio || "sin nombre") + " a " + comercio);
+    }
+
+    const observaciones = String(document.getElementById("obsEditarPedido")?.value || "").trim();
+    if (observaciones !== edicionAbierta.observaciones) {
+        partes.push(observaciones ? "Cambió las observaciones" : "Quitó las observaciones");
+    }
+
+    return { partes, comercio, observaciones };
+}
+
+function dibujarCambiosEdicion() {
+    const contenedor = document.getElementById("cambiosEditarPedido");
+    if (!contenedor) return;
+
+    const { partes } = cambiosDeLaEdicion();
+    contenedor.innerHTML = "";
+    contenedor.classList.toggle("conCambios", partes.length > 0);
+
+    const titulo = document.createElement("strong");
+    titulo.textContent = partes.length ? "Cambios" : "Todavía no cambiaste nada";
+    contenedor.appendChild(titulo);
+
+    if (partes.length) {
+        const texto = document.createElement("p");
+        texto.textContent = partes.join(" · ");
+        contenedor.appendChild(texto);
+    }
+}
+
+function guardarEdicionPedido() {
+    if (!edicionAbierta) return;
+
+    const { partes, comercio, observaciones } = cambiosDeLaEdicion();
+    const filas = edicionAbierta.filas.filter(fila => fila.cantidad > 0);
+
+    if (!comercio) {
+        mostrarErrorEdicion("Escribí el comercio.");
+        return;
+    }
+    if (!filas.length) {
+        mostrarErrorEdicion("Dejá al menos un producto en el pedido.");
+        return;
+    }
+    if (!partes.length) {
+        mostrarErrorEdicion("Todavía no cambiaste nada.");
+        return;
+    }
+
+    // Si mientras tanto el pedido cambió (otra edición), no se pisa.
+    const pedido = obtenerHistorial().find(item => String(item.id || "") === edicionAbierta.id);
+    if (!pedido || fotoDeLoPedido(pedido) !== edicionAbierta.foto) {
+        cerrarEdicionPedido();
+        mostrarAviso("El pedido cambió", "Otra persona lo editó mientras lo cambiabas. Abrí «Editar pedido» de nuevo para ver cómo quedó.");
+        return;
+    }
+
+    const catalogo = obtenerProductos();
+    const revisar = {};
+    const productos = filas.map(fila => {
+        if (fila.item && fila.cantidad === fila.original) return JSON.parse(JSON.stringify(fila.item));
+
+        const id = generarId(PREFIJO_ID_LINEA);
+
+        // Otra cantidad: línea nueva (vuelve a quedar sin tildar) con el
+        // precio con que se cargó.
+        if (fila.item) {
+            revisar[id] = "Antes x" + fila.original;
+            return { ...JSON.parse(JSON.stringify(fila.item)), id, cantidad: fila.cantidad };
+        }
+
+        revisar[id] = "Nuevo";
+        return {
+            id,
+            marca: fila.marca,
+            producto: fila.producto,
+            cantidad: fila.cantidad,
+            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo)
+        };
+    });
+
+    const fecha = String(pedido.fecha || "") || new Date(Number(pedido.timestamp) || Date.now()).toLocaleDateString("es-AR");
+    const cantidad = productos.reduce((total, item) => total + (Number(item.cantidad) || 0), 0);
+
+    try {
+        window.nubeVendeFrio.editarPedido(edicionAbierta.id, {
+            productos,
+            comercio,
+            observaciones,
+            pedido: armarTextoDelPedido(comercio, fecha, productos, observaciones),
+            cantidad,
+            texto: partes.join(" · "),
+            revisar
+        });
+    } catch (error) {
+        console.error("No se pudo editar el pedido.", error);
+        mostrarErrorEdicion(error && error.code === "pedido" ? error.message : "No se pudo guardar. Probá de nuevo en unos segundos.");
+        return;
+    }
+
+    cerrarEdicionPedido();
+    mostrarToast("Pedido editado");
+}
+
+window.abrirEdicionPedido = abrirEdicionPedido;
+window.cerrarEdicionPedido = cerrarEdicionPedido;
