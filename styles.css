@@ -3699,3 +3699,9 @@ html[data-tema="oscuro"] .botonVerComprobante{color:var(--acento-oscuro) !import
 html[data-tema="oscuro"] .vistaFotoCobro{border-color:#374151;}
 html[data-tema="oscuro"] .fotoComprobante{background:#111827;}
 html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitado);}
+
+/* ================= TICKET (T28b) ================= */
+.accionesFichaPedido .botonImprimirTicket{justify-content:center;width:100%;min-height:44px;}
+.botonImprimirTicket:disabled{opacity:.6;cursor:default;transform:none;}
+.impresionPedido h2{margin-bottom:8px;}
+.impresionPedido .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}

@@ -20,7 +20,9 @@
 // entregado y, si se entregó por error, se vuelve un paso atrás (T27).
 // Quien tiene "Cobra" registra el cobro ("¿Cómo pagó?": efectivo,
 // transferencia con foto opcional del comprobante o "Todavía no pagó"), al
-// entregar o después desde "A cobrar" (T28).
+// entregar o después desde "A cobrar" (T28). Cualquiera imprime el ticket
+// del pedido por Bluetooth, desde "Cargado" en adelante (T28b, con
+// impresion.js).
 // =====================================================
 
 (function () {
@@ -1114,6 +1116,9 @@
         // cobro registrado, el pedido ya no vuelve atrás.
         const cobrar = puedeRegistrarCobro(pedido);
         const cobrado = estado === "entregado" ? cobroDe(pedido) : null;
+        // Ticket (T28b): cualquiera, desde "Cargado" en adelante, con
+        // Web Bluetooth (en iPhone no aparece).
+        const imprimir = Boolean(window.impresionVendeFrio?.puedeImprimir?.(pedido));
 
         // "Marcar preparado" (T24) se puede tocar solo con la checklist
         // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
@@ -1123,7 +1128,7 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado && !imprimir) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
@@ -1154,6 +1159,18 @@
 
         // Editar (T25): solo quien cargó el pedido y el dueño.
         if (editar) acciones.appendChild(crearBoton("btnAccion secundario botonEditarPedido", "Editar pedido", "editar"));
+
+        if (imprimir) {
+            const enCurso = window.impresionVendeFrio.imprimiendo();
+            const boton = crearBoton(
+                "btnAccion secundario botonImprimirTicket",
+                enCurso === String(pedido.id || "") ? "Imprimiendo…" : "Imprimir ticket",
+                "imprimir"
+            );
+            boton.insertAdjacentHTML("afterbegin", window.icono ? window.icono("impresora", 18) : "");
+            boton.disabled = Boolean(enCurso);
+            acciones.appendChild(boton);
+        }
 
         if (entregar && estado !== "enReparto") {
             acciones.appendChild(crearBoton("btnAccion secundario botonEntregarMostrador", "Entregar en el mostrador", "entregar"));
@@ -1460,6 +1477,7 @@
         else if (boton.dataset.accion === "entregarConCambios") abrirEntrega(id, true);
         else if (boton.dataset.accion === "cobrar") abrirCobro(id, false);
         else if (boton.dataset.accion === "verComprobante") abrirComprobante(id);
+        else if (boton.dataset.accion === "imprimir") window.impresionVendeFrio?.imprimirPedido(id);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -3072,6 +3090,9 @@
     // Si el dueño cambia los permisos o los roles, los botones de la ficha
     // cambian al instante (T22).
     window.empleadosVendeFrio?.escucharPermisos?.(() => dibujar());
+
+    // Ticket (T28b): "Imprimiendo…" mientras se manda a la impresora.
+    window.impresionVendeFrio?.escuchar?.(() => dibujar());
 
     cambiarVista(pantalla.classList.contains("oculto") ? "nuevo" : "pedidos");
 
