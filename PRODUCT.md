@@ -23,8 +23,8 @@ Muchas distribuidoras funcionan con cuadernos, listas impresas, mensajes de What
 ## Pilares
 
 - **Venta:** carga rápida, catálogo y precios confiables, comercios y visitas, repetición de pedidos habituales.
-- **Operación:** pedidos compartidos, estados, responsables, preparación, reparto, entrega e incidencias.
-- **Administración (después):** stock, cuentas, comprobantes e impresión.
+- **Operación:** pedidos compartidos, estados, responsables, preparación, reparto, entrega, ticket impreso e incidencias.
+- **Administración (después):** stock, cuentas y comprobantes.
 - **Inteligencia (después):** reposición, clientes sin visitar, evolución de ventas.
 
 ## Alcance de la versión 1.0
@@ -36,13 +36,13 @@ Muchas distribuidoras funcionan con cuadernos, listas impresas, mensajes de What
 - Ciclo completo del pedido con estados e historial (ver `ORDER_FLOW.md`).
 - Checklist de preparación, manejo de faltantes, confirmación de entrega y registro del cobro.
 - Avisos dentro de la app y notificaciones en el celular.
+- Impresión de tickets del pedido por Bluetooth (solo Android): dos copias, una para el comercio y otra para la distribuidora, no válidas como factura.
 - Trabajo sin conexión con sincronización automática al volver internet.
 - Rework visual completo: menos densidad de botones y tarjetas, lectura rápida, uso con una mano, modo claro y oscuro.
 
 **No incluye (queda para después, pero se diseña sin bloquearlo)**
 
 - Facturación fiscal y integraciones contables.
-- Impresión Bluetooth definitiva (la futura será de comprobantes simples).
 - Stock conectado con la venta (físico, reservado y disponible).
 - Multiempresa real, suscripciones e inteligencia comercial.
 - Inteligencia artificial dentro de la app.

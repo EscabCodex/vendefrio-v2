@@ -109,7 +109,7 @@ Cada paso importante avisa a quien le toca (pedido nuevo, preparado, faltante, i
 - El pedido se puede consultar después de entregado.
 - Los estados se cambian fácilmente desde el celular.
 - El sistema contempla errores, faltantes, devoluciones y entregas parciales.
-- La impresión y la facturación futuras usan el mismo pedido, sin recargarlo.
+- El ticket impreso (T28b) y la facturación futura usan el mismo pedido, sin recargarlo.
 
 ## Casos que hay que probar
 
@@ -117,4 +117,4 @@ Carga del pedido · preparación · cambio de estado · modificación · faltant
 
 ## Futuro
 
-Conexión con stock, facturación, impresión de boletas, cuentas corrientes, rutas y comprobantes de entrega.
+Conexión con stock, facturación, cuentas corrientes, rutas y comprobantes de entrega. El ticket impreso del pedido ya entra en la 1.0 (T28b).
