@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28)
+// T22, T23, T24, T25, T26, T27, T28, T29b)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -220,13 +220,39 @@ service cloud.firestore {
         && textoObligatorio(entrada.nota);
     }
 
+    // Pasos más cortos (T29b): el primer tilde de la checklist pasa solo un
+    // pedido "Cargado" a "En preparación", a nombre de quien tildó, aunque no
+    // tenga "Prepara pedidos". El tilde va en una escritura anterior (el
+    // límite de 1000 expresiones no deja juntarlos), así que el pedido ya
+    // tiene que tener algún tilde. Se usa la copia del estado.
+    function preparacionAutomaticaValida(antes, entrada) {
+      return entrada.estado == "enPreparacion"
+        && antes.get("estado", "") == "cargado"
+        && antes.get("preparacion", {}).size() > 0;
+    }
+
+    // Volver atrás desde "En reparto" (T29b): como "Salir a repartir" sale de
+    // cualquier paso anterior, "Reparte" lo vuelve al paso del que salió
+    // (Cargado, En preparación o Preparado), con motivo. Se usa la copia del
+    // estado ("Cargado en el vehículo" cuenta como "En reparto").
+    function vueltaDeRepartoValida(idDistribuidora, antes, entrada) {
+      return antes.get("estado", "") in ["enVehiculo", "enReparto"]
+        && entrada.estado in ["cargado", "enPreparacion"]
+        && textoObligatorio(entrada.nota)
+        && tienePermiso(idDistribuidora, "reparte");
+    }
+
     // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
     // del que viene: dos cambios hechos sin señal pueden llegar desordenados
     // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
     // quien tiene su permiso, y el mismo permiso lo vuelve atrás:
     //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
-    //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
+    //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto, y
+    //   "En reparto" desde cualquier paso anterior (T29b), con su vuelta.
     //   "Controla pedidos" y el dueño: todos.
+    // "En preparación", también cualquiera con el primer tilde (T29b).
+    // "Cargado en el vehículo" ya no lo usa la app nueva (T29b): se sigue
+    // aceptando para la versión de "main" hasta que se actualice.
     // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera, y
     // volver atrás desde "Entregado", también (T27).
     function puedePonerEstado(idDistribuidora, antes, despues, entrada) {
@@ -235,9 +261,11 @@ service cloud.firestore {
         : (entrada.estado == "entregado"
           ? entregadoValido(antes, despues)
           : (vueltaDeEntregaValida(antes, entrada)
+            || preparacionAutomaticaValida(antes, entrada)
             || tienePermiso(idDistribuidora, "controla")
             || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
-            || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))));
+            || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))
+            || vueltaDeRepartoValida(idDistribuidora, antes, entrada)));
     }
 
     // El historial de estados solo se agrega: una entrada por cambio, a

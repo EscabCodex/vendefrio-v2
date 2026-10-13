@@ -29,36 +29,64 @@ function configuracionConEmuladores() {
         window.firebase.firestore().useEmulator("127.0.0.1", 8080);`);
 }
 
+// Prepara una página (un "celular"): corta internet, conecta los emuladores
+// si la prueba usa la nube y junta los errores de JavaScript.
+async function prepararPagina(page, nube) {
+    const errores = [];
+    page.on("pageerror", error => errores.push(error.message));
+
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
+        const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
+        return ruta.fulfill({ status: 200, contentType: tipo, body: "" });
+    });
+
+    if (nube) {
+        const configuracion = configuracionConEmuladores();
+        await page.route("**/firebase-config.js", ruta =>
+            ruta.fulfill({ status: 200, contentType: "text/javascript", body: configuracion })
+        );
+
+        // El recordatorio "Descargá un respaldo" aparece cuando quiere
+        // (una vez por día al dueño): si tapa la pantalla, "Ahora no".
+        const recordatorio = page.locator("#modalRecordatorioRespaldo:not(.oculto)");
+        await page.addLocatorHandler(recordatorio, async () => {
+            await recordatorio.getByRole("button", { name: "Ahora no" }).click();
+        });
+    }
+
+    return errores;
+}
+
 const test = base.test.extend({
     // Las pruebas que usan la nube ponen { nube: true } con test.use().
     nube: [false, { option: true }],
 
-    page: async ({ page, nube }, use, testInfo) => {
-        const errores = [];
-        page.on("pageerror", error => errores.push(error.message));
-
-        await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
-            const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
-            return ruta.fulfill({ status: 200, contentType: tipo, body: "" });
-        });
-
-        if (nube) {
-            const configuracion = configuracionConEmuladores();
-            await page.route("**/firebase-config.js", ruta =>
-                ruta.fulfill({ status: 200, contentType: "text/javascript", body: configuracion })
-            );
-
-            // El recordatorio "Descargá un respaldo" aparece cuando quiere
-            // (una vez por día al dueño): si tapa la pantalla, "Ahora no".
-            const recordatorio = page.locator("#modalRecordatorioRespaldo:not(.oculto)");
-            await page.addLocatorHandler(recordatorio, async () => {
-                await recordatorio.getByRole("button", { name: "Ahora no" }).click();
-            });
-        }
-
+    page: async ({ page, nube }, use) => {
+        const errores = await prepararPagina(page, nube);
         await use(page);
-
         base.expect(errores, "La página tuvo errores de JavaScript").toEqual([]);
+    },
+
+    // Otro celular (T29b), con su propio navegador: por ejemplo, el de un
+    // empleado mientras el dueño usa "page". Mismo tamaño y mismo tema.
+    otroCelular: async ({ browser, nube }, use, testInfo) => {
+        const opciones = testInfo.project.use;
+        const contexto = await browser.newContext({
+            viewport: opciones.viewport,
+            deviceScaleFactor: opciones.deviceScaleFactor,
+            isMobile: opciones.isMobile,
+            hasTouch: opciones.hasTouch,
+            locale: opciones.locale,
+            timezoneId: opciones.timezoneId,
+            colorScheme: opciones.colorScheme,
+            baseURL: opciones.baseURL,
+            serviceWorkers: opciones.serviceWorkers
+        });
+        const pagina = await contexto.newPage();
+        const errores = await prepararPagina(pagina, nube);
+        await use(pagina);
+        await contexto.close();
+        base.expect(errores, "El otro celular tuvo errores de JavaScript").toEqual([]);
     }
 });
 

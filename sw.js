@@ -1,7 +1,7 @@
 // =====================================================
 // VendeFrío - Service Worker (v154 - Historial dentro de Pedidos)
 // =====================================================
-const CACHE_NAME = "vendefrio-v154";
+const CACHE_NAME = "vendefrio-v155";
 const ARCHIVOS = [
   "./",
   "./index.html",

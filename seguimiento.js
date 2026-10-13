@@ -14,10 +14,13 @@
 // marca los productos a revisar y "Entendido" la cierra (T25). Quien cargó
 // el pedido y el dueño lo eliminan (solo en "Cargado") o lo cancelan con
 // motivo (antes de "Entregado"); el cancelado queda en "Cancelados" (T26).
-// Cualquiera lo entrega deslizando "Entregado" (desde "En reparto", o antes
-// en el mostrador) o con "Entregar con cambios" (lo entregado de cada
-// producto, con motivo); la ficha muestra el total a cobrar con lo
-// entregado y, si se entregó por error, se vuelve un paso atrás (T27).
+// Cualquiera lo entrega deslizando "Entregado" o con "Entregar con cambios"
+// (lo entregado de cada producto, con motivo); la ficha muestra el total a
+// cobrar con lo entregado y, si se entregó por error, se vuelve un paso
+// atrás (T27). Pasos más cortos (T29b): la checklist se ve ya en "Cargado"
+// y el primer tilde pasa el pedido solo a "En preparación"; "Salir a
+// repartir" lleva directo a "En reparto" desde Cargado, En preparación o
+// Preparado, y "Entregado" se desliza desde cualquiera de esos pasos.
 // Quien tiene "Cobra" registra el cobro ("¿Cómo pagó?": efectivo,
 // transferencia con foto opcional del comprobante o "Todavía no pagó"), al
 // entregar o después desde "A cobrar" (T28). Cualquiera imprime el ticket
@@ -39,14 +42,15 @@
     const tituloPantalla = pantalla.querySelector("header h1");
     const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo Pedido";
 
-    // Etapas de la vista. "En reparto" junta "Cargado en el vehículo" y "En
-    // reparto". "Incidencias" se marca encima del estado (T17), así que un
-    // pedido con incidencia también sigue en su etapa.
+    // Etapas de la vista. Un pedido que quedó en "Cargado en el vehículo" (ya
+    // no existe, T29b) se ve en "En reparto": estadoActualDelPedido ya lo
+    // devuelve así. "Incidencias" se marca encima del estado (T17), así que
+    // un pedido con incidencia también sigue en su etapa.
     const ETAPAS = [
         { id: "cargados", nombre: "Cargados", estados: ["cargado"] },
         { id: "enPreparacion", nombre: "En preparación", estados: ["enPreparacion"] },
         { id: "preparados", nombre: "Preparados", estados: ["preparado"] },
-        { id: "enReparto", nombre: "En reparto", estados: ["enVehiculo", "enReparto"] },
+        { id: "enReparto", nombre: "En reparto", estados: ["enReparto"] },
         // Historial (T27b): reemplaza a "Entregados" y a la sección
         // Historial. Lleva los entregados y los "Histórico" (los de antes,
         // sin estados), sin eliminados ni cancelados (pedidosDelHistorial).
@@ -62,22 +66,34 @@
     const TANDA = 40;
 
     // Pasos que se hacen desde la ficha (T22), con el permiso que los deja
-    // hacer. El mismo permiso vuelve el paso atrás, con motivo. "Controla
-    // pedidos" y el dueño pueden todos. "Preparado" se marca con la
-    // checklist completa y su resumen (T24). "Entregado" se marca con la
-    // entrega (T27), que tiene sus propios botones y su vuelta atrás.
+    // hacer. "Controla pedidos" y el dueño pueden todos. Pasos más cortos
+    // (T29b): solo "Cargado" y "Entregado" son obligatorios. "En
+    // preparación" no tiene botón: lo pone el primer tilde de la checklist
+    // (nube.js). "Preparado" se marca con la checklist completa y su resumen
+    // (T24). "Salir a repartir" sale de cualquier paso anterior. "Entregado"
+    // se marca con la entrega (T27), que tiene sus propios botones y su
+    // vuelta atrás.
     const PASOS = [
-        { desde: "cargado", hacia: "enPreparacion", permiso: "prepara", boton: "Empezar a preparar", hecho: "Pedido en preparación" },
-        { desde: "enPreparacion", hacia: "preparado", permiso: "prepara", boton: "Marcar preparado", conChecklist: true },
-        { desde: "preparado", hacia: "enVehiculo", permiso: "reparte", boton: "Cargar en el vehículo", hecho: "Pedido cargado en el vehículo" },
-        { desde: "enVehiculo", hacia: "enReparto", permiso: "reparte", boton: "Salir a repartir", hecho: "Pedido en reparto" }
+        { desde: ["enPreparacion"], hacia: "preparado", permiso: "prepara", boton: "Marcar preparado", conChecklist: true },
+        { desde: ["cargado", "enPreparacion", "preparado"], hacia: "enReparto", permiso: "reparte", boton: "Salir a repartir", hecho: "Pedido en reparto" }
     ];
+
+    // Volver un paso atrás (T22, con los pasos de T29b): el mismo permiso
+    // del paso en el que está el pedido lo vuelve atrás, con motivo. Como
+    // los pasos del medio son opcionales, vuelve al último paso anterior por
+    // el que pasó (por ejemplo, de "En reparto" a "Cargado" si salió directo).
+    const ORDEN_DE_PASOS = ["cargado", "enPreparacion", "preparado", "enReparto"];
+    const PERMISO_PARA_VOLVER = { enPreparacion: "prepara", preparado: "prepara", enReparto: "reparte" };
 
     const LARGO_MAXIMO_MOTIVO = 300;
 
     // Estados en los que el pedido ya pasó por la checklist (T24): la ficha
     // muestra sus faltantes.
-    const ESTADOS_PREPARADOS = ["preparado", "enVehiculo", "enReparto", "entregado"];
+    const ESTADOS_PREPARADOS = ["preparado", "enReparto", "entregado"];
+
+    // Estados en los que la ficha es la checklist (T24; desde "Cargado",
+    // T29b).
+    const ESTADOS_CON_CHECKLIST = ["cargado", "enPreparacion"];
 
     // Tilde de la casilla (dibujado acá para que se vea igual en todos lados).
     const SVG_TILDE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -205,17 +221,42 @@
         return empleados.puede(permiso) || empleados.puede("controla");
     }
 
-    // El paso que sigue desde este estado, si esta persona lo puede hacer
+    // Los pasos que siguen desde este estado y que esta persona puede hacer
     // desde la ficha.
-    function pasoSiguiente(estado) {
-        const paso = PASOS.find(item => item.desde === estado && item.boton);
-        return paso && puede(paso.permiso) ? paso : null;
+    function pasosSiguientes(estado) {
+        return PASOS.filter(item => item.desde.includes(estado) && puede(item.permiso));
     }
 
-    // El paso que se vuelve atrás desde este estado, si esta persona puede.
-    function pasoAnterior(estado) {
-        const paso = PASOS.find(item => item.hacia === estado);
-        return paso && puede(paso.permiso) ? paso : null;
+    // El estado al que vuelve el pedido con "Volver un paso atrás": el más
+    // nuevo del seguimiento que esté antes del actual (mismo orden que usa
+    // estadoActualDelPedido). "" si no hay paso anterior.
+    function estadoParaVolverAtras(pedido, estado) {
+        const posicion = ORDEN_DE_PASOS.indexOf(estado);
+        if (posicion <= 0) return "";
+
+        const entradas = Object.keys(pedido.estados || {})
+            .map(id => ({ id, entrada: pedido.estados[id] }))
+            .filter(item => item.entrada && typeof item.entrada === "object")
+            .sort((a, b) => {
+                const diferencia = (Number(b.entrada.horaCelular) || 0) - (Number(a.entrada.horaCelular) || 0);
+                if (diferencia !== 0) return diferencia;
+                return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+            });
+
+        const anterior = entradas
+            .map(item => estadoQueSeUsa(String(item.entrada.estado || "")))
+            .find(id => {
+                const lugar = ORDEN_DE_PASOS.indexOf(id);
+                return lugar >= 0 && lugar < posicion;
+            });
+
+        return anterior || "cargado";
+    }
+
+    // El estado al que se vuelve atrás desde este, si esta persona puede.
+    function pasoAnterior(pedido, estado) {
+        const permiso = PERMISO_PARA_VOLVER[estado];
+        return permiso && puede(permiso) ? estadoParaVolverAtras(pedido, estado) : "";
     }
 
     function puedeResolverIncidencias() {
@@ -1073,10 +1114,10 @@
         etiquetas.appendChild(etiquetaEstado(estado));
         if (sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
 
-        // En preparación (T24) la ficha es la checklist: comercio, autor y
-        // observaciones arriba, los productos con su casilla y, al final,
-        // "Marcar preparado".
-        const enChecklist = estado === "enPreparacion";
+        // En preparación (T24), y desde "Cargado" (T29b), la ficha es la
+        // checklist: comercio, autor y observaciones arriba, los productos
+        // con su casilla y, al final, los pasos.
+        const enChecklist = ESTADOS_CON_CHECKLIST.includes(estado);
 
         const datos = crear("div", "datosFichaPedido");
         const hora = horaDelPedido(pedido);
@@ -1329,9 +1370,10 @@
 
     // Botones de la ficha: solo los pasos que esta persona puede hacer.
     function dibujarAcciones(pedido, estado) {
-        const siguiente = pasoSiguiente(estado);
+        const siguientes = pasosSiguientes(estado);
+        const preparar = siguientes.find(paso => paso.conChecklist) || null;
         // Entregado (T27): vuelve al estado que tenía antes de la entrega.
-        const anterior = estado === "entregado" ? puedeVolverDeEntregado(pedido) : pasoAnterior(estado);
+        const anterior = estado === "entregado" ? puedeVolverDeEntregado(pedido) : pasoAnterior(pedido, estado);
         const marcar = estado !== "cancelado" && !tieneIncidencia(pedido);
         const editar = puedeEditar(pedido);
         const cancelar = puedeCancelar(pedido);
@@ -1350,37 +1392,42 @@
         // lo hace.
         const preparacion = estado === "enPreparacion" ? preparacionDe(pedido) : null;
         let pista = "";
-        if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
-        else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
+        if (preparacion && preparar && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
+        else if (preparacion && !preparar && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado && !imprimir && estado !== "entregado") return null;
+        if (!siguientes.length && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado && !imprimir && estado !== "entregado") return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
         if (cobrar && !cobrado) acciones.appendChild(crearBoton("btnAccion pasoSiguientePedido botonRegistrarCobro", "Registrar cobro", "cobrar"));
 
-        // Entrega (T27): en "En reparto", el botón que se desliza y, al
-        // lado, "Entregar con cambios". Antes (en el mostrador), un botón
-        // que abre la entrega con su resumen.
-        if (entregar && estado === "enReparto") {
+        // Los pasos que siguen: el primero, como botón principal ("Marcar
+        // preparado" va con la pista de lo que falta tildar).
+        siguientes.forEach((paso, posicion) => {
+            const boton = crearBoton(
+                posicion === 0 ? "btnAccion pasoSiguientePedido" : "btnAccion secundario botonOtroPaso",
+                paso.boton,
+                "siguiente"
+            );
+            boton.dataset.estado = paso.hacia;
+            if (paso.conChecklist && !preparacion.completa) {
+                boton.classList.add("incompleto");
+                boton.setAttribute("aria-disabled", "true");
+            }
+            acciones.appendChild(boton);
+            if (paso.conChecklist && pista) acciones.appendChild(crear("p", "pistaChecklist", pista));
+        });
+        if (pista && !preparar) acciones.appendChild(crear("p", "pistaChecklist", pista));
+
+        // Entrega (T27): el botón que se desliza y, al lado, "Entregar con
+        // cambios", desde cualquier paso antes de "Entregado" (T29b).
+        if (entregar) {
             const id = String(pedido.id || "");
             acciones.append(
                 crearDeslizador("Deslizá para marcar Entregado", () => entregarSinCambios(id, estado)),
                 crearBoton("btnAccion secundario botonEntregarConCambios", "Entregar con cambios", "entregarConCambios")
             );
         }
-
-        if (siguiente) {
-            const boton = crearBoton("btnAccion pasoSiguientePedido", siguiente.boton, "siguiente");
-            boton.dataset.estado = siguiente.hacia;
-            if (siguiente.conChecklist && !preparacion.completa) {
-                boton.classList.add("incompleto");
-                boton.setAttribute("aria-disabled", "true");
-            }
-            acciones.appendChild(boton);
-        }
-
-        if (pista) acciones.appendChild(crear("p", "pistaChecklist", pista));
 
         // Editar (T25): solo quien cargó el pedido y el dueño.
         if (editar) acciones.appendChild(crearBoton("btnAccion secundario botonEditarPedido", "Editar pedido", "editar"));
@@ -1395,10 +1442,6 @@
             boton.insertAdjacentHTML("afterbegin", window.icono ? window.icono("impresora", 18) : "");
             boton.disabled = Boolean(enCurso);
             acciones.appendChild(boton);
-        }
-
-        if (entregar && estado !== "enReparto") {
-            acciones.appendChild(crearBoton("btnAccion secundario botonEntregarMostrador", "Entregar en el mostrador", "entregar"));
         }
 
         // Historial (T27b): el mensaje del pedido, para reenviarlo.
@@ -1435,8 +1478,8 @@
         return Boolean(pedido) && estadoActualDelPedido(pedido) === estado;
     }
 
-    function avanzar(id, estado) {
-        const paso = pasoSiguiente(estado);
+    function avanzar(id, estado, hacia) {
+        const paso = pasosSiguientes(estado).find(item => item.hacia === hacia);
         if (!paso || !pedidoSigueEn(id, estado)) return;
 
         // "Preparado" (T24): primero el resumen, que se desliza para confirmar.
@@ -1561,11 +1604,12 @@
             return;
         }
 
-        const paso = pasoAnterior(estado);
-        if (!paso) return;
+        const pedido = buscarPedido(id);
+        const anterior = pedido ? pasoAnterior(pedido, estado) : "";
+        if (!anterior) return;
 
         const desde = nombreDeEstadoPedido(estado);
-        const hacia = nombreDeEstadoPedido(paso.desde);
+        const hacia = nombreDeEstadoPedido(anterior);
 
         abrirModalTexto({
             titulo: "Volver un paso atrás",
@@ -1582,7 +1626,7 @@
                 }
 
                 try {
-                    window.nubeVendeFrio.agregarEstadoAlPedido(id, paso.desde, motivo);
+                    window.nubeVendeFrio.agregarEstadoAlPedido(id, anterior, motivo);
                     mostrarToast("Volvió a " + hacia);
                 } catch (error) {
                     avisarError(error);
@@ -1694,7 +1738,7 @@
         if (!pedido) return;
         const estado = estadoActualDelPedido(pedido);
 
-        if (boton.dataset.accion === "siguiente") avanzar(id, estado);
+        if (boton.dataset.accion === "siguiente") avanzar(id, estado, boton.dataset.estado);
         else if (boton.dataset.accion === "atras") volverAtras(id, estado);
         else if (boton.dataset.accion === "incidencia") marcarIncidencia(id);
         else if (boton.dataset.accion === "resolver") resolverIncidencia(id);
@@ -1848,7 +1892,7 @@
 
     function lineaDelPedido(id, clave) {
         const pedido = buscarPedido(id);
-        if (!pedido || estadoActualDelPedido(pedido) !== "enPreparacion") return null;
+        if (!pedido || !ESTADOS_CON_CHECKLIST.includes(estadoActualDelPedido(pedido))) return null;
         return preparacionDe(pedido).lineas.find(linea => linea.clave === clave) || null;
     }
 
@@ -2397,10 +2441,10 @@
     // -------------------------------------------------
     // Entrega (T27)
     // -------------------------------------------------
-    // "Entregado" lo marca cualquiera. En "En reparto" se desliza desde la
-    // ficha; antes (por ejemplo, en el mostrador), "Entregar en el
-    // mostrador" abre la ventana de la entrega, con el resumen y el mismo
-    // botón que se desliza. Por defecto se entrega todo lo preparado;
+    // "Entregado" lo marca cualquiera. Se desliza desde la ficha, desde
+    // cualquier paso antes de "Entregado" (T29b; antes, fuera de "En
+    // reparto" había que tocar "Entregar en el mostrador"). Por defecto se
+    // entrega todo lo preparado;
     // "Entregar con cambios" deja ajustar lo entregado de cada producto, con
     // motivo. Lo pedido y lo preparado se conservan.
 

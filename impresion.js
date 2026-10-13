@@ -32,8 +32,10 @@
     const ESPERA_CONEXION = 10000;
 
     // Estados en los que se imprime el ticket (no en Cancelado ni Histórico).
-    const ESTADOS_QUE_SE_IMPRIMEN = ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto", "entregado"];
-    const ESTADOS_PREPARADOS = ["preparado", "enVehiculo", "enReparto"];
+    // "Cargado en el vehículo" ya no existe (T29b): estadoActualDelPedido lo
+    // devuelve como "En reparto".
+    const ESTADOS_QUE_SE_IMPRIMEN = ["cargado", "enPreparacion", "preparado", "enReparto", "entregado"];
+    const ESTADOS_PREPARADOS = ["preparado", "enReparto"];
 
     // ESC/POS
     const INICIAR = [0x1b, 0x40];

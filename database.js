@@ -2316,6 +2316,16 @@ const ESTADOS_PEDIDO = [
     { id: "cancelado", nombre: "Cancelado" }
 ];
 const ESTADO_PEDIDO_INICIAL = "cargado";
+
+// Pasos más cortos (T29b): "Cargado en el vehículo" ya no existe. Queda en la
+// lista para mostrar su nombre en el seguimiento de los pedidos de antes (el
+// historial no se cambia), pero un pedido que quedó en ese estado se ve y se
+// maneja como "En reparto", y ningún cambio nuevo lo usa.
+const ESTADOS_QUE_YA_NO_SE_USAN = { enVehiculo: "enReparto" };
+
+function estadoQueSeUsa(id) {
+    return ESTADOS_QUE_YA_NO_SE_USAN[id] || id;
+}
 const PREFIJO_ID_LINEA = "lin";
 const PREFIJO_ID_ESTADO = "est";
 const LARGO_MAXIMO_NOMBRE_PERSONA = 60;
@@ -2334,7 +2344,8 @@ function pedidoTieneEstados(pedido) {
 
 // Id del estado actual: el de la entrada más nueva según la hora en que se
 // hizo (si empatan, la de id mayor, así da igual en todos los celulares).
-// "" si el pedido no tiene historial de estados.
+// "" si el pedido no tiene historial de estados. "Cargado en el vehículo"
+// cuenta como "En reparto" (T29b).
 function estadoActualDelPedido(pedido) {
     if (!pedidoTieneEstados(pedido)) return "";
 
@@ -2354,7 +2365,7 @@ function estadoActualDelPedido(pedido) {
         }
     });
 
-    return elegida ? String(elegida.estado || "") : "";
+    return elegida ? estadoQueSeUsa(String(elegida.estado || "")) : "";
 }
 
 function limpiarNombrePersona(nombre) {

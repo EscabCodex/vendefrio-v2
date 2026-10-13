@@ -266,7 +266,7 @@
             });
             return [...armaron, ...personasConPermiso("prepara")];
         }
-        if (["preparado", "enVehiculo", "enReparto"].includes(estado)) return personasConPermiso("reparte");
+        if (["preparado", "enReparto"].includes(estado)) return personasConPermiso("reparte");
         if (estado === "entregado") return personasConPermiso("cobra");
         return [];
     }

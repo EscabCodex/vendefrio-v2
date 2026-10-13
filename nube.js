@@ -654,7 +654,9 @@
     function agregarEstadoAlPedido(idPedido, estado, nota) {
         const { ref, pedido } = pedidoEnLaNube(idPedido);
 
-        if (!ESTADOS_PEDIDO.some(item => item.id === estado)) throw errorDelPedido("Ese estado no existe: " + estado);
+        if (!ESTADOS_PEDIDO.some(item => item.id === estado) || estadoQueSeUsa(estado) !== estado) {
+            throw errorDelPedido("Ese estado no existe: " + estado);
+        }
         if (!pedidoTieneEstados(pedido)) throw errorDelPedido("Un pedido Histórico no cambia de estado.");
 
         const persona = personaDeEsteCelular();
@@ -851,11 +853,13 @@
     }
 
     // El pedido, quién usa el celular y el producto, solo mientras el pedido
-    // está "En preparación".
+    // está "Cargado" (T29b) o "En preparación".
+    const ESTADOS_DE_LA_CHECKLIST = ["cargado", "enPreparacion"];
+
     function lineaParaPreparar(idPedido, clave) {
         const datos = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se prepara con la checklist.");
 
-        if (estadoActualDelPedido(datos.pedido) !== "enPreparacion") {
+        if (!ESTADOS_DE_LA_CHECKLIST.includes(estadoActualDelPedido(datos.pedido))) {
             throw errorDelPedido("El pedido ya no está en preparación.");
         }
 
@@ -876,8 +880,19 @@
         return entradaMasNueva(entradasPorLinea(mapa).get(clave) || []);
     }
 
+    // Pasos más cortos (T29b): el primer tilde (o faltante) de un pedido
+    // "Cargado" lo pasa solo a "En preparación", a nombre de quien tildó. Va
+    // en una escritura aparte, después del tilde (el límite de 1000
+    // expresiones de las reglas no deja juntarlos, ver T24), y las reglas lo
+    // dejan a cualquiera si el pedido ya tiene un tilde.
+    function empezarAPrepararSiHaceFalta(idPedido, pedido) {
+        if (estadoActualDelPedido(pedido) !== "cargado") return;
+        agregarEstadoAlPedido(idPedido, "enPreparacion", "");
+    }
+
     // Tilda o destilda un producto. Puede cualquiera. Devuelve el id de la
-    // entrada nueva.
+    // entrada nueva. Si el pedido estaba "Cargado", tildar lo pasa a "En
+    // preparación" (T29b).
     function tildarProducto(idPedido, clave, tildado) {
         const { ref, pedido, persona, linea } = lineaParaPreparar(idPedido, clave);
         const id = generarId("prep");
@@ -889,6 +904,7 @@
         };
 
         enviarCambiosDelPedido(ref, [{ ruta: ["preparacion", id], valor: entrada }]);
+        if (entrada.tildado) empezarAPrepararSiHaceFalta(idPedido, pedido);
         return id;
     }
 
@@ -916,6 +932,7 @@
         };
 
         enviarCambiosDelPedido(ref, [{ ruta: ["faltantes", id], valor: entrada }]);
+        empezarAPrepararSiHaceFalta(idPedido, pedido);
 
         avisarAccionDePedido({
             accion: "faltante",
@@ -1252,7 +1269,7 @@
     // con la copia del estado, como al cancelar (T26). El cobro queda
     // "Pendiente" hasta T28.
 
-    const ESTADOS_QUE_SE_ENTREGAN = ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto"];
+    const ESTADOS_QUE_SE_ENTREGAN = ["cargado", "enPreparacion", "preparado", "enReparto"];
     const LARGO_MAXIMO_MOTIVO_ENTREGA = 300;
     const MAXIMO_CAMBIOS_DE_ENTREGA = 200;
 
@@ -1431,8 +1448,11 @@
                 return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
             });
 
-        const anterior = entradas.find(entrada => ESTADOS_QUE_SE_ENTREGAN.includes(entrada.estado));
-        return anterior ? anterior.estado : "enReparto";
+        // "Cargado en el vehículo" ya no existe (T29b): vuelve a "En reparto".
+        const anterior = entradas
+            .map(entrada => estadoQueSeUsa(String(entrada.estado || "")))
+            .find(estado => ESTADOS_QUE_SE_ENTREGAN.includes(estado));
+        return anterior || "enReparto";
     }
 
     // Si la persona de este celular puede volver atrás un pedido entregado
