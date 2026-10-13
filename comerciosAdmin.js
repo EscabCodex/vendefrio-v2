@@ -216,7 +216,8 @@ function renderizarComercios() {
     if (!listaComerciosAdmin) return;
 
     const todosLosComercios = obtenerComercios();
-    const historialComercios = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+    // Eliminados y cancelados no cuentan (T26).
+    const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
     actualizarResumenComercios(todosLosComercios);
 
     const texto = buscarComercio ? buscarComercio.value : "";

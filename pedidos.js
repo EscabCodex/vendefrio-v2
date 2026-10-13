@@ -321,7 +321,8 @@ function prepararBuscadorProductosPedido() {
 function actualizarEstadoBotonRepetir() {
     if (!botonRepetirPedido) return;
 
-    botonRepetirPedido.style.display = obtenerHistorial().length > 0
+    // Eliminados y cancelados no se repiten (T26).
+    botonRepetirPedido.style.display = obtenerPedidosQueCuentan().length > 0
         ? "inline-flex"
         : "none";
 }
@@ -588,7 +589,8 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 }
 
 function repetirUltimoPedido() {
-    const historial = obtenerHistorial();
+    // Eliminados y cancelados no se repiten (T26).
+    const historial = obtenerPedidosQueCuentan();
     const ultimo = historial[0];
 
     if (!ultimo || (!ultimo.pedido && !Array.isArray(ultimo.productos))) {

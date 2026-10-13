@@ -2,7 +2,8 @@
 // a la nube" y modo nube (T11), sincronización visible e indicador de
 // conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
 // pedidos campo por campo (T20), lo que necesitan los avisos (T23), la
-// checklist de preparación con sus faltantes (T24) y editar el pedido (T25).
+// checklist de preparación con sus faltantes (T24), editar el pedido (T25) y
+// eliminar y cancelar (T26).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -462,8 +463,9 @@
     }
 
     // Avisos (T23): lo que este celular hace sobre los pedidos (pedido
-    // nuevo, incidencia y su resolución; desde T24, faltante y preparado, y
-    // desde T25, pedido editado), para que avisos.js les deje un
+    // nuevo, incidencia y su resolución; desde T24, faltante y preparado;
+    // desde T25, pedido editado, y desde T26, pedido cancelado), para que
+    // avisos.js les deje un
     // aviso a quienes corresponde. Se avisa después de mandar el cambio: un
     // aviso que falla nunca frena el pedido.
     const oyentesAccionesDePedidos = [];
@@ -1120,6 +1122,116 @@
         });
 
         return sinVer.length;
+    }
+
+    // -------------------------------------------------
+    // Eliminar y cancelar (T26)
+    // -------------------------------------------------
+    // Solo quien cargó el pedido y el dueño. Un pedido nunca se borra de la
+    // nube:
+    // - Eliminar es para errores (un pedido cargado dos veces), solo
+    //   mientras está "Cargado": queda guardado por dentro con eliminado:
+    //   true y "eliminacion": { persona, horaCelular }, y desaparece de la
+    //   app. Un "Histórico" no tiene autor: solo lo elimina el dueño.
+    // - Cancelar es para cuando el comercio ya no lo quiere, en cualquier
+    //   estado antes de "Entregado", con motivo: una entrada nueva
+    //   "Cancelado" del historial de estados (el motivo es su nota). Queda a
+    //   la vista en "Cancelados" y avisa a quien ya trabajaba en el pedido.
+    // Las reglas revisan "Cargado" y "Entregado" con la copia del estado
+    // (campo "estado"): acá se piden las dos cosas, la copia y el estado
+    // según el historial, para no mandar algo que la nube va a rechazar.
+
+    const LARGO_MAXIMO_MOTIVO_CANCELACION = 300;
+
+    function esPedidoEliminado(pedido) {
+        return Boolean(pedido) && pedido.eliminado === true;
+    }
+
+    // Si la persona de este celular puede eliminar el pedido.
+    function puedeEliminarElPedido(pedido) {
+        if (!pedido || esPedidoEliminado(pedido)) return false;
+
+        const persona = personaDeEsteCelular();
+        if (!persona) return false;
+
+        if (!pedidoTieneEstados(pedido)) return persona.idPersona === "dueno";
+
+        return estadoActualDelPedido(pedido) === "cargado" &&
+            pedido.estado === "cargado" &&
+            esAutorODueno(pedido, persona);
+    }
+
+    // Si la persona de este celular puede cancelar el pedido.
+    function puedeCancelarElPedido(pedido) {
+        if (!pedidoTieneEstados(pedido) || esPedidoEliminado(pedido)) return false;
+
+        const estado = estadoActualDelPedido(pedido);
+        return estado !== "entregado" && estado !== "cancelado" &&
+            pedido.estado !== "entregado" &&
+            esAutorODueno(pedido, personaDeEsteCelular());
+    }
+
+    // Marca el pedido como eliminado (una sola escritura, campo por campo).
+    // Devuelve true.
+    function eliminarPedido(idPedido) {
+        const { ref, pedido } = pedidoEnLaNube(idPedido);
+        const persona = personaDeEsteCelular();
+
+        if (!persona) {
+            throw errorDelPedido("La app todavía está reconociendo quién usa este celular. Probá de nuevo en unos segundos.");
+        }
+        if (esPedidoEliminado(pedido)) throw errorDelPedido("Ese pedido ya estaba eliminado.");
+
+        if (!pedidoTieneEstados(pedido)) {
+            if (persona.idPersona !== "dueno") throw errorDelPedido("Un pedido Histórico solo lo elimina el dueño.");
+        } else {
+            if (!esAutorODueno(pedido, persona)) throw errorDelPedido("Solo quien cargó el pedido o el dueño lo elimina.");
+            if (estadoActualDelPedido(pedido) !== "cargado" || pedido.estado !== "cargado") {
+                throw errorDelPedido("Solo se elimina un pedido «Cargado». Si el comercio ya no lo quiere, cancelalo.");
+            }
+        }
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["eliminado"], valor: true },
+            {
+                ruta: ["eliminacion"],
+                valor: {
+                    persona: { idPersona: persona.idPersona, nombre: persona.nombre, uid: persona.uid },
+                    horaCelular: Date.now()
+                }
+            }
+        ]);
+
+        return true;
+    }
+
+    // Cancela el pedido con un motivo (obligatorio). La entrada nueva queda
+    // siempre como la más nueva del historial, aunque otro celular tenga la
+    // hora adelantada. Avisa a quien ya trabajaba en el pedido. Devuelve el
+    // id de la entrada.
+    function cancelarPedido(idPedido, motivo) {
+        const texto = String(motivo || "").trim().slice(0, LARGO_MAXIMO_MOTIVO_CANCELACION);
+        if (!texto) throw errorDelPedido("Escribí el motivo.");
+
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se cancela.");
+        const estado = estadoActualDelPedido(pedido);
+
+        if (esPedidoEliminado(pedido)) throw errorDelPedido("Ese pedido fue eliminado.");
+        if (!esAutorODueno(pedido, persona)) throw errorDelPedido("Solo quien cargó el pedido o el dueño lo cancela.");
+        if (estado === "cancelado") throw errorDelPedido("El pedido ya estaba cancelado.");
+        if (estado === "entregado" || pedido.estado === "entregado") throw errorDelPedido("Un pedido entregado no se cancela.");
+
+        const ultima = Object.values(pedido.estados || {})
+            .reduce((maxima, entrada) => Math.max(maxima, Number(entrada && entrada.horaCelular) || 0), 0);
+        const [idEntrada, entrada] = nuevaEntradaDeEstado("cancelado", texto, persona, Math.max(Date.now(), ultima + 1));
+
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["estados", idEntrada], valor: entrada },
+            { ruta: ["estado"], valor: "cancelado" }
+        ]);
+
+        avisarAccionDePedido({ accion: "pedidoCancelado", pedido, estado, motivo: texto, persona });
+        return idEntrada;
     }
 
     // -------------------------------------------------
@@ -2285,6 +2397,11 @@
         edicionesSinVer,
         quienesVieronLasEdiciones,
         marcarEdicionesVistas,
+        // Eliminar y cancelar (T26).
+        puedeEliminarElPedido,
+        puedeCancelarElPedido,
+        eliminarPedido,
+        cancelarPedido,
         // Avisos (T23).
         escucharAccionesDePedidos,
         // Sincronización visible (T12).

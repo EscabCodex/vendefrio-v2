@@ -11,7 +11,9 @@
 // pedidos" anota faltantes y marca "Preparado" con un resumen que se desliza
 // para confirmar (T24). Quien cargó el pedido y el dueño lo editan desde la
 // ficha; los demás ven una franja amarilla con lo que cambió, la checklist
-// marca los productos a revisar y "Entendido" la cierra (T25).
+// marca los productos a revisar y "Entendido" la cierra (T25). Quien cargó
+// el pedido y el dueño lo eliminan (solo en "Cargado") o lo cancelan con
+// motivo (antes de "Entregado"); el cancelado queda en "Cancelados" (T26).
 // =====================================================
 
 (function () {
@@ -118,6 +120,15 @@
 
     function puedeEditar(pedido) {
         return Boolean(window.nubeVendeFrio?.puedeEditarElPedido?.(pedido));
+    }
+
+    // Eliminar y cancelar (T26): solo quien cargó el pedido y el dueño.
+    function puedeEliminar(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeEliminarElPedido?.(pedido));
+    }
+
+    function puedeCancelar(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeCancelarElPedido?.(pedido));
     }
 
     // La persona de este celular hizo esa entrada.
@@ -811,6 +822,9 @@
         const edicion = dibujarEdiciones(pedido);
         if (edicion) cuerpo.appendChild(edicion);
 
+        const cancelacion = dibujarCancelacion(pedido, estado);
+        if (cancelacion) cuerpo.appendChild(cancelacion);
+
         const acciones = dibujarAcciones(pedido, estado);
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
@@ -903,12 +917,45 @@
         return franja;
     }
 
+    // Franja del pedido cancelado (T26): el motivo, quién y cuándo.
+    function dibujarCancelacion(pedido, estado) {
+        if (estado !== "cancelado") return null;
+
+        let cancelacion = null;
+        let idCancelacion = "";
+        Object.keys(pedido.estados || {}).forEach(id => {
+            const entrada = pedido.estados[id];
+            if (!entrada || typeof entrada !== "object" || entrada.estado !== "cancelado") return;
+
+            const hora = Number(entrada.horaCelular) || 0;
+            const horaElegida = cancelacion ? Number(cancelacion.horaCelular) || 0 : -Infinity;
+            if (hora > horaElegida || (hora === horaElegida && id > idCancelacion)) {
+                cancelacion = entrada;
+                idCancelacion = id;
+            }
+        });
+        if (!cancelacion) return null;
+
+        const franja = crear("div", "canceladoFichaPedido");
+        franja.setAttribute("role", "status");
+        franja.appendChild(crear("strong", "", "Pedido cancelado"));
+
+        const motivo = String(cancelacion.nota || "").trim();
+        if (motivo) franja.appendChild(crear("p", "motivoCancelacion", motivo));
+        franja.appendChild(crear("small", "", [textoCuando(Number(cancelacion.horaCelular) || 0), nombrePersona(cancelacion.persona)].join("  ·  ")));
+        franja.appendChild(crear("small", "", "No cuenta en Historial ni en Estadísticas."));
+
+        return franja;
+    }
+
     // Botones de la ficha: solo los pasos que esta persona puede hacer.
     function dibujarAcciones(pedido, estado) {
         const siguiente = pasoSiguiente(estado);
         const anterior = pasoAnterior(estado);
         const marcar = estado !== "cancelado" && !tieneIncidencia(pedido);
         const editar = puedeEditar(pedido);
+        const cancelar = puedeCancelar(pedido);
+        const eliminar = puedeEliminar(pedido);
 
         // "Marcar preparado" (T24) se puede tocar solo con la checklist
         // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
@@ -918,7 +965,7 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
 
@@ -941,6 +988,12 @@
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
         if (marcar) secundarias.appendChild(crearBoton("btnAccion secundario marcarIncidencia", "Marcar incidencia", "incidencia"));
         if (secundarias.children.length) acciones.appendChild(secundarias);
+
+        // Cancelar y eliminar (T26): solo quien cargó el pedido y el dueño.
+        const peligro = crear("div", "accionesSecundariasPedido");
+        if (cancelar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Cancelar pedido", "cancelar"));
+        if (eliminar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
+        if (peligro.children.length) acciones.appendChild(peligro);
 
         return acciones;
     }
@@ -1014,6 +1067,7 @@
         const botones = crear("div", "modalBotones");
         const cancelar = crear("button", "btnModalCancelar", "Cancelar");
         cancelar.type = "button";
+        cancelar.id = "volverTextoPedido";
         const confirmar = crear("button", "btnModalConfirmar", "Confirmar");
         confirmar.type = "button";
         confirmar.id = "confirmarTextoPedido";
@@ -1046,7 +1100,9 @@
         return modal;
     }
 
-    function abrirModalTexto({ titulo, explicacion, etiqueta, falta, boton, peligro, alConfirmar }) {
+    // "volver" cambia el texto del botón que cierra sin hacer nada (T26:
+    // "Volver" al cancelar un pedido, para no confundirlo con "Cancelar").
+    function abrirModalTexto({ titulo, explicacion, etiqueta, falta, boton, peligro, volver, alConfirmar }) {
         const modal = crearModalTexto();
 
         document.getElementById("tituloTextoPedido").textContent = titulo;
@@ -1063,6 +1119,7 @@
         const confirmar = document.getElementById("confirmarTextoPedido");
         confirmar.textContent = boton;
         confirmar.className = peligro ? "btnModalPeligro" : "btnModalConfirmar";
+        document.getElementById("volverTextoPedido").textContent = volver || "Cancelar";
 
         alConfirmarTexto = alConfirmar;
         modal.classList.remove("oculto");
@@ -1145,6 +1202,58 @@
         });
     }
 
+    // Cancelar (T26): con motivo, antes de "Entregado". Queda en
+    // "Cancelados" y en el seguimiento, y se avisa a quien ya trabajaba en
+    // el pedido.
+    function cancelarPedido(id, estado) {
+        abrirModalTexto({
+            titulo: "Cancelar pedido",
+            explicacion: "Es para cuando el comercio ya no lo quiere. El pedido queda en \u00abCancelados\u00bb, con tu nombre y el motivo, y no cuenta en Historial ni en Estadísticas. Se avisa a quien ya estaba trabajando en él.",
+            etiqueta: "¿Por qué se cancela?",
+            falta: "el motivo",
+            boton: "Cancelar pedido",
+            peligro: true,
+            volver: "Volver",
+            alConfirmar: motivo => {
+                if (!pedidoSigueEn(id, estado)) {
+                    mostrarAviso("El pedido cambió", "Otra persona lo cambió mientras escribías. Revisá el estado nuevo y probá de nuevo si hace falta.");
+                    return;
+                }
+
+                try {
+                    window.nubeVendeFrio.cancelarPedido(id, motivo);
+                    mostrarToast("Pedido cancelado");
+                } catch (error) {
+                    avisarError(error);
+                }
+            }
+        });
+    }
+
+    // Eliminar (T26): solo en "Cargado", para errores (por ejemplo, un pedido
+    // cargado dos veces). Desaparece de la app, pero queda guardado por dentro.
+    function eliminarPedido(id, estado) {
+        abrirConfirmacion({
+            titulo: "Eliminar pedido",
+            mensaje: "Es para errores, por ejemplo un pedido cargado dos veces. Desaparece de la app para todos. Si el comercio ya no lo quiere, mejor cancelalo.",
+            boton: "Eliminar",
+            alConfirmar: () => {
+                if (!pedidoSigueEn(id, estado)) {
+                    mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá el estado nuevo y probá de nuevo si hace falta.");
+                    return;
+                }
+
+                try {
+                    window.nubeVendeFrio.eliminarPedido(id);
+                    cerrarFicha();
+                    mostrarToast("Pedido eliminado");
+                } catch (error) {
+                    avisarError(error);
+                }
+            }
+        });
+    }
+
     document.addEventListener("click", evento => {
         const boton = evento.target.closest("#cuerpoFichaPedido button[data-accion]");
         if (!boton || !idFichaAbierta) return;
@@ -1162,6 +1271,8 @@
         else if (boton.dataset.accion === "faltante") abrirFaltante(id, boton.dataset.linea);
         else if (boton.dataset.accion === "editar") window.abrirEdicionPedido?.(id);
         else if (boton.dataset.accion === "entendido") entendido(id);
+        else if (boton.dataset.accion === "cancelar") cancelarPedido(id, estado);
+        else if (boton.dataset.accion === "eliminar") eliminarPedido(id, estado);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.

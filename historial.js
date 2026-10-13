@@ -223,8 +223,11 @@ function obtenerPedidosFiltrados() {
         ? filtroFechaHistorial.value
         : "todos";
 
+    // Eliminados y cancelados no cuentan (T26). El índice es el de la lista
+    // completa, como antes.
     return obtenerHistorial()
         .map((pedido, indice) => ({ pedido, indice }))
+        .filter(registro => pedidoCuentaEnHistorial(registro.pedido))
         .filter(registro => {
             const comercio = normalizarTexto(registro.pedido.comercio);
             const detalle = normalizarTexto(registro.pedido.pedido);
@@ -357,7 +360,7 @@ function abrirHistorialDePedido(indice) {
 // -----------------------------------------------------
 
 function obtenerEstadisticasComerciales() {
-    const historial = obtenerHistorial();
+    const historial = obtenerPedidosQueCuentan();
     const comercios = new Map();
     const productos = new Map();
     const marcas = new Map();
@@ -842,7 +845,7 @@ function crearAlertasComerciales(perfiles) {
 
 function crearPanelInteligenciaComercial() {
     const estadisticas = obtenerEstadisticasComerciales();
-    const historialCompleto = obtenerHistorial();
+    const historialCompleto = obtenerPedidosQueCuentan();
     const hayDatos = estadisticas.comercios.length > 0 ||
         estadisticas.productos.length > 0 ||
         estadisticas.marcas.length > 0;
@@ -1015,7 +1018,14 @@ function renderizarHistorial() {
         botonEliminar.dataset.id = String(pedido.id || "");
         botonEliminar.innerHTML = window.icono("tacho", 14) + " Eliminar";
 
-        acciones.append(botonVer, botonEliminar);
+        // Eliminar (T26): en la nube, solo quien cargó el pedido o el dueño
+        // y solo mientras está "Cargado" (un "Histórico", solo el dueño). En
+        // el modo personal, como siempre.
+        const puedeEliminar = !usaNubeReal() ||
+            Boolean(window.nubeVendeFrio?.puedeEliminarElPedido?.(pedido));
+
+        acciones.append(botonVer);
+        if (puedeEliminar) acciones.append(botonEliminar);
         tarjeta.append(cabecera, acciones);
         contenedor.appendChild(tarjeta);
         });
@@ -1085,6 +1095,34 @@ if (pantallaHistorial) {
 
         if (boton.classList.contains("eliminarPedidoHistorial")) {
             const id = boton.dataset.id;
+
+            // En la nube (T26) el pedido no se borra: queda guardado por
+            // dentro como eliminado y desaparece de la app para todos.
+            if (usaNubeReal()) {
+                abrirConfirmacion(
+                    "Eliminar pedido",
+                    "Desaparece de la app para todos, pero queda guardado por dentro. \u00bfLo elimin\u00e1s?",
+                    () => {
+                        try {
+                            window.nubeVendeFrio.eliminarPedido(id);
+                            mostrarToast("Pedido eliminado");
+                        } catch (error) {
+                            console.error("No se pudo eliminar el pedido.", error);
+                            mostrarAviso(
+                                "No se pudo eliminar",
+                                error && error.code === "pedido" ? error.message : "Prob\u00e1 de nuevo en unos segundos."
+                            );
+                        }
+
+                        renderizarHistorial();
+
+                        if (typeof actualizarDashboard === "function") {
+                            actualizarDashboard();
+                        }
+                    }
+                );
+                return;
+            }
 
             abrirConfirmacion(
                 "Eliminar pedido",

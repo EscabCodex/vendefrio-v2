@@ -3376,6 +3376,16 @@ html[data-tema="oscuro"] .btnAccion.secundario.marcarIncidencia{background:#3B1D
 html[data-tema="oscuro"] .pasoSiguientePedido,
 html[data-tema="oscuro"] .resolverIncidencia{color:#fff !important;}
 html[data-tema="oscuro"] .pasoSeguimiento.incidencia::before{background:#F87171;}
+/* Eliminar y cancelar (T26) */
+.peligroPedido{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
+.canceladoFichaPedido{display:grid;gap:3px;margin-bottom:14px;padding:12px;border:1px solid #F1C9C6;border-left:4px solid var(--peligro);border-radius:var(--radius-md);background:var(--peligro-bg);}
+.canceladoFichaPedido>strong{color:var(--peligro);font-size:14px;}
+.motivoCancelacion{margin-top:4px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;}
+.canceladoFichaPedido small{color:var(--texto-sec);font-size:12px;}
+html[data-tema="oscuro"] .btnAccion.secundario.peligroPedido{background:#3B1D1D !important;color:#FCA5A5 !important;}
+html[data-tema="oscuro"] .canceladoFichaPedido{background:#3B1D1D;border-color:#7F2A25;border-left-color:#F87171;}
+html[data-tema="oscuro"] .canceladoFichaPedido>strong{color:#FCA5A5 !important;}
+html[data-tema="oscuro"] .canceladoFichaPedido small{color:#cbd5e1 !important;}
 /* Avisos en la app (T23): campanita, lista, aviso emergente y Configuración > Avisos */
 .campanaAvisos{display:none;position:relative;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:42px;margin-left:auto;padding:0;border:none;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;}
 html.conAvisos .campanaAvisos{display:flex;}

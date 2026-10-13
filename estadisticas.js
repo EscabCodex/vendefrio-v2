@@ -24,7 +24,8 @@
     }
 
     function obtenerHistorialPeriodo() {
-        const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+        // Eliminados y cancelados no cuentan (T26).
+        const historial = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
         const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
         if (periodo === "todo") return historial;
         const ahora = new Date();

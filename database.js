@@ -2457,6 +2457,33 @@ function totalDelPedido(pedido) {
     return resultado;
 }
 
+// --- Eliminar y cancelar (T26) ---
+// En la nube un pedido nunca se borra: el eliminado queda guardado por
+// dentro (eliminado: true) y desaparece de la app, y el cancelado tiene
+// "Cancelado" como estado actual (queda en "Cancelados" de la vista
+// Pedidos). Ninguno de los dos cuenta en Historial, Estadísticas ni en los
+// números de Inicio y de cada comercio. obtenerHistorial() sigue trayendo
+// todos: el guardado de siempre compara contra la lista completa y, si
+// faltaran, los borraría. En el modo personal no hay ni eliminados ni
+// cancelados: cuentan todos, como siempre.
+
+function pedidoEliminado(pedido) {
+    return Boolean(pedido) && pedido.eliminado === true;
+}
+
+function pedidoCancelado(pedido) {
+    return estadoActualDelPedido(pedido) === "cancelado";
+}
+
+function pedidoCuentaEnHistorial(pedido) {
+    return !pedidoEliminado(pedido) && !pedidoCancelado(pedido);
+}
+
+// Los pedidos que cuentan, en el mismo orden que obtenerHistorial().
+function obtenerPedidosQueCuentan() {
+    return obtenerHistorial().filter(pedidoCuentaEnHistorial);
+}
+
 // --- Rutas guardadas ---
 // Cada ruta guarda dos listas paralelas: "comercios" (nombres, para mostrar)
 // e "idsComercios" (el id de cada uno, en la misma posición; "" si ese
