@@ -18,8 +18,8 @@ El dueño del producto (Jeremías) es principiante en programación y en IA. Si 
 
 ## Roles
 
-- **Dueño del producto (Jeremías):** define problemas reales y prioridades, pide cada tarea a Claude Code, revisa el pull request, prueba la vista previa de Vercel en su celular y decide si se une a `main`.
-- **Claude Code:** ingeniería principal y única IA que modifica el repo. Programa, diseña la interfaz directamente en código y redacta la documentación. Trabaja en una rama nueva y abre un pull request sin unirlo a `main`.
+- **Dueño del producto (Jeremías):** define problemas reales y prioridades, pide cada tarea a Claude Code, revisa el pull request (capturas y pruebas) y lo une a `desarrollo`; cada 3 o 4 tareas prueba `desarrollo` en su celular y decide si se une a `main`.
+- **Claude Code:** ingeniería principal y única IA que modifica el repo. Programa, diseña la interfaz directamente en código, corre las pruebas automáticas y redacta la documentación. Trabaja en una rama nueva y abre un pull request hacia `desarrollo` sin unirlo.
 - **Claude (chats y Proyecto de Claude):** consultas, análisis y especificaciones. No modifica código.
 - **Zapia:** ideas de producto y orden de prioridades. Conoce bien el proyecto.
 - **DeepSeek:** tareas chicas (ajustar un texto, resolver una duda puntual).
@@ -29,7 +29,7 @@ El dueño del producto (Jeremías) es principiante en programación y en IA. Si 
 
 1. **Una sola IA modifica el código a la vez.** Las demás proponen, revisan o preparan especificaciones.
 2. **GitHub es la fuente de verdad.** Vercel es la zona de prueba.
-3. **Cada tarea en su rama y su pull request.** Nada se une a `main` sin probarlo en la vista previa de Vercel y sin el OK del dueño. Cada entrega informa qué cambió, qué no y qué quedó pendiente.
+3. **Cada tarea en su rama y su pull request hacia `desarrollo`.** Se une a `desarrollo` si pasan las pruebas automáticas y las capturas se ven bien. Nada se une a `main` sin probarlo en el celular y sin el OK del dueño (ver "Probar en tanda"). Cada entrega informa qué cambió, qué no y qué quedó pendiente.
 4. **No se rompen datos ni funciones existentes** (ver `PROJECT_STATE.md`).
 5. **Toda tarea nueva** declara problema, usuario, resultado esperado, archivos involucrados, riesgos y criterio de aceptación.
 6. **Si algo no está definido, se pregunta o se declara como supuesto.** No se inventa el estado del proyecto.
@@ -41,18 +41,20 @@ Cada chat de Claude parte de cero y no garantiza recordar los anteriores. La app
 
 - **Un chat por tarea.** Los chats largos gastan más límite porque en cada mensaje se vuelve a leer toda la conversación.
 - **Claude Code lee el repo directamente**, así que no hace falta adjuntar archivos. Si el chat es de consulta dentro del Proyecto de Claude, los `.md` ya los tiene.
-- **Pedido completo en un solo mensaje:** qué tarea del plan hacer (por ejemplo "hacé solo T1").
+- **Siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan." Claude Code busca en el plan la primera tarea sin hacer. Si alguna vez querés otra, nombrala (por ejemplo "Seguí CLAUDE.md. Hacé solo T29c.").
 - **Fuera de las horas pico** (días de semana, de día) el límite rinde más.
-- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request. El dueño prueba, une a `main` y recién después abre la siguiente sesión.
+- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request, y le pasa al dueño el mensaje y el esfuerzo de la sesión siguiente. El dueño une el pull request a `desarrollo` y recién después abre la siguiente sesión.
 
 ## Rutina de cada sesión
 
 1. **Abrir una sesión nueva de Claude Code** sobre el repo `EscabCodex/vendefrio-v2`. Claude Code lee `CLAUDE.md` solo y, desde ahí, los demás documentos.
-2. **Pedir una sola tarea** del plan en un mensaje (por ejemplo "hacé solo T1, tal como está en `PROJECT_STATE.md`"). Antes, elegir en la sesión el **esfuerzo recomendado** que figura en esa tarea del plan (Medio, Alto o Extra). Si una tarea no lo tiene, Claude Code lo recomienda al empezar.
-3. **Esperar el pull request** que abre Claude Code en una rama nueva, con la tarea marcada y la línea de la bitácora.
-4. **Probar la vista previa de Vercel** en el celular (ver "Revisar un pull request y probar").
-5. **Unir el pull request a `main`** solo si todo funciona. Si algo falla, avisarle a Claude Code en la misma sesión.
-6. **Actualizar `PROJECT_STATE.md`** también en el Proyecto de Claude, si se usa.
+2. **Elegir el esfuerzo** de la sesión (Medio, Alto o Extra): el que te pasó Claude Code al terminar la sesión anterior (también figura en cada tarea del plan).
+3. **Mandar siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan."
+4. **Confirmar:** Claude Code contesta qué tarea va a hacer y con qué esfuerzo (por ejemplo "Voy con T29b, esfuerzo Alto. ¿Sigo?"). Si no coincide con el esfuerzo que elegiste, cambialo en la sesión. Después contestá "Sí".
+5. **Esperar el pull request** que abre Claude Code hacia `desarrollo`, con la tarea marcada, la línea de la bitácora, el resultado de las pruebas automáticas y las capturas.
+6. **Revisarlo y unirlo a `desarrollo`** (ver "Revisar un pull request"). Probar a mano en el celular solo si el pull request lo pide.
+7. **Cada 3 o 4 tareas, probar en tanda** y unir `desarrollo` a `main` (ver "Probar en tanda").
+8. **Actualizar `PROJECT_STATE.md`** también en el Proyecto de Claude, si se usa.
 
 ## Cómo armar el Proyecto de Claude (guía para el dueño)
 
@@ -67,16 +69,43 @@ Un Proyecto es un espacio de trabajo con instrucciones y archivos propios. Cada 
 
 Importante: el Proyecto da contexto a todos sus chats, pero los chats **no se comparten entre sí**. Lo que une a los chats son los archivos.
 
-## Recordatorio: revisar un pull request y probar
+## Las ramas
 
-Ya no se suben archivos a mano. Claude Code hace los cambios en una rama (una copia paralela del código) y abre un pull request (un pedido para unir esa rama a `main`).
+Una rama es una copia paralela del código.
 
-1. Abrir el repo en GitHub y entrar a la pestaña **Pull requests**. Tocar el que abrió Claude Code.
-2. En la pestaña **Files changed** se ve qué cambió: en verde lo agregado, en rojo lo borrado.
-3. En la pestaña **Conversation**, esperar uno o dos minutos el comentario de Vercel y tocar el enlace **Preview** (o **Visit Preview**). Es una vista previa: una copia de la app con los cambios, que no toca la versión de `main`.
-4. Probar en el celular lo que se cambió, en modo claro y oscuro. Ojo: la vista previa usa la misma nube que la app publicada. Si la prueba usa la nube, entrar en la vista previa con la cuenta de prueba (la distribuidora "PRUEBA"), no con la real.
-5. Si todo funciona, tocar **Merge pull request** y después **Confirm merge**. Vercel publica la nueva versión en https://vendefrio-v2.vercel.app/ en uno o dos minutos.
-6. Si algo falla, no unir: mandarle a Claude Code una captura de pantalla o el mensaje de error.
+- **`main`:** la app que usa el equipo (https://vendefrio-v2.vercel.app/). Nunca recibe nada sin que lo pruebes en el celular.
+- **`desarrollo`:** junta las tareas terminadas que todavía no probaste a mano. Vercel le da una dirección fija: https://vendefrio-v2-git-desarrollo-escab-codex.vercel.app/
+- **La rama de cada tarea:** la crea Claude Code desde `desarrollo` y abre un pull request (un pedido para unir esa rama a `desarrollo`).
+
+## Revisar un pull request
+
+Ya no se suben archivos a mano ni se prueba cada tarea en el celular: Claude Code corre las pruebas automáticas antes de abrir el pull request.
+
+1. Abrir el repo en GitHub y entrar a la pestaña **Pull requests**. Tocar el que abrió Claude Code. Arriba tiene que decir que va a `desarrollo` ("wants to merge … into `desarrollo`").
+2. En la pestaña **Conversation**, leer la descripción: qué cambió, el resultado de las pruebas (por ejemplo "4 de 4 pasaron") y las capturas, en modo claro y oscuro. Mirar que las pantallas se vean bien.
+3. Si la descripción dice "Probar a mano" (por ejemplo, con la impresora o con dos celulares), entrar a la vista previa: esperar uno o dos minutos el comentario de Vercel y tocar **Preview** (o **Visit Preview**). Ojo: la vista previa usa la misma nube que la app publicada. Entrar con la cuenta de prueba (la distribuidora "PRUEBA"), no con la real.
+4. Si todo está bien, tocar **Merge pull request** y después **Confirm merge**. Esto une la tarea a `desarrollo`: la app del equipo (`main`) todavía no cambia.
+5. Si algo se ve mal o falla, no unir: mandarle a Claude Code una captura de pantalla o el mensaje de error, en la misma sesión.
+
+## Probar en tanda (cada 3 o 4 tareas)
+
+Cuando `desarrollo` junta 3 o 4 tareas, Claude Code te avisa y abre un pull request de `desarrollo` a `main` con la lista de tareas y qué probar.
+
+1. Abrir en el celular la dirección fija de `desarrollo`: https://vendefrio-v2-git-desarrollo-escab-codex.vercel.app/ (con la cuenta de prueba, como en cualquier vista previa).
+2. Probar lo que dice ese pull request, en modo claro y oscuro.
+3. Si anda todo, entrar a ese pull request en GitHub y tocar **Merge pull request** y **Confirm merge** (no elegir "Squash and merge" ni "Rebase and merge": así `desarrollo` y `main` quedan iguales). Vercel publica la nueva versión en https://vendefrio-v2.vercel.app/ en uno o dos minutos.
+4. Si algo falla, no unir: avisarle a Claude Code. Lo arregla en una tarea que va a `desarrollo` y se vuelve a probar.
+
+**Cuidado con las reglas:** la vista previa, `desarrollo` y la app real usan la misma nube. Si una tarea cambia `firestore.rules`, Claude Code te avisa antes y las escribe para que la app de `main` siga funcionando; publicarlas en la consola de Firebase afecta también a la app de `main`.
+
+## Pruebas automáticas
+
+Son programas que abren la app en un navegador manejado solo (Playwright, con Chromium), en tamaño de celular, y la usan como una persona: tocan botones, escriben y revisan lo que aparece en pantalla. Corren dos veces, en modo claro y en modo oscuro, y fallan si la página tiene algún error. Las pruebas de la nube usan los emuladores de Firebase (una nube falsa que corre en la computadora de Claude Code, con las mismas reglas de `firestore.rules`): nunca tocan la nube real.
+
+- **Qué recorren hoy:** en el modo personal, entrar, cargar un pedido y verlo en Historial; en la nube, registrar una distribuidora, cargar un pedido, armarlo con la checklist, salir a repartir, entregarlo y cobrarlo. Cada tarea suma o ajusta las pruebas de lo que toca.
+- **Comando:** `npm test` (necesita Node y Java). Corre todo y deja una captura de cada paso en la carpeta `capturas` (`personal-…` y `nube-…`, cada una en `-claro` y `-oscuro`). Las capturas viejas se borran en cada corrida, así no se acumulan.
+- **Archivos:** carpeta `pruebas` (las pruebas, el servidor de prueba y la configuración), `firebase.json` (los emuladores) y `package.json`. Ninguno cambia la app, y Vercel no los publica (`.vercelignore`).
+- **Lo que una máquina no prueba:** la impresora Bluetooth, dos celulares reales a la vez y las notificaciones. Eso lo probás vos, solo en las tareas que lo tocan.
 
 ## Instrucciones del Proyecto (para pegar en Claude)
 
