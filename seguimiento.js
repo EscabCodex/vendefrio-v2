@@ -18,6 +18,9 @@
 // en el mostrador) o con "Entregar con cambios" (lo entregado de cada
 // producto, con motivo); la ficha muestra el total a cobrar con lo
 // entregado y, si se entregó por error, se vuelve un paso atrás (T27).
+// Quien tiene "Cobra" registra el cobro ("¿Cómo pagó?": efectivo,
+// transferencia con foto opcional del comprobante o "Todavía no pagó"), al
+// entregar o después desde "A cobrar" (T28).
 // =====================================================
 
 (function () {
@@ -41,6 +44,9 @@
         { id: "preparados", nombre: "Preparados", estados: ["preparado"] },
         { id: "enReparto", nombre: "En reparto", estados: ["enVehiculo", "enReparto"] },
         { id: "entregados", nombre: "Entregados", estados: ["entregado"] },
+        // Cobro (T28): los entregados sin cobro registrado. Solo lo ve quien
+        // tiene "Cobra" (y el dueño).
+        { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true },
         { id: "incidencias", nombre: "Incidencias", estados: [] },
         { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"] }
     ];
@@ -148,6 +154,28 @@
         return Boolean(window.nubeVendeFrio?.puedeVolverDeEntregado?.(pedido));
     }
 
+    // Cobro (T28): el registrado (o null si está pendiente) y quién lo puede
+    // registrar ("Cobra" y el dueño; "Controla pedidos" no alcanza).
+    function cobroDe(pedido) {
+        return window.nubeVendeFrio?.cobroDelPedido?.(pedido) || null;
+    }
+
+    function cobroPendiente(pedido) {
+        return Boolean(window.nubeVendeFrio?.cobroPendiente?.(pedido));
+    }
+
+    function puedeCobrar() {
+        return Boolean(window.nubeVendeFrio?.puedeCobrar?.());
+    }
+
+    function puedeRegistrarCobro(pedido) {
+        return Boolean(window.nubeVendeFrio?.puedeRegistrarElCobro?.(pedido));
+    }
+
+    function textoCobro(cobro) {
+        return window.nubeVendeFrio?.textoDelCobro?.(cobro) || "Pendiente";
+    }
+
     // La persona de este celular hizo esa entrada.
     function esMio(persona) {
         const yo = typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
@@ -197,6 +225,7 @@
 
     function esDeLaEtapa(registro, etapa) {
         if (etapa.id === "incidencias") return tieneIncidencia(registro.pedido);
+        if (etapa.id === "aCobrar") return cobroPendiente(registro.pedido);
         return etapa.estados.includes(registro.estado);
     }
 
@@ -403,10 +432,16 @@
     // Lista de pedidos por etapa
     // -------------------------------------------------
 
+    // "A cobrar" (T28) solo aparece para quien cobra.
+    function etapasVisibles() {
+        const cobra = puedeCobrar();
+        return ETAPAS.filter(etapa => !etapa.soloCobra || cobra);
+    }
+
     function dibujarFiltros(registros) {
         filtros.innerHTML = "";
 
-        ETAPAS.forEach(etapa => {
+        etapasVisibles().forEach(etapa => {
             const cantidad = registros.filter(registro => esDeLaEtapa(registro, etapa)).length;
             const boton = crear("button", "filtroEtapa");
             boton.type = "button";
@@ -460,6 +495,14 @@
             info.append(crear("span", "badge entregaSeguimiento", "Entregado con cambios"));
         }
 
+        // Cobro (T28): "Cobro pendiente" o cómo se cobró.
+        if (registro.estado === "entregado") {
+            const cobro = cobroDe(pedido);
+            info.append(cobro
+                ? crear("span", "badge cobradoSeguimiento", "Cobrado: " + textoCobro(cobro))
+                : crear("span", "badge cobroPendienteSeguimiento", "Cobro pendiente"));
+        }
+
         if (tieneIncidencia(pedido)) info.append(crear("span", "badge incidenciaSeguimiento", "Con incidencia"));
         if (edicionesSinVer(pedido).length) info.append(crear("span", "badge edicionSeguimiento", "Editado"));
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
@@ -470,7 +513,11 @@
 
     function dibujarLista() {
         const registros = pedidosDeTrabajo();
-        const etapa = ETAPAS.find(item => item.id === etapaActual) || ETAPAS[0];
+        // Si a esta persona le sacaron "Cobra" mientras miraba "A cobrar",
+        // vuelve a la primera etapa.
+        const visibles = etapasVisibles();
+        if (!visibles.some(item => item.id === etapaActual)) etapaActual = visibles[0].id;
+        const etapa = visibles.find(item => item.id === etapaActual) || visibles[0];
         const deLaEtapa = registros
             .filter(registro => esDeLaEtapa(registro, etapa))
             .sort((a, b) => horaDelPedido(b.pedido) - horaDelPedido(a.pedido));
@@ -489,7 +536,9 @@
                 crear("h3", "", "No hay pedidos " + etapa.nombre.toLowerCase()),
                 crear("p", "", etapa.id === "incidencias"
                     ? "Acá van a aparecer los pedidos con algún problema."
-                    : "Cuando un pedido llegue a esta etapa, aparece acá al instante.")
+                    : etapa.id === "aCobrar"
+                        ? "Acá van a aparecer los pedidos entregados que todavía no se cobraron."
+                        : "Cuando un pedido llegue a esta etapa, aparece acá al instante.")
             );
             lista.appendChild(vacio);
             return;
@@ -576,12 +625,14 @@
         const modal = document.getElementById("modalFichaPedido");
         if (modal) modal.classList.add("oculto");
 
-        // Las ventanas de la checklist (T24), la de editar (T25) y la de la
-        // entrega (T27) son de esta ficha.
+        // Las ventanas de la checklist (T24), la de editar (T25), la de la
+        // entrega (T27) y las del cobro (T28) son de esta ficha.
         cerrarResumen();
         cerrarFaltante();
         cerrarConfirmacion();
         cerrarEntrega();
+        cerrarCobro();
+        cerrarComprobante();
         window.cerrarEdicionPedido?.();
     }
 
@@ -782,6 +833,19 @@
             });
         });
 
+        // Cobro (T28): cómo se cobró, quién y cuándo (el último registrado).
+        const cobro = cobroDe(pedido);
+        if (cobro) {
+            entradas.push({
+                id: "cobro",
+                tipo: "cobro",
+                titulo: "Cobro registrado",
+                persona: cobro.persona,
+                hora: cobro.horaCelular,
+                nota: textoCobro(cobro)
+            });
+        }
+
         entradas.sort((a, b) => {
             const diferencia = b.hora - a.hora;
             if (diferencia !== 0) return diferencia;
@@ -870,21 +934,37 @@
         ];
         if (enChecklist) filasDatos.push(["Total", textoTotal(pedido)]);
 
-        // Entregado (T27): quién lo entregó y el cobro, que queda pendiente
-        // hasta que se registre (T28).
+        // Entregado (T27): quién lo entregó y el cobro (T28): "Pendiente" o
+        // cómo se cobró, quién y cuándo.
+        const cobro = estado === "entregado" ? cobroDe(pedido) : null;
         if (estado === "entregado") {
             const entrega = entregaDe(pedido);
             if (entrega && entrega.persona) {
                 filasDatos.push(["Entregado por", nombrePersona(entrega.persona) + "  ·  " + textoCuando(entrega.horaCelular)]);
             }
-            filasDatos.push(["Cobro", "Pendiente"]);
+            filasDatos.push(["Cobro", textoCobro(cobro), cobro ? "cobrado" : "pendiente"]);
+            if (cobro && cobro.persona) {
+                filasDatos.push(["Cobrado por", nombrePersona(cobro.persona) + "  ·  " + textoCuando(cobro.horaCelular)]);
+            }
         }
 
-        filasDatos.forEach(([nombre, valor]) => {
+        filasDatos.forEach(([nombre, valor, cobroFila]) => {
             const fila = crear("div", "datoFichaPedido");
+            if (cobroFila) fila.dataset.cobro = cobroFila;
             fila.append(crear("span", "", nombre), crear("strong", "", valor));
             datos.appendChild(fila);
         });
+
+        // Transferencia con foto (T28): se ve desde cualquier celular.
+        if (cobro && cobro.forma === "transferencia" && cobro.comprobante) {
+            const fila = crear("div", "datoFichaPedido comprobanteFichaPedido");
+            const sinSubirFoto = window.nubeVendeFrio?.comprobanteSinSubir?.(cobro.comprobante);
+            fila.append(
+                crear("span", "", sinSubirFoto ? "Comprobante · sin subir todavía" : "Comprobante"),
+                crearBoton("botonVerComprobante", "Ver foto", "verComprobante")
+            );
+            datos.appendChild(fila);
+        }
 
         cuerpo.append(titulo, etiquetas);
 
@@ -1030,6 +1110,10 @@
         const cancelar = puedeCancelar(pedido);
         const eliminar = puedeEliminar(pedido);
         const entregar = puedeEntregar(pedido);
+        // Cobro (T28): registrarlo si está pendiente o corregirlo. Con el
+        // cobro registrado, el pedido ya no vuelve atrás.
+        const cobrar = puedeRegistrarCobro(pedido);
+        const cobrado = estado === "entregado" ? cobroDe(pedido) : null;
 
         // "Marcar preparado" (T24) se puede tocar solo con la checklist
         // completa; si no, dice qué falta. Quien no lo puede marcar ve quién
@@ -1039,9 +1123,11 @@
         if (preparacion && siguiente && !preparacion.completa) pista = textoPendientes(preparacion.pendientes);
         else if (preparacion && !siguiente && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
 
-        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar) return null;
+        if (!siguiente && !anterior && !marcar && !pista && !editar && !cancelar && !eliminar && !entregar && !cobrar && !cobrado) return null;
 
         const acciones = crear("div", "accionesFichaPedido");
+
+        if (cobrar && !cobrado) acciones.appendChild(crearBoton("btnAccion pasoSiguientePedido botonRegistrarCobro", "Registrar cobro", "cobrar"));
 
         // Entrega (T27): en "En reparto", el botón que se desliza y, al
         // lado, "Entregar con cambios". Antes (en el mostrador), un botón
@@ -1072,6 +1158,9 @@
         if (entregar && estado !== "enReparto") {
             acciones.appendChild(crearBoton("btnAccion secundario botonEntregarMostrador", "Entregar en el mostrador", "entregar"));
         }
+
+        if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
+        if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
@@ -1369,6 +1458,8 @@
         else if (boton.dataset.accion === "eliminar") eliminarPedido(id, estado);
         else if (boton.dataset.accion === "entregar") abrirEntrega(id, false);
         else if (boton.dataset.accion === "entregarConCambios") abrirEntrega(id, true);
+        else if (boton.dataset.accion === "cobrar") abrirCobro(id, false);
+        else if (boton.dataset.accion === "verComprobante") abrirComprobante(id);
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -2061,9 +2152,12 @@
     // "Entregar con cambios" deja ajustar lo entregado de cada producto, con
     // motivo. Lo pedido y lo preparado se conservan.
 
-    function avisarEntregado(resultado) {
+    // Cobro (T28): si quien entrega tiene "Cobra", enseguida le pregunta
+    // "¿Cómo pagó?".
+    function avisarEntregado(resultado, id) {
         mostrarToast(resultado && resultado.cambios ? "Pedido entregado con cambios" : "Pedido entregado");
         if (navigator.vibrate) navigator.vibrate(30);
+        if (id && puedeCobrar()) preguntarCobroTrasEntrega(id);
     }
 
     // El botón deslizable de la ficha: entrega todo lo preparado.
@@ -2075,7 +2169,7 @@
 
         try {
             window.nubeVendeFrio.entregarPedido(id, {});
-            avisarEntregado(null);
+            avisarEntregado(null, id);
         } catch (error) {
             avisarError(error);
         }
@@ -2405,12 +2499,547 @@
         try {
             window.nubeVendeFrio.entregarPedido(id, cambios);
             cerrarEntrega();
-            avisarEntregado({ cambios: Object.keys(cambios).length });
+            avisarEntregado({ cambios: Object.keys(cambios).length }, id);
         } catch (error) {
             entregaAbierta.error = error && error.code === "pedido" ? error.message : "No se pudo entregar. Probá de nuevo en unos segundos.";
             console.error("No se pudo entregar el pedido.", error);
             dibujarEntrega();
         }
+    }
+
+    // -------------------------------------------------
+    // Cobro (T28)
+    // -------------------------------------------------
+    // "¿Cómo pagó?": "Efectivo", "Transferencia" (con foto opcional del
+    // comprobante) o "Todavía no pagó". El monto viene escrito con el total
+    // a cobrar y se puede corregir. Solo quien tiene "Cobra" (y el dueño): al
+    // entregar, si quien entrega lo tiene, o después desde la ficha
+    // ("Registrar cobro" o "Corregir cobro"). Si después de entregar queda
+    // pendiente (o se cierra la pregunta), avisa a los demás de "Cobra".
+
+    // La ventana del cobro: { id, forma, monto, foto, quitarFoto,
+    // trasEntrega, firma, error, procesando }. "firma" es el cobro que tenía
+    // el pedido al abrirla: si otro lo cambia, se cierra y avisa.
+    let cobroAbierto = null;
+    // Recién entregado: se abre cuando el pedido ya figura como entregado.
+    let cobroPorAbrir = "";
+    let esperaCobroPorAbrir = 0;
+
+    // Lado más largo de la foto del comprobante y tamaño máximo (en letras;
+    // las reglas aceptan hasta 700.000).
+    const LADO_MAXIMO_FOTO = 1280;
+    const LARGO_BUSCADO_FOTO = 600000;
+
+    function firmaDeCobro(pedido) {
+        return JSON.stringify(cobroDe(pedido));
+    }
+
+    // "12.500,50", "12500.5" o "$ 12.500" -> 12500.5. NaN si no es un monto.
+    function leerMonto(texto) {
+        let limpio = String(texto || "").replace(/[$\s]/g, "");
+        if (!limpio) return NaN;
+
+        if (limpio.includes(",")) {
+            limpio = limpio.replace(/\./g, "").replace(",", ".");
+        } else if (/^\d{1,3}(\.\d{3})+$/.test(limpio)) {
+            limpio = limpio.replace(/\./g, "");
+        }
+
+        return /^\d+(\.\d{1,2})?$/.test(limpio) ? Number(limpio) : NaN;
+    }
+
+    // 12500.5 -> "12500,5" (para escribirlo en el campo).
+    function montoParaEscribir(valor) {
+        const numero = Math.round((Number(valor) || 0) * 100) / 100;
+        return String(numero).replace(".", ",");
+    }
+
+    function crearModalCobro() {
+        let modal = document.getElementById("modalCobroPedido");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalCobroPedido";
+
+        const contenido = crear("div", "modalContenido cobroPedido");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloCobroPedido");
+
+        const titulo = crear("h2", "", "¿Cómo pagó?");
+        titulo.id = "tituloCobroPedido";
+
+        const cuerpo = crear("div", "cuerpoCobroPedido");
+        cuerpo.id = "cuerpoCobroPedido";
+
+        // Para sacar la foto o elegirla de la galería.
+        const archivo = document.createElement("input");
+        archivo.type = "file";
+        archivo.accept = "image/*";
+        archivo.id = "archivoComprobantePedido";
+        archivo.className = "oculto";
+        archivo.setAttribute("aria-hidden", "true");
+        archivo.tabIndex = -1;
+
+        const botones = crear("div", "modalBotones");
+        const volver = crear("button", "btnModalCancelar", "Volver");
+        volver.type = "button";
+        const guardar = crear("button", "btnModalConfirmar", "Guardar cobro");
+        guardar.type = "button";
+        guardar.id = "guardarCobroPedido";
+        botones.append(volver, guardar);
+
+        contenido.append(titulo, cuerpo, archivo, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        volver.addEventListener("click", () => cerrarCobro(true));
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarCobro(true);
+        });
+        guardar.addEventListener("click", guardarCobro);
+
+        cuerpo.addEventListener("click", evento => {
+            const boton = evento.target.closest("button[data-cobro]");
+            if (!boton || !cobroAbierto) return;
+
+            const accion = boton.dataset.cobro;
+            if (accion === "foto") {
+                archivo.value = "";
+                archivo.click();
+                return;
+            }
+            if (accion === "quitarFoto") {
+                cobroAbierto.foto = null;
+                cobroAbierto.quitarFoto = true;
+            } else {
+                cobroAbierto.forma = accion;
+            }
+            cobroAbierto.error = "";
+            dibujarCobro();
+        });
+
+        // El monto se escribe sin redibujar (no se pierde lo que se tipea).
+        cuerpo.addEventListener("input", evento => {
+            if (evento.target.id !== "montoCobroPedido" || !cobroAbierto) return;
+            cobroAbierto.monto = evento.target.value;
+            const error = document.getElementById("errorCobroPedido");
+            if (error) error.classList.add("oculto");
+        });
+
+        archivo.addEventListener("change", () => {
+            const elegido = archivo.files && archivo.files[0];
+            if (!elegido || !cobroAbierto) return;
+
+            const abierto = cobroAbierto;
+            abierto.procesando = true;
+            abierto.error = "";
+            dibujarCobro();
+
+            comprimirFoto(elegido)
+                .then(foto => {
+                    if (cobroAbierto !== abierto) return;
+                    abierto.foto = foto;
+                    abierto.quitarFoto = false;
+                })
+                .catch(error => {
+                    console.warn("No se pudo preparar la foto.", error);
+                    if (cobroAbierto === abierto) abierto.error = "No se pudo usar esa foto. Probá con otra.";
+                })
+                .finally(() => {
+                    if (cobroAbierto !== abierto) return;
+                    abierto.procesando = false;
+                    dibujarCobro();
+                });
+        });
+
+        return modal;
+    }
+
+    // Después de entregar: se abre apenas el pedido figura como entregado
+    // (enseguida, también sin señal).
+    function preguntarCobroTrasEntrega(id) {
+        cobroPorAbrir = id;
+        clearTimeout(esperaCobroPorAbrir);
+        esperaCobroPorAbrir = setTimeout(() => {
+            cobroPorAbrir = "";
+        }, 5000);
+        abrirCobroPendienteDeAbrir();
+    }
+
+    function abrirCobroPendienteDeAbrir() {
+        const id = cobroPorAbrir;
+        const pedido = id ? buscarPedido(id) : null;
+        if (!pedido || !puedeRegistrarCobro(pedido)) return;
+
+        cobroPorAbrir = "";
+        clearTimeout(esperaCobroPorAbrir);
+        abrirCobro(id, true);
+    }
+
+    function abrirCobro(id, trasEntrega) {
+        const pedido = buscarPedido(id);
+        if (!pedido || !puedeRegistrarCobro(pedido)) return;
+
+        const cobro = cobroDe(pedido);
+        const monto = cobro ? cobro.monto : window.nubeVendeFrio.montoACobrar(pedido);
+
+        cobroAbierto = {
+            id,
+            forma: cobro ? cobro.forma : "",
+            monto: montoParaEscribir(monto),
+            foto: null,
+            quitarFoto: false,
+            trasEntrega: Boolean(trasEntrega),
+            firma: firmaDeCobro(pedido),
+            error: "",
+            procesando: false
+        };
+
+        const modal = crearModalCobro();
+        dibujarCobro();
+        modal.classList.remove("oculto");
+
+        const contenido = modal.querySelector(".modalContenido");
+        if (contenido) contenido.scrollTop = 0;
+    }
+
+    // avisar: se cerró sin guardar ("Volver" o tocando afuera). Si se acaba
+    // de entregar, el cobro queda pendiente y se avisa a "Cobra".
+    function cerrarCobro(avisar) {
+        const abierto = cobroAbierto;
+        cobroAbierto = null;
+        const modal = document.getElementById("modalCobroPedido");
+        if (modal) modal.classList.add("oculto");
+
+        if (avisar === true && abierto && abierto.trasEntrega) dejarCobroPendiente(abierto.id);
+    }
+
+    function dejarCobroPendiente(id) {
+        try {
+            if (window.nubeVendeFrio.avisarCobroPendiente(id)) mostrarToast("Cobro pendiente: queda en «A cobrar»");
+        } catch (error) {
+            console.warn("No se pudo avisar el cobro pendiente.", error);
+        }
+    }
+
+    // Con los cambios de otro celular: si el pedido ya no está entregado o
+    // otra persona registró el cobro, se cierra y avisa.
+    function revisarCobro() {
+        const pedido = buscarPedido(cobroAbierto.id);
+
+        if (!pedido || !puedeRegistrarCobro(pedido)) {
+            cerrarCobro(false);
+            mostrarAviso("El pedido cambió", "El pedido ya no está entregado o ya no podés registrar su cobro. Revisá la ficha.");
+            return;
+        }
+
+        if (firmaDeCobro(pedido) !== cobroAbierto.firma) {
+            cerrarCobro(false);
+            mostrarAviso("El cobro cambió", "Otra persona registró o corrigió el cobro de este pedido. Revisá la ficha.");
+        }
+    }
+
+    function dibujarCobro() {
+        const cuerpo = document.getElementById("cuerpoCobroPedido");
+        if (!cuerpo || !cobroAbierto) return;
+
+        const pedido = buscarPedido(cobroAbierto.id);
+        if (!pedido) {
+            cerrarCobro(false);
+            return;
+        }
+
+        const anterior = cobroDe(pedido);
+        const entrega = entregaDe(pedido);
+        const forma = cobroAbierto.forma;
+        cuerpo.innerHTML = "";
+
+        cuerpo.appendChild(crear(
+            "p",
+            "explicacionTextoPedido",
+            String(pedido.comercio || "SIN NOMBRE").trim() + ". " + (anterior
+                ? "Ahora: " + textoCobro(anterior) + ". Elegí cómo quedó."
+                : "Elegí cómo pagó. Si todavía no pagó, queda en «A cobrar».")
+        ));
+
+        if (entrega) {
+            const total = crear("div", "totalFichaPedido totalEntrega");
+            total.append(crear("span", "", "Total a cobrar"), crear("strong", "", textoMonto(entrega.total)));
+            cuerpo.appendChild(total);
+        }
+
+        const opciones = crear("div", "opcionesCobro");
+        opciones.setAttribute("role", "group");
+        opciones.setAttribute("aria-label", "Cómo pagó");
+        [
+            ["efectivo", "Efectivo"],
+            ["transferencia", "Transferencia"],
+            ["pendiente", "Todavía no pagó"]
+        ].forEach(([id, nombre]) => {
+            const boton = crear("button", "opcionCobro", nombre);
+            boton.type = "button";
+            boton.dataset.cobro = id;
+            boton.setAttribute("aria-pressed", forma === id ? "true" : "false");
+            if (forma === id) boton.classList.add("activa");
+            opciones.appendChild(boton);
+        });
+        cuerpo.appendChild(opciones);
+
+        if (forma === "efectivo" || forma === "transferencia") {
+            const etiqueta = crear("label", "etiquetaCobro", "Monto que pagó");
+            etiqueta.htmlFor = "montoCobroPedido";
+            const campo = document.createElement("input");
+            campo.id = "montoCobroPedido";
+            campo.type = "text";
+            campo.inputMode = "decimal";
+            campo.autocomplete = "off";
+            campo.className = "montoCobro";
+            campo.value = cobroAbierto.monto;
+            const ayuda = crear("small", "ayudaCobro", entrega && entrega.total.sinPrecio
+                ? "Hay productos sin precio: revisá el monto."
+                : "Viene escrito el total a cobrar. Si pagó otro monto, corregilo.");
+            cuerpo.append(etiqueta, campo, ayuda);
+        }
+
+        if (forma === "transferencia") {
+            const foto = crear("div", "fotoCobro");
+            foto.appendChild(crear("span", "etiquetaCobro", "Foto del comprobante (opcional)"));
+
+            const conFotoVieja = anterior && anterior.forma === "transferencia" && anterior.comprobante && !cobroAbierto.quitarFoto;
+            if (cobroAbierto.procesando) {
+                foto.appendChild(crear("small", "ayudaCobro", "Preparando la foto..."));
+            } else if (cobroAbierto.foto) {
+                const imagen = document.createElement("img");
+                imagen.className = "vistaFotoCobro";
+                imagen.alt = "Foto del comprobante";
+                imagen.src = cobroAbierto.foto;
+                foto.appendChild(imagen);
+            } else if (conFotoVieja) {
+                foto.appendChild(crear("small", "ayudaCobro", "Ya tiene una foto. Si sacás otra, reemplaza a la anterior."));
+            }
+
+            const acciones = crear("div", "accionesFotoCobro");
+            const elegir = crear("button", "btnAccion secundario", cobroAbierto.foto || conFotoVieja ? "Cambiar foto" : "Sacar o elegir foto");
+            elegir.type = "button";
+            elegir.dataset.cobro = "foto";
+            if (cobroAbierto.procesando) elegir.disabled = true;
+            acciones.appendChild(elegir);
+            if (cobroAbierto.foto || conFotoVieja) {
+                const quitar = crear("button", "btnAccion secundario peligroPedido", "Quitar foto");
+                quitar.type = "button";
+                quitar.dataset.cobro = "quitarFoto";
+                acciones.appendChild(quitar);
+            }
+            foto.appendChild(acciones);
+            cuerpo.appendChild(foto);
+        }
+
+        if (forma === "pendiente") {
+            cuerpo.appendChild(crear("small", "ayudaCobro ayudaCobroPendiente", anterior
+                ? "El cobro vuelve a quedar pendiente y el pedido vuelve a «A cobrar»."
+                : "Queda «Cobro pendiente» y el pedido aparece en «A cobrar»."));
+        }
+
+        const error = crear("p", "errorTextoPedido" + (cobroAbierto.error ? "" : " oculto"), cobroAbierto.error || "");
+        error.id = "errorCobroPedido";
+        error.setAttribute("role", "alert");
+        cuerpo.appendChild(error);
+
+        const guardar = document.getElementById("guardarCobroPedido");
+        if (guardar) {
+            guardar.textContent = forma === "pendiente" ? "Dejar pendiente" : "Guardar cobro";
+            guardar.disabled = cobroAbierto.procesando;
+        }
+    }
+
+    function mostrarErrorCobro(texto) {
+        if (!cobroAbierto) return;
+        cobroAbierto.error = texto;
+        dibujarCobro();
+        if (texto.includes("monto")) document.getElementById("montoCobroPedido")?.focus();
+    }
+
+    function guardarCobro() {
+        if (!cobroAbierto || cobroAbierto.procesando) return;
+
+        const { id, forma, trasEntrega } = cobroAbierto;
+        if (!forma) {
+            mostrarErrorCobro("Elegí cómo pagó: efectivo, transferencia o todavía no pagó.");
+            return;
+        }
+
+        const pedido = buscarPedido(id);
+        if (!pedido || !puedeRegistrarCobro(pedido) || firmaDeCobro(pedido) !== cobroAbierto.firma) {
+            cerrarCobro(false);
+            mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá la ficha y probá de nuevo si hace falta.");
+            return;
+        }
+
+        const datos = { forma };
+        if (forma !== "pendiente") {
+            const monto = leerMonto(cobroAbierto.monto);
+            if (!Number.isFinite(monto)) {
+                mostrarErrorCobro("Escribí el monto que pagó, por ejemplo 12500 o 12.500,50.");
+                return;
+            }
+            datos.monto = monto;
+            if (forma === "transferencia") {
+                datos.foto = cobroAbierto.foto || "";
+                datos.quitarFoto = cobroAbierto.quitarFoto;
+            }
+        }
+
+        try {
+            const cobro = window.nubeVendeFrio.registrarCobro(id, datos);
+            cerrarCobro(false);
+
+            if (cobro) {
+                mostrarToast("Cobro registrado: " + textoCobro(cobro));
+                if (navigator.vibrate) navigator.vibrate(30);
+            } else if (trasEntrega) {
+                dejarCobroPendiente(id);
+            } else {
+                mostrarToast("Cobro pendiente: queda en «A cobrar»");
+            }
+        } catch (error) {
+            console.error("No se pudo registrar el cobro.", error);
+            mostrarErrorCobro(error && error.code === "pedido" ? error.message : "No se pudo guardar el cobro. Probá de nuevo en unos segundos.");
+        }
+    }
+
+    // Achica la foto en el celular (lado más largo de 1280 px, JPEG) hasta
+    // que entre en el documento. Devuelve "data:image/jpeg;base64,...".
+    function cargarImagen(archivo) {
+        return new Promise((resolver, rechazar) => {
+            const url = URL.createObjectURL(archivo);
+            const imagen = new Image();
+            imagen.onload = () => {
+                URL.revokeObjectURL(url);
+                resolver(imagen);
+            };
+            imagen.onerror = () => {
+                URL.revokeObjectURL(url);
+                rechazar(new Error("No se pudo leer la imagen."));
+            };
+            imagen.src = url;
+        });
+    }
+
+    async function comprimirFoto(archivo) {
+        if (!archivo || !/^image\//.test(archivo.type || "image/")) throw new Error("No es una imagen.");
+
+        const imagen = await cargarImagen(archivo);
+        const ancho = imagen.naturalWidth || imagen.width;
+        const alto = imagen.naturalHeight || imagen.height;
+        if (!ancho || !alto) throw new Error("La imagen está vacía.");
+
+        const maximo = window.nubeVendeFrio?.LARGO_MAXIMO_FOTO || 700000;
+        const lienzo = document.createElement("canvas");
+        const contexto = lienzo.getContext("2d");
+
+        for (const lado of [LADO_MAXIMO_FOTO, 1024, 800, 640]) {
+            const escala = Math.min(1, lado / Math.max(ancho, alto));
+            lienzo.width = Math.max(1, Math.round(ancho * escala));
+            lienzo.height = Math.max(1, Math.round(alto * escala));
+            // Fondo blanco: una imagen con transparencia no queda negra.
+            contexto.fillStyle = "#fff";
+            contexto.fillRect(0, 0, lienzo.width, lienzo.height);
+            contexto.drawImage(imagen, 0, 0, lienzo.width, lienzo.height);
+
+            for (const calidad of [0.72, 0.6, 0.5, 0.4]) {
+                const foto = lienzo.toDataURL("image/jpeg", calidad);
+                if (foto.startsWith("data:image/jpeg") && foto.length <= LARGO_BUSCADO_FOTO) return foto;
+            }
+        }
+
+        const ultima = lienzo.toDataURL("image/jpeg", 0.3);
+        if (ultima.startsWith("data:image/jpeg") && ultima.length <= maximo) return ultima;
+        throw new Error("La foto es demasiado grande.");
+    }
+
+    // Ver la foto del comprobante (desde cualquier celular).
+    let idComprobanteAbierto = "";
+
+    function crearModalComprobante() {
+        let modal = document.getElementById("modalComprobantePedido");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalComprobantePedido";
+
+        const contenido = crear("div", "modalContenido comprobantePedido");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloComprobantePedido");
+
+        const titulo = crear("h2", "", "Comprobante");
+        titulo.id = "tituloComprobantePedido";
+        const cuerpo = crear("div", "cuerpoComprobantePedido");
+        cuerpo.id = "cuerpoComprobantePedido";
+
+        const botones = crear("div", "modalBotones");
+        const cerrar = crear("button", "btnModalSecundario", "Cerrar");
+        cerrar.type = "button";
+        botones.appendChild(cerrar);
+
+        contenido.append(titulo, cuerpo, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        cerrar.addEventListener("click", cerrarComprobante);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrarComprobante();
+        });
+
+        return modal;
+    }
+
+    function abrirComprobante(id) {
+        const pedido = buscarPedido(id);
+        const cobro = pedido ? cobroDe(pedido) : null;
+        if (!cobro || !cobro.comprobante) return;
+
+        const idComprobante = cobro.comprobante;
+        idComprobanteAbierto = idComprobante;
+
+        const modal = crearModalComprobante();
+        const cuerpo = document.getElementById("cuerpoComprobantePedido");
+        cuerpo.innerHTML = "";
+        cuerpo.appendChild(crear("p", "explicacionTextoPedido", String(pedido.comercio || "SIN NOMBRE").trim() + ". " + textoCobro(cobro) + "."));
+        const cargando = crear("p", "ayudaCobro", "Cargando la foto...");
+        cuerpo.appendChild(cargando);
+        modal.classList.remove("oculto");
+
+        window.nubeVendeFrio.leerComprobante(idComprobante).then(registro => {
+            if (idComprobanteAbierto !== idComprobante) return;
+
+            if (!registro) {
+                cargando.textContent = navigator.onLine
+                    ? "La foto todavía no llegó a la nube: falta que suba desde el celular de quien cobró."
+                    : "Sin internet no se puede traer la foto. Probá de nuevo con señal.";
+                return;
+            }
+
+            const imagen = document.createElement("img");
+            imagen.className = "fotoComprobante";
+            imagen.alt = "Foto del comprobante de la transferencia";
+            imagen.src = registro.foto;
+            cargando.replaceWith(imagen);
+
+            const quien = [registro.persona ? nombrePersona(registro.persona) : "", registro.horaCelular ? textoCuando(registro.horaCelular) : ""]
+                .filter(Boolean).join("  ·  ");
+            if (quien) cuerpo.appendChild(crear("small", "ayudaCobro", "Subida por " + quien));
+            if (window.nubeVendeFrio.comprobanteSinSubir(idComprobante)) {
+                cuerpo.appendChild(crear("small", "ayudaCobro ayudaCobroPendiente", "Todavía no subió a la nube: sube sola cuando haya señal."));
+            }
+        });
+    }
+
+    function cerrarComprobante() {
+        idComprobanteAbierto = "";
+        const modal = document.getElementById("modalComprobantePedido");
+        if (modal) modal.classList.add("oculto");
     }
 
     // -------------------------------------------------
@@ -2426,6 +3055,8 @@
         if (idFichaAbierta) dibujarFicha();
         if (idResumenAbierto) dibujarResumen();
         if (entregaAbierta) revisarEntrega();
+        if (cobroPorAbrir) abrirCobroPendienteDeAbrir();
+        if (cobroAbierto) revisarCobro();
     }
 
     // Un pedido cargado en otro celular (o en este) aparece al instante.

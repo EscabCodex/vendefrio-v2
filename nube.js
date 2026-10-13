@@ -3,7 +3,7 @@
 // conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
 // pedidos campo por campo (T20), lo que necesitan los avisos (T23), la
 // checklist de preparación con sus faltantes (T24), editar el pedido (T25),
-// eliminar y cancelar (T26) y la entrega (T27).
+// eliminar y cancelar (T26), la entrega (T27) y el cobro (T28).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -464,8 +464,9 @@
 
     // Avisos (T23): lo que este celular hace sobre los pedidos (pedido
     // nuevo, incidencia y su resolución; desde T24, faltante y preparado;
-    // desde T25, pedido editado; desde T26, pedido cancelado, y desde T27,
-    // pedido entregado), para que avisos.js les deje un
+    // desde T25, pedido editado; desde T26, pedido cancelado; desde T27,
+    // pedido entregado, y desde T28, cobro pendiente), para que avisos.js
+    // les deje un
     // aviso a quienes corresponde. Se avisa después de mandar el cambio: un
     // aviso que falla nunca frena el pedido.
     const oyentesAccionesDePedidos = [];
@@ -1402,7 +1403,17 @@
             { ruta: ["entrega"], valor: { cambios, persona, horaCelular: hora } }
         ]);
 
-        avisarAccionDePedido({ accion: "entregado", pedido, resumen: textoResumenDeEntrega(resumen), persona });
+        // Cobro (T28): si quien entrega tiene "Cobra", la app le pregunta
+        // "¿Cómo pagó?" y, si queda pendiente, avisa a "Cobra" después
+        // (avisarCobroPendiente). Si no lo tiene, el cobro queda pendiente y
+        // el aviso le llega también a "Cobra".
+        avisarAccionDePedido({
+            accion: "entregado",
+            pedido,
+            resumen: textoResumenDeEntrega(resumen),
+            persona,
+            cobroPendiente: !puedeCobrar()
+        });
         return idEntrada;
     }
 
@@ -1425,12 +1436,13 @@
     }
 
     // Si la persona de este celular puede volver atrás un pedido entregado
-    // (cualquiera, como al entregarlo).
+    // (cualquiera, como al entregarlo). Con el cobro registrado, no (T28).
     function puedeVolverDeEntregado(pedido) {
         if (!pedidoTieneEstados(pedido) || esPedidoEliminado(pedido)) return false;
 
         return estadoActualDelPedido(pedido) === "entregado" &&
             pedido.estado === "entregado" &&
+            !cobroDelPedido(pedido) &&
             Boolean(personaDeEsteCelular());
     }
 
@@ -1447,6 +1459,7 @@
         if (estadoActualDelPedido(pedido) !== "entregado" || pedido.estado !== "entregado") {
             throw errorDelPedido("El pedido ya no está entregado.");
         }
+        if (cobroDelPedido(pedido)) throw errorDelPedido("El pedido tiene el cobro registrado: ya no vuelve atrás.");
 
         const hacia = estadoAntesDeLaEntrega(pedido);
         const [idEntrada, entrada] = nuevaEntradaDeEstado(hacia, texto, persona, horaDespuesDeLaUltima(pedido));
@@ -1457,6 +1470,220 @@
         ]);
 
         return hacia;
+    }
+
+    // -------------------------------------------------
+    // Cobro (T28)
+    // -------------------------------------------------
+    // Entregar y cobrar son cosas distintas (opción A, T17). El cobro es un
+    // campo aparte del pedido entregado: "cobro": { forma, monto,
+    // comprobante, persona, horaCelular }, con forma "efectivo" o
+    // "transferencia". Sin cobro (o con cobro null) está "Pendiente" y
+    // aparece en "A cobrar". Solo quien tiene "Cobra" (y el dueño) lo
+    // registra o lo corrige; "Todavía no pagó" lo deja (o lo vuelve a dejar)
+    // pendiente. El monto viene escrito con el total a cobrar y se puede
+    // corregir. La foto del comprobante de una transferencia es opcional, se
+    // comprime en el celular y va en su propio documento
+    // (comprobantes/{id}: { idPedido, foto, persona, horaCelular }), así la
+    // lista de pedidos no descarga fotos. Un pedido con el cobro registrado
+    // ya no vuelve atrás de "Entregado".
+
+    const FORMAS_DE_COBRO = [
+        { id: "efectivo", nombre: "Efectivo" },
+        { id: "transferencia", nombre: "Transferencia" }
+    ];
+    const MONTO_MAXIMO_COBRO = 1000000000;
+    // Las reglas aceptan hasta 700.000 letras (Firestore guarda hasta 1 MB
+    // por documento).
+    const LARGO_MAXIMO_FOTO = 700000;
+
+    // Fotos mandadas que la nube todavía no confirmó: cuentan como cambios
+    // sin subir (T12), así "Salir" no deja salir sin subirlas.
+    const comprobantesSinSubir = new Set();
+    // Fotos ya leídas: id -> { foto, persona, horaCelular }.
+    const comprobantesLeidos = new Map();
+
+    function nombreDeFormaDeCobro(forma) {
+        const encontrada = FORMAS_DE_COBRO.find(item => item.id === forma);
+        return encontrada ? encontrada.nombre : "";
+    }
+
+    // El cobro registrado de un pedido entregado, o null si está pendiente.
+    function cobroDelPedido(pedido) {
+        if (!pedido || estadoActualDelPedido(pedido) !== "entregado") return null;
+
+        const cobro = esMapa(pedido.cobro) ? pedido.cobro : null;
+        if (!cobro || !nombreDeFormaDeCobro(cobro.forma)) return null;
+
+        const monto = Number(cobro.monto);
+        return {
+            forma: cobro.forma,
+            monto: Number.isFinite(monto) ? monto : 0,
+            comprobante: typeof cobro.comprobante === "string" && cobro.comprobante ? cobro.comprobante : null,
+            persona: esMapa(cobro.persona) ? cobro.persona : null,
+            horaCelular: Number(cobro.horaCelular) || 0
+        };
+    }
+
+    // Entregado, con estados y sin cobro registrado: va a "A cobrar".
+    function cobroPendiente(pedido) {
+        return pedidoTieneEstados(pedido) &&
+            !esPedidoEliminado(pedido) &&
+            estadoActualDelPedido(pedido) === "entregado" &&
+            !cobroDelPedido(pedido);
+    }
+
+    // "Cobra" (el dueño también puede todo). "Controla pedidos" no alcanza:
+    // el cobro lo registra solo quien cobra (T17).
+    function puedeCobrar() {
+        return Boolean(window.empleadosVendeFrio?.puede?.("cobra"));
+    }
+
+    function puedeRegistrarElCobro(pedido) {
+        if (!pedidoTieneEstados(pedido) || esPedidoEliminado(pedido)) return false;
+
+        return estadoActualDelPedido(pedido) === "entregado" &&
+            pedido.estado === "entregado" &&
+            puedeCobrar() &&
+            Boolean(personaDeEsteCelular());
+    }
+
+    // El total a cobrar de lo entregado (el monto que viene escrito).
+    function montoACobrar(pedido) {
+        const entrega = entregaDelPedido(pedido);
+        return Math.round(entrega.total.total * 100) / 100;
+    }
+
+    // "Efectivo · $ 12.500".
+    function textoDelCobro(cobro) {
+        if (!cobro) return "Pendiente";
+        return nombreDeFormaDeCobro(cobro.forma) + " · " + textoPrecioEntrega(cobro.monto);
+    }
+
+    // Registra (o corrige) el cobro de un pedido entregado.
+    // datos: { forma: "efectivo" | "transferencia" | "pendiente", monto, foto }.
+    // foto es opcional, solo en transferencia: una imagen JPEG ya
+    // comprimida ("data:image/jpeg;base64,..."). "pendiente" deja el pedido
+    // en "A cobrar". Devuelve el cobro guardado (o null si quedó pendiente).
+    function registrarCobro(idPedido, datos) {
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no tiene cobro.");
+
+        if (esPedidoEliminado(pedido)) throw errorDelPedido("Ese pedido fue eliminado.");
+        if (estadoActualDelPedido(pedido) !== "entregado" || pedido.estado !== "entregado") {
+            throw errorDelPedido("El cobro se registra cuando el pedido está entregado.");
+        }
+        if (!puedeCobrar()) throw errorDelPedido("El cobro lo registra quien tiene el permiso «Cobra».");
+
+        const forma = String(datos && datos.forma || "");
+
+        if (forma === "pendiente") {
+            // Ya estaba pendiente: no hay nada que guardar.
+            if (!cobroDelPedido(pedido) && !esMapa(pedido.cobro)) return null;
+            enviarCambiosDelPedido(ref, [{ ruta: ["cobro"], valor: null }]);
+            return null;
+        }
+
+        if (!nombreDeFormaDeCobro(forma)) throw errorDelPedido("Elegí cómo pagó.");
+
+        const texto = String(datos && datos.monto !== undefined && datos.monto !== null ? datos.monto : "").trim();
+        const monto = Math.round(Number(texto.replace(",", ".")) * 100) / 100;
+        if (!texto || !Number.isFinite(monto) || monto < 0 || monto > MONTO_MAXIMO_COBRO) {
+            throw errorDelPedido("Escribí el monto que pagó (un número desde 0).");
+        }
+
+        const foto = forma === "transferencia" && typeof (datos && datos.foto) === "string" ? datos.foto : "";
+        if (foto && (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(foto) || foto.length > LARGO_MAXIMO_FOTO)) {
+            throw errorDelPedido("La foto del comprobante es demasiado grande. Probá con otra.");
+        }
+
+        // Al corregir una transferencia sin foto nueva, se conserva la de antes.
+        const anterior = cobroDelPedido(pedido);
+        let comprobante = forma === "transferencia" && anterior && anterior.forma === "transferencia"
+            ? anterior.comprobante
+            : null;
+        if (datos && datos.quitarFoto) comprobante = null;
+
+        const hora = Date.now();
+
+        // La foto va primero, en su propio documento: si la nube la rechaza,
+        // también rechaza el cobro que la nombra (las reglas revisan que
+        // exista). Sin señal quedan las dos en el celular y suben en orden.
+        if (foto) {
+            comprobante = generarId("comp");
+            const refComprobante = refDistribuidora.collection("comprobantes").doc(comprobante);
+            const registro = { idPedido: String(pedido.id), foto, persona, horaCelular: hora };
+
+            comprobantesLeidos.set(comprobante, registro);
+            comprobantesSinSubir.add(comprobante);
+            avisarSincronizacion();
+
+            refComprobante.set(registro)
+                .then(() => {
+                    comprobantesSinSubir.delete(comprobante);
+                    avisarSincronizacion();
+                })
+                .catch(error => {
+                    comprobantesSinSubir.delete(comprobante);
+                    comprobantesLeidos.delete(comprobante);
+                    avisarSincronizacion();
+                    errorAlEscribir(error);
+                });
+        }
+
+        const cobro = { forma, monto, comprobante, persona, horaCelular: hora };
+        enviarCambiosDelPedido(ref, [{ ruta: ["cobro"], valor: cobro }]);
+        return cobro;
+    }
+
+    // Quien entregó tenía "Cobra" y respondió "Todavía no pagó" (o cerró la
+    // pregunta): el aviso de cobro pendiente les llega a los demás de "Cobra".
+    function avisarCobroPendiente(idPedido) {
+        const { pedido } = pedidoEnLaNube(idPedido);
+        if (!cobroPendiente(pedido)) return false;
+
+        avisarAccionDePedido({
+            accion: "cobroPendiente",
+            pedido,
+            resumen: "Cobro pendiente · " + textoPrecioEntrega(montoACobrar(pedido))
+        });
+        return true;
+    }
+
+    // La foto del comprobante. Primero la del celular (también la que todavía
+    // no subió) y, si no está, la de la nube. Devuelve null si no existe o
+    // si todavía no llegó.
+    async function leerComprobante(id) {
+        const clave = String(id || "");
+        if (!/^comp_[A-Za-z0-9_]{1,80}$/.test(clave)) return null;
+        if (comprobantesLeidos.has(clave)) return comprobantesLeidos.get(clave);
+        if (!refDistribuidora) return null;
+
+        const ref = refDistribuidora.collection("comprobantes").doc(clave);
+        let foto = null;
+
+        try {
+            foto = await ref.get({ source: "cache" });
+        } catch (error) {
+            foto = null;
+        }
+
+        if (!foto || !foto.exists) {
+            try {
+                foto = await esperarNube(ref.get());
+            } catch (error) {
+                console.warn("No se pudo leer la foto del comprobante.", error);
+                return null;
+            }
+        }
+
+        if (!foto || !foto.exists) return null;
+
+        const datos = foto.data() || {};
+        if (typeof datos.foto !== "string") return null;
+
+        const registro = { foto: datos.foto, persona: datos.persona || null, horaCelular: Number(datos.horaCelular) || 0 };
+        comprobantesLeidos.set(clave, registro);
+        return registro;
     }
 
     // -------------------------------------------------
@@ -1488,7 +1715,8 @@
     function cantidadSinSubir() {
         const enDocumentos = Object.values(idsSinSubir)
             .reduce((total, ids) => total + ids.size, 0);
-        return enDocumentos + borradosSinSubir;
+        // Las fotos de los comprobantes (T28) no se escuchan: se cuentan aparte.
+        return enDocumentos + borradosSinSubir + comprobantesSinSubir.size;
     }
 
     function sincronizacion() {
@@ -2635,6 +2863,20 @@
         estadoAntesDeLaEntrega,
         puedeVolverDeEntregado,
         volverDeEntregado,
+        // Cobro (T28).
+        FORMAS_DE_COBRO,
+        nombreDeFormaDeCobro,
+        cobroDelPedido,
+        cobroPendiente,
+        puedeCobrar,
+        puedeRegistrarElCobro,
+        montoACobrar,
+        textoDelCobro,
+        registrarCobro,
+        avisarCobroPendiente,
+        leerComprobante,
+        comprobanteSinSubir: id => Boolean(id && comprobantesSinSubir.has(String(id))),
+        LARGO_MAXIMO_FOTO,
         // Avisos (T23).
         escucharAccionesDePedidos,
         // Sincronización visible (T12).

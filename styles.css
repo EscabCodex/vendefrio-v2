@@ -3658,3 +3658,44 @@ html[data-tema="oscuro"] .pasoContadorEntrega{background:#334049;color:#f9fafb;}
 html[data-tema="oscuro"] .totalEntrega{background:#111827;}
 html[data-tema="oscuro"] [data-tipo="entregado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="entregado"]{border-left-color:var(--visitado);}
+/* Cobro (T28): "A cobrar", cobro en la tarjeta y en la ficha, ventana "¿Cómo pagó?" y foto del comprobante */
+.cobroPendienteSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
+.cobradoSeguimiento{display:flex;width:max-content;max-width:100%;margin-top:4px;color:var(--visitado);overflow-wrap:anywhere;}
+.datoFichaPedido[data-cobro="pendiente"] strong{color:var(--pendiente);}
+.datoFichaPedido[data-cobro="cobrado"] strong{color:var(--visitado);}
+.comprobanteFichaPedido{align-items:center;}
+.botonVerComprobante{flex-shrink:0;min-height:36px;padding:0 14px;border:1px solid var(--acento);border-radius:999px;background:transparent;color:var(--acento-oscuro);font-size:12.5px;font-weight:700;cursor:pointer;}
+.botonVerComprobante:active{background:var(--acento-bg);}
+.pasoSeguimiento.cobro::before{background:var(--visitado);}
+.cobroPedido h2,.comprobantePedido h2{margin-bottom:8px;}
+.opcionesCobro{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 4px;}
+.opcionCobro[data-cobro="pendiente"]{grid-column:1 / -1;min-height:48px;}
+.opcionCobro{min-height:56px;padding:8px 6px;border:2px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);color:var(--texto);font-size:14px;font-weight:700;line-height:1.2;cursor:pointer;}
+.opcionCobro:active{transform:scale(.97);}
+.opcionCobro.activa{border-color:var(--acento);background:var(--acento-bg);color:var(--acento-oscuro);}
+.opcionCobro[data-cobro="pendiente"].activa{border-color:var(--pendiente);background:var(--pendiente-bg);color:var(--pendiente);}
+.etiquetaCobro{display:block;margin-top:12px;font-size:13px;font-weight:700;}
+.cobroPedido .montoCobro{min-height:52px;font-size:22px !important;font-weight:800;text-align:center;}
+.ayudaCobro{display:block;margin-top:4px;color:var(--texto-sec);font-size:12.5px;line-height:1.4;}
+.ayudaCobroPendiente{color:var(--pendiente);font-weight:700;}
+.fotoCobro{display:grid;gap:6px;}
+.vistaFotoCobro{justify-self:center;max-width:100%;max-height:220px;border:1px solid var(--borde);border-radius:var(--radius-md);object-fit:contain;}
+.accionesFotoCobro{display:flex;gap:8px;}
+.accionesFotoCobro .btnAccion{flex:1;min-width:0;min-height:44px;justify-content:center;}
+.fotoComprobante{display:block;width:100%;max-height:65vh;margin-top:8px;border-radius:var(--radius-md);background:var(--fondo);object-fit:contain;}
+.cobroPedido .modalBotones,.comprobantePedido .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
+/* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
+html[data-tema="oscuro"] .cobroPendienteSeguimiento,
+html[data-tema="oscuro"] .datoFichaPedido[data-cobro="pendiente"] strong,
+html[data-tema="oscuro"] .ayudaCobroPendiente,
+html[data-tema="oscuro"] .opcionCobro[data-cobro="pendiente"].activa{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .cobradoSeguimiento,
+html[data-tema="oscuro"] .datoFichaPedido[data-cobro="cobrado"] strong{color:var(--visitado) !important;}
+html[data-tema="oscuro"] .opcionCobro{background:#111827;border-color:#4b5563;color:#f9fafb;}
+html[data-tema="oscuro"] .opcionCobro.activa{background:var(--acento-bg);border-color:var(--acento);color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .opcionCobro[data-cobro="pendiente"].activa{background:var(--pendiente-bg);border-color:var(--pendiente);}
+html[data-tema="oscuro"] .ayudaCobro{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .botonVerComprobante{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .vistaFotoCobro{border-color:#374151;}
+html[data-tema="oscuro"] .fotoComprobante{background:#111827;}
+html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitado);}
