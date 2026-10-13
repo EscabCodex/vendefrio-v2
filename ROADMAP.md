@@ -49,9 +49,10 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 
 Cerradas el 2026-10-12 (T17): qué pasa si dos personas modifican el mismo pedido y quién puede cambiar cada estado. Ver "Pedido completo, Etapa 3" en `PROJECT_STATE.md`.
 
+Cerrada el 2026-10-13: qué impresora o dispositivo se usará. Una GOOJPRT MTP-3 por Bluetooth BLE, solo desde Android (Chrome). El ticket es un remito, no válido como factura (T28b). Ver "Impresión de tickets" en `PROJECT_STATE.md`.
+
 - ¿Qué datos mínimos necesita el depósito para preparar? Propuesta en T24 (comercio, autor, observaciones y productos por marca con cantidad); se confirma al probarla.
 - ¿Qué diferencia hay entre pedido, remito, factura y entrega?
-- ¿Qué impresora o dispositivo se usará más adelante?
 
 ## Cómo se decide
 
