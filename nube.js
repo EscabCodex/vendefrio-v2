@@ -1,7 +1,7 @@
 // VendeFrío - Adaptador nube (Firestore) (T9), migración "Subir mis datos
 // a la nube" y modo nube (T11), sincronización visible e indicador de
-// conexión (T12), nube directa al registrarse (T13), Solo nube (T16c) y
-// pedidos campo por campo (T20).
+// conexión (T12), nube directa al registrarse (T13), Solo nube (T16c),
+// pedidos campo por campo (T20) y lo que necesitan los avisos (T23).
 // El adaptador nube cumple la misma interfaz que el adaptador local de
 // database.js. Con cuenta o con código los datos salen siempre de la
 // distribuidora en la nube (T16c): los datos de este celular (localStorage)
@@ -460,6 +460,32 @@
         }
     }
 
+    // Avisos (T23): lo que este celular hace sobre los pedidos (pedido
+    // nuevo, incidencia y su resolución), para que avisos.js les deje un
+    // aviso a quienes corresponde. Se avisa después de mandar el cambio: un
+    // aviso que falla nunca frena el pedido.
+    const oyentesAccionesDePedidos = [];
+
+    function avisarAccionDePedido(accion) {
+        oyentesAccionesDePedidos.forEach(oyente => {
+            try {
+                oyente(accion);
+            } catch (error) {
+                console.error("Falló un aviso de pedidos.", error);
+            }
+        });
+    }
+
+    function escucharAccionesDePedidos(oyente) {
+        if (typeof oyente !== "function") return () => {};
+
+        oyentesAccionesDePedidos.push(oyente);
+        return () => {
+            const indice = oyentesAccionesDePedidos.indexOf(oyente);
+            if (indice >= 0) oyentesAccionesDePedidos.splice(indice, 1);
+        };
+    }
+
     const adaptadorNube = {
         nombre: "nube",
 
@@ -479,6 +505,7 @@
 
             const escrituras = [];
             const refMarcas = refDistribuidora.collection("config").doc("marcas");
+            let pedidosCreados = [];
 
             if (coleccion === "ordenMarcas") {
                 const orden = (Array.isArray(datos) ? datos : []).map(marca => String(marca));
@@ -511,13 +538,24 @@
                     .filter(registro => registro && typeof registro === "object")
                     .map(registro => ({ registro, extras: {} }));
 
-                compararRegistros(SUBCOLECCIONES[coleccion], items, escrituras);
+                // Avisos (T23): los pedidos que este guardado crea en la nube.
+                if (coleccion === "historial") {
+                    const conocidos = new Set(documentos.pedidos.keys());
+                    compararRegistros("pedidos", items, escrituras);
+                    pedidosCreados = items
+                        .map(item => item.registro)
+                        .filter(registro => !conocidos.has(registro.id) && documentos.pedidos.has(registro.id));
+                } else {
+                    compararRegistros(SUBCOLECCIONES[coleccion], items, escrituras);
+                }
             } else {
                 throw new Error("Colección desconocida: " + coleccion);
             }
 
             actualizarTexto(coleccion);
             if (escrituras.length) enviarEscrituras(escrituras);
+
+            pedidosCreados.forEach(pedido => avisarAccionDePedido({ accion: "pedidoNuevo", pedido: JSON.parse(JSON.stringify(pedido)) }));
         },
 
         // En la nube nunca se borran colecciones enteras (T10).
@@ -674,13 +712,14 @@
     // Devuelve el id de la incidencia nueva.
     function marcarIncidencia(idPedido, motivo) {
         const texto = textoDeIncidencia(motivo, "el motivo");
-        const { ref, persona } = pedidoConEstadosYPersona(idPedido);
+        const { ref, pedido, persona } = pedidoConEstadosYPersona(idPedido);
         const id = generarId("inc");
 
         enviarCambiosDelPedido(ref, [
             { ruta: ["incidencias", id], valor: { motivo: texto, persona, horaCelular: Date.now() } }
         ]);
 
+        avisarAccionDePedido({ accion: "incidencia", pedido, motivo: texto, persona });
         return id;
     }
 
@@ -699,6 +738,7 @@
             ]);
         });
 
+        if (abiertas.length) avisarAccionDePedido({ accion: "incidenciaResuelta", pedido, nota: texto, persona, incidencias: abiertas });
         return abiertas.length;
     }
 
@@ -1852,6 +1892,8 @@
         incidenciasAbiertas,
         marcarIncidencia,
         resolverIncidencias,
+        // Avisos (T23).
+        escucharAccionesDePedidos,
         // Sincronización visible (T12).
         sincronizacion,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),

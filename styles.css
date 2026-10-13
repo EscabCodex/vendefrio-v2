@@ -3196,6 +3196,7 @@ html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px s
 
 /* Empleados (T14): código, roles y panel del dueño */
 #configFilaEmpleados.oculto{display:none;}
+#configFilaAvisos.oculto{display:none;}
 .inicioSesion input.inicioCodigo{font-size:22px;font-weight:800;letter-spacing:.12em;text-align:center;text-transform:uppercase;}
 .inicioRoles{display:grid;gap:8px;margin:0;padding:0;border:0;}
 .inicioRoles legend{margin-bottom:8px;color:var(--texto);font-size:14px;font-weight:700;}
@@ -3375,3 +3376,71 @@ html[data-tema="oscuro"] .btnAccion.secundario.marcarIncidencia{background:#3B1D
 html[data-tema="oscuro"] .pasoSiguientePedido,
 html[data-tema="oscuro"] .resolverIncidencia{color:#fff !important;}
 html[data-tema="oscuro"] .pasoSeguimiento.incidencia::before{background:#F87171;}
+/* Avisos en la app (T23): campanita, lista, aviso emergente y Configuración > Avisos */
+.campanaAvisos{display:none;position:relative;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:42px;margin-left:auto;padding:0;border:none;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;}
+html.conAvisos .campanaAvisos{display:flex;}
+.campanaAvisos:active{background:var(--gris-claro);}
+.dashboardHeaderTop .dashboardMarca{margin-right:auto;min-width:0;}
+.dashboardHeaderTop .campanaAvisos{margin-left:6px;color:#fff;}
+.dashboardHeaderTop .campanaAvisos:active{background:rgba(255,255,255,.2);}
+.configHeader .campanaAvisos{color:inherit;}
+.contadorAvisos{position:absolute;top:2px;right:0;min-width:19px;height:19px;padding:0 5px;border:2px solid var(--superficie);border-radius:999px;background:var(--peligro);color:#fff;font-size:10.5px;font-weight:800;line-height:15px;text-align:center;box-sizing:border-box;}
+.dashboardHeaderTop .contadorAvisos{border-color:var(--acento);}
+.contadorAvisos.oculto{display:none;}
+.listaAvisosContenido h2{margin-bottom:10px;}
+.marcarTodosAvisos{justify-content:center;width:100%;min-height:42px;margin-bottom:10px;}
+.marcarTodosAvisos.oculto{display:none;}
+.listaAvisos{display:grid;gap:6px;}
+.itemAviso{display:grid;grid-template-columns:36px minmax(0,1fr) 10px;align-items:start;gap:10px;width:100%;padding:10px;border:1px solid var(--borde);border-radius:12px;background:var(--superficie);color:var(--texto);text-align:left;cursor:pointer;}
+.itemAviso:active{transform:scale(.99);}
+.itemAviso.noLeido{border-color:var(--acento);background:var(--acento-bg);}
+.iconoAviso{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--acento-bg);color:var(--acento-oscuro);}
+.itemAviso.noLeido .iconoAviso{background:var(--superficie);}
+[data-tipo="incidencia"] .iconoAviso{background:var(--peligro-bg);color:var(--peligro);}
+[data-tipo="incidenciaResuelta"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
+.textosAviso{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.tituloAviso{font-size:14px;font-weight:700;overflow-wrap:anywhere;}
+.itemAviso.noLeido .tituloAviso{font-weight:800;}
+.comercioAviso{font-size:13.5px;font-weight:600;overflow-wrap:anywhere;}
+.detalleAviso{margin-top:2px;color:var(--texto-sec);font-size:12.5px;font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere;}
+.cuandoAviso{margin-top:2px;color:var(--texto-sec);font-size:11.5px;overflow-wrap:anywhere;}
+.puntoAviso{width:10px;height:10px;margin-top:4px;border-radius:50%;background:var(--acento);}
+.avisosVacio{padding:18px 8px;text-align:center;}
+.avisosVacio strong{display:block;margin-bottom:4px;font-size:15px;}
+.avisosVacio p{color:var(--texto-sec);font-size:13px;line-height:1.45;}
+.notaAvisos{margin-top:10px;color:var(--texto-sec);font-size:12px;text-align:center;}
+.emergenteAviso{position:fixed;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;z-index:3500;display:flex;align-items:center;gap:10px;max-width:480px;margin:0 auto;padding:10px 6px 10px 10px;border:1px solid var(--borde);border-left:4px solid var(--acento);border-radius:14px;background:var(--superficie);color:var(--texto);box-shadow:0 10px 28px rgba(0,0,0,.22);cursor:pointer;opacity:0;transform:translateY(-130%);transition:opacity .22s ease, transform .25s ease;}
+.emergenteAviso.visible{opacity:1;transform:translateY(0);}
+.emergenteAviso.oculto{display:none;}
+.emergenteAviso[data-tipo="incidencia"]{border-left-color:var(--peligro);}
+.emergenteAviso[data-tipo="incidenciaResuelta"]{border-left-color:var(--visitado);}
+.emergenteAviso .textosAviso{flex:1;}
+.cerrarEmergenteAviso{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;padding:0;border:none;border-radius:50%;background:transparent;color:var(--texto-sec);cursor:pointer;}
+.configAviso{display:flex!important;align-items:flex-start!important;}
+.configAviso input{margin-top:2px;flex-shrink:0;}
+.configAviso span{font-weight:600;}
+.configAviso small{color:var(--texto-sec);font-weight:500;}
+.configAviso em{font-style:normal;color:var(--pendiente);}
+.configAvisoProblema{border:1px solid var(--peligro);}
+@media (prefers-reduced-motion: reduce){.emergenteAviso{transition:none;}}
+/* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
+html[data-tema="oscuro"] .campanaAvisos{color:#f9fafb;}
+html[data-tema="oscuro"] .campanaAvisos:active{background:#374151;}
+html[data-tema="oscuro"] .contadorAvisos{color:#fff !important;background:#DC2626;border-color:#1f2937;}
+html[data-tema="oscuro"] .dashboardHeaderTop .contadorAvisos{border-color:var(--acento);}
+html[data-tema="oscuro"] .itemAviso{background:#1f2937;border-color:#374151;color:#f9fafb;}
+html[data-tema="oscuro"] .itemAviso.noLeido{background:#163B39;border-color:var(--acento);}
+html[data-tema="oscuro"] .itemAviso.noLeido .iconoAviso{background:#111827;}
+html[data-tema="oscuro"] .iconoAviso{background:#163B39;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] [data-tipo="incidencia"] .iconoAviso{background:#3B1D1D;color:#FCA5A5;}
+html[data-tema="oscuro"] [data-tipo="incidenciaResuelta"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .detalleAviso,
+html[data-tema="oscuro"] .cuandoAviso,
+html[data-tema="oscuro"] .avisosVacio p,
+html[data-tema="oscuro"] .notaAvisos,
+html[data-tema="oscuro"] .configAviso small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .configAviso em{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .emergenteAviso{background:#1f2937;border-color:#374151;border-left-color:var(--acento);color:#f9fafb;box-shadow:0 10px 28px rgba(0,0,0,.5);}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidencia"]{border-left-color:#F87171;}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidenciaResuelta"]{border-left-color:var(--visitado);}
+html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}

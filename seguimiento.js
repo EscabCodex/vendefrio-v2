@@ -6,7 +6,7 @@
 // seguimiento de sus estados. Solo en la nube (con cuenta o con código): el
 // modo personal sigue igual. Desde la ficha se cambia de estado, se vuelve un
 // paso atrás y se marcan y resuelven incidencias, según los permisos de cada
-// persona (T22).
+// persona (T22). Los avisos abren la ficha de su pedido (T23).
 // =====================================================
 
 (function () {
@@ -976,4 +976,16 @@
     window.empleadosVendeFrio?.escucharPermisos?.(() => dibujar());
 
     cambiarVista(pantalla.classList.contains("oculto") ? "nuevo" : "pedidos");
+
+    // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
+    // cualquier pantalla. Devuelve false si el pedido ya no está.
+    window.seguimientoVendeFrio = {
+        abrirPedido(id) {
+            const pedido = enLaNube() ? buscarPedido(String(id || "")) : null;
+            if (!pedido || pedido.eliminado === true || !estadoActualDelPedido(pedido)) return false;
+
+            abrirFicha(String(id));
+            return true;
+        }
+    };
 })();

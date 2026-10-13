@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22)
+// T22, T23)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -29,6 +29,8 @@ rules_version = '2';
 //                                   incidencias en "incidencias" e
 //                                   "incidenciasResueltas" (T22)
 //     rutas/{id}
+//     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
+//     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
 // Todo lo que no figura acá queda bloqueado.
@@ -266,6 +268,35 @@ service cloud.firestore {
           || ("estados" in antes && incidenciaAgregadaValida(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["incidenciasResueltas"])
           || ("estados" in antes && resolucionAgregadaValida(idDistribuidora, antes, despues)));
+    }
+
+    // Avisos dentro de la app (T23). Cada persona tiene su buzón:
+    // avisos/{idPersona}/recibidos/{idAviso}. Quien hace el cambio deja una
+    // copia del aviso en el buzón de cada destinatario, nunca en el suyo
+    // (nadie recibe aviso de lo que hizo él mismo). Cada uno lee, marca como
+    // leídos y limpia solo los suyos.
+    function rutaPedido(idDistribuidora, idPedido) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/pedidos/$(idPedido);
+    }
+
+    function idPersonaValida(idPersona) {
+      return idPersona == "dueno" || idValido(idPersona);
+    }
+
+    function avisoNuevoValido(idDistribuidora, aviso) {
+      return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
+        && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
+        && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta"]
+        && aviso.idPedido is string
+        && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
+        && aviso.comercio is string
+        && aviso.comercio.size() <= 120
+        && aviso.detalle is string
+        && aviso.detalle.size() <= 300
+        && aviso.horaCelular is number
+        && aviso.leido == null
+        && personaPropia(idDistribuidora, aviso.persona)
+        && existsAfter(rutaPedido(idDistribuidora, aviso.idPedido));
     }
 
     function vigente(datosCodigo) {
@@ -550,6 +581,46 @@ service cloud.firestore {
           && cambioDePedidoValido(idDistribuidora, resource.data, request.resource.data);
 
         allow delete: if esMiembro(idDistribuidora);
+      }
+
+      // Avisos (T23): el buzón de cada persona ("dueno" o el id de la ficha
+      // del empleado, que no cambia con un reingreso).
+      match /avisos/{idPersona}/recibidos/{idAviso} {
+        allow read: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora);
+
+        // Cualquier miembro deja un aviso en el buzón de otro, a nombre
+        // propio y sobre un pedido que existe.
+        allow create: if esMiembro(idDistribuidora)
+          && idPersonaValida(idPersona)
+          && idPersona != miIdPersona(idDistribuidora)
+          && avisoNuevoValido(idDistribuidora, request.resource.data);
+
+        // Marcar como leído: solo el dueño del buzón, una sola vez.
+        allow update: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["leido"])
+          && resource.data.leido == null
+          && request.resource.data.leido is number;
+
+        // Limpiar los avisos viejos: solo el dueño del buzón.
+        allow delete: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora);
+      }
+
+      // Qué avisos recibe cada persona (T23). Los leen todos los miembros
+      // (quien hace un cambio no le deja aviso a quien lo apagó); cada uno
+      // cambia solo los suyos.
+      match /preferenciasAvisos/{idPersona} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create, update: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora)
+          && request.resource.data.keys().hasOnly(["apagados"])
+          && request.resource.data.apagados is list
+          && request.resource.data.apagados.size() <= 20;
+
+        allow delete: if false;
       }
     }
   }
