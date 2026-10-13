@@ -406,8 +406,8 @@
         separador();
 
         // La marca en negrita y de doble alto, para agrupar los productos. La
-        // cantidad, de doble alto (sin negrita). El doble alto no cambia el
-        // ancho de las letras, así que las columnas siguen alineadas.
+        // cantidad va del tamaño normal: mezclar tamaños en un mismo renglón
+        // desalineaba el subtotal (probado por el dueño con la impresora).
         datos.marcas.forEach(grupo => {
             agregar(NEGRITA);
             agregar(DOBLE_ALTO);
@@ -417,22 +417,10 @@
 
             grupo.items.forEach(item => {
                 partir(item.nombre, ANCHO).forEach(linea);
-                const cantidad = String(item.cantidad);
-                const detalle = cantidad + " x " + (Number.isFinite(item.precio) ? textoPrecio(item.precio) : "Sin precio") +
+                const detalle = item.cantidad + " x " + (Number.isFinite(item.precio) ? textoPrecio(item.precio) : "Sin precio") +
                     (item.cantidad !== item.pedida ? " (pedido " + item.pedida + ")" : "");
                 const subtotal = Number.isFinite(item.precio) ? textoPrecio(item.precio * item.cantidad) : "-";
-                dosColumnas(detalle, subtotal, "  ").forEach((texto, posicion) => {
-                    const inicio = "  " + cantidad;
-                    if (posicion > 0 || !texto.startsWith(inicio)) {
-                        linea(texto);
-                        return;
-                    }
-                    agregar(codificar("  "));
-                    agregar(DOBLE_ALTO);
-                    agregar(codificar(cantidad));
-                    agregar(TAMANO_NORMAL);
-                    linea(texto.slice(inicio.length));
-                });
+                dosColumnas(detalle, subtotal, "  ").forEach(linea);
             });
         });
         separador();

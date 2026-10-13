@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v152 - Imprimir ticket)
+// VendeFrío - Service Worker (v153 - Imprimir ticket)
 // =====================================================
-const CACHE_NAME = "vendefrio-v152";
+const CACHE_NAME = "vendefrio-v153";
 const ARCHIVOS = [
   "./",
   "./index.html",
