@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -18,10 +18,12 @@ rules_version = '2';
 //                                   no el celular
 //     comercios/{id}
 //     productos/{id}
-//     config/{id}                   config/marcas (orden de marcas) y
+//     config/{id}                   config/marcas (orden de marcas),
 //                                   config/roles (lista de roles con sus
 //                                   permisos y copia por permiso, solo el
-//                                   dueño; T19)
+//                                   dueño; T19) y config/equipo (la llave
+//                                   "Todos pueden hacer todo", solo el
+//                                   dueño; T29d)
 //     pedidos/{id}                  con estado, autor y precios (T20); el
 //                                   historial de estados va adentro, en el
 //                                   campo "estados", y solo se agrega; cada
@@ -183,14 +185,65 @@ service cloud.firestore {
         || ("autor" in pedido && pedido.autor.idPersona == miIdPersona(idDistribuidora));
     }
 
+    // "Todos pueden hacer todo" (T29d): la llave de config/equipo, que solo
+    // cambia el dueño. Prendida (también si todavía no existe: así arranca
+    // cada distribuidora), cualquier miembro hace cualquier paso, anota
+    // faltantes y resuelve incidencias. Apagada, cada uno según sus permisos.
+    // Nunca alcanza para cobrar: lo de plata queda siempre para "Cobra".
+    function rutaEquipo(idDistribuidora) {
+      return /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/equipo;
+    }
+
+    function todosPuedenTodo(idDistribuidora) {
+      return !exists(rutaEquipo(idDistribuidora))
+        || get(rutaEquipo(idDistribuidora)).data.get("todosPuedenTodo", true) != false;
+    }
+
+    // Algún rol de quien escribe tiene ese permiso, según la copia por
+    // permiso de config/roles (T19).
+    function rolesTienen(idDistribuidora, permiso) {
+      return get(rutaEmpleado(idDistribuidora, miIdPersona(idDistribuidora))).data.get("roles", [])
+        .hasAny(get(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/roles)
+          .data.porPermiso.get(permiso, []));
+    }
+
+    // "Cobra" (T29d): un rol que el empleado eligió y que tiene "Cobra" queda
+    // en "rolesPendientes" hasta que el dueño lo aprueba; mientras tanto no
+    // cuenta para cobrar. Para lo demás vale al instante.
+    function cobraAprobado(idDistribuidora) {
+      let ficha = get(rutaEmpleado(idDistribuidora, miIdPersona(idDistribuidora))).data;
+      return ficha.get("roles", []).toSet().difference(ficha.get("rolesPendientes", []).toSet())
+        .hasAny(get(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/roles)
+          .data.porPermiso.get("cobra", []));
+    }
+
     // Permisos de quien escribe (T22). El dueño tiene todos. El empleado,
-    // los de cualquiera de sus roles, según la copia por permiso de
-    // config/roles (T19).
+    // los de cualquiera de sus roles, y con la llave prendida todos menos
+    // "Cobra", que pide un rol aprobado (T29d).
     function tienePermiso(idDistribuidora, permiso) {
       return esDueno(idDistribuidora)
-        || get(rutaEmpleado(idDistribuidora, miIdPersona(idDistribuidora))).data.get("roles", [])
-          .hasAny(get(/databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/roles)
-            .data.porPermiso.get(permiso, []));
+        || (permiso == "cobra"
+          ? cobraAprobado(idDistribuidora)
+          : (rolesTienen(idDistribuidora, permiso) || todosPuedenTodo(idDistribuidora)));
+    }
+
+    // Los roles que hoy tienen "Cobra" (T29d). Sin config/roles (una
+    // distribuidora que todavía no generó códigos), el precargado.
+    function rolesConCobra(idDistribuidora) {
+      let ruta = /databases/$(database)/documents/distribuidoras/$(idDistribuidora)/config/roles;
+      return exists(ruta) ? get(ruta).data.porPermiso.get("cobra", []) : ["cobranza"];
+    }
+
+    // El empleado cambia sus roles (T29d): cada rol nuevo que tiene "Cobra"
+    // entra en "rolesPendientes", y no puede sacar de ahí un rol que sigue
+    // teniendo. Así nadie se da "Cobra" a sí mismo: lo aprueba el dueño.
+    function rolesPropiosValidos(idDistribuidora, antes, despues) {
+      let pendientes = despues.get("rolesPendientes", []);
+      let nuevos = despues.roles.toSet().difference(antes.get("roles", []).toSet());
+      return pendientes is list
+        && pendientes.size() <= 20
+        && pendientes.toSet().hasAll(nuevos.intersection(rolesConCobra(idDistribuidora).toSet()))
+        && pendientes.toSet().hasAll(antes.get("rolesPendientes", []).toSet().intersection(despues.roles.toSet()));
     }
 
     // Cancelar (T26): solo quien cargó el pedido o el dueño, con motivo y
@@ -220,24 +273,45 @@ service cloud.firestore {
         && textoObligatorio(entrada.nota);
     }
 
+    // Volver atrás desde "En reparto" (T29b): "Salir a repartir" lleva a "En
+    // reparto" desde cualquier paso anterior, así que "Reparte" lo vuelve al
+    // paso que tenía (también Cargado o En preparación), con motivo. Se usa
+    // la copia del estado para saber que estaba en reparto (o en "Cargado en
+    // el vehículo", que ya no se usa).
+    function vueltaDeRepartoValida(idDistribuidora, antes, entrada) {
+      return antes.get("estado", "") in ["enVehiculo", "enReparto"]
+        && entrada.estado in ["cargado", "enPreparacion"]
+        && textoObligatorio(entrada.nota)
+        && tienePermiso(idDistribuidora, "reparte");
+    }
+
     // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
     // del que viene: dos cambios hechos sin señal pueden llegar desordenados
     // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
     // quien tiene su permiso, y el mismo permiso lo vuelve atrás:
-    //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
-    //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
+    //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado. Desde
+    //   T29b, "En preparación" lo pone la app sola con el primer tilde (en
+    //   otra escritura, a nombre de quien tildó y solo si tiene el permiso).
+    //   "Reparte": "En reparto" desde cualquier paso anterior (T29b) y de
+    //   vuelta al paso que tenía. "Cargado en el vehículo" ya no lo usa la
+    //   app nueva; se sigue aceptando para los celulares con la versión
+    //   vieja.
     //   "Controla pedidos" y el dueño: todos.
-    // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera, y
-    // volver atrás desde "Entregado", también (T27).
+    //   Con "Todos pueden hacer todo" prendida (T29d), cualquier miembro.
+    // Se revisa primero el permiso propio de cada paso: así cada escritura
+    // gasta menos del límite de expresiones de la nube.
+    // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera,
+    // desde cualquier paso, y volver atrás desde "Entregado", también (T27).
     function puedePonerEstado(idDistribuidora, antes, despues, entrada) {
       return entrada.estado == "cancelado"
         ? cancelacionValida(idDistribuidora, antes, entrada)
         : (entrada.estado == "entregado"
           ? entregadoValido(antes, despues)
           : (vueltaDeEntregaValida(antes, entrada)
-            || tienePermiso(idDistribuidora, "controla")
             || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
-            || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))));
+            || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))
+            || vueltaDeRepartoValida(idDistribuidora, antes, entrada)
+            || tienePermiso(idDistribuidora, "controla")));
     }
 
     // El historial de estados solo se agrega: una entrada por cambio, a
@@ -521,13 +595,16 @@ service cloud.firestore {
       return idPersona == "dueno" || idValido(idPersona);
     }
 
-    function avisoNuevoValido(idDistribuidora, aviso) {
+    // "Rol pendiente de aprobar" (T29d): el empleado que eligió un rol con
+    // "Cobra" le deja el aviso al dueño, sin pedido: idPedido vacío y su
+    // propia ficha en idEmpleado, que tiene que tener un rol pendiente.
+    function avisoNuevoValido(idDistribuidora, idPersona, aviso) {
       return aviso.keys().hasAll(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
-        && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido"])
+        && aviso.keys().hasOnly(["tipo", "idPedido", "comercio", "detalle", "persona", "horaCelular", "leido",
+          "idEmpleado"])
         && aviso.tipo in ["pedidoNuevo", "incidencia", "incidenciaResuelta", "preparado", "faltante", "pedidoEditado",
-          "pedidoCancelado", "entregado"]
+          "pedidoCancelado", "entregado", "rolPendiente"]
         && aviso.idPedido is string
-        && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
         && aviso.comercio is string
         && aviso.comercio.size() <= 120
         && aviso.detalle is string
@@ -535,7 +612,14 @@ service cloud.firestore {
         && aviso.horaCelular is number
         && aviso.leido == null
         && personaPropia(idDistribuidora, aviso.persona)
-        && existsAfter(rutaPedido(idDistribuidora, aviso.idPedido));
+        && (aviso.tipo == "rolPendiente"
+          ? (idPersona == "dueno"
+            && aviso.idPedido == ""
+            && aviso.get("idEmpleado", "") == miIdPersona(idDistribuidora)
+            && get(rutaEmpleado(idDistribuidora, miIdPersona(idDistribuidora))).data.get("rolesPendientes", []).size() > 0)
+          : (!("idEmpleado" in aviso)
+            && aviso.idPedido.matches('^[A-Za-z0-9_-]{1,100}$')
+            && existsAfter(rutaPedido(idDistribuidora, aviso.idPedido))));
     }
 
     function vigente(datosCodigo) {
@@ -714,8 +798,10 @@ service cloud.firestore {
       }
 
       // Ficha de cada empleado (T14). Nace cuando el empleado usa un código
-      // de alta del dueño; el empleado solo cambia su nombre y sus roles.
-      // El dueño cambia los roles y da de baja (T15). Nunca se borra.
+      // de alta del dueño; el empleado solo cambia su nombre y sus roles
+      // (un rol con "Cobra" queda en "rolesPendientes" hasta que lo aprueba
+      // el dueño, T29d). El dueño cambia los roles, aprueba o rechaza los
+      // pendientes y da de baja (T15). Nunca se borra.
       match /empleados/{idEmpleado} {
         // Un empleado dado de baja puede leer solo su propia ficha, para que
         // su celular sepa que fue una baja (T15). No ve nada más.
@@ -734,15 +820,17 @@ service cloud.firestore {
 
         allow update: if ingreso()
           && (
-            // El empleado cambia solo su nombre (obligatorio) y sus roles.
+            // El empleado cambia solo su nombre (obligatorio) y sus roles;
+            // los nuevos con "Cobra" quedan pendientes (T29d).
             (resource.data.uidActual == request.auth.uid
               && esMiembro(idDistribuidora)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "roles"])
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "roles", "rolesPendientes"])
               && request.resource.data.nombre is string
               && request.resource.data.nombre.size() >= 1
               && request.resource.data.nombre.size() <= 60
               && request.resource.data.roles is list
-              && request.resource.data.roles.size() <= 20)
+              && request.resource.data.roles.size() <= 20
+              && rolesPropiosValidos(idDistribuidora, resource.data, request.resource.data))
             ||
             // Reingreso: la ficha pasa a la cuenta nueva y la vieja deja de
             // ser miembro en la misma tanda. Solo si la ficha está activa.
@@ -753,11 +841,14 @@ service cloud.firestore {
               && fichaDeCanje(idDistribuidora, idEmpleado, "reingreso")
               && !existsAfter(rutaMiembro(idDistribuidora, resource.data.uidActual)))
             ||
-            // El dueño cambia los roles de un empleado (T15).
+            // El dueño cambia los roles de un empleado (T15) y aprueba o
+            // rechaza los pendientes (T29d).
             (esDueno(idDistribuidora)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["roles"])
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["roles", "rolesPendientes"])
               && request.resource.data.roles is list
-              && request.resource.data.roles.size() <= 20)
+              && request.resource.data.roles.size() <= 20
+              && request.resource.data.get("rolesPendientes", []) is list
+              && request.resource.data.get("rolesPendientes", []).size() <= 20)
             ||
             // Baja (T15): la ficha queda como "dado de baja" y, en la misma
             // tanda, su cuenta deja de ser miembro. No hay vuelta atrás: para
@@ -786,9 +877,17 @@ service cloud.firestore {
       // marca de que los precargados ya recibieron los suyos se escriben
       // juntas, en el mismo documento. Una versión vieja de la app (que
       // guardaba solo la lista y borraría los permisos) no puede escribirla.
+      // config/equipo (T29d): la llave "Todos pueden hacer todo"
+      // ({ todosPuedenTodo }), solo el dueño. No se borra.
       match /config/{id} {
         allow read: if esMiembro(idDistribuidora);
-        allow write: if esMiembro(idDistribuidora) && id != "roles";
+        allow write: if esMiembro(idDistribuidora) && !(id in ["roles", "equipo"]);
+
+        allow create, update: if id == "equipo"
+          && esDueno(idDistribuidora)
+          && request.resource.data.keys().hasAll(["todosPuedenTodo"])
+          && request.resource.data.keys().hasOnly(["todosPuedenTodo"])
+          && request.resource.data.todosPuedenTodo is bool;
 
         allow create, update: if id == "roles"
           && esDueno(idDistribuidora)
@@ -861,7 +960,7 @@ service cloud.firestore {
         allow create: if esMiembro(idDistribuidora)
           && idPersonaValida(idPersona)
           && idPersona != miIdPersona(idDistribuidora)
-          && avisoNuevoValido(idDistribuidora, request.resource.data);
+          && avisoNuevoValido(idDistribuidora, idPersona, request.resource.data);
 
         // Marcar como leído: solo el dueño del buzón, una sola vez.
         allow update: if esMiembro(idDistribuidora)

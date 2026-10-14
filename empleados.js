@@ -16,6 +16,11 @@
 //   personal), para registrar quién hace cada cosa en la Etapa 3.
 // - Permisos por rol (T19): cada rol tiene sus casillas de permiso, que solo
 //   marca el dueño. puede(permiso) dice si la persona de este celular lo tiene.
+// - "Todos pueden hacer todo" (T29d): una llave en config/equipo que solo
+//   cambia el dueño. Prendida (así arranca), cualquiera hace cualquier paso;
+//   los roles deciden solo los avisos. Cobrar es siempre de "Cobra" y del
+//   dueño. Un rol con "Cobra" que elige el empleado queda en
+//   "rolesPendientes" hasta que el dueño lo aprueba.
 // Los datos de este celular (localStorage) no se leen ni se borran.
 (function () {
     // Este celular es de un empleado: { uid, distribuidora, idEmpleado }.
@@ -48,6 +53,9 @@
         { id: "controla", nombre: "Controla pedidos" }
     ];
     const IDS_PERMISOS = PERMISOS.map(permiso => permiso.id);
+    // Los que da "Todos pueden hacer todo" (T29d): los pasos del pedido,
+    // los faltantes y las incidencias. Nunca "Cobra".
+    const PERMISOS_DE_LA_LLAVE = ["prepara", "reparte", "controla"];
 
     // Los permisos acordados para los roles precargados (por su id, así vale
     // aunque el dueño los haya renombrado). Vendedor y los roles nuevos
@@ -61,6 +69,11 @@
 
     let miFicha = null;
     let roles = null;
+    // "Todos pueden hacer todo" (T29d): prendida mientras la nube no diga
+    // otra cosa (sin config/equipo también está prendida).
+    let todosPuedenTodo = true;
+    let dejarDeEscucharLlave = null;
+    const oyentesLlave = [];
     // La lista de roles de la nube ya recibió los permisos de los
     // precargados (T19): se hace una sola vez.
     let permisosIniciales = false;
@@ -423,9 +436,19 @@
         const validos = new Set(listaDeRoles().map(rol => rol.id));
         const elegidos = Array.from(new Set(idsRoles || [])).filter(id => validos.has(id));
 
+        // T29d: cada rol nuevo con "Cobra" queda pendiente hasta que lo
+        // aprueba el dueño; los que ya estaban pendientes siguen así.
+        const antes = new Set(miFicha?.roles || []);
+        const conCobra = new Set(rolesConPermiso("cobra"));
+        const nuevosConCobra = elegidos.filter(id => !antes.has(id) && conCobra.has(id));
+        const rolesPendientes = Array.from(new Set([
+            ...(miFicha?.rolesPendientes || []).filter(id => elegidos.includes(id)),
+            ...nuevosConCobra
+        ]));
+
         const guardar = db.collection("distribuidoras").doc(guardado.distribuidora)
             .collection("empleados").doc(guardado.idEmpleado)
-            .update({ nombre: limpio, roles: elegidos });
+            .update({ nombre: limpio, roles: elegidos, rolesPendientes });
 
         guardar.catch(error => {
             console.error("No se pudieron guardar tus datos.", error);
@@ -435,9 +458,16 @@
         });
 
         // Sin señal queda en el celular y se sube solo al volver.
-        miFicha = { ...(miFicha || {}), nombre: limpio, roles: elegidos };
+        miFicha = { ...(miFicha || {}), nombre: limpio, roles: elegidos, rolesPendientes };
         avisarA(oyentesMiFicha, miFicha);
-        return Promise.resolve(miFicha);
+
+        // Al dueño le llega "Rol pendiente de aprobar" (después de la ficha:
+        // la nube revisa que el rol ya esté pendiente).
+        if (nuevosConCobra.length) {
+            window.avisosVendeFrio?.avisarRolPendiente?.(nombresDeRoles(nuevosConCobra));
+        }
+
+        return Promise.resolve({ ...miFicha, nuevosPendientes: nuevosConCobra });
     }
 
     function nombresDeRoles(ids) {
@@ -511,7 +541,8 @@
 
             miFicha = {
                 nombre: typeof datos.nombre === "string" ? datos.nombre : "",
-                roles: Array.isArray(datos.roles) ? datos.roles : []
+                roles: Array.isArray(datos.roles) ? datos.roles : [],
+                rolesPendientes: Array.isArray(datos.rolesPendientes) ? datos.rolesPendientes : []
             };
             avisarA(oyentesMiFicha, miFicha);
 
@@ -523,6 +554,8 @@
 
         refDistribuidora.collection("config").doc("roles")
             .onSnapshot(recibirRoles, error => console.warn("No se pudo leer la lista de roles.", error));
+
+        arrancarEscuchaDeLlave(guardado.distribuidora);
     }
 
     // "Salir" del empleado: la cuenta anónima no se puede recuperar, así que
@@ -639,6 +672,7 @@
                     id: documento.id,
                     nombre: typeof datos.nombre === "string" ? datos.nombre : "",
                     roles: Array.isArray(datos.roles) ? datos.roles : [],
+                    rolesPendientes: Array.isArray(datos.rolesPendientes) ? datos.rolesPendientes : [],
                     activo: datos.activo !== false,
                     baja: datos.baja && typeof datos.baja.toDate === "function" ? datos.baja.toDate() : null
                 };
@@ -710,16 +744,20 @@
         return errorConTexto(texto + " Revisá la señal y probá de nuevo.");
     }
 
-    // Cambia los roles de un empleado. Sin señal queda en el celular y se
-    // sube solo al volver.
+    // Cambia los roles de un empleado. Lo que marca el dueño vale sin
+    // aprobar; un rol que seguía pendiente sigue pendiente (se aprueba con
+    // "Aprobar", T29d). Sin señal queda en el celular y se sube solo al
+    // volver.
     function cambiarRolesDe(idEmpleado, idsRoles) {
         try {
             const { refDistribuidora } = refDeMiDistribuidora();
             const validos = new Set(listaDeRoles().map(rol => rol.id));
             const elegidos = Array.from(new Set(idsRoles || [])).filter(id => validos.has(id));
+            const ficha = empleados.find(empleado => empleado.id === idEmpleado);
+            const rolesPendientes = (ficha?.rolesPendientes || []).filter(id => elegidos.includes(id));
 
             refDistribuidora.collection("empleados").doc(idEmpleado)
-                .update({ roles: elegidos })
+                .update({ roles: elegidos, rolesPendientes })
                 .catch(error => {
                     console.error("No se pudieron guardar los roles.", error);
                     if (typeof mostrarAviso === "function") {
@@ -728,6 +766,30 @@
                 });
 
             return Promise.resolve(elegidos);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    // Rol pendiente de aprobar (T29d): "Aprobar" lo saca de pendientes (el
+    // empleado ya cobra); "Rechazar" se lo quita al empleado. Sin señal
+    // queda en el celular y se sube solo al volver.
+    function resolverRolPendiente(idEmpleado, idRol, aprobar) {
+        try {
+            const { refDistribuidora } = refDeMiDistribuidora();
+            const quitar = window.firebase.firestore.FieldValue.arrayRemove(idRol);
+            const cambios = aprobar ? { rolesPendientes: quitar } : { roles: quitar, rolesPendientes: quitar };
+
+            refDistribuidora.collection("empleados").doc(idEmpleado)
+                .update(cambios)
+                .catch(error => {
+                    console.error("No se guardó la aprobación del rol.", error);
+                    if (typeof mostrarAviso === "function") {
+                        mostrarAviso("No se guardó el cambio", errorDelPanel(error, "No se guardó el cambio.").message);
+                    }
+                });
+
+            return Promise.resolve();
         } catch (error) {
             return Promise.reject(error);
         }
@@ -889,7 +951,8 @@
             const tanda = db.batch();
             empleadosConRol(id).forEach(empleado => {
                 tanda.update(refDistribuidora.collection("empleados").doc(empleado.id), {
-                    roles: window.firebase.firestore.FieldValue.arrayRemove(id)
+                    roles: window.firebase.firestore.FieldValue.arrayRemove(id),
+                    rolesPendientes: window.firebase.firestore.FieldValue.arrayRemove(id)
                 });
             });
 
@@ -1046,18 +1109,45 @@
         }
     }
 
-    // Ids de los permisos que tiene la persona de este celular: el dueño,
-    // todos; el empleado, los de cualquiera de sus roles. En el modo
-    // personal no hay permisos (la Etapa 3 es solo para la nube).
-    function misPermisos() {
+    function rolesConPermiso(permiso) {
+        return listaDeRoles().filter(rol => rol.permisos.includes(permiso)).map(rol => rol.id);
+    }
+
+    // Los roles de una ficha que esperan la aprobación del dueño (T29d):
+    // solo los que todavía tiene y que hoy tienen "Cobra".
+    function rolesPendientesDe(ficha) {
+        const conCobra = new Set(rolesConPermiso("cobra"));
+        const tiene = new Set(ficha?.roles || []);
+        return (ficha?.rolesPendientes || []).filter(id => tiene.has(id) && conCobra.has(id));
+    }
+
+    // Los permisos que dan los roles de la persona de este celular, como
+    // los revisan las reglas: un rol pendiente no cuenta para "Cobra"
+    // (T29d). El dueño, todos. Son los que deciden los avisos.
+    function permisosDeMisRoles() {
         if (esDueno()) return IDS_PERMISOS.slice();
         if (!esEmpleado()) return [];
 
         const misRoles = new Set(miFicha?.roles || []);
+        const pendientes = new Set(rolesPendientesDe(miFicha));
         const tengo = new Set();
         listaDeRoles().forEach(rol => {
-            if (misRoles.has(rol.id)) rol.permisos.forEach(permiso => tengo.add(permiso));
+            if (!misRoles.has(rol.id)) return;
+            rol.permisos.forEach(permiso => {
+                if (permiso !== "cobra" || !pendientes.has(rol.id)) tengo.add(permiso);
+            });
         });
+        return IDS_PERMISOS.filter(permiso => tengo.has(permiso));
+    }
+
+    // Ids de los permisos que tiene la persona de este celular: el dueño,
+    // todos; el empleado, los de cualquiera de sus roles y, con "Todos
+    // pueden hacer todo" prendida, todos los pasos (no "Cobra", que es de
+    // plata, ni "Recibe aviso de faltantes", que es un aviso; T29d). En el
+    // modo personal no hay permisos (la Etapa 3 es solo para la nube).
+    function misPermisos() {
+        const tengo = new Set(permisosDeMisRoles());
+        if (esEmpleado() && todosPuedenTodo) PERMISOS_DE_LA_LLAVE.forEach(permiso => tengo.add(permiso));
         return IDS_PERMISOS.filter(permiso => tengo.has(permiso));
     }
 
@@ -1077,6 +1167,65 @@
 
         ultimosPermisos = texto;
         avisarA(oyentesPermisos, misPermisos());
+    }
+
+    // -------------------------------------------------
+    // "Todos pueden hacer todo" (T29d)
+    // -------------------------------------------------
+
+    function recibirLlave(foto) {
+        const datos = foto.exists ? foto.data() || {} : {};
+        const valor = datos.todosPuedenTodo !== false;
+        if (valor === todosPuedenTodo) return;
+
+        todosPuedenTodo = valor;
+        avisarA(oyentesLlave, todosPuedenTodo);
+        avisarPermisos();
+    }
+
+    // El dueño y el empleado escuchan la llave de su distribuidora.
+    function arrancarEscuchaDeLlave(idDistribuidora) {
+        const db = obtenerFirestore();
+        if (dejarDeEscucharLlave || !db || !idDistribuidora) return;
+
+        dejarDeEscucharLlave = db.collection("distribuidoras").doc(idDistribuidora)
+            .collection("config").doc("equipo")
+            .onSnapshot(recibirLlave, error => {
+                console.warn("No se pudo leer «Todos pueden hacer todo».", error);
+                dejarDeEscucharLlave = null;
+            });
+    }
+
+    function dejarLaLlave() {
+        if (dejarDeEscucharLlave) dejarDeEscucharLlave();
+        dejarDeEscucharLlave = null;
+        if (!todosPuedenTodo) {
+            todosPuedenTodo = true;
+            avisarA(oyentesLlave, todosPuedenTodo);
+        }
+    }
+
+    // Solo el dueño. Sin señal queda en el celular y se sube solo al volver.
+    function cambiarTodosPuedenTodo(valor) {
+        try {
+            const { refDistribuidora } = refDeMiDistribuidora();
+            const prendida = valor !== false;
+
+            refDistribuidora.collection("config").doc("equipo")
+                .set({ todosPuedenTodo: prendida })
+                .catch(error => {
+                    console.error("No se guardó «Todos pueden hacer todo».", error);
+                    if (typeof mostrarAviso === "function") {
+                        mostrarAviso("No se guardó el cambio", errorDelPanel(error, "No se guardó el cambio.").message);
+                    }
+                });
+
+            // Se ve enseguida en este celular.
+            recibirLlave({ exists: true, data: () => ({ todosPuedenTodo: prendida }) });
+            return Promise.resolve(prendida);
+        } catch (error) {
+            return Promise.reject(error);
+        }
     }
 
     // -------------------------------------------------
@@ -1170,6 +1319,11 @@
         escucharEmpleados,
         escucharCodigos,
         cambiarRolesDe,
+        // Rol pendiente de aprobar (T29d)
+        aprobarRol: (idEmpleado, idRol) => resolverRolPendiente(idEmpleado, idRol, true),
+        rechazarRol: (idEmpleado, idRol) => resolverRolPendiente(idEmpleado, idRol, false),
+        rolesPendientesDe,
+        rolesConPermiso,
         anularCodigo,
         darDeBaja,
         largoMaximoRol: LARGO_MAXIMO_ROL,
@@ -1186,7 +1340,14 @@
         puede,
         misPermisos,
         nombresDePermisos,
-        escucharPermisos: oyente => sumarOyente(oyentesPermisos, oyente, misPermisos())
+        escucharPermisos: oyente => sumarOyente(oyentesPermisos, oyente, misPermisos()),
+        // "Todos pueden hacer todo" (T29d)
+        todosPuedenTodo: () => todosPuedenTodo,
+        cambiarTodosPuedenTodo,
+        escucharTodosPuedenTodo: oyente => sumarOyente(oyentesLlave, oyente, todosPuedenTodo),
+        // Lo que dan los roles (sin la llave): deciden los avisos.
+        permisosDeMisRoles,
+        tieneEnSusRoles: permiso => permisosDeMisRoles().includes(permiso)
     };
 
     // El celular de un empleado arranca a escuchar apenas se sabe la cuenta.
@@ -1234,10 +1395,14 @@
             // entra, para completar una sola vez los de los precargados.
             if (esDueno()) {
                 arrancarEscuchaDeRoles();
-            } else if (dejarDeEscucharRoles) {
-                dejarDeEscucharRoles();
-                dejarDeEscucharRoles = null;
-                if (!esEmpleado()) roles = null;
+                arrancarEscuchaDeLlave(window.cuentaVendeFrio.usuarioActual().uid);
+            } else {
+                if (dejarDeEscucharRoles) {
+                    dejarDeEscucharRoles();
+                    dejarDeEscucharRoles = null;
+                    if (!esEmpleado()) roles = null;
+                }
+                if (!esEmpleado()) dejarLaLlave();
             }
             avisarQuienSoy();
             avisarPermisos();

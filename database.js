@@ -2305,6 +2305,10 @@ function eliminarPedidoPorId(id) {
 // horaCelular, nota }. El estado actual es el de la entrada más nueva según
 // la hora en que se hizo. El campo "estado" guarda una copia para leerlo
 // rápido: si dos cambios llegan desordenados, manda el historial.
+//
+// Pasos más cortos (T29b): "Cargado en el vehículo" ya no se usa. Un pedido
+// que quedó en ese estado se ve y se maneja como "En reparto" (el estado
+// actual lo dice así); su historial no cambia y sigue mostrando ese paso.
 
 const ESTADOS_PEDIDO = [
     { id: "cargado", nombre: "Cargado" },
@@ -2354,7 +2358,8 @@ function estadoActualDelPedido(pedido) {
         }
     });
 
-    return elegida ? String(elegida.estado || "") : "";
+    const estado = elegida ? String(elegida.estado || "") : "";
+    return estado === "enVehiculo" ? "enReparto" : estado;
 }
 
 function limpiarNombrePersona(nombre) {

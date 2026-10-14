@@ -3242,6 +3242,24 @@ html[data-tema="oscuro"] .rolPermisos legend{color:#f9fafb;}
 html[data-tema="oscuro"] .rolPermisos .inicioRol{background:#111827;color:#f9fafb;border-color:#4b5563;}
 #misPermisos small{color:var(--texto-sec);font-size:13px;}
 
+/* "Todos pueden hacer todo" y roles pendientes de aprobar (T29d) */
+.llaveEquipo{display:grid;gap:4px;padding:12px;border:2px solid var(--acento);border-radius:12px;background:var(--superficie);}
+.llaveEquipo .configSwitch{align-items:flex-start;padding:0;border-bottom:0;}
+.llaveEquipo .configSwitch input{width:24px;height:24px;min-height:24px;margin-top:2px;flex-shrink:0;}
+.llaveEquipo .configSwitch strong{font-size:16px;color:var(--texto);}
+.llaveEquipo small{color:var(--texto-sec);font-size:13px;font-weight:500;line-height:1.4;}
+.llaveEquipo .configEstado{margin:0;}
+.empleadoRolPendiente{display:grid;gap:8px;padding:10px;border:1px solid var(--pendiente);border-radius:10px;background:var(--pendiente-bg);color:var(--texto);font-size:14px;line-height:1.35;}
+.empleadoRolPendiente small{color:var(--texto-sec);}
+.inicioRolAclaracion{display:block;margin-top:2px;color:var(--texto-sec);font-size:12px;font-weight:600;}
+.inicioRol span{line-height:1.25;}
+html[data-tema="oscuro"] .llaveEquipo{background:#1f2937;}
+html[data-tema="oscuro"] .llaveEquipo .configSwitch strong{color:#f9fafb;}
+html[data-tema="oscuro"] .llaveEquipo small{color:#d1d5db;}
+html[data-tema="oscuro"] .empleadoRolPendiente{color:#f9fafb;}
+html[data-tema="oscuro"] .empleadoRolPendiente small,
+html[data-tema="oscuro"] .inicioRolAclaracion{color:#d1d5db;}
+
 /* Modo personal (T16d): cartel fijo arriba de la barra de abajo. Se corren
    para arriba lo que también va fijo abajo (avisos y botones del pedido). */
 :root{--alto-cartel-personal:44px;}
@@ -3264,6 +3282,7 @@ html.conCartelPersonal .botonNuevoPedido{bottom:calc(92px + var(--alto-cartel-pe
 .botonVolverPedidos:active{background:var(--gris-claro);}
 .botonVolverPedidos.oculto{display:none;}
 #pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(170px + env(safe-area-inset-bottom)) !important;}
+html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(190px + env(safe-area-inset-bottom)) !important;}
 .filtrosEtapaPedidos{display:flex;gap:6px;margin:0 -12px 6px;padding:2px 12px 6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .filtrosEtapaPedidos::-webkit-scrollbar{display:none;}
 .filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
@@ -3621,7 +3640,7 @@ html[data-tema="oscuro"] [data-tipo="pedidoEditado"] .iconoAviso{background:#3A3
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
 /* Entrega (T27): botón que se desliza en la ficha, "Entregar con cambios", ventana de la entrega y lo entregado en la ficha */
 .accionesFichaPedido .deslizador{margin-top:0;}
-.accionesFichaPedido .botonEntregarConCambios,.accionesFichaPedido .botonEntregarMostrador{justify-content:center;width:100%;min-height:44px;}
+.accionesFichaPedido .botonEntregarConCambios{justify-content:center;width:100%;min-height:44px;}
 .entregaSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
 .resumenEntregaFicha,.cambioEntregaFicha{color:var(--pendiente) !important;font-weight:700;}
 .resumenEntregaFicha{margin-bottom:4px;font-size:13px;}
@@ -3722,3 +3741,27 @@ html[data-tema="oscuro"] .opcionCopias:active{background:var(--acento-bg);border
 .filtrosHistorialPedidos.oculto{display:none;}
 .estadoSeguimiento[data-estado="historico"]{background:var(--gris-claro);color:var(--texto-sec);}
 html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:#374151;color:#e5e7eb !important;}
+/* "Salir a repartir" en tanda (T29c): elegir varios pedidos y la barra de abajo */
+.barraTandaPedidos{display:flex;gap:8px;margin:0 0 10px;}
+.barraTandaPedidos.oculto,.barraTandaPedidos .oculto{display:none;}
+.barraTandaPedidos .btnAccion{flex:1;justify-content:center;min-height:42px;}
+.casillaTanda{display:grid;place-items:center;flex-shrink:0;width:26px;height:26px;margin-top:7px;border:2px solid var(--borde);border-radius:7px;background:var(--superficie);color:transparent;}
+.tarjetaSeguimiento.elegidaTanda{outline:2px solid var(--acento);outline-offset:-2px;background:var(--acento-bg);}
+.casillaTanda svg{visibility:hidden;}
+.elegidaTanda .casillaTanda{border-color:var(--acento);background:var(--acento);color:#fff;}
+.elegidaTanda .casillaTanda svg{visibility:visible;}
+.pieTandaPedidos{position:fixed;left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));z-index:950;}
+.pieTandaPedidos.oculto{display:none;}
+.botonSalirEnTanda{justify-content:center;width:100%;min-height:52px;border-radius:14px;background:var(--acento);color:#fff;font-size:16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.botonSalirEnTanda:disabled{opacity:.55;box-shadow:none;cursor:default;}
+.listaRepartoTanda{list-style:none;max-height:40vh;margin:12px 0 4px;padding:0;overflow-y:auto;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);}
+.listaRepartoTanda li{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--borde);font-size:13.5px;}
+.listaRepartoTanda li:last-child{border-bottom:none;}
+.listaRepartoTanda strong{min-width:0;overflow-wrap:anywhere;}
+.listaRepartoTanda span{flex-shrink:0;color:var(--texto-sec);}
+html[data-tema="oscuro"] .casillaTanda{background:#111827;border-color:#4b5563;}
+html[data-tema="oscuro"] .elegidaTanda .casillaTanda{background:var(--acento);border-color:var(--acento);color:#fff !important;}
+html[data-tema="oscuro"] .botonSalirEnTanda{color:#fff !important;}
+html[data-tema="oscuro"] .listaRepartoTanda{background:#111827;border-color:#374151;}
+html[data-tema="oscuro"] .listaRepartoTanda li{border-color:#374151;}
+html[data-tema="oscuro"] .listaRepartoTanda span{color:#cbd5e1 !important;}

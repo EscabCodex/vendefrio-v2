@@ -387,6 +387,10 @@
                         <legend>Tus roles (podés marcar varios o ninguno)</legend>
                         <div id="inicioListaRoles"></div>
                     </fieldset>
+                    <p class="inicioAclaracion oculto" id="inicioNotaCobra">
+                        Los roles con «Cobra» quedan pendientes hasta que tu encargado
+                        los apruebe: mientras tanto no registrás cobros. Los demás valen al instante.
+                    </p>
                     <p class="inicioNota">
                         <strong>Recomendado:</strong> instalá la app en la pantalla de inicio
                         del celular. En Android: menú ⋮ del navegador &gt; "Agregar a la
@@ -717,12 +721,31 @@
             caja.dataset.dibujado = "1";
         }
 
+        // T29d: un rol con "Cobra" que todavía no tiene queda pendiente de
+        // aprobar por el dueño; se avisa antes de elegirlo.
+        const ficha = empleados.miFicha();
+        const tiene = new Set(ficha?.roles || []);
+        const pendientes = new Set(empleados.rolesPendientesDe?.(ficha) || []);
+        const conCobra = new Set(empleados.rolesConPermiso?.("cobra") || []);
+        const aclaracion = rol => {
+            if (pendientes.has(rol.id)) return "Pendiente de aprobar";
+            if (conCobra.has(rol.id) && !tiene.has(rol.id)) return "Con «Cobra»: lo aprueba tu encargado";
+            return "";
+        };
+
         caja.innerHTML = empleados.roles().map(rol => `
             <label class="inicioRol">
                 <input type="checkbox" value="${escapar(rol.id)}" ${marcados.has(rol.id) ? "checked" : ""}>
-                <span>${escapar(rol.nombre)}</span>
+                <span>${escapar(rol.nombre)}${aclaracion(rol)
+                    ? `<small class="inicioRolAclaracion">${escapar(aclaracion(rol))}</small>`
+                    : ""}</span>
             </label>
         `).join("");
+
+        document.getElementById("inicioNotaCobra")?.classList.toggle(
+            "oculto",
+            !empleados.roles().some(rol => aclaracion(rol))
+        );
     }
 
     // La pide empleados.js mientras la ficha no tenga nombre.
@@ -760,7 +783,16 @@
         empleados.guardarMisDatos(nombre, roles)
             .then(ficha => {
                 cerrar();
-                mostrarToast("¡Hola, " + escapar(ficha.nombre) + "!");
+                const pendientes = empleados.nombresDeRoles(ficha.nuevosPendientes || []);
+                if (pendientes.length) {
+                    mostrarAviso(
+                        "Rol pendiente de aprobar",
+                        pendientes.map(rol => "«" + rol + "»").join(", ") + " tiene «Cobra»: le avisamos a tu encargado para que lo apruebe. " +
+                            "Mientras tanto no registrás cobros. Los demás roles ya valen."
+                    );
+                } else {
+                    mostrarToast("¡Hola, " + escapar(ficha.nombre) + "!");
+                }
             })
             .catch(error => {
                 liberar();
