@@ -17,6 +17,9 @@
 //   resolución. Cada tarea siguiente suma los suyos: pedido preparado y
 //   faltante (T24), pedido editado (T25), pedido cancelado (T26), pedido
 //   entregado (T27) y, si el cobro quedó pendiente, también a "Cobra" (T28).
+// - Rol pendiente de aprobar (T29d): al dueño, cuando un empleado elige un
+//   rol con "Cobra". No es de un pedido: al tocarlo abre Configuración >
+//   Empleados.
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -81,6 +84,14 @@
             quien: "Le llega a quien cargó el pedido, a quien marcó la incidencia y a quien controla pedidos.",
             icono: "check",
             hecho: "Resuelta por"
+        },
+        {
+            id: "rolPendiente",
+            nombre: "Rol pendiente de aprobar",
+            quien: "Te llega cuando un empleado elige un rol con «Cobra»: lo aprobás o lo rechazás en Empleados.",
+            icono: "alerta",
+            hecho: "Lo eligió",
+            soloDueno: true
         }
     ];
     const IDS_TIPOS = TIPOS.map(tipo => tipo.id);
@@ -106,7 +117,8 @@
     let avisos = [];
     let listoDelServidor = false;
     const vistos = new Set();
-    // Fichas activas: idEmpleado -> lista de ids de rol.
+    // Fichas activas: idEmpleado -> { roles, pendientes } (ids de rol; los
+    // pendientes de aprobar no cuentan para "Cobra", T29d).
     let empleados = new Map();
     let empleadosCargados = false;
     // idPersona -> Set de tipos apagados.
@@ -222,15 +234,18 @@
     // Quién recibe cada aviso
     // -------------------------------------------------
 
-    // El dueño tiene todos los permisos; el empleado, los de sus roles.
+    // El dueño tiene todos los permisos; el empleado, los de sus roles (no
+    // los de "Todos pueden hacer todo": los roles deciden los avisos, T29d).
+    // Un rol pendiente de aprobar no cuenta para "Cobra".
     function tienePermiso(idPersona, permiso) {
         if (idPersona === "dueno") return true;
 
-        const roles = empleados.get(idPersona);
-        if (!roles) return false;
+        const ficha = empleados.get(idPersona);
+        if (!ficha) return false;
 
         const lista = window.empleadosVendeFrio?.roles?.() || [];
-        return lista.some(rol => roles.includes(rol.id) && Array.isArray(rol.permisos) && rol.permisos.includes(permiso));
+        return lista.some(rol => ficha.roles.includes(rol.id) && Array.isArray(rol.permisos) &&
+            rol.permisos.includes(permiso) && (permiso !== "cobra" || !ficha.pendientes.includes(rol.id)));
     }
 
     function personasConPermiso(permiso) {
@@ -302,8 +317,29 @@
         tanda.commit().catch(error => console.warn("No se pudo dejar un aviso.", error));
     }
 
+    // Rol pendiente de aprobar (T29d): el empleado se lo deja al dueño, sin
+    // pedido. La nube revisa que la ficha ya tenga el rol pendiente.
+    function dejarAvisoDeRolPendiente(nombresRoles) {
+        const db = obtenerFirestore();
+        const persona = typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+        if (!db || !refDistribuidora || !persona || yo.idPersona === "dueno") return;
+        if (!destinatarios("rolPendiente", ["dueno"]).length) return;
+
+        const roles = (nombresRoles || []).map(nombre => "«" + nombre + "»").join(", ");
+        refDistribuidora.collection("avisos").doc("dueno").collection("recibidos").doc(generarId("avi")).set({
+            tipo: "rolPendiente",
+            idPedido: "",
+            idEmpleado: yo.idPersona,
+            comercio: String(persona.nombre || "").trim().slice(0, 120),
+            detalle: ("Eligió " + (roles || "un rol con «Cobra»") + ". Aprobalo o rechazalo en Configuración > Empleados.").slice(0, 300),
+            persona: { idPersona: persona.idPersona, nombre: persona.nombre, uid: persona.uid },
+            horaCelular: Date.now(),
+            leido: null
+        }).catch(error => console.warn("No se pudo dejar el aviso del rol pendiente.", error));
+    }
+
     function alHacerAlgo(accion) {
-        if (!yo || !accion || !accion.pedido) return;
+        if (!yo || !accion) return;
 
         // Hasta saber quién trabaja en la distribuidora y qué avisos apagó
         // cada uno, se espera (la copia del celular llega enseguida).
@@ -311,6 +347,12 @@
             accionesEnEspera.push(accion);
             return;
         }
+
+        if (accion.accion === "rolPendiente") {
+            dejarAvisoDeRolPendiente(accion.roles);
+            return;
+        }
+        if (!accion.pedido) return;
 
         const pedido = accion.pedido;
         const autor = pedido.autor && pedido.autor.idPersona;
@@ -377,6 +419,10 @@
     // Los que se muestran: los tipos que la persona recibe.
     function avisosVisibles() {
         return avisos.filter(aviso => recibe(aviso.tipo));
+    }
+
+    function tiposDeEstaPersona() {
+        return TIPOS.filter(tipo => !tipo.soloDueno || (yo && yo.idPersona === "dueno"));
     }
 
     function sinLeer() {
@@ -519,7 +565,12 @@
                 const activos = new Map();
                 foto.docs.forEach(documento => {
                     const datos = documento.data() || {};
-                    if (datos.activo !== false) activos.set(documento.id, Array.isArray(datos.roles) ? datos.roles : []);
+                    if (datos.activo !== false) {
+                        activos.set(documento.id, {
+                            roles: Array.isArray(datos.roles) ? datos.roles : [],
+                            pendientes: Array.isArray(datos.rolesPendientes) ? datos.rolesPendientes : []
+                        });
+                    }
                 });
                 empleados = activos;
                 empleadosCargados = true;
@@ -750,6 +801,12 @@
         cerrarLista();
         cerrarEmergente();
 
+        // Rol pendiente de aprobar (T29d): no es de un pedido.
+        if (aviso.tipo === "rolPendiente") {
+            if (typeof window.abrirConfiguracionEn === "function") window.abrirConfiguracionEn("empleados");
+            return;
+        }
+
         const abierto = window.seguimientoVendeFrio?.abrirPedido?.(aviso.idPedido);
         if (!abierto && typeof mostrarToast === "function") mostrarToast("Ese pedido ya no está en Pedidos");
     }
@@ -836,13 +893,15 @@
     // -------------------------------------------------
 
     window.avisosVendeFrio = {
-        tipos: () => TIPOS.map(tipo => ({ id: tipo.id, nombre: tipo.nombre, quien: tipo.quien, permiso: tipo.permiso || "" })),
+        tipos: () => tiposDeEstaPersona().map(tipo => ({ id: tipo.id, nombre: tipo.nombre, quien: tipo.quien, permiso: tipo.permiso || "" })),
         disponible: () => Boolean(yo),
         estado: () => estado,
         recibe,
         cambiarPreferencia,
         sinLeer: () => (yo ? sinLeer() : 0),
         abrirLista,
+        // T29d: lo llama empleados.js cuando el empleado elige un rol con "Cobra".
+        avisarRolPendiente: roles => alHacerAlgo({ accion: "rolPendiente", roles }),
         escuchar(oyente) {
             if (typeof oyente !== "function") return () => {};
             oyentes.push(oyente);

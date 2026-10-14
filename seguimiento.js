@@ -1878,7 +1878,11 @@
     function marcarIncidencia(id) {
         abrirModalTexto({
             titulo: "Marcar incidencia",
-            explicacion: "El pedido sigue en su estado y aparece también en \u00abIncidencias\u00bb hasta que la resuelva el dueño o quien controla pedidos.",
+            // Con "Todos pueden hacer todo" la resuelve cualquiera (T29d).
+            explicacion: "El pedido sigue en su estado y aparece también en \u00abIncidencias\u00bb hasta que " +
+                (window.empleadosVendeFrio?.todosPuedenTodo?.() !== false
+                    ? "alguien del equipo la resuelva."
+                    : "la resuelva el dueño o quien controla pedidos."),
             etiqueta: "¿Qué pasó?",
             falta: "el motivo",
             boton: "Marcar incidencia",
