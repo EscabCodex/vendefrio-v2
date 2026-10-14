@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v155 - Pasos más cortos)
+// VendeFrío - Service Worker (v156 - Salir a repartir en tanda)
 // =====================================================
-const CACHE_NAME = "vendefrio-v155";
+const CACHE_NAME = "vendefrio-v156";
 const ARCHIVOS = [
   "./",
   "./index.html",
