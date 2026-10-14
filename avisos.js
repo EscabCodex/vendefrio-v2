@@ -256,17 +256,20 @@
     // Pedido editado (T25): a quien está trabajando en el pedido según su
     // etapa. Mientras se arma, quienes ya tildaron o anotaron faltantes y
     // "Prepara pedidos"; preparado o en reparto, "Reparte"; entregado,
-    // "Cobra". En "Cargado" todavía nadie lo trabaja: solo le llega a quien
-    // lo cargó (si lo editó el dueño).
+    // "Cobra". En "Cargado", solo quienes ya tildaron (T29b: tilda quien no
+    // tiene "Prepara pedidos" y el pedido sigue "Cargado") y quien lo cargó
+    // (si lo editó el dueño).
+    function quienesArmaron(pedido) {
+        return ["preparacion", "faltantes"].flatMap(campo => {
+            const mapa = pedido[campo] && typeof pedido[campo] === "object" ? pedido[campo] : {};
+            return Object.values(mapa).map(entrada => entrada && entrada.persona && entrada.persona.idPersona);
+        });
+    }
+
     function quienesTrabajanEnElPedido(pedido, estado) {
-        if (estado === "enPreparacion") {
-            const armaron = ["preparacion", "faltantes"].flatMap(campo => {
-                const mapa = pedido[campo] && typeof pedido[campo] === "object" ? pedido[campo] : {};
-                return Object.values(mapa).map(entrada => entrada && entrada.persona && entrada.persona.idPersona);
-            });
-            return [...armaron, ...personasConPermiso("prepara")];
-        }
-        if (["preparado", "enVehiculo", "enReparto"].includes(estado)) return personasConPermiso("reparte");
+        if (estado === "cargado") return quienesArmaron(pedido);
+        if (estado === "enPreparacion") return [...quienesArmaron(pedido), ...personasConPermiso("prepara")];
+        if (["preparado", "enReparto"].includes(estado)) return personasConPermiso("reparte");
         if (estado === "entregado") return personasConPermiso("cobra");
         return [];
     }

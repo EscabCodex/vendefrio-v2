@@ -3621,7 +3621,7 @@ html[data-tema="oscuro"] [data-tipo="pedidoEditado"] .iconoAviso{background:#3A3
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
 /* Entrega (T27): botón que se desliza en la ficha, "Entregar con cambios", ventana de la entrega y lo entregado en la ficha */
 .accionesFichaPedido .deslizador{margin-top:0;}
-.accionesFichaPedido .botonEntregarConCambios,.accionesFichaPedido .botonEntregarMostrador{justify-content:center;width:100%;min-height:44px;}
+.accionesFichaPedido .botonEntregarConCambios{justify-content:center;width:100%;min-height:44px;}
 .entregaSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
 .resumenEntregaFicha,.cambioEntregaFicha{color:var(--pendiente) !important;font-weight:700;}
 .resumenEntregaFicha{margin-bottom:4px;font-size:13px;}

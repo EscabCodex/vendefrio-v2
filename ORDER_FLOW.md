@@ -11,32 +11,35 @@ La operación real es por tandas: el vendedor toma pedidos durante la jornada y 
 ```text
 Vendedor visita el comercio → elige comercio y productos → carga cantidades y observaciones
 → confirma (se guarda en el celular si no hay internet) → se sincroniza al volver la conexión
-→ alguien lo abre en el depósito → lo prepara con checklist → ajusta faltantes con observación
-→ marca preparado → se carga al vehículo → sale a reparto → se marca entregado
+→ alguien lo abre en el depósito → lo prepara con checklist (el primer tilde lo pasa a "En preparación")
+→ ajusta faltantes con observación → marca preparado (opcional) → sale a repartir → se marca entregado
 ```
+
+Solo **Cargado** y **Entregado** son obligatorios (decidido en T29a, hecho en T29b). Se puede entregar directo desde "Cargado", por ejemplo en el mostrador, o salir a repartir sin marcar "Preparado".
 
 ## Estados
 
 | # | Estado | Significado |
 |---|---|---|
 | 1 | Pedido cargado | Quien vende lo cargó desde el comercio (antes figuraba como "ingresado") |
-| 2 | En preparación | Alguien lo está armando con la checklist |
-| 3 | Pedido preparado | Armado y listo en el depósito |
-| 4 | Cargado en el vehículo | Revisado y subido |
-| 5 | En reparto | Salió hacia el comercio |
-| 6 | Pedido entregado | Entregado y confirmado |
+| 2 | En preparación | Alguien lo está armando con la checklist: llega solo con el primer tilde (o faltante) |
+| 3 | Pedido preparado | Armado y listo en el depósito (opcional: sirve cuando se arma un día y se entrega otro) |
+| 4 | En reparto | Salió hacia el comercio ("Salir a repartir") |
+| 5 | Pedido entregado | Entregado y confirmado |
 | — | Con incidencia | Hay un problema que requiere atención; se marca encima del estado, sin reemplazarlo (supuesto a validar) |
 | — | Cancelado | Se anuló; se conserva el motivo |
 
 **Decisión:** no existe un estado separado de "pedido recibido".
 
+**Cargado en el vehículo (hasta T29b):** se juntó con "En reparto". Un pedido que quedó en ese estado se ve y se maneja como "En reparto"; su seguimiento conserva ese paso (el historial no se reescribe).
+
 ## Quién hace cada paso (decidido el 2026-10-12)
 
 Cada rol tiene casillas de permiso que marca el dueño. El dueño puede todo.
 
-- **Cualquiera:** cargar pedidos, tildar en la checklist, marcar "Entregado" y marcar una incidencia (con motivo).
-- **Prepara pedidos:** pasa de "Cargado" a "En preparación", anota faltantes y marca "Preparado".
-- **Reparte:** "Cargado en el vehículo" y "En reparto".
+- **Cualquiera:** cargar pedidos, tildar en la checklist, marcar "Entregado" (desde cualquier paso) y marcar una incidencia (con motivo).
+- **Prepara pedidos:** su primer tilde pasa el pedido de "Cargado" a "En preparación" (el tilde de quien no tiene este permiso queda anotado, pero el pedido sigue "Cargado"), anota faltantes y marca "Preparado".
+- **Reparte:** "Salir a repartir" (a "En reparto" desde Cargado, En preparación o Preparado) y volverlo al paso que tenía.
 - **Cobra:** registra el cobro.
 - **Recibe aviso de faltantes:** recibe los avisos de faltantes.
 - **Controla pedidos:** cualquier paso de cualquier pedido y resolver incidencias.
@@ -45,7 +48,7 @@ Cada rol tiene casillas de permiso que marca el dueño. El dueño puede todo.
 
 ## Vistas en la sección Pedido
 
-Pedidos cargados · en preparación · preparados · en reparto (incluye "Cargado en el vehículo") · entregados · incidencias · cancelados, más "A cobrar" para quien cobra. "Preparado" (listo en depósito) y "en reparto" (debe salir o ya está en ruta) son etapas distintas.
+Pedidos cargados · en preparación · preparados · en reparto (incluye los viejos en "Cargado en el vehículo") · historial (entregados) · incidencias · cancelados, más "A cobrar" para quien cobra. "Preparado" (listo en depósito) y "en reparto" (debe salir o ya está en ruta) son etapas distintas.
 
 ## Seguimiento e historial
 
@@ -61,7 +64,7 @@ Cada pedido muestra estado actual, fecha y hora de cada cambio, usuario que lo h
 
 ## Checklist de preparación
 
-Cada producto aparece con su cantidad y una casilla. Sirve para saber qué ya se colocó en los cajones o bultos y qué falta, sin volver a cargar cantidades.
+Se ve en la ficha desde "Cargado". Cada producto aparece con su cantidad y una casilla. Sirve para saber qué ya se colocó en los cajones o bultos y qué falta, sin volver a cargar cantidades.
 
 Pueden tildar varias personas a la vez. Para no equivocarse: cada tilde muestra quién lo puso, los tildes se ven en vivo en todos los celulares, no se puede marcar "Preparado" con productos sin tildar ni marcar como faltante, antes de "Preparado" aparece un resumen que se desliza para confirmar, y destildar lo que tildó otro pide confirmación.
 
@@ -77,7 +80,7 @@ Si se pidieron 10 unidades y solo hay 8: se ajusta la cantidad preparada a 8, se
 
 ## Entrega
 
-La acción principal es un botón que se desliza: "Entregado". Lo puede hacer cualquiera. "Entregar con cambios" ajusta lo entregado de cada producto con motivo (entrega parcial). El comprobante futuro será una boleta simple para imprimir, no una factura fiscal.
+La acción principal es un botón que se desliza: "Entregado". Lo puede hacer cualquiera, desde cualquier paso anterior (Cargado, En preparación, Preparado o En reparto). "Entregar con cambios" ajusta lo entregado de cada producto con motivo (entrega parcial). El comprobante futuro será una boleta simple para imprimir, no una factura fiscal.
 
 ## Cobro
 

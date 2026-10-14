@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28)
+// T22, T23, T24, T25, T26, T27, T28, T29b)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -220,15 +220,32 @@ service cloud.firestore {
         && textoObligatorio(entrada.nota);
     }
 
+    // Volver atrás desde "En reparto" (T29b): "Salir a repartir" lleva a "En
+    // reparto" desde cualquier paso anterior, así que "Reparte" lo vuelve al
+    // paso que tenía (también Cargado o En preparación), con motivo. Se usa
+    // la copia del estado para saber que estaba en reparto (o en "Cargado en
+    // el vehículo", que ya no se usa).
+    function vueltaDeRepartoValida(idDistribuidora, antes, entrada) {
+      return antes.get("estado", "") in ["enVehiculo", "enReparto"]
+        && entrada.estado in ["cargado", "enPreparacion"]
+        && textoObligatorio(entrada.nota)
+        && tienePermiso(idDistribuidora, "reparte");
+    }
+
     // Quién puede poner cada estado (T22). Se revisa el estado al que va, no
     // del que viene: dos cambios hechos sin señal pueden llegar desordenados
     // y los dos tienen que quedar en el historial (T17). Cada paso lo hace
     // quien tiene su permiso, y el mismo permiso lo vuelve atrás:
-    //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado.
-    //   "Reparte": Preparado <-> Cargado en el vehículo <-> En reparto.
+    //   "Prepara pedidos": Cargado <-> En preparación <-> Preparado. Desde
+    //   T29b, "En preparación" lo pone la app sola con el primer tilde (en
+    //   otra escritura, a nombre de quien tildó y solo si tiene el permiso).
+    //   "Reparte": "En reparto" desde cualquier paso anterior (T29b) y de
+    //   vuelta al paso que tenía. "Cargado en el vehículo" ya no lo usa la
+    //   app nueva; se sigue aceptando para los celulares con la versión
+    //   vieja.
     //   "Controla pedidos" y el dueño: todos.
-    // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera, y
-    // volver atrás desde "Entregado", también (T27).
+    // "Cancelado", solo el autor o el dueño (T26). "Entregado", cualquiera,
+    // desde cualquier paso, y volver atrás desde "Entregado", también (T27).
     function puedePonerEstado(idDistribuidora, antes, despues, entrada) {
       return entrada.estado == "cancelado"
         ? cancelacionValida(idDistribuidora, antes, entrada)
@@ -236,6 +253,7 @@ service cloud.firestore {
           ? entregadoValido(antes, despues)
           : (vueltaDeEntregaValida(antes, entrada)
             || tienePermiso(idDistribuidora, "controla")
+            || vueltaDeRepartoValida(idDistribuidora, antes, entrada)
             || (entrada.estado in ["cargado", "enPreparacion", "preparado"] && tienePermiso(idDistribuidora, "prepara"))
             || (entrada.estado in ["preparado", "enVehiculo", "enReparto"] && tienePermiso(idDistribuidora, "reparte"))));
     }
