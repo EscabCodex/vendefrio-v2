@@ -3,7 +3,9 @@
 Plataforma móvil (PWA) para distribuidoras que venden y reparten productos a almacenes, kioscos y supermercados. El pedido se carga una sola vez, desde el celular, y acompaña toda la operación: venta, preparación, reparto y entrega.
 
 - **Repositorio:** `EscabCodex/vendefrio-v2` (rama `main`, fuente de verdad)
-- **Pruebas:** https://vendefrio-v2.vercel.app/
+- **App del equipo (`main`):** https://vendefrio-v2.vercel.app/
+- **Tareas sin probar a mano (`desarrollo`):** https://vendefrio-v2-git-desarrollo-escab-codex.vercel.app/
+- **Pruebas automáticas:** `npm test` (carpeta `pruebas`; capturas en `capturas`)
 - **Tecnología:** HTML, CSS y JavaScript puro, PWA, datos en `localStorage` (por ahora)
 - **Objetivo actual:** llegar a una versión 1.0 profesional, usable en el trabajo real durante meses
 
@@ -21,7 +23,7 @@ Cada archivo tiene un solo trabajo. Si algo cambia, se actualiza donde correspon
 |---|---|---|
 | `README.md` | Portada y mapa | Siempre, primero |
 | `CLAUDE.md` | Instrucciones cortas que Claude Code lee solo al empezar cada sesión | Lo lee Claude Code; editarlo solo si cambia la forma de trabajo |
-| `WORKING_GUIDE.md` | Cómo trabajamos: perfil del dueño, estilo de respuesta, roles, reglas, chats, Proyecto de Claude y límite de uso | Antes de responder cualquier cosa |
+| `WORKING_GUIDE.md` | Cómo trabajamos: perfil del dueño, estilo de respuesta, roles, reglas, rutina de cada sesión, ramas, pruebas automáticas, chats, Proyecto de Claude y límite de uso | Antes de responder cualquier cosa |
 | `PRODUCT.md` | Visión, usuarios, propuesta de valor y alcance de la 1.0 | Antes de proponer o decidir funciones |
 | `ORDER_FLOW.md` | Cómo vive un pedido: estados, checklist, faltantes, entrega y trabajo sin conexión | Antes de tocar pedidos |
 | `ROADMAP.md` | Etapas, tareas y decisiones abiertas | Para saber qué sigue |

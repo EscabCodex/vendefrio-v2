@@ -1,8 +1,12 @@
 {
   "scripts": {
-    "start": "servor --reload"
+    "start": "servor --reload",
+    "test": "npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-vendefrio \"playwright test -c pruebas\""
   },
   "dependencies": {
     "servor": "^4.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
   }
 }

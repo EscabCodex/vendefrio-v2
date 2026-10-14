@@ -759,8 +759,17 @@
     // señal. Lo que vale de cada producto es su entrada más nueva según la
     // hora en que se hizo (como el estado), y siempre se ve quién la puso.
     // Lo pedido (cantidad de cada producto) no se toca: se conserva.
+    //
+    // Pasos más cortos (T29b): la checklist se usa desde "Cargado". El
+    // primer tilde (o el primer faltante) pasa el pedido solo a "En
+    // preparación", a nombre de quien tildó, en una escritura aparte (las
+    // reglas revisan cada cosa por separado). Lo pasa solo quien tiene
+    // "Prepara pedidos" (o "Controla pedidos", o el dueño): si no, el tilde
+    // queda anotado y el pedido sigue "Cargado" hasta que tilde alguien con
+    // ese permiso.
 
     const LARGO_MAXIMO_OBSERVACION_FALTANTE = 300;
+    const ESTADOS_CON_CHECKLIST = ["cargado", "enPreparacion"];
 
     // Id de cada producto del pedido: el de su línea (T20) o, si no tiene,
     // su posición en el pedido.
@@ -851,11 +860,11 @@
     }
 
     // El pedido, quién usa el celular y el producto, solo mientras el pedido
-    // está "En preparación".
+    // está "Cargado" o "En preparación" (T29b).
     function lineaParaPreparar(idPedido, clave) {
         const datos = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se prepara con la checklist.");
 
-        if (estadoActualDelPedido(datos.pedido) !== "enPreparacion") {
+        if (!ESTADOS_CON_CHECKLIST.includes(estadoActualDelPedido(datos.pedido))) {
             throw errorDelPedido("El pedido ya no está en preparación.");
         }
 
@@ -876,6 +885,35 @@
         return entradaMasNueva(entradasPorLinea(mapa).get(clave) || []);
     }
 
+    function puedePreparar() {
+        const empleados = window.empleadosVendeFrio;
+        return Boolean(empleados && (empleados.puede("prepara") || empleados.puede("controla")));
+    }
+
+    // Pedidos que este celular ya pasó a "En preparación" y todavía no se
+    // ven así (la nube confirma enseguida): evita dos entradas seguidas si
+    // se tildan dos productos muy rápido.
+    const preparacionEmpezada = new Map();
+    const ESPERA_PREPARACION_EMPEZADA = 10000;
+
+    // El primer tilde o faltante de un pedido "Cargado" lo pasa a "En
+    // preparación" (T29b). La entrada queda como la más nueva del historial,
+    // aunque otro celular tenga la hora adelantada. Devuelve true si lo pasó.
+    function empezarPreparacionSiHaceFalta(ref, pedido, persona) {
+        if (estadoActualDelPedido(pedido) !== "cargado" || !puedePreparar()) return false;
+
+        const id = String(pedido.id || "");
+        if (Date.now() - (preparacionEmpezada.get(id) || 0) < ESPERA_PREPARACION_EMPEZADA) return false;
+        preparacionEmpezada.set(id, Date.now());
+
+        const [idEntrada, entrada] = nuevaEntradaDeEstado("enPreparacion", "", persona, horaDespuesDeLaUltima(pedido));
+        enviarCambiosDelPedido(ref, [
+            { ruta: ["estados", idEntrada], valor: entrada },
+            { ruta: ["estado"], valor: "enPreparacion" }
+        ]);
+        return true;
+    }
+
     // Tilda o destilda un producto. Puede cualquiera. Devuelve el id de la
     // entrada nueva.
     function tildarProducto(idPedido, clave, tildado) {
@@ -889,6 +927,7 @@
         };
 
         enviarCambiosDelPedido(ref, [{ ruta: ["preparacion", id], valor: entrada }]);
+        if (entrada.tildado) empezarPreparacionSiHaceFalta(ref, pedido, persona);
         return id;
     }
 
@@ -916,6 +955,7 @@
         };
 
         enviarCambiosDelPedido(ref, [{ ruta: ["faltantes", id], valor: entrada }]);
+        empezarPreparacionSiHaceFalta(ref, pedido, persona);
 
         avisarAccionDePedido({
             accion: "faltante",
@@ -1238,8 +1278,8 @@
     // -------------------------------------------------
     // Entrega (T27)
     // -------------------------------------------------
-    // "Entregado" lo marca cualquiera, deslizando, desde "En reparto" o antes
-    // si se entrega en el mostrador. Es una entrada nueva del historial de
+    // "Entregado" lo marca cualquiera, deslizando, desde cualquier paso
+    // anterior: Cargado, En preparación, Preparado o En reparto (T29b). Es una entrada nueva del historial de
     // estados y, en la misma escritura, el campo "entrega": { cambios,
     // persona, horaCelular }. Por defecto se entrega todo lo preparado: lo
     // pedido o, si el producto tuvo faltante, lo que se preparó. "Entregar con
@@ -1432,7 +1472,27 @@
             });
 
         const anterior = entradas.find(entrada => ESTADOS_QUE_SE_ENTREGAN.includes(entrada.estado));
-        return anterior ? anterior.estado : "enReparto";
+        // "Cargado en el vehículo" ya no existe (T29b): vuelve a "En reparto".
+        return anterior && anterior.estado !== "enVehiculo" ? anterior.estado : "enReparto";
+    }
+
+    // Volver atrás desde "En reparto" (T29b): al paso que tenía antes de
+    // salir a repartir (Cargado, En preparación o Preparado). Un pedido que
+    // pasó por "Cargado en el vehículo" vuelve a "Preparado", como antes.
+    function estadoAntesDelReparto(pedido) {
+        if (estadoActualDelPedido(pedido) !== "enReparto") return "";
+
+        const entradas = Object.keys(pedido.estados || {})
+            .filter(id => esMapa(pedido.estados[id]))
+            .map(id => ({ id, ...pedido.estados[id] }))
+            .sort((a, b) => {
+                const diferencia = (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0);
+                if (diferencia !== 0) return diferencia;
+                return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
+            });
+
+        const anterior = entradas.find(entrada => ["cargado", "enPreparacion", "preparado"].includes(entrada.estado));
+        return anterior ? anterior.estado : "preparado";
     }
 
     // Si la persona de este celular puede volver atrás un pedido entregado
@@ -2861,6 +2921,8 @@
         puedeEntregarElPedido,
         entregarPedido,
         estadoAntesDeLaEntrega,
+        // Pasos más cortos (T29b).
+        estadoAntesDelReparto,
         puedeVolverDeEntregado,
         volverDeEntregado,
         // Cobro (T28).
