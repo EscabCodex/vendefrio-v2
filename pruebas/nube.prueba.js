@@ -7,6 +7,9 @@
 // 2. Pasos más cortos (T29b): un pedido viejo en "Cargado en el vehículo" se
 //    ve como "En reparto", vuelve un paso atrás a "Cargado" y se entrega
 //    directo desde "Cargado".
+// 3. "Salir a repartir" en tanda (T29c): elegir varios pedidos cargados,
+//    "Marcar todos", confirmar con el resumen y, si otro celular canceló uno
+//    mientras tanto, avisarlo y sacar los demás.
 const { test, expect, capturar, deslizar } = require("./ayudas");
 
 test.use({ nube: true });
@@ -41,11 +44,11 @@ async function registrarDistribuidora(page, testInfo) {
 }
 
 // Carga un pedido de 2 helados y 1 palito (sin captura si no se pide).
-async function cargarPedido(page, conCaptura) {
+async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill("Almacén Don Pepe");
+    await page.locator("#cliente").fill(comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
@@ -189,6 +192,79 @@ test("nube: pedido viejo en el vehículo, volver atrás y entregar desde Cargado
     await expect(ficha.locator(".datoFichaPedido", { hasText: "Entregado por" })).toContainText("Jere");
     await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" }).first()).toContainText("Pendiente");
     await capturar(page, "nube-12-entregado-desde-cargado");
+
+    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+});
+
+test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+    await page.evaluate(() =>
+        agregarComercio({ nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "" }) &&
+        agregarComercio({ nombre: "Super Norte", direccion: "Mitre 900", telefono: "" })
+    );
+    for (const comercio of ["Almacén Don Pepe", "Kiosco Luna", "Super Norte"]) {
+        await cargarPedido(page, false, comercio);
+    }
+
+    const tarjetas = page.locator(".tarjetaSeguimiento");
+    const pie = page.locator(".pieTandaPedidos");
+    await expect(tarjetas).toHaveCount(3);
+    await expect(pie).toBeHidden();
+
+    // "Elegir varios": las tarjetas se marcan en vez de abrir la ficha y
+    // abajo aparece "Salir a repartir (N)" en lugar del botón flotante.
+    await page.getByRole("button", { name: "Elegir varios" }).click();
+    await expect(pie.getByRole("button", { name: "Salir a repartir (0)" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeHidden();
+    await page.getByRole("checkbox", { name: /Almacén Don Pepe/ }).click();
+    await page.getByRole("checkbox", { name: /Kiosco Luna/ }).click();
+    await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(2);
+    await expect(page.locator(".fichaPedido")).toBeHidden();
+    await capturar(page, "nube-13-elegir-varios");
+
+    // "Cancelar" deja todo como estaba.
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(pie).toBeHidden();
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(tarjetas).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeVisible();
+
+    // "Marcar todos" y confirmar con el resumen.
+    await page.getByRole("button", { name: "Elegir varios" }).click();
+    await page.getByRole("button", { name: "Marcar todos" }).click();
+    await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
+    await pie.getByRole("button", { name: "Salir a repartir (3)" }).click();
+    const confirmar = page.locator("#modalRepartoTanda");
+    await expect(confirmar).toBeVisible();
+    await expect(confirmar).toContainText("3 pedidos (9 unidades) pasan a «En reparto»");
+    await expect(confirmar.locator("li")).toHaveCount(3);
+    await capturar(page, "nube-14-confirmar-tanda");
+
+    // Mientras tanto, otro (acá, el dueño desde la consola) cancela uno.
+    await page.evaluate(() => {
+        const pedido = obtenerHistorial().find(item => item.comercio === "Super Norte");
+        window.nubeVendeFrio.cancelarPedido(pedido.id, "Ya no lo quiere");
+    });
+    await confirmar.getByRole("button", { name: "Salir a repartir (3)" }).click();
+
+    const aviso = page.locator("#modalAviso");
+    await expect(aviso).toContainText("Algunos pedidos no salieron");
+    await expect(aviso).toContainText("Salieron 2 de 3 a reparto");
+    await expect(aviso).toContainText("Super Norte (ahora está «Cancelado»)");
+    await capturar(page, "nube-15-tanda-con-aviso");
+    await aviso.getByRole("button", { name: "Entendido" }).click();
+
+    // Cargados queda vacío y los dos salen en "En reparto".
+    await expect(tarjetas).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Elegir varios" })).toBeHidden();
+    await expect(pie).toBeHidden();
+    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /En reparto/ }).click();
+    await expect(tarjetas).toHaveCount(2);
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
+    await expect(tarjetas.filter({ hasText: "Kiosco Luna" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Elegir varios" })).toBeHidden();
+    await capturar(page, "nube-16-en-reparto-tanda");
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
 });

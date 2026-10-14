@@ -25,7 +25,9 @@
 // del pedido por Bluetooth, desde "Cargado" en adelante (T28b, con
 // impresion.js). En la nube, Historial es el filtro "Historial" de esta
 // lista (T27b): los entregados y los "Histórico", con buscador, filtro por
-// fecha y el filtro de un comercio o de un pedido.
+// fecha y el filtro de un comercio o de un pedido. En "Cargados" y
+// "Preparados", quien reparte elige varios pedidos y los saca a reparto de
+// una sola vez (T29c).
 // =====================================================
 
 (function () {
@@ -99,6 +101,12 @@
     let periodoHistorial = "todos";
     let comercioHistorial = "";
     let idPedidoHistorial = "";
+
+    // "Salir a repartir" en tanda (T29c): las etapas donde se eligen varios
+    // pedidos y los ids elegidos. Cada pedido sale en su propia escritura.
+    const ETAPAS_EN_TANDA = ["cargados", "preparados"];
+    let eligiendo = false;
+    const elegidos = new Set();
 
     // -------------------------------------------------
     // Datos
@@ -430,6 +438,7 @@
     function cambiarVista(nueva) {
         const nube = enLaNube();
         vistaActual = nube && nueva === "pedidos" ? "pedidos" : "nuevo";
+        if (vistaActual !== "pedidos") dejarDeElegir();
 
         pantalla.dataset.vista = vistaActual;
         vista.classList.toggle("oculto", vistaActual !== "pedidos");
@@ -444,7 +453,9 @@
     }
 
     function actualizarBotonNuevo() {
-        botonNuevo.classList.toggle("oculto", !vistaVisible());
+        // Mientras se eligen pedidos (T29c), abajo va "Salir a repartir (N)".
+        botonNuevo.classList.toggle("oculto", !vistaVisible() || eligiendo);
+        if (typeof actualizarPieTanda === "function") actualizarPieTanda();
     }
 
     botonNuevo.addEventListener("click", () => {
@@ -475,6 +486,9 @@
         } else if (pantallaOculta && !oculta) {
             cambiarVista("nuevo");
         }
+
+        // Al irse a otra sección se deja de elegir (T29c).
+        if (oculta) dejarDeElegir();
 
         entrarPorLaBarra = false;
         pantallaOculta = oculta;
@@ -654,7 +668,24 @@
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
 
         tarjeta.append(avatar, info);
+
+        // Elegir varios (T29c): la tarjeta se marca en vez de abrir la ficha.
+        if (eligiendo) {
+            const casilla = crear("span", "casillaTanda");
+            casilla.innerHTML = SVG_TILDE;
+            tarjeta.prepend(casilla);
+            tarjeta.classList.add("eligiendoTanda");
+            tarjeta.setAttribute("role", "checkbox");
+            tarjeta.setAttribute("aria-label", "Elegir el pedido de " + comercio);
+            marcarTarjeta(tarjeta, elegidos.has(tarjeta.dataset.id));
+        }
+
         return tarjeta;
+    }
+
+    function marcarTarjeta(tarjeta, elegido) {
+        tarjeta.classList.toggle("elegidaTanda", elegido);
+        tarjeta.setAttribute("aria-checked", elegido ? "true" : "false");
     }
 
     function dibujarLista() {
@@ -673,6 +704,7 @@
 
         dibujarFiltros(registros, historial);
         dibujarBarraHistorial(enHistorial);
+        dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
 
         const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
@@ -722,6 +754,7 @@
 
         etapaActual = boton.dataset.etapa;
         mostrando = TANDA;
+        dejarDeElegir();
         dibujarLista();
         boton.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     });
@@ -734,7 +767,9 @@
         }
 
         const tarjeta = evento.target.closest(".tarjetaSeguimiento");
-        if (tarjeta) abrirFicha(tarjeta.dataset.id);
+        if (!tarjeta) return;
+        if (eligiendo) alternarElegido(tarjeta);
+        else abrirFicha(tarjeta.dataset.id);
     });
 
     lista.addEventListener("keydown", evento => {
@@ -744,8 +779,235 @@
         if (!tarjeta) return;
 
         evento.preventDefault();
-        abrirFicha(tarjeta.dataset.id);
+        if (eligiendo) alternarElegido(tarjeta);
+        else abrirFicha(tarjeta.dataset.id);
     });
+
+    // -------------------------------------------------
+    // "Salir a repartir" en tanda (T29c)
+    // -------------------------------------------------
+    // En "Cargados" y "Preparados", quien puede "Salir a repartir" toca
+    // "Elegir varios", marca pedidos (o "Marcar todos") y abajo toca "Salir a
+    // repartir (N)". Pide confirmar con un resumen y pasa cada pedido a "En
+    // reparto" en su propia escritura (las mismas reglas que desde la
+    // ficha). Sin señal quedan pendientes y suben solos. Si alguno ya no se
+    // puede mover (otro lo canceló o lo movió), lo dice y mueve los demás.
+
+    const barraTanda = crear("div", "barraTandaPedidos oculto");
+    const botonElegir = crear("button", "btnAccion secundario botonElegirVarios", "Elegir varios");
+    botonElegir.type = "button";
+    const botonMarcarTodos = crear("button", "btnAccion secundario botonMarcarTodos", "Marcar todos");
+    botonMarcarTodos.type = "button";
+    const botonDejarDeElegir = crear("button", "btnAccion secundario botonDejarDeElegir", "Cancelar");
+    botonDejarDeElegir.type = "button";
+    barraTanda.append(botonElegir, botonMarcarTodos, botonDejarDeElegir);
+    resumen.after(barraTanda);
+
+    const pieTanda = crear("div", "pieTandaPedidos oculto");
+    const botonSalirEnTanda = crear("button", "btnAccion botonSalirEnTanda", "Salir a repartir");
+    botonSalirEnTanda.type = "button";
+    pieTanda.appendChild(botonSalirEnTanda);
+    document.body.appendChild(pieTanda);
+
+    // Los ids de la etapa que se ve ahora (todos, no solo los dibujados).
+    let idsDeLaEtapaTanda = [];
+
+    function puedeSalirEnTanda(etapa) {
+        return Boolean(etapa) && ETAPAS_EN_TANDA.includes(etapa.id) && pasosSiguientes(etapa.estados[0]).some(paso => paso.hacia === "enReparto");
+    }
+
+    function dibujarBarraTanda(etapa, deLaEtapa) {
+        const tanda = puedeSalirEnTanda(etapa) && deLaEtapa.length > 0;
+        idsDeLaEtapaTanda = tanda ? deLaEtapa.map(registro => String(registro.pedido.id || "")) : [];
+
+        if (!tanda) {
+            dejarDeElegir();
+        } else {
+            // Un pedido que salió de la etapa (otro celular lo movió o lo
+            // canceló) deja de estar elegido.
+            [...elegidos].forEach(id => {
+                if (!idsDeLaEtapaTanda.includes(id)) elegidos.delete(id);
+            });
+        }
+
+        barraTanda.classList.toggle("oculto", !tanda);
+        actualizarTanda();
+    }
+
+    function actualizarTanda() {
+        botonElegir.classList.toggle("oculto", eligiendo);
+        botonMarcarTodos.classList.toggle("oculto", !eligiendo);
+        botonDejarDeElegir.classList.toggle("oculto", !eligiendo);
+
+        const todos = idsDeLaEtapaTanda.length > 0 && idsDeLaEtapaTanda.every(id => elegidos.has(id));
+        botonMarcarTodos.textContent = todos ? "Desmarcar todos" : "Marcar todos";
+
+        botonSalirEnTanda.textContent = "Salir a repartir (" + elegidos.size + ")";
+        botonSalirEnTanda.disabled = elegidos.size === 0;
+        actualizarBotonNuevo();
+    }
+
+    function actualizarPieTanda() {
+        pieTanda.classList.toggle("oculto", !eligiendo || !vistaVisible());
+        document.documentElement.classList.toggle("conPieTanda", eligiendo && vistaVisible());
+    }
+
+    function dejarDeElegir() {
+        if (!eligiendo && !elegidos.size) return;
+        eligiendo = false;
+        elegidos.clear();
+    }
+
+    function alternarElegido(tarjeta) {
+        const id = tarjeta.dataset.id;
+        if (elegidos.has(id)) elegidos.delete(id);
+        else elegidos.add(id);
+        marcarTarjeta(tarjeta, elegidos.has(id));
+        actualizarTanda();
+    }
+
+    botonElegir.addEventListener("click", () => {
+        eligiendo = true;
+        elegidos.clear();
+        dibujarLista();
+    });
+
+    botonDejarDeElegir.addEventListener("click", () => {
+        dejarDeElegir();
+        dibujarLista();
+    });
+
+    botonMarcarTodos.addEventListener("click", () => {
+        const todos = idsDeLaEtapaTanda.every(id => elegidos.has(id));
+        elegidos.clear();
+        if (!todos) idsDeLaEtapaTanda.forEach(id => elegidos.add(id));
+        // Con "Marcar todos" se ven todos los elegidos, también los que
+        // estaban después de "Ver más".
+        if (!todos) mostrando = Math.max(mostrando, idsDeLaEtapaTanda.length);
+        dibujarLista();
+    });
+
+    botonSalirEnTanda.addEventListener("click", () => {
+        if (elegidos.size) abrirConfirmarTanda();
+    });
+
+    function textoPedidos(cantidad) {
+        return cantidad === 1 ? "1 pedido" : cantidad + " pedidos";
+    }
+
+    function crearModalTanda() {
+        let modal = document.getElementById("modalRepartoTanda");
+        if (modal) return modal;
+
+        modal = crear("div", "modal oculto");
+        modal.id = "modalRepartoTanda";
+
+        const contenido = crear("div", "modalContenido repartoTanda");
+        contenido.setAttribute("role", "dialog");
+        contenido.setAttribute("aria-modal", "true");
+        contenido.setAttribute("aria-labelledby", "tituloRepartoTanda");
+
+        const titulo = crear("h2", "", "Salir a repartir");
+        titulo.id = "tituloRepartoTanda";
+
+        const explicacion = crear("p", "explicacionTextoPedido");
+        explicacion.id = "explicacionRepartoTanda";
+
+        const listaTanda = crear("ul", "listaRepartoTanda");
+        listaTanda.id = "listaRepartoTanda";
+
+        const botones = crear("div", "modalBotones");
+        const volver = crear("button", "btnModalCancelar", "Volver");
+        volver.type = "button";
+        const confirmar = crear("button", "btnModalConfirmar", "Salir a repartir");
+        confirmar.type = "button";
+        confirmar.id = "confirmarRepartoTanda";
+        botones.append(volver, confirmar);
+
+        contenido.append(titulo, explicacion, listaTanda, botones);
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+
+        const cerrar = () => modal.classList.add("oculto");
+        volver.addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+        confirmar.addEventListener("click", () => {
+            cerrar();
+            salirEnTanda();
+        });
+
+        return modal;
+    }
+
+    // Los pedidos que se confirman: los elegidos al abrir la ventana. Si
+    // mientras tanto otro celular mueve alguno, al confirmar se avisa.
+    let idsAConfirmar = [];
+
+    function abrirConfirmarTanda() {
+        const modal = crearModalTanda();
+        idsAConfirmar = [...elegidos];
+        const pedidos = idsAConfirmar.map(buscarPedido).filter(Boolean);
+        const unidades = pedidos.reduce((total, pedido) => total + unidadesDelPedido(pedido), 0);
+
+        document.getElementById("explicacionRepartoTanda").textContent =
+            textoPedidos(idsAConfirmar.length) + " (" + textoUnidades(unidades) + ") pasan a \u00abEn reparto\u00bb, a tu nombre.";
+
+        const listaTanda = document.getElementById("listaRepartoTanda");
+        listaTanda.innerHTML = "";
+        pedidos.forEach(pedido => {
+            const item = crear("li", "");
+            item.append(
+                crear("strong", "", String(pedido.comercio || "SIN NOMBRE").trim()),
+                crear("span", "", textoTotal(pedido))
+            );
+            listaTanda.appendChild(item);
+        });
+
+        document.getElementById("confirmarRepartoTanda").textContent = "Salir a repartir (" + idsAConfirmar.length + ")";
+        modal.classList.remove("oculto");
+    }
+
+    function salirEnTanda() {
+        const ids = idsAConfirmar;
+        idsAConfirmar = [];
+        const noSalieron = [];
+        let salieron = 0;
+
+        ids.forEach(id => {
+            const pedido = buscarPedido(id);
+            const comercio = String(pedido && pedido.comercio || "Un pedido").trim();
+            const estado = pedido && pedido.eliminado !== true ? estadoActualDelPedido(pedido) : "";
+            const paso = pasosSiguientes(estado).find(item => item.hacia === "enReparto");
+
+            if (!paso) {
+                noSalieron.push(comercio + (estado ? " (ahora está \u00ab" + (nombreDeEstadoPedido(estado) || estado) + "\u00bb)" : " (ya no está)"));
+                return;
+            }
+
+            try {
+                window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "");
+                salieron += 1;
+            } catch (error) {
+                console.error("No se pudo sacar a reparto el pedido.", error);
+                noSalieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
+            }
+        });
+
+        dejarDeElegir();
+        dibujarLista();
+
+        if (!noSalieron.length) {
+            mostrarToast(salieron === 1 ? "Pedido en reparto" : salieron + " pedidos en reparto");
+            return;
+        }
+
+        mostrarAviso(
+            salieron ? "Algunos pedidos no salieron" : "No salió ningún pedido",
+            "Salieron " + salieron + " de " + ids.length + " a reparto. No se movieron: " + noSalieron.join("; ") + "."
+        );
+    }
 
     // -------------------------------------------------
     // Ficha del pedido

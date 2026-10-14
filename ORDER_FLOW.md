@@ -39,7 +39,7 @@ Cada rol tiene casillas de permiso que marca el dueño. El dueño puede todo.
 
 - **Cualquiera:** cargar pedidos, tildar en la checklist, marcar "Entregado" (desde cualquier paso) y marcar una incidencia (con motivo).
 - **Prepara pedidos:** su primer tilde pasa el pedido de "Cargado" a "En preparación" (el tilde de quien no tiene este permiso queda anotado, pero el pedido sigue "Cargado"), anota faltantes y marca "Preparado".
-- **Reparte:** "Salir a repartir" (a "En reparto" desde Cargado, En preparación o Preparado) y volverlo al paso que tenía.
+- **Reparte:** "Salir a repartir" (a "En reparto" desde Cargado, En preparación o Preparado) y volverlo al paso que tenía. En las listas de "Cargados" y "Preparados" puede elegir varios pedidos y sacarlos a reparto de una sola vez (T29c); entregar sigue siendo de a uno.
 - **Cobra:** registra el cobro.
 - **Recibe aviso de faltantes:** recibe los avisos de faltantes.
 - **Controla pedidos:** cualquier paso de cualquier pedido y resolver incidencias.
