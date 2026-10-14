@@ -29,32 +29,41 @@ function configuracionConEmuladores() {
         window.firebase.firestore().useEmulator("127.0.0.1", 8080);`);
 }
 
+// Prepara una página como la de cada prueba: sin internet, con los
+// emuladores si es de la nube y anotando los errores de JavaScript. La usan
+// también las pruebas con un segundo celular (por ejemplo, un empleado).
+async function prepararPagina(page, nube) {
+    const errores = [];
+    page.on("pageerror", error => errores.push(error.message));
+
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
+        const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
+        return ruta.fulfill({ status: 200, contentType: tipo, body: "" });
+    });
+
+    if (nube) {
+        const configuracion = configuracionConEmuladores();
+        await page.route("**/firebase-config.js", ruta =>
+            ruta.fulfill({ status: 200, contentType: "text/javascript", body: configuracion })
+        );
+
+        // El recordatorio "Descargá un respaldo" aparece cuando quiere
+        // (una vez por día al dueño): si tapa la pantalla, "Ahora no".
+        const recordatorio = page.locator("#modalRecordatorioRespaldo:not(.oculto)");
+        await page.addLocatorHandler(recordatorio, async () => {
+            await recordatorio.getByRole("button", { name: "Ahora no" }).click();
+        });
+    }
+
+    return errores;
+}
+
 const test = base.test.extend({
     // Las pruebas que usan la nube ponen { nube: true } con test.use().
     nube: [false, { option: true }],
 
-    page: async ({ page, nube }, use, testInfo) => {
-        const errores = [];
-        page.on("pageerror", error => errores.push(error.message));
-
-        await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
-            const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
-            return ruta.fulfill({ status: 200, contentType: tipo, body: "" });
-        });
-
-        if (nube) {
-            const configuracion = configuracionConEmuladores();
-            await page.route("**/firebase-config.js", ruta =>
-                ruta.fulfill({ status: 200, contentType: "text/javascript", body: configuracion })
-            );
-
-            // El recordatorio "Descargá un respaldo" aparece cuando quiere
-            // (una vez por día al dueño): si tapa la pantalla, "Ahora no".
-            const recordatorio = page.locator("#modalRecordatorioRespaldo:not(.oculto)");
-            await page.addLocatorHandler(recordatorio, async () => {
-                await recordatorio.getByRole("button", { name: "Ahora no" }).click();
-            });
-        }
+    page: async ({ page, nube }, use) => {
+        const errores = await prepararPagina(page, nube);
 
         await use(page);
 
@@ -95,4 +104,4 @@ async function deslizar(page, texto) {
     await page.mouse.up();
 }
 
-module.exports = { test, expect: base.expect, capturar, deslizar, CARPETA_CAPTURAS };
+module.exports = { test, expect: base.expect, capturar, deslizar, prepararPagina, CARPETA_CAPTURAS };

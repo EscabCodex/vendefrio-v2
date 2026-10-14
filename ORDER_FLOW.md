@@ -37,10 +37,14 @@ Solo **Cargado** y **Entregado** son obligatorios (decidido en T29a, hecho en T2
 
 Cada rol tiene casillas de permiso que marca el dueño. El dueño puede todo.
 
+**"Todos pueden hacer todo" (T29d):** llave en Configuración > Empleados que solo cambia el dueño. **Prendida** (así arranca cada distribuidora): cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias, y los permisos de abajo deciden solo a quién le llega cada aviso. **Apagada:** cada uno según la lista de abajo. Con la llave prendida o apagada, cobrar es solo del dueño y de quien tiene un rol con "Cobra" aprobado, y editar, eliminar y cancelar siguen siendo de quien cargó el pedido y del dueño.
+
+**Rol con "Cobra" para aprobar (T29d):** el empleado elige sus roles al entrar y en Cuenta. Si elige uno con "Cobra", queda "Pendiente de aprobar" (al dueño le llega un aviso) y no cobra hasta que el dueño lo aprueba en Configuración > Empleados; si lo rechaza, se le quita. Los demás roles valen al instante. Lo que marca el dueño vale sin aprobar.
+
 - **Cualquiera:** cargar pedidos, tildar en la checklist, marcar "Entregado" (desde cualquier paso) y marcar una incidencia (con motivo).
 - **Prepara pedidos:** su primer tilde pasa el pedido de "Cargado" a "En preparación" (el tilde de quien no tiene este permiso queda anotado, pero el pedido sigue "Cargado"), anota faltantes y marca "Preparado".
 - **Reparte:** "Salir a repartir" (a "En reparto" desde Cargado, En preparación o Preparado) y volverlo al paso que tenía. En las listas de "Cargados" y "Preparados" puede elegir varios pedidos y sacarlos a reparto de una sola vez (T29c); entregar sigue siendo de a uno.
-- **Cobra:** registra el cobro.
+- **Cobra:** registra el cobro (si el empleado eligió el rol, después de que el dueño lo apruebe).
 - **Recibe aviso de faltantes:** recibe los avisos de faltantes.
 - **Controla pedidos:** cualquier paso de cualquier pedido y resolver incidencias.
 - **Solo quien cargó el pedido (y el dueño):** editarlo en cualquier estado, eliminarlo (solo en "Cargado") y cancelarlo (antes de "Entregado", con motivo).

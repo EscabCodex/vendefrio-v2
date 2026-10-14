@@ -10,7 +10,13 @@
 // 3. "Salir a repartir" en tanda (T29c): elegir varios pedidos cargados,
 //    "Marcar todos", confirmar con el resumen y, si otro celular canceló uno
 //    mientras tanto, avisarlo y sacar los demás.
-const { test, expect, capturar, deslizar } = require("./ayudas");
+// 4. "Todos pueden hacer todo" y "Cobra" para aprobar (T29d), con el dueño y
+//    un empleado en dos celulares: con la llave prendida el empleado sin
+//    roles hace todos los pasos pero no cobra; elige "Cobranza", queda
+//    pendiente, el dueño recibe el aviso y lo aprueba, y ahí cobra; con la
+//    llave apagada vuelve a cada uno según sus permisos. Lo que la app no
+//    deja, la nube tampoco (escrituras directas, saltándose la app).
+const { test, expect, capturar, deslizar, prepararPagina } = require("./ayudas");
 
 test.use({ nube: true });
 
@@ -267,4 +273,194 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await capturar(page, "nube-16-en-reparto-tanda");
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+});
+
+// Abre Configuración desde "Más" y entra a una sección.
+async function abrirConfiguracionEn(page, seccion) {
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await page.locator(".menuMasContenido").getByRole("button", { name: /Configuración/ }).click();
+    await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
+}
+
+async function irAPedidos(page) {
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+}
+
+// Escribe directo en la nube del emulador, sin pasar por la app (como lo
+// haría alguien que se salta la app). Devuelve "ok" o el código del error.
+async function escribirDirecto(page, accion, comercio = "Almacén Don Pepe") {
+    return page.evaluate(async ({ accion, comercio }) => {
+        const db = window.firebase.firestore();
+        const guardado = JSON.parse(localStorage.getItem("vendefrio_empleado"));
+        const ref = db.collection("distribuidoras").doc(guardado.distribuidora);
+        const ficha = ref.collection("empleados").doc(guardado.idEmpleado);
+        const yo = { idPersona: guardado.idEmpleado, nombre: "Maxi", uid: guardado.uid };
+        const pedido = obtenerHistorial().find(item => item.comercio === comercio);
+        const escrituras = {
+            prenderLlave: () => ref.collection("config").doc("equipo").set({ todosPuedenTodo: true }),
+            apagarLlave: () => ref.collection("config").doc("equipo").set({ todosPuedenTodo: false }),
+            aprobarme: () => ficha.update({ rolesPendientes: [] }),
+            cobranzaSinPendiente: () => ficha.update({ roles: ["cobranza"], rolesPendientes: [] }),
+            cobrar: () => ref.collection("pedidos").doc(pedido.id).update({
+                cobro: { forma: "efectivo", monto: 100, comprobante: null, persona: yo, horaCelular: Date.now() }
+            }),
+            salirARepartir: () => ref.collection("pedidos").doc(pedido.id).update({
+                estado: "enReparto",
+                ["estados.est_directo" + Date.now()]: { estado: "enReparto", persona: yo, horaCelular: Date.now(), nota: "" }
+            })
+        };
+        try {
+            await escrituras[accion]();
+            return "ok";
+        } catch (error) {
+            return error.code || String(error);
+        }
+    }, { accion, comercio });
+}
+
+test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browser }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+
+    // El dueño ve la llave prendida (así arranca) y genera un código.
+    await abrirConfiguracionEn(page, "empleados");
+    const llave = page.locator("#llaveTodosPuedenTodo");
+    await expect(llave).toBeChecked();
+    await expect(page.locator(".llaveEquipo")).toContainText("cualquiera del equipo hace cualquier paso");
+    await capturar(page, "nube-17-llave-prendida");
+    await page.getByRole("button", { name: "Generar código para un empleado nuevo" }).click();
+    const codigo = (await page.locator("#empleadoCodigoGenerado strong").textContent()).trim();
+    expect(codigo).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+
+    // Segundo celular: el empleado entra con el código, sin roles.
+    const contexto = await browser.newContext({
+        ...testInfo.project.use,
+        baseURL: testInfo.project.use.baseURL,
+        serviceWorkers: "block"
+    });
+    const empleado = await contexto.newPage();
+    const erroresEmpleado = await prepararPagina(empleado, true);
+    await empleado.goto("/");
+    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.locator("#inicioCodigo").fill(codigo);
+    await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
+    await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });
+    await empleado.locator("#inicioNombreEmpleado").fill("Maxi");
+    await expect(empleado.locator("#inicioListaRoles .inicioRol", { hasText: "Cobranza" }))
+        .toContainText("Con «Cobra»: lo aprueba tu encargado");
+    await expect(empleado.locator("#inicioNotaCobra")).toBeVisible();
+    await empleado.locator("#inicioFormDatosEmpleado").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(empleado.locator("#pantallaInicioSesion")).toBeHidden();
+
+    // El dueño carga un pedido; el empleado, sin roles, lo arma, marca y
+    // resuelve una incidencia, sale a repartir y lo entrega, pero no cobra.
+    await irAPedidos(page);
+    await cargarPedido(page, false);
+    await irAPedidos(empleado);
+    const tarjeta = empleado.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" });
+    await tarjeta.click();
+    const ficha = empleado.locator(".fichaPedido");
+    await ficha.locator(".lineaChecklist", { hasText: "Helado 1 kg" }).click();
+    await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("En preparación");
+    await expect(ficha.locator(".pasoSeguimiento.actual")).toContainText("Maxi");
+
+    await ficha.getByRole("button", { name: "Marcar incidencia" }).click();
+    const modalTexto = empleado.locator("#modalTextoPedido");
+    await expect(modalTexto).toContainText("hasta que alguien del equipo la resuelva");
+    await modalTexto.locator("#campoTextoPedido").fill("Falta un helado en la cámara");
+    await modalTexto.getByRole("button", { name: "Marcar incidencia" }).click();
+    await ficha.getByRole("button", { name: "Resolver incidencia" }).click();
+    await modalTexto.locator("#campoTextoPedido").fill("Apareció en la otra cámara");
+    await modalTexto.getByRole("button", { name: "Resolver", exact: true }).click();
+    await expect(ficha.getByRole("button", { name: "Resolver incidencia" })).toHaveCount(0);
+
+    await ficha.getByRole("button", { name: "Salir a repartir" }).click();
+    await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("En reparto");
+    // Espera a que la nube confirme el paso (la ficha se redibuja una vez).
+    await expect(ficha).not.toContainText("Pendiente de sincronizar");
+    await expect(empleado.getByRole("button", { name: /Deslizá para marcar Entregado/ })).toBeVisible();
+    await deslizar(empleado, "Deslizá para marcar Entregado");
+    await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Entregado");
+    await expect(empleado.getByText("¿Cómo pagó?")).toHaveCount(0);
+    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" }).first()).toContainText("Pendiente");
+    await expect(ficha.getByRole("button", { name: "Registrar cobro" })).toHaveCount(0);
+    await capturar(empleado, "nube-18-empleado-entrega-sin-cobrar");
+
+    // Saltándose la app, la nube tampoco lo deja cobrar, ni tocar la llave.
+    expect(await escribirDirecto(empleado, "cobrar")).toBe("permission-denied");
+    expect(await escribirDirecto(empleado, "apagarLlave")).toBe("permission-denied");
+    expect(await escribirDirecto(empleado, "cobranzaSinPendiente")).toBe("permission-denied");
+    await ficha.getByRole("button", { name: "Cerrar" }).click();
+
+    // El empleado elige "Cobranza" en Cuenta: queda pendiente de aprobar.
+    await abrirConfiguracionEn(empleado, "cuenta");
+    await empleado.getByRole("button", { name: "Cambiar mi nombre o mis roles" }).click();
+    await empleado.locator("#inicioListaRoles .inicioRol", { hasText: "Cobranza" }).click();
+    await capturar(empleado, "nube-19-elegir-cobranza");
+    await empleado.locator("#inicioFormDatosEmpleado").getByRole("button", { name: "Guardar y entrar" }).click();
+    const aviso = empleado.locator("#modalAviso");
+    await expect(aviso).toContainText("Rol pendiente de aprobar");
+    await expect(aviso).toContainText("«Cobranza» tiene «Cobra»");
+    await aviso.getByRole("button", { name: "Entendido" }).click();
+    await expect(empleado.locator(".configDetalle")).toContainText("Cobranza (pendiente de aprobar)");
+    await expect(empleado.locator("#misPermisos")).toContainText("Cobrar: todavía no. «Cobranza» está pendiente de aprobar");
+    await capturar(empleado, "nube-20-cuenta-pendiente");
+
+    // Mientras está pendiente, ni la app ni la nube lo dejan cobrar ni
+    // aprobarse solo.
+    expect(await escribirDirecto(empleado, "aprobarme")).toBe("permission-denied");
+    expect(await escribirDirecto(empleado, "cobrar")).toBe("permission-denied");
+
+    // Al dueño le llega el aviso; al tocarlo abre Empleados y lo aprueba.
+    await irAPedidos(page);
+    await page.locator("#pantallaPedido .campanaAvisos").click();
+    const itemAviso = page.locator(".itemAviso[data-tipo=\"rolPendiente\"]");
+    await expect(itemAviso).toContainText("Rol pendiente de aprobar");
+    await expect(itemAviso).toContainText("Maxi");
+    await itemAviso.click();
+    const pendiente = page.locator(".empleadoRolPendiente");
+    await expect(pendiente).toContainText("Cobranza");
+    await expect(pendiente).toContainText("Pendiente de aprobar");
+    await pendiente.scrollIntoViewIfNeeded();
+    await capturar(page, "nube-21-aprobar-rol");
+    await pendiente.getByRole("button", { name: "Aprobar" }).click();
+    await expect(page.locator(".empleadoRolPendiente")).toHaveCount(0);
+
+    // Aprobado, el empleado cobra el pedido que entregó.
+    await expect(empleado.locator("#misPermisos")).toContainText("Cobrar: sí");
+    await irAPedidos(empleado);
+    await empleado.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /A cobrar/ }).click();
+    await tarjeta.click();
+    await ficha.getByRole("button", { name: "Registrar cobro" }).click();
+    await empleado.getByRole("button", { name: "Efectivo" }).click();
+    await empleado.getByRole("button", { name: "Guardar cobro" }).click();
+    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobrado por" })).toContainText("Maxi");
+    await ficha.getByRole("button", { name: "Cerrar" }).click();
+
+    // Con la llave apagada, el empleado (que solo tiene Cobranza) ya no ve
+    // "Salir a repartir" ni puede hacerlo saltándose la app.
+    await abrirConfiguracionEn(page, "empleados");
+    await page.locator("#llaveTodosPuedenTodo").uncheck();
+    await expect(page.locator("#textoLlaveEquipo")).toContainText("Apagada: cada uno según los permisos");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await capturar(page, "nube-22-llave-apagada");
+    await page.evaluate(() => agregarComercio({ nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "" }));
+    await irAPedidos(page);
+    await cargarPedido(page, false, "Kiosco Luna");
+
+    await irAPedidos(empleado);
+    await empleado.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Cargados/ }).click();
+    await empleado.locator(".tarjetaSeguimiento", { hasText: "Kiosco Luna" }).click();
+    await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Cargado");
+    await expect(ficha.getByRole("button", { name: "Salir a repartir" })).toHaveCount(0);
+    expect(await escribirDirecto(empleado, "salirARepartir", "Kiosco Luna")).toBe("permission-denied");
+    expect(await escribirDirecto(empleado, "prenderLlave")).toBe("permission-denied");
+    await ficha.getByRole("button", { name: "Cerrar" }).click();
+    await abrirConfiguracionEn(empleado, "cuenta");
+    await expect(empleado.locator("#misPermisos")).toContainText("Ninguno por ahora");
+    await expect(empleado.locator("#misPermisos")).toContainText("Cobrar: sí");
+
+    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+    await contexto.close();
+    expect(erroresEmpleado, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });

@@ -650,10 +650,24 @@
             `;
         }
 
+        // Roles con "Cobra" que eligió el empleado y esperan tu aprobación (T29d).
+        const pendientes = empleados.rolesPendientesDe(empleado).map(idRol => `
+            <div class="empleadoRolPendiente">
+                <span><strong>${escaparTexto(empleados.nombresDeRoles([idRol])[0] || "Un rol")}</strong>
+                    · Pendiente de aprobar<br>
+                    <small>Tiene «Cobra»: hasta que lo apruebes, no registra cobros.</small></span>
+                <div class="configAcciones">
+                    <button type="button" data-accion="rechazarRol" data-rol="${escaparTexto(idRol)}" ${datos}>Rechazar</button>
+                    <button type="button" data-accion="aprobarRol" data-rol="${escaparTexto(idRol)}" class="configCuentaIngresar" ${datos}>Aprobar</button>
+                </div>
+            </div>
+        `).join("");
+
         return `
             <li class="empleadoFila">
                 <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
                 <small>Activo · ${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
+                ${pendientes}
                 <div class="configAcciones">
                     <button type="button" data-accion="cambiarRolesEmpleado" ${datos}>Cambiar roles</button>
                     <button type="button" data-accion="codigoReingreso" ${datos}
@@ -790,6 +804,31 @@
         `;
     }
 
+    // "Todos pueden hacer todo" (T29d): solo la cambia el dueño.
+    function htmlLlaveEquipo() {
+        const prendida = window.empleadosVendeFrio.todosPuedenTodo();
+        return `
+            <div class="llaveEquipo">
+                <label class="configSwitch">
+                    <input type="checkbox" id="llaveTodosPuedenTodo" ${prendida ? "checked" : ""}>
+                    <span><strong>Todos pueden hacer todo</strong><br>
+                    <small id="textoLlaveEquipo">${htmlTextoLlave(prendida)}</small></span>
+                </label>
+                <p class="configEstado">
+                    <small>Siempre, prendida o apagada: cobrar es solo tuyo y de quien tiene
+                    un rol con «Cobra» aprobado por vos. Editar, eliminar y cancelar un
+                    pedido, solo quien lo cargó y vos.</small>
+                </p>
+            </div>
+        `;
+    }
+
+    function htmlTextoLlave(prendida) {
+        return prendida
+            ? "Prendida: cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias. Los roles deciden solo a quién le llega cada aviso."
+            : "Apagada: cada uno según los permisos de sus roles.";
+    }
+
     function htmlEmpleados() {
         const empleados = window.empleadosVendeFrio;
 
@@ -803,6 +842,7 @@
         }
 
         return `
+            ${htmlLlaveEquipo()}
             <p class="configEstado">
                 Generá un código y pasáselo al empleado (en persona o por WhatsApp).
                 Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las
@@ -829,7 +869,9 @@
                 <strong>Roles</strong><br>
                 Creá, renombrá o eliminá los roles que pueden elegir tus empleados,
                 y marcá qué permite cada uno. Una persona puede lo que permite
-                cualquiera de sus roles. Vos podés todo.
+                cualquiera de sus roles. Vos podés todo. Con «Todos pueden hacer
+                todo» prendida, los permisos deciden solo a quién le llega cada
+                aviso y quién cobra.
             </p>
             <div id="editorRoles">${htmlEditorRoles()}</div>
         `;
@@ -978,7 +1020,8 @@
         const nombresPermisos = empleados?.permisos?.() || [];
         const casillas = avisos.tipos().map(tipo => {
             const permiso = nombresPermisos.find(item => item.id === tipo.permiso);
-            const sinPermiso = permiso && !empleados.puede(tipo.permiso)
+            // Los avisos van por los roles, no por "Todos pueden hacer todo" (T29d).
+            const sinPermiso = permiso && !empleados.tieneEnSusRoles(tipo.permiso)
                 ? `<br><em>Hoy no te llega: no tenés el permiso "${escaparTexto(permiso.nombre)}".</em>`
                 : "";
 
@@ -1013,10 +1056,32 @@
     }
 
     // Permisos del empleado (T19): salen de sus roles; los marca el dueño.
-    function htmlMisPermisos(nombres) {
+    // Con "Todos pueden hacer todo" prendida, cualquier paso; cobrar, solo
+    // con un rol con "Cobra" aprobado (T29d).
+    function htmlMisPermisos() {
+        const empleados = window.empleadosVendeFrio;
+        const ficha = empleados.miFicha();
+        const pendientes = empleados.nombresDeRoles(empleados.rolesPendientesDe(ficha));
+        const cobra = empleados.puede("cobra");
+
+        let texto = "";
+        if (empleados.todosPuedenTodo()) {
+            texto = "Podés hacer cualquier paso de cualquier pedido: tu encargado dejó prendida «Todos pueden hacer todo».";
+        } else {
+            const nombres = empleados.nombresDePermisos(empleados.misPermisos().filter(id => id !== "cobra"));
+            texto = nombres.length ? nombres.join(", ") : "Ninguno por ahora";
+        }
+
+        const textoCobro = cobra
+            ? "Cobrar: sí, con «Cobra»."
+            : pendientes.length
+                ? "Cobrar: todavía no. " + pendientes.map(nombre => "«" + nombre + "»").join(", ") + " está pendiente de aprobar por tu encargado."
+                : "Cobrar: no (hace falta un rol con «Cobra»).";
+
         return `
             <strong>Tus permisos</strong><br>
-            ${nombres.length ? escaparTexto(nombres.join(", ")) : "Ninguno por ahora"}<br>
+            ${escaparTexto(texto)}<br>
+            ${escaparTexto(textoCobro)}<br>
             <small>Los da tu encargado según tus roles.</small>
         `;
     }
@@ -1026,8 +1091,13 @@
     function htmlCuentaEmpleado() {
         const empleados = window.empleadosVendeFrio;
         const ficha = empleados.miFicha();
-        const roles = ficha ? empleados.nombresDeRoles(ficha.roles) : [];
-        const permisos = empleados.nombresDePermisos(empleados.misPermisos());
+        const pendientes = new Set(empleados.rolesPendientesDe(ficha));
+        const roles = ficha
+            ? (ficha.roles || []).map(id => {
+                const nombre = empleados.nombresDeRoles([id])[0];
+                return nombre && pendientes.has(id) ? nombre + " (pendiente de aprobar)" : nombre;
+            }).filter(Boolean)
+            : [];
         const nube = window.nubeVendeFrio;
 
         const textos = {
@@ -1048,7 +1118,7 @@
                 <strong>${escaparTexto(ficha?.nombre) || "…"}</strong><br>
                 Roles: ${roles.length ? escaparTexto(roles.join(", ")) : "ninguno"}
             </p>
-            <p class="configEstado" id="misPermisos">${htmlMisPermisos(permisos)}</p>
+            <p class="configEstado" id="misPermisos">${htmlMisPermisos()}</p>
             <button type="button" data-accion="editarDatosEmpleado">Cambiar mi nombre o mis roles</button>
             ${htmlNombreDistribuidora()}
             <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
@@ -1625,6 +1695,20 @@
                 .catch(error => mostrarAviso("No se guardaron los roles", error.message));
         }
 
+        // Rol pendiente de aprobar (T29d).
+        if (accion === "aprobarRol" || accion === "rechazarRol") {
+            const boton = event.target.closest("[data-accion]");
+            const empleados = window.empleadosVendeFrio;
+            const nombreRol = empleados.nombresDeRoles([boton.dataset.rol])[0] || "el rol";
+            const aprobar = accion === "aprobarRol";
+
+            (aprobar ? empleados.aprobarRol : empleados.rechazarRol)(boton.dataset.empleado, boton.dataset.rol)
+                .then(() => mostrarToast(aprobar
+                    ? "Aprobado: " + (boton.dataset.nombre || "el empleado") + " ya puede cobrar"
+                    : "Rechazado: se le quitó «" + nombreRol + "»"))
+                .catch(error => mostrarAviso("No se guardó el cambio", error.message));
+        }
+
         if (accion === "darDeBaja") {
             const boton = event.target.closest("[data-accion]");
             const nombre = boton.dataset.nombre || "este empleado";
@@ -2122,6 +2206,23 @@
         guardarCampo(campo, valor);
     });
 
+    // "Todos pueden hacer todo" (T29d): se guarda al tocar la llave.
+    document.addEventListener("change", event => {
+        if (event.target.id !== "llaveTodosPuedenTodo") return;
+
+        const llave = event.target;
+        window.empleadosVendeFrio.cambiarTodosPuedenTodo(llave.checked)
+            .then(prendida => {
+                const texto = document.getElementById("textoLlaveEquipo");
+                if (texto) texto.textContent = htmlTextoLlave(prendida);
+                mostrarToast(prendida ? "Listo: todos pueden hacer todo" : "Listo: cada uno según sus permisos");
+            })
+            .catch(error => {
+                llave.checked = !llave.checked;
+                mostrarAviso("No se guardó el cambio", error.message);
+            });
+    });
+
     // Permisos de un rol (T19): se guardan al tocar la casilla.
     document.addEventListener("change", event => {
         const casilla = event.target.closest?.(".rolPermiso");
@@ -2316,9 +2417,18 @@
         window.empleadosVendeFrio.escucharPermisos?.(() => {
             const texto = document.getElementById("misPermisos");
             if (!texto || !window.empleadosVendeFrio.esEmpleado()) return;
-            texto.innerHTML = htmlMisPermisos(
-                window.empleadosVendeFrio.nombresDePermisos(window.empleadosVendeFrio.misPermisos())
-            );
+            texto.innerHTML = htmlMisPermisos();
+        });
+
+        // "Todos pueden hacer todo" (T29d): si cambia en otro celular, se
+        // actualizan la llave del dueño y los permisos del empleado.
+        window.empleadosVendeFrio.escucharTodosPuedenTodo?.(prendida => {
+            const llave = document.getElementById("llaveTodosPuedenTodo");
+            if (llave) llave.checked = prendida;
+            const textoLlave = document.getElementById("textoLlaveEquipo");
+            if (textoLlave) textoLlave.textContent = htmlTextoLlave(prendida);
+            const texto = document.getElementById("misPermisos");
+            if (texto && window.empleadosVendeFrio.esEmpleado()) texto.innerHTML = htmlMisPermisos();
         });
     }
 
