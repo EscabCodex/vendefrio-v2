@@ -231,7 +231,8 @@ function crearManejador({ obtenerApp, enviar }) {
             resultado = await enviar(app, mensajes);
         } catch (error) {
             console.error("Firebase Cloud Messaging no mandó las notificaciones.", error);
-            return responder(response, 502, { ok: false, message: "No se pudieron mandar las notificaciones." });
+            const codigo = textoCorto(error && (error.code || error.name) || "", 80);
+            return responder(response, 502, { ok: false, message: "No se pudieron mandar las notificaciones.", codigo });
         }
 
         // Los celulares que ya no existen se borran.
@@ -250,7 +251,9 @@ function crearManejador({ obtenerApp, enviar }) {
             return await notificar(request, response);
         } catch (error) {
             console.error("Falló la función de notificaciones.", error);
-            return responder(response, 500, { ok: false, message: "No se pudieron mandar las notificaciones." });
+            // El código del error ayuda a saber qué pasó (nunca lleva claves).
+            const codigo = textoCorto(error && (error.code || error.name) || "", 80);
+            return responder(response, 500, { ok: false, message: "No se pudieron mandar las notificaciones.", codigo });
         }
     };
 }

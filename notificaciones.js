@@ -348,7 +348,10 @@
                 body: JSON.stringify({ idDistribuidora: yo.idDistribuidora, idAviso: String(idAviso), para }),
                 keepalive: true
             });
-            if (!respuesta.ok) console.warn("La función de notificaciones respondió " + respuesta.status + ".");
+            if (!respuesta.ok) {
+                const datos = await respuesta.json().catch(() => ({}));
+                console.warn("La función de notificaciones respondió " + respuesta.status + ".", datos.codigo || datos.message || "");
+            }
         } catch (error) {
             console.warn("No se pudo pedir la notificación.", error);
         }
