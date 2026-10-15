@@ -1793,3 +1793,90 @@ html,body{overflow-x:clip !important;}
 /* Pantallas de entrada: "Volver" con la flecha nueva, sin el "‹" viejo (T52). */
 html .inicioVolver{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--texto-sec);font-weight:700;}
 .statsFilaTexto > .statsChips{justify-content:flex-start;}
+
+/* ===== Pedidos por WhatsApp (T53 a T57) ===== */
+[data-color="whatsapp"]{background:var(--visitado-bg) !important;color:var(--visitado) !important;}
+.pantallaWhatsapp .container{display:grid;gap:14px;padding-bottom:110px;}
+.waTarjeta{display:grid;gap:10px;min-width:0;padding:16px;border:var(--borde-tarjeta);border-radius:var(--radius-lg);background:var(--superficie);box-shadow:var(--sombra);}
+.waTarjeta h2{margin:0;color:var(--texto-sec);font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;}
+.waAyuda{margin:0;color:var(--texto-sec);font-size:13px;line-height:1.45;}
+.waCampo{display:flex;align-items:baseline;gap:8px;margin:2px 0 -4px;color:var(--texto);font-size:14px;font-weight:700;}
+.waCampo small{color:var(--texto-sec);font-weight:600;}
+.waTarjeta textarea,.waTarjeta input[type="search"],.waTarjeta input[type="text"]{
+  width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--borde-fuerte);border-radius:var(--radius-md);
+  background:var(--fondo);color:var(--texto);font:inherit;font-size:15px;line-height:1.4;resize:vertical;
+}
+.waEnlace{min-height:32px;padding:0;border:0;background:none;color:var(--acento-oscuro);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+html[data-tema="oscuro"] .waEnlace{color:var(--acento);}
+.waEjemplo{display:grid;gap:4px;margin:0;padding:12px 14px;border-radius:var(--radius-md) var(--radius-md) var(--radius-md) 4px;background:var(--visitado-bg);color:var(--texto);font-size:14px;line-height:1.45;}
+.waEjemplo small{color:var(--texto-sec);font-size:12px;font-weight:700;}
+.waAviso{display:flex;gap:8px;align-items:flex-start;margin:0;padding:10px 12px;border-radius:var(--radius-sm);background:var(--info-bg);color:var(--texto);font-size:13px;line-height:1.4;}
+.waAviso svg{flex-shrink:0;margin-top:1px;color:var(--info);}
+.waCabeceraLista{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;}
+.waCabeceraLista .waCampo{margin:0;}
+.waCabeceraLista > span{color:var(--texto-ter);white-space:nowrap;}
+.waLista{display:grid;max-height:340px;overflow:auto;border:1px solid var(--borde);border-radius:var(--radius-md);}
+.waComercio{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-bottom:1px solid var(--borde);cursor:pointer;}
+.waComercio:last-child{border-bottom:0;}
+.waComercio input{flex-shrink:0;width:22px;height:22px;margin:0;accent-color:var(--acento);}
+.waComercio span{display:grid;min-width:0;}
+.waComercio strong{overflow:hidden;font-size:15px;text-overflow:ellipsis;white-space:nowrap;}
+.waComercio small{color:var(--texto-sec);font-size:12.5px;}
+.waComercio.sinTelefono{opacity:.6;cursor:default;}
+.waVacio{margin:0;padding:14px;color:var(--texto-sec);font-size:13.5px;text-align:center;}
+.waBotonGrande,.waBotonPrincipal,.waBotonSecundario{
+  display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 16px;
+  border:0;border-radius:var(--radio-pildora);font:inherit;font-size:15px;font-weight:800;text-decoration:none;cursor:pointer;
+}
+.waBotonGrande,.waBotonPrincipal{background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);}
+html[data-tema="oscuro"] .waBotonGrande,html[data-tema="oscuro"] .waBotonPrincipal{color:#0C0F13;box-shadow:none;}
+.waBotonGrande:disabled{opacity:.45;box-shadow:none;cursor:default;}
+.waBotonAuto{background:var(--visitado);color:#fff;box-shadow:none;}
+html[data-tema="oscuro"] .waBotonAuto{background:var(--visitado);color:#0C0F13;}
+.waBotonSecundario{min-height:46px;background:var(--superficie-2);color:var(--texto);}
+.waProgreso{margin:0;font-size:15px;}
+.waBarra{height:8px;overflow:hidden;border-radius:999px;background:var(--superficie-2);}
+.waBarra span{display:block;height:100%;border-radius:inherit;background:var(--visitado);transition:width .3s;}
+.waListo{display:flex;align-items:center;gap:8px;margin:0;padding:12px 14px;border-radius:var(--radius-md);background:var(--visitado-bg);color:var(--visitado);font-weight:800;}
+.waListaRonda{display:grid;border:1px solid var(--borde);border-radius:var(--radius-md);}
+.waFilaRonda{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:4px 8px 4px 14px;border-bottom:1px solid var(--borde);}
+.waFilaRonda:last-child{border-bottom:0;}
+.waFilaRonda span{overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap;}
+.waFilaRonda a{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;min-height:40px;padding:0 14px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:14px;font-weight:800;text-decoration:none;}
+html[data-tema="oscuro"] .waFilaRonda a{color:var(--acento);}
+.waFilaRonda.hecho span{color:var(--texto-sec);}
+.waFilaRonda.hecho a{background:var(--visitado-bg);color:var(--visitado);}
+.waPasos{display:grid;gap:6px;margin:0;padding-left:20px;color:var(--texto);font-size:14px;line-height:1.45;}
+.waFilaLlave{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:6px 0;border-bottom:1px solid var(--borde);cursor:pointer;}
+.waFilaLlave span{display:grid;gap:2px;min-width:0;}
+.waFilaLlave strong{font-size:15px;}
+.waFilaLlave small{color:var(--texto-sec);font-size:12.5px;line-height:1.35;}
+.waTarjeta code{padding:2px 6px;border-radius:6px;background:var(--superficie-2);font-size:12.5px;word-break:break-all;}
+.waEstado{display:grid;gap:6px;margin:0;padding:0;list-style:none;font-size:14px;}
+.waEstado li{display:flex;align-items:center;gap:8px;}
+.waEstado li.ok{color:var(--visitado);}
+.waEstado li.falta{color:var(--pendiente);}
+.waMensaje{display:grid;gap:8px;padding:14px;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);}
+.waMensaje header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;}
+.waMensaje header strong{font-size:15px;}
+.waMensaje header small{color:var(--texto-ter);font-size:12.5px;}
+.waEtiqueta{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:800;}
+.waEtiqueta.entendido{background:var(--visitado-bg);color:var(--visitado);}
+.waEtiqueta.revisar{background:var(--pendiente-bg);color:var(--pendiente);}
+.waTextoMensaje{display:flex;gap:6px;align-items:flex-start;margin:0;color:var(--texto-sec);font-size:14px;font-style:italic;line-height:1.45;}
+.waTextoMensaje svg{flex-shrink:0;margin-top:2px;}
+.waProductos{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:14.5px;}
+.waProductos b{display:inline-block;min-width:34px;}
+.waProductos small{color:var(--texto-ter);}
+.waNoEntendido{margin:0;color:var(--pendiente);font-size:13px;line-height:1.4;}
+.waBotonesMensaje{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;}
+.waBotonesMensaje .waBotonPrincipal,.waBotonesMensaje .waBotonSecundario{min-height:46px;font-size:14px;}
+.waAvisoInicio{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 14px;padding:14px;border:0;text-align:left;color:var(--texto);font:inherit;cursor:pointer;}
+.waAvisoInicio .waAvisoIcono{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:14px;background:var(--visitado-bg);color:var(--visitado);}
+.waAvisoInicio > span:nth-child(2){display:grid;flex:1;min-width:0;}
+.waAvisoInicio strong{font-size:15px;}
+.waAvisoInicio small{color:var(--texto-sec);font-size:12.5px;}
+.waAvisoInicio > b{color:var(--texto-ter);}
+.waAudioCompartido{display:grid;gap:6px;margin:4px 0 8px;}
+.waAudioCompartido audio{width:100%;}
+.waConfirmar{z-index:1200;}

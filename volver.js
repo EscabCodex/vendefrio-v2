@@ -11,7 +11,7 @@
     const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
     // Los que llevan a Inicio no necesitan la casita al lado.
     const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
-    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre"];
+    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
 
     function preferencia(campo) {

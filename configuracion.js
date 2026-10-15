@@ -348,6 +348,7 @@
             accesos.innerHTML =
                 tarjeta("rutas", "mapa", "Rutas") +
                 tarjeta("estadisticas", "grafico", "Estadísticas") +
+                tarjeta("whatsapp", "whatsapp", "WhatsApp") +
                 (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
                 (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
         }
