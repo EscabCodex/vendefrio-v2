@@ -229,6 +229,10 @@
             decir("No entendí «" + texto + "». Probá de nuevo.");
             return false;
         }
+        return ejecutarOrden(orden);
+    }
+
+    function ejecutarOrden(orden) {
         const navegacion = window.navegacionVendeFrio;
         switch (orden.accion) {
             case "proximaParada": {
@@ -272,6 +276,168 @@
             default:
                 return false;
         }
+    }
+
+    // -------------------------------------------------
+    // IA (T54): solo si la voz gratis no entendió y el dueño la prendió en
+    // Más > Trabajo. Primero la del celular (gratis y privada, Chrome con
+    // Gemini Nano), después la de la nube (api/entender.js, con Claude).
+    // -------------------------------------------------
+
+    const PANTALLAS_IA = ["pedido", "menu", "comercios", "catalogo", "rutas", "estadisticas", "cierre"];
+    const ESQUEMAS_IA = {
+        comando: {
+            type: "object",
+            properties: {
+                accion: { type: "string", enum: ["nuevoPedido", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue", "nada"] },
+                comercio: { type: "string" },
+                pantalla: { type: "string", enum: [...PANTALLAS_IA, ""] }
+            },
+            required: ["accion", "comercio", "pantalla"],
+            additionalProperties: false
+        },
+        pedido: {
+            type: "object",
+            properties: {
+                comercio: { type: "string" },
+                productos: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: { marca: { type: "string" }, producto: { type: "string" }, cantidad: { type: "integer" } },
+                        required: ["marca", "producto", "cantidad"],
+                        additionalProperties: false
+                    }
+                },
+                sinEntender: { type: "array", items: { type: "string" } }
+            },
+            required: ["comercio", "productos", "sinEntender"],
+            additionalProperties: false
+        }
+    };
+    const INSTRUCCIONES_IA = {
+        comando: "Sos el asistente de voz de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Te llega lo que dijo un vendedor, en español rioplatense. Elegí una acción: nuevoPedido (cargar un pedido), ir (que lo guíe hasta un comercio), visitado (ya pasó por un comercio), ficha (ver datos de un comercio), pantalla (abrir: pedido, menu, comercios, catalogo, rutas, estadisticas o cierre), proximaParada (a dónde ir ahora), llegue (llegó al comercio) o nada (no es para la app). En comercio poné el nombre exacto de la lista, o \"\". En pantalla poné la pantalla solo si la acción es pantalla; si no, \"\".",
+        pedido: "Sos el asistente de VendeFrío. Te llega un pedido dictado o pegado de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad en unidades (una docena son 12), usando solo productos del catálogo, con marca y producto escritos exactamente como en la lista. Si nombra un comercio de la lista, ponelo exacto en comercio; si no, \"\". Lo que no esté en el catálogo va en sinEntender. Ignorá saludos y relleno."
+    };
+
+    function preferenciaIA(campo) {
+        try {
+            return JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}")[campo] === true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function iaPrendida() {
+        return preferenciaIA("iaCelular") || preferenciaIA("iaNube");
+    }
+
+    // "available", "downloadable", "downloading" o "unavailable".
+    async function estadoIACelular() {
+        const Modelo = window.LanguageModel;
+        if (!Modelo?.availability) return "unavailable";
+        try {
+            return await Modelo.availability({ expectedInputs: [{ type: "text", languages: ["es"] }], expectedOutputs: [{ type: "text", languages: ["es"] }] });
+        } catch (error) {
+            return "unavailable";
+        }
+    }
+
+    function conTiempo(promesa, milisegundos) {
+        return Promise.race([promesa, new Promise((resolver, rechazar) => setTimeout(() => rechazar(new Error("tiempo")), milisegundos))]);
+    }
+
+    async function preguntarAlCelular(tipo, mensaje) {
+        if (!preferenciaIA("iaCelular") || (await estadoIACelular()) === "unavailable") return null;
+        let sesion = null;
+        try {
+            sesion = await conTiempo(window.LanguageModel.create({
+                initialPrompts: [{ role: "system", content: INSTRUCCIONES_IA[tipo] }],
+                expectedInputs: [{ type: "text", languages: ["es"] }],
+                expectedOutputs: [{ type: "text", languages: ["es"] }]
+            }), 20000);
+            const respuesta = await conTiempo(sesion.prompt(mensaje, { responseConstraint: ESQUEMAS_IA[tipo] }), 20000);
+            return JSON.parse(respuesta);
+        } catch (error) {
+            console.warn("La IA del celular no respondió.", error?.message || "");
+            return null;
+        } finally {
+            try { sesion?.destroy?.(); } catch (error) { /* ya cerrada */ }
+        }
+    }
+
+    async function preguntarALaNube(tipo, datos) {
+        if (!preferenciaIA("iaNube")) return null;
+        const usuario = window.firebase?.auth?.().currentUser;
+        if (!usuario) return null;
+        try {
+            const respuesta = await conTiempo(fetch("/api/entender", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + await usuario.getIdToken() },
+                body: JSON.stringify({ tipo, ...datos })
+            }), 25000);
+            const cuerpo = await respuesta.json().catch(() => ({}));
+            if (!respuesta.ok) {
+                console.warn("La IA en la nube respondió " + respuesta.status + ".", cuerpo.codigo || cuerpo.message || "");
+                return null;
+            }
+            return cuerpo.resultado || null;
+        } catch (error) {
+            console.warn("No se pudo usar la IA en la nube.", error?.message || "");
+            return null;
+        }
+    }
+
+    function nombresDeComercios() {
+        return typeof obtenerComercios === "function" ? obtenerComercios().map(comercio => comercio.nombre) : [];
+    }
+
+    // Pregunta primero al celular y después a la nube.
+    async function preguntarIA(tipo, texto) {
+        const comercios = nombresDeComercios();
+        const productos = tipo === "pedido" ? productosDelCatalogo().map(({ marca, producto }) => ({ marca, producto })) : [];
+        const mensaje = "Comercios:\n" + (comercios.join("\n") || "(ninguno)")
+            + (tipo === "pedido" ? "\n\nCatálogo (marca | producto):\n" + productos.map(item => item.marca + " | " + item.producto).join("\n") : "")
+            + "\n\nLo que dijo:\n" + texto;
+        return (await preguntarAlCelular(tipo, mensaje)) || (await preguntarALaNube(tipo, { texto, comercios, productos }));
+    }
+
+    function comercioPorNombre(nombre) {
+        if (!nombre || typeof obtenerComercios !== "function") return null;
+        return obtenerComercios().find(comercio => comercio.nombre === nombre) || buscarComercioEn(nombre, 0.75);
+    }
+
+    // Lo que dijo, entendido por la IA: una orden como las de interpretar().
+    async function interpretarConIA(texto) {
+        const resultado = await preguntarIA("comando", texto);
+        if (!resultado || !resultado.accion || resultado.accion === "nada") return null;
+        const comercio = comercioPorNombre(resultado.comercio);
+        if (resultado.accion === "pantalla") return PANTALLAS_IA.includes(resultado.pantalla) ? { accion: "pantalla", pantalla: resultado.pantalla } : null;
+        if (resultado.accion === "proximaParada" || resultado.accion === "llegue") return { accion: resultado.accion };
+        if (resultado.accion === "nuevoPedido") return comercio ? { accion: "nuevoPedido", comercio } : { accion: "nuevoPedido" };
+        if (["ir", "visitado", "ficha"].includes(resultado.accion) && comercio) return { accion: resultado.accion, comercio };
+        return null;
+    }
+
+    // Un pedido entendido por la IA, con los productos del catálogo.
+    async function leerPedidoConIA(texto) {
+        const resultado = await preguntarIA("pedido", texto);
+        if (!resultado) return null;
+        const catalogo = productosDelCatalogo();
+        const productos = [];
+        (resultado.productos || []).forEach(item => {
+            const cantidad = Math.round(Number(item.cantidad));
+            const delCatalogo = catalogo.find(otro => otro.marca === item.marca && otro.producto === item.producto);
+            if (!delCatalogo || !(cantidad > 0)) return;
+            const existente = productos.find(otro => otro.marca === delCatalogo.marca && otro.producto === delCatalogo.producto);
+            if (existente) existente.cantidad += cantidad;
+            else productos.push({ marca: delCatalogo.marca, producto: delCatalogo.producto, cantidad, dicho: "" });
+        });
+        return {
+            comercio: comercioPorNombre(resultado.comercio),
+            productos,
+            sinEntender: (resultado.sinEntender || []).map(item => String(item)).filter(Boolean)
+        };
     }
 
     // -------------------------------------------------
@@ -390,14 +556,34 @@
                 if (!final) return;
                 texto.textContent = "«" + final + "»";
                 // Si el celular escuchó otra cosa parecida, prueba también esa.
-                const entendido = [final, ...alternativas].find(frase => interpretar(frase)?.accion && interpretar(frase).accion !== "noEncontrado")
-                    || (interpretar(final) ? final : null);
+                const entendido = [final, ...alternativas].find(frase => interpretar(frase)?.accion && interpretar(frase).accion !== "noEncontrado");
                 if (entendido) {
                     cerrarVentana();
                     ejecutar(entendido);
-                } else {
-                    texto.textContent = "No entendí «" + final + "». Tocá el micrófono y probá de nuevo.";
+                    return;
                 }
+                const sinIA = () => {
+                    if (interpretar(final)) {
+                        cerrarVentana();
+                        ejecutar(final);
+                    } else {
+                        texto.textContent = "No entendí «" + final + "». Tocá el micrófono y probá de nuevo.";
+                    }
+                };
+                if (!iaPrendida()) return sinIA();
+                // T54: la IA lo intenta antes de rendirse.
+                texto.textContent = "«" + final + "» · Pensando…";
+                ventana.classList.add("pensando");
+                interpretarConIA(final).then(orden => {
+                    ventana.classList.remove("pensando");
+                    if (ventana.classList.contains("oculto")) return;
+                    if (orden) {
+                        cerrarVentana();
+                        ejecutarOrden(orden);
+                    } else {
+                        sinIA();
+                    }
+                });
             }
         });
     }
@@ -519,6 +705,12 @@
     }
 
     let hojaDictado = null;
+    // Lo que entendió la IA para un texto (T54); vale mientras el texto no cambie.
+    let lecturaIA = null;
+
+    function lecturaDe(texto) {
+        return lecturaIA && lecturaIA.texto === texto ? lecturaIA.lectura : leerPedido(texto);
+    }
 
     function crearHojaDictado() {
         if (hojaDictado) return hojaDictado;
@@ -566,7 +758,7 @@
         hojaDictado.querySelector(".cancelarDictado").addEventListener("click", cerrarDictado);
         hojaDictado.addEventListener("click", evento => { if (evento.target === hojaDictado) cerrarDictado(); });
         hojaDictado.querySelector(".agregarDictado").addEventListener("click", () => {
-            const lectura = leerPedido(campo.value);
+            const lectura = lecturaDe(campo.value);
             const elegidos = lectura.productos.filter((item, indice) =>
                 hojaDictado.querySelector('.resultadoDictado input[data-indice="' + indice + '"]')?.checked !== false);
             const unidades = typeof window.agregarProductosAlPedido === "function"
@@ -582,7 +774,7 @@
         const caja = hojaDictado.querySelector(".resultadoDictado");
         const boton = hojaDictado.querySelector(".agregarDictado");
         caja.innerHTML = "";
-        const lectura = leerPedido(texto);
+        const lectura = lecturaDe(texto);
         boton.disabled = lectura.productos.length === 0;
         if (!String(texto || "").trim()) return;
         if (lectura.comercio) {
@@ -607,6 +799,27 @@
             aviso.className = "sinEntenderDictado";
             aviso.textContent = "No encontré: " + lectura.sinEntender.map(tramo => "«" + tramo + "»").join(", ");
             caja.appendChild(aviso);
+            if (iaPrendida() && !(lecturaIA && lecturaIA.texto === texto)) {
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "botonRepetirPedido botonEntenderIA";
+                boton.innerHTML = window.icono("chispa", 15) + " Entender con IA";
+                boton.addEventListener("click", async () => {
+                    boton.disabled = true;
+                    boton.lastChild.textContent = " Pensando…";
+                    const leida = await leerPedidoConIA(texto);
+                    if (!hojaDictado || hojaDictado.querySelector("#textoDictado").value !== texto) return;
+                    if (leida) {
+                        lecturaIA = { texto, lectura: leida };
+                        mostrarLectura(texto);
+                    } else {
+                        boton.disabled = false;
+                        boton.lastChild.textContent = " Entender con IA";
+                        hojaDictado.querySelector(".estadoDictado").textContent = "La IA no pudo leerlo. Revisá la conexión o probá de nuevo.";
+                    }
+                });
+                caja.appendChild(boton);
+            }
         }
     }
 
@@ -649,5 +862,5 @@
     const pantallaPedido = document.getElementById("pantallaPedido");
     if (pantallaPedido) new MutationObserver(() => agregarBotonDictado()).observe(pantallaPedido, { childList: true, subtree: true });
 
-    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, leerPedido, escuchar, abrirDictado, comando: empezarComando };
+    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, interpretarConIA, leerPedidoConIA, estadoIACelular, leerPedido, escuchar, abrirDictado, comando: empezarComando };
 }());
