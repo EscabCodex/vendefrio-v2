@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v161 - Ticket impreso por, en el seguimiento)
+// VendeFrío - Service Worker (v162 - Hoja de reparto impresa)
 // =====================================================
-const CACHE_NAME = "vendefrio-v161";
+const CACHE_NAME = "vendefrio-v162";
 const ARCHIVOS = [
   "./",
   "./index.html",

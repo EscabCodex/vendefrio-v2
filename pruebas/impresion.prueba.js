@@ -7,6 +7,9 @@
 // 2. "Ticket impreso por" en el seguimiento (T28d): cada impresión queda en el
 //    pedido (quién, cuándo y cuántas copias) y se ve en los dos celulares. La
 //    nube solo deja agregar impresiones a nombre propio.
+// 3. Hoja de reparto impresa (T28e): en Rutas, después de "Optimizar ruta",
+//    se imprime la hoja con los comercios en el orden de la ruta, sus
+//    pedidos sin entregar, lo que deben de antes y el total a cobrar.
 const { test, expect, capturar } = require("./ayudas");
 const {
     registrarDistribuidora,
@@ -182,4 +185,61 @@ test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
     await contexto.close();
     expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
+});
+
+test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
+    await usarImpresoraFalsa(page);
+    await registrarDistribuidora(page, testInfo);
+
+    // Dos comercios con GPS (uno cerca y otro lejos) y Don Pepe sin GPS.
+    await page.evaluate(() =>
+        agregarComercio({ nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "11 4000-1111", lat: -34.601, lng: -58.381 }) &&
+        agregarComercio({ nombre: "Super Norte", direccion: "Ruta 8 km 50", telefono: "", lat: -34.450, lng: -58.700 })
+    );
+    await irAPedidos(page);
+    await cargarPedido(page, false, "Super Norte");
+    await cargarPedido(page, false, "Kiosco Luna");
+    await cargarPedido(page, false, "Super Norte");
+    // Uno de Super Norte ya se entregó y quedó sin cobrar.
+    await page.evaluate(() => {
+        const pedido = obtenerHistorial().find(item => item.comercio === "Super Norte");
+        window.nubeVendeFrio.entregarPedido(pedido.id, {});
+    });
+    await expect(page.locator("#filtrosEtapaPedidos")).toContainText("A cobrar");
+
+    // Rutas: todos los comercios y "Optimizar ruta".
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await page.locator(".menuMasContenido").getByRole("button", { name: /Rutas/ }).click();
+    // Sin internet en la prueba, el mapa no carga: la ruta se arma igual.
+    const aviso = page.locator("#modalAviso");
+    await expect(aviso).toContainText("Mapa no disponible");
+    await aviso.getByRole("button", { name: "Entendido" }).click();
+    await page.locator("#seleccionarTodosRuta").click();
+    await page.locator("#btnOptimizarRuta").click();
+    await expect(aviso).toContainText("1. Kiosco Luna");
+    await aviso.getByRole("button", { name: "Entendido" }).click();
+
+    const boton = page.getByRole("button", { name: "Imprimir hoja de reparto" });
+    await expect(boton).toBeVisible();
+    await page.locator("#listaRutaOrdenada").evaluate(lista => lista.scrollIntoView({ block: "start" }));
+    await capturar(page, "impresion-04-hoja-de-reparto");
+    await boton.click();
+    await expect(page.locator("#contenedorToasts")).toContainText("Hoja de reparto impresa");
+
+    const hoja = await textoImpreso(page);
+    expect(hoja).toContain("Distribuidora Prueba\nHOJA DE REPARTO");
+    expect(hoja).toContain("2 paradas");
+    expect(hoja.indexOf("1. [ ] Kiosco Luna")).toBeGreaterThan(-1);
+    expect(hoja.indexOf("2. [ ] Super Norte")).toBeGreaterThan(hoja.indexOf("1. [ ] Kiosco Luna"));
+    expect(hoja).toContain("Belgrano 45\n   Tel.: 11 4000-1111");
+    expect(hoja).toContain("Ruta 8 km 50");
+    expect(hoja).toContain("A cobrar (ya entregado) N? ");
+    expect(hoja).toContain("Pedidos: 3");
+    expect(hoja).toMatch(/A COBRAR\s+\$ 29\.400/);
+    expect(hoja).toContain("Sin GPS (no entran en la ruta):\n- Almac?n Don Pepe");
+    // Super Norte: el pedido sin entregar y el que debe de antes.
+    const superNorte = hoja.slice(hoja.indexOf("2. [ ] Super Norte"));
+    expect(superNorte).toMatch(/Pedido N\? [A-Z0-9_]{6} · Cargado|Pedido N\? [A-Z0-9_]{6} \? Cargado/);
 });

@@ -3777,3 +3777,6 @@ html[data-tema="oscuro"] .botonSalirEnTanda{color:#fff !important;}
 html[data-tema="oscuro"] .listaRepartoTanda{background:#111827;border-color:#374151;}
 html[data-tema="oscuro"] .listaRepartoTanda li{border-color:#374151;}
 html[data-tema="oscuro"] .listaRepartoTanda span{color:#cbd5e1 !important;}
+
+/* Hoja de reparto impresa (T28e) */
+.imprimirHojaReparto{justify-content:center;width:100%;min-height:44px;margin:0 0 16px;}
