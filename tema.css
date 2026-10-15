@@ -778,7 +778,7 @@ html .menuFichaPedido .opcionMenuFicha:active{background:var(--superficie-2) !im
 /* ---------- Pedidos con Historial (T33) ---------- */
 
 html .segmentoPeriodo{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;
   padding:4px;border-radius:999px;
   background:var(--superficie-2);
 }
@@ -895,3 +895,88 @@ html[data-tema] #pantallaCatalogo input.buscadorCatalogo{
 html[data-tema="oscuro"] .chipMarca.activo,
 html[data-tema="oscuro"] .chipMarca.activo span,
 html[data-tema="oscuro"] .chipMarca.activo small{color:var(--acento-txt) !important;}
+
+/* ---------- Comercios y ficha del comercio (T37) ---------- */
+
+html #pantallaComercios .filtrosComercios{display:flex;flex-direction:column;gap:10px;}
+html #pantallaComercios #buscarComercio{border-radius:999px;}
+html #pantallaComercios .resumenComercios{margin:0;font-size:12.5px;font-weight:600;color:var(--texto-sec);}
+html #pantallaComercios #agregarComercio{border-radius:999px;}
+html #pantallaComercios .comercioCard{
+  margin:0 0 10px !important;padding:14px !important;
+  border-radius:var(--radius-md) !important;box-shadow:var(--sombra) !important;
+}
+html #pantallaComercios .comercioCard .cabeceraCard{align-items:center;gap:12px;}
+html #pantallaComercios .comercioCard .avatar{width:44px;height:44px;border-radius:14px;font-weight:700;flex-shrink:0;}
+html .filaTituloComercio{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+html .filaTituloComercio h3{margin:0;font-size:15px;font-weight:700;min-width:0;}
+html .estadoComercio{font-size:11.5px;padding:3px 9px;}
+html #pantallaComercios .datosComercioGrid{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:4px;}
+html #pantallaComercios .datoComercio{font-size:12.5px;color:var(--texto-sec);}
+html #pantallaComercios .datoVisita,
+html #pantallaComercios .datoTelefono{display:none;}
+
+/* Ficha del comercio: hoja que sube desde abajo. */
+html .modalFichaComercio .fichaComercioNueva{
+  padding:22px 18px 18px !important;
+  border-radius:28px 28px 0 0;
+  background:var(--superficie) !important;color:var(--texto);
+}
+html .fichaComercioNueva .fichaCerrar{
+  display:grid;place-items:center;top:16px;right:16px;
+  background:var(--superficie-2) !important;color:var(--texto-sec) !important;
+}
+html .fichaComercioNueva .fichaEncabezado{align-items:flex-start;gap:14px;margin-bottom:16px;}
+html .fichaComercioNueva .fichaAvatar{width:56px;height:56px;border-radius:18px;color:#fff;font-size:18px;}
+html .fichaComercioNueva .fichaTitulo{display:grid;gap:4px;justify-items:start;min-width:0;}
+html .fichaComercioNueva h2{font-size:21px;font-weight:800;line-height:1.15;}
+html .fichaComercioNueva .fichaDireccion{margin:0;color:var(--texto-sec);font-size:13.5px;}
+html .fichaComercioNueva .fichaEstado{margin-top:2px;}
+
+html .fichaAccesos{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-bottom:14px;}
+html .fichaAcceso{
+  display:grid;justify-items:center;gap:6px;padding:0;margin:0;min-height:0;
+  border:0;background:transparent;color:var(--texto);text-decoration:none;cursor:pointer;
+  font:inherit;box-shadow:none;
+}
+html .fichaAccesoIcono{
+  display:grid;place-items:center;width:52px;height:52px;border-radius:18px;
+  background:var(--acento-bg);color:var(--acento-oscuro);
+}
+html[data-tema="oscuro"] .fichaAccesoIcono{color:var(--acento);}
+html .fichaAccesoPrincipal .fichaAccesoIcono{background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);}
+html .fichaAcceso small{font-size:12px;font-weight:600;color:var(--texto-sec);}
+
+html .fichaNumeros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+html .fichaNumeros div{display:grid;gap:2px;padding:12px 10px;border-radius:16px;background:var(--superficie-2);text-align:center;}
+html .fichaNumeros strong{font-size:16px;font-weight:800;overflow-wrap:anywhere;}
+html .fichaNumeros small{font-size:11.5px;color:var(--texto-sec);}
+
+html .fichaUbicacion{
+  display:grid;grid-template-columns:36px 1fr;align-items:center;gap:4px 10px;
+  padding:12px;margin-bottom:12px;border-radius:16px;background:var(--superficie-2);
+}
+html .fichaUbicacionIcono{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--info-bg);color:var(--info);}
+html .fichaUbicacion div{display:grid;gap:1px;}
+html .fichaUbicacion strong{font-size:14px;}
+html .fichaUbicacion small{font-size:12px;color:var(--texto-sec);}
+html .fichaUbicacion .botonGpsComercio{grid-column:1/-1;margin-top:8px;width:100%;border-radius:999px;justify-content:center;gap:6px;}
+
+html .modalFichaComercio .fichaComercioNueva .fichaProductos{
+  padding:12px;margin:0;border-radius:16px;
+  background:var(--superficie-2) !important;color:var(--texto);
+}
+html .fichaComercioNueva .fichaProductos > strong{font-size:13px;color:var(--texto);}
+html .fichaComercioNueva .fichaProductoBarraFila{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;}
+html .fichaComercioNueva .fichaProductoNombre{color:var(--texto);font-size:13px;font-weight:600;}
+html .fichaComercioNueva .fichaProductoPorcentaje{color:var(--texto-sec);font-size:12px;font-weight:600;}
+html .fichaProductoBarra{grid-column:1/-1;height:6px;border-radius:99px;background:var(--borde);overflow:hidden;}
+html .fichaProductoBarra i{display:block;height:100%;border-radius:inherit;background:var(--acento);}
+
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones{
+  grid-template-columns:1fr 1fr;gap:8px;
+  background:var(--superficie) !important;
+}
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton{border-radius:999px;border:0;background:var(--superficie-2);color:var(--texto);font-size:13px;}
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.ver{background:var(--visitado-bg);color:var(--visitado);}
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.eliminar{background:var(--peligro-bg);color:var(--peligro);}

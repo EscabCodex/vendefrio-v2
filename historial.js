@@ -114,47 +114,11 @@ function coincidePeriodoHistorial(pedido, periodo) {
 const PERIODOS_HISTORIAL = [["hoy", "Hoy"], ["semana", "Semana"], ["mes", "Mes"], ["todos", "Todo"]];
 
 function crearSegmentoPeriodo(select) {
-    if (!select) return null;
-    select.innerHTML = "";
-    PERIODOS_HISTORIAL.forEach(([valor, texto]) => {
-        const opcion = document.createElement("option");
-        opcion.value = valor;
-        opcion.textContent = texto;
-        select.appendChild(opcion);
-    });
-    select.value = "todos";
-    select.classList.add("oculto");
-
-    const segmento = document.createElement("div");
-    segmento.className = "segmentoPeriodo";
-    segmento.setAttribute("role", "radiogroup");
-    segmento.setAttribute("aria-label", "Período");
-    PERIODOS_HISTORIAL.forEach(([valor, texto]) => {
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.dataset.periodo = valor;
-        boton.setAttribute("role", "radio");
-        boton.textContent = texto;
-        boton.addEventListener("click", () => {
-            if (select.value === valor) return;
-            select.value = valor;
-            sincronizarSegmentoPeriodo(segmento, valor);
-            select.dispatchEvent(new Event("change"));
-        });
-        segmento.appendChild(boton);
-    });
-    select.after(segmento);
-    sincronizarSegmentoPeriodo(segmento, select.value);
-    return segmento;
+    return crearSegmentoDeSelect(select, PERIODOS_HISTORIAL, "Período", "todos");
 }
 
 function sincronizarSegmentoPeriodo(segmento, valor) {
-    if (!segmento) return;
-    segmento.querySelectorAll("button[data-periodo]").forEach(boton => {
-        const activo = boton.dataset.periodo === valor;
-        boton.classList.toggle("activo", activo);
-        boton.setAttribute("aria-checked", activo ? "true" : "false");
-    });
+    sincronizarSegmento(segmento, valor);
 }
 
 const segmentoPeriodoHistorial = crearSegmentoPeriodo(filtroFechaHistorial);

@@ -661,3 +661,51 @@ if (!document.querySelector('script[data-configuracion="true"]')) {
     script.defer = true;
     document.body.appendChild(script);
 });
+
+// Etapa 4: botones en fila (Hoy / Semana / Mes / Todo, Todos / Pendientes /
+// Visitados) en lugar de un desplegable. El desplegable queda escondido y
+// sigue siendo el que manda: el botón le cambia el valor y avisa el cambio,
+// y quien cambia el valor por código llama a sincronizarSegmento.
+function crearSegmentoDeSelect(select, opciones, etiqueta, inicial) {
+    if (!select) return null;
+    select.innerHTML = "";
+    opciones.forEach(([valor, texto]) => {
+        const opcion = document.createElement("option");
+        opcion.value = valor;
+        opcion.textContent = texto;
+        select.appendChild(opcion);
+    });
+    select.value = inicial;
+    select.classList.add("oculto");
+
+    const segmento = document.createElement("div");
+    segmento.className = "segmentoPeriodo";
+    segmento.setAttribute("role", "radiogroup");
+    segmento.setAttribute("aria-label", etiqueta);
+    opciones.forEach(([valor, texto]) => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.dataset.valor = valor;
+        boton.setAttribute("role", "radio");
+        boton.textContent = texto;
+        boton.addEventListener("click", () => {
+            if (select.value === valor) return;
+            select.value = valor;
+            sincronizarSegmento(segmento, valor);
+            select.dispatchEvent(new Event("change"));
+        });
+        segmento.appendChild(boton);
+    });
+    select.after(segmento);
+    sincronizarSegmento(segmento, select.value);
+    return segmento;
+}
+
+function sincronizarSegmento(segmento, valor) {
+    if (!segmento) return;
+    segmento.querySelectorAll("button[data-valor]").forEach(boton => {
+        const activo = boton.dataset.valor === valor;
+        boton.classList.toggle("activo", activo);
+        boton.setAttribute("aria-checked", activo ? "true" : "false");
+    });
+}
