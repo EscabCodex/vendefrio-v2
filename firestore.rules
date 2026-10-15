@@ -471,6 +471,23 @@ service cloud.firestore {
         && personaPropia(idDistribuidora, vista.persona);
     }
 
+    // "Ticket impreso por" (T28d): cada impresión es una entrada nueva de
+    // "impresiones": { copias, persona, horaCelular }. Cualquier miembro, a
+    // nombre propio, de a una, sin cambiar las que ya están.
+    function impresionAgregadaValida(idDistribuidora, antes, despues) {
+      let previas = antes.get("impresiones", {});
+      let nuevas = despues.impresiones.keys().removeAll(previas.keys());
+      let impresion = despues.impresiones[nuevas[0]];
+      return despues.impresiones.diff(previas).affectedKeys().size() == 1
+        && nuevas.size() == 1
+        && impresion is map
+        && impresion.keys().hasAll(["copias", "persona", "horaCelular"])
+        && impresion.keys().hasOnly(["copias", "persona", "horaCelular"])
+        && impresion.copias in [1, 2]
+        && impresion.horaCelular is number
+        && personaPropia(idDistribuidora, impresion.persona);
+    }
+
     // Entrega (T27): "entrega" es { cambios, persona, horaCelular }. cambios
     // tiene lo entregado de cada producto que se entregó distinto de lo
     // preparado: { idLinea: { entregada, motivo } }. Se escribe solo junto
@@ -557,7 +574,7 @@ service cloud.firestore {
       let cambiados = despues.diff(antes).affectedKeys();
       return cambiados.hasOnly(["_orden", "estado", "estados", "incidencias", "incidenciasResueltas", "preparacion",
           "faltantes", "entrega", "cobro", "ediciones", "edicionesVistas", "productos", "comercio", "observaciones",
-          "pedido", "cantidad", "eliminado", "eliminacion"])
+          "pedido", "cantidad", "eliminado", "eliminacion", "impresiones"])
         && (antes.get("eliminado", false) != true || cambiados.hasOnly(["_orden"]))
         && (!cambiados.hasAny(["eliminado", "eliminacion"]) || eliminacionValida(idDistribuidora, antes, despues))
         && (!cambiados.hasAny(["productos", "comercio", "observaciones", "pedido", "cantidad"])
@@ -579,6 +596,8 @@ service cloud.firestore {
           || ("estados" in antes && faltanteAgregadoValido(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["entrega"])
           || ("estados" in antes && entregaValida(idDistribuidora, antes, despues)))
+        && (!cambiados.hasAny(["impresiones"])
+          || ("estados" in antes && impresionAgregadaValida(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["cobro"])
           || ("estados" in antes && cobroValido(idDistribuidora, antes, despues)))
         && (!cambiados.hasAny(["estado", "estados"])
@@ -752,9 +771,17 @@ service cloud.firestore {
 
       // El dueño puede cambiar el nombre de la distribuidora y el suyo
       // (nombreDueno, T18: obligatorio, hasta 60 caracteres), nunca quién es
-      // el dueño.
+      // el dueño. También los datos del ticket (T28c): teléfono, dirección y
+      // CUIT, cada uno un texto (vacío si no lo tiene).
       allow update: if esDueno(idDistribuidora)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "nombreDueno"])
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["nombre", "nombreDueno", "telefono", "direccion", "cuit"])
+        && request.resource.data.get("telefono", "") is string
+        && request.resource.data.get("telefono", "").size() <= 40
+        && request.resource.data.get("direccion", "") is string
+        && request.resource.data.get("direccion", "").size() <= 80
+        && request.resource.data.get("cuit", "") is string
+        && request.resource.data.get("cuit", "").size() <= 20
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() <= 80
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["nombreDueno"])

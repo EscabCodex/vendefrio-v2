@@ -95,6 +95,13 @@ async function prepararNotificaciones(pagina) {
         trabajador.ready = Promise.resolve(registro);
         Object.defineProperty(navigator, "serviceWorker", { value: trabajador, configurable: true });
         if (!("PushManager" in window)) window.PushManager = function PushManager() {};
+        // Algunos Chromium de prueba (por ejemplo, el "headless shell")
+        // dicen "denied" aunque el permiso esté dado: se respeta el permiso
+        // dado arriba.
+        if (window.Notification && Notification.permission === "denied") {
+            Object.defineProperty(Notification, "permission", { get: () => "granted", configurable: true });
+            Notification.requestPermission = async () => "granted";
+        }
     });
     await pagina.route("**/firebase/firebase-messaging-compat.js", ruta =>
         ruta.fulfill({ status: 200, contentType: "text/javascript", body: MENSAJERIA_FALSA })

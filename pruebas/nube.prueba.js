@@ -17,62 +17,9 @@
 //    llave apagada vuelve a cada uno según sus permisos. Lo que la app no
 //    deja, la nube tampoco (escrituras directas, saltándose la app).
 const { test, expect, capturar, deslizar, prepararPagina } = require("./ayudas");
+const { registrarDistribuidora, cargarPedido, abrirConfiguracionEn, irAPedidos } = require("./recorridos");
 
 test.use({ nube: true });
-
-// Cuenta y distribuidora nuevas (en el emulador), con un comercio y dos
-// productos con precio, guardados con las mismas funciones que usa la app.
-async function registrarDistribuidora(page, testInfo) {
-    await page.goto("/");
-
-    await page.getByRole("button", { name: /Distribuidora/ }).click();
-    await page.getByRole("button", { name: /Registrarse/ }).click();
-    await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
-    await page.locator("#inicioRegistroEmail").fill(`dueno-${testInfo.project.name}-${Date.now()}@prueba.com`);
-    await page.locator("#inicioRegistroContrasena").fill("clave-de-prueba");
-    await page.locator("#inicioRegistroRepetir").fill("clave-de-prueba");
-    await page.getByRole("button", { name: "Crear cuenta y distribuidora" }).click();
-
-    // "Tu nombre" (se pide una sola vez al dueño).
-    await expect(page.locator("#inicioNombreDueno")).toBeVisible({ timeout: 20000 });
-    await page.locator("#inicioNombreDueno").fill("Jere");
-    await page.locator("#inicioFormDatosDueno").getByRole("button", { name: "Guardar y entrar" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
-    await expect(page.locator("#dashNombreDistribuidora")).toHaveText("Distribuidora Prueba");
-
-    const guardado = await page.evaluate(() =>
-        agregarComercio({ nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "11 5555-1234" }) &&
-        agregarMarca("Frío Sur") &&
-        agregarProducto("Frío Sur", { nombre: "Helado 1 kg", precio: 4500 }) &&
-        agregarProducto("Frío Sur", { nombre: "Palito bombón", precio: 800 })
-    );
-    expect(guardado).toBeTruthy();
-}
-
-// Carga un pedido de 2 helados y 1 palito (sin captura si no se pide).
-async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
-    await expect(page.locator("#vistaPedidos")).toBeVisible();
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill(comercio);
-    await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
-    const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
-    const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
-    await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
-    await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
-    await palito.getByRole("button", { name: "Aumentar cantidad" }).click();
-    await expect(page.locator("#totalUnidadesPedido")).toHaveText("3");
-    if (conCaptura) {
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await capturar(page, "nube-02-nuevo-pedido");
-    }
-
-    await page.locator("#generar").click();
-    const generado = page.locator("#modalPedido");
-    await expect(generado).toBeVisible();
-    await generado.click({ position: { x: 10, y: 10 } });
-    await expect(generado).toBeHidden();
-}
 
 test("nube: cargar, armar, entregar y cobrar un pedido", async ({ page }, testInfo) => {
     await registrarDistribuidora(page, testInfo);
@@ -274,18 +221,6 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
 });
-
-// Abre Configuración desde "Más" y entra a una sección.
-async function abrirConfiguracionEn(page, seccion) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
-    await page.locator(".menuMasContenido").getByRole("button", { name: /Configuración/ }).click();
-    await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
-}
-
-async function irAPedidos(page) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
-    await expect(page.locator("#vistaPedidos")).toBeVisible();
-}
 
 // Escribe directo en la nube del emulador, sin pasar por la app (como lo
 // haría alguien que se salta la app). Devuelve "ok" o el código del error.
