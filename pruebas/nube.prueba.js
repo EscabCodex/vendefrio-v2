@@ -464,3 +464,56 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     await contexto.close();
     expect(erroresEmpleado, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });
+
+test("nube: datos de la distribuidora en el ticket", async ({ page }, testInfo) => {
+    // El Chromium de prueba no trae Bluetooth: se simula solo para armar el ticket.
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, "bluetooth", { value: { requestDevice() {} }, configurable: true });
+    });
+    await registrarDistribuidora(page, testInfo);
+    await cargarPedido(page, false);
+    const textoDelTicket = () => page.evaluate(() => {
+        const lista = obtenerHistorial();
+        const bytes = window.impresionVendeFrio.armarTicket(lista[0].id, 2);
+        return Array.from(bytes).map(b => String.fromCharCode(b)).join("");
+    });
+
+    // Sin datos cargados, el ticket queda como antes.
+    const antes = await textoDelTicket();
+    expect(antes).not.toContain("CUIT");
+    expect(antes).not.toContain("Tel: ");
+
+    // El dueño carga teléfono y CUIT (la dirección queda vacía).
+    await abrirConfiguracionEn(page, "cuenta");
+    await page.locator("#datosTicketTelefono").fill("11 4444-5555");
+    await page.locator("#datosTicketCuit").fill("30-12345678-9");
+    await page.locator("#formDatosTicket").evaluate(forma => forma.scrollIntoView({ block: "center" }));
+    await capturar(page, "nube-23-datos-ticket");
+    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await expect(page.locator("#contenedorToasts")).toContainText("Datos del ticket guardados");
+
+    const con = await textoDelTicket();
+    expect(con.match(/Tel: 11 4444-5555/g)).toHaveLength(2);
+    expect(con.match(/CUIT: 30-12345678-9/g)).toHaveLength(2);
+    expect(con).not.toMatch(/Dirección: (?!San Martín)/);
+
+    // La nube rechaza datos que no son texto o son demasiado largos.
+    const resultado = await page.evaluate(async () => {
+        const id = window.distribuidoraVendeFrio.idActual();
+        const ref = window.firebase.firestore().collection("distribuidoras").doc(id);
+        const intentar = async cambios => {
+            try {
+                await ref.update(cambios);
+                return "ok";
+            } catch (error) {
+                return error.code;
+            }
+        };
+        return {
+            largo: await intentar({ cuit: "9".repeat(21) }),
+            numero: await intentar({ telefono: 1155551234 }),
+            ajeno: await intentar({ duenoUid: "otro" }),
+        };
+    });
+    expect(resultado).toEqual({ largo: "permission-denied", numero: "permission-denied", ajeno: "permission-denied" });
+});

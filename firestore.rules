@@ -13,6 +13,8 @@ rules_version = '2';
 //   distribuidoras/{idDistribuidora}   el id es el uid del dueño, o "prueba-" + uid
 //                                   para la distribuidora de prueba (T9);
 //                                   nombreDueno: el nombre del dueño (T18)
+//                                   telefono, direccion y cuit: datos para el
+//                                   ticket, opcionales (T28c)
 //     miembros/{uid}                usuarios autorizados (dueño y empleados)
 //     empleados/{idEmpleado}        ficha de cada empleado (T14): la persona,
 //                                   no el celular
@@ -751,12 +753,19 @@ service cloud.firestore {
         && existsAfter(rutaMiembro(idDistribuidora, request.auth.uid));
 
       // El dueño puede cambiar el nombre de la distribuidora y el suyo
-      // (nombreDueno, T18: obligatorio, hasta 60 caracteres), nunca quién es
-      // el dueño.
+      // (nombreDueno, T18: obligatorio, hasta 60 caracteres) y los datos para
+      // el ticket (T28c: telefono, direccion y cuit, opcionales, de texto y
+      // cortos), nunca quién es el dueño.
       allow update: if esDueno(idDistribuidora)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "nombreDueno"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "nombreDueno", "telefono", "direccion", "cuit"])
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() <= 80
+        && (request.resource.data.get("telefono", "") is string
+          && request.resource.data.get("telefono", "").size() <= 40)
+        && (request.resource.data.get("direccion", "") is string
+          && request.resource.data.get("direccion", "").size() <= 120)
+        && (request.resource.data.get("cuit", "") is string
+          && request.resource.data.get("cuit", "").size() <= 20)
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["nombreDueno"])
           || (request.resource.data.get("nombreDueno", null) is string
             && request.resource.data.nombreDueno.size() >= 1

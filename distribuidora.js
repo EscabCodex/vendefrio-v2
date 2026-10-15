@@ -28,6 +28,13 @@
     let nombreDuenoRechazado = false;
     const oyentesNombreDueno = [];
 
+    // Datos de la distribuidora para el ticket (T28c): teléfono, dirección y
+    // CUIT, los tres opcionales. Los carga solo el dueño y cada uno sale en
+    // el ticket solo si está cargado.
+    const LARGOS_DATOS_TICKET = { telefono: 40, direccion: 120, cuit: 20 };
+    let datosTicket = { telefono: "", direccion: "", cuit: "" };
+    const oyentesDatosTicket = [];
+
     // Estados: sinCuenta, verificando, lista, creada, sinConexion, sinPermiso, error, noDisponible
     // y sinAcceso (cuenta de empleado todavía sin distribuidora, T14).
     function cambiarEstado(nuevoEstado, nuevoId) {
@@ -77,6 +84,27 @@
         avisarNombreDueno();
     }
 
+    function cambiarDatosTicketConocidos(nuevos) {
+        const iguales = Object.keys(LARGOS_DATOS_TICKET).every(clave => nuevos[clave] === datosTicket[clave]);
+        if (iguales) return;
+        datosTicket = nuevos;
+        oyentesDatosTicket.forEach(oyente => {
+            try {
+                oyente({ ...datosTicket });
+            } catch (error) {
+                console.error("Falló un aviso de los datos del ticket.", error);
+            }
+        });
+    }
+
+    function datosTicketDe(datos) {
+        const leido = {};
+        Object.keys(LARGOS_DATOS_TICKET).forEach(clave => {
+            leido[clave] = datos && typeof datos[clave] === "string" ? datos[clave].trim() : "";
+        });
+        return leido;
+    }
+
     function escucharNombreEnLaNube(id) {
         if (id === idNombre) return;
 
@@ -90,6 +118,7 @@
         if (!idNombre) {
             cambiarNombreConocido("");
             cambiarNombreDuenoConocido("", false);
+            cambiarDatosTicketConocidos(datosTicketDe(null));
             return;
         }
 
@@ -108,6 +137,7 @@
                     datos && typeof datos.nombreDueno === "string" ? datos.nombreDueno : "",
                     Boolean(datos) && !foto.metadata.fromCache
                 );
+                cambiarDatosTicketConocidos(datosTicketDe(datos));
             },
             error => {
                 console.warn("No se pudo leer el nombre de la distribuidora.", error);
@@ -198,6 +228,47 @@
 
         cambiarNombreDuenoConocido(limpio, nombreDuenoConfirmado);
         return Promise.resolve(limpio);
+    }
+
+    // Datos para el ticket (T28c): solo el dueño los cambia (lo controla
+    // firestore.rules). Un dato vacío se borra de la nube. Como el nombre, no
+    // espera a la nube: sin internet se sube cuando vuelve la señal.
+    function cambiarDatosTicket(nuevos) {
+        const db = obtenerFirestore();
+        const limpios = {};
+
+        if (!db || !idDistribuidora) {
+            return Promise.reject(new Error("Tu distribuidora en la nube todavía no está lista."));
+        }
+        if (!soyElDueno()) {
+            return Promise.reject(new Error("Solo el dueño de la distribuidora puede cambiar estos datos."));
+        }
+
+        Object.keys(LARGOS_DATOS_TICKET).forEach(clave => {
+            limpios[clave] = String((nuevos && nuevos[clave]) || "").trim().replace(/\s+/g, " ").slice(0, LARGOS_DATOS_TICKET[clave]);
+        });
+
+        const borrar = window.firebase.firestore.FieldValue.delete();
+        const cambios = {};
+        Object.keys(limpios).forEach(clave => {
+            cambios[clave] = limpios[clave] ? limpios[clave] : borrar;
+        });
+
+        const guardado = db.collection("distribuidoras").doc(idDistribuidora).update(cambios);
+        guardado.catch(error => {
+            console.error("No se pudieron guardar los datos del ticket.", error);
+            if (typeof mostrarAviso === "function") {
+                mostrarAviso(
+                    "No se pudieron guardar los datos del ticket",
+                    error && error.code === "permission-denied"
+                        ? "La nube no dejó guardar los datos. Revisá que las reglas de seguridad estén publicadas."
+                        : "Probá de nuevo en un rato."
+                );
+            }
+        });
+
+        cambiarDatosTicketConocidos(limpios);
+        return Promise.resolve({ ...limpios });
     }
 
     function obtenerFirestore() {
@@ -362,6 +433,21 @@
             return () => {
                 const indice = oyentesNombreDueno.indexOf(oyente);
                 if (indice >= 0) oyentesNombreDueno.splice(indice, 1);
+            };
+        },
+        // Datos para el ticket (T28c)
+        largosDatosTicket: LARGOS_DATOS_TICKET,
+        datosTicketActuales: () => ({ ...datosTicket }),
+        cambiarDatosTicket,
+        escucharDatosTicket(oyente) {
+            if (typeof oyente !== "function") return () => {};
+
+            oyentesDatosTicket.push(oyente);
+            oyente({ ...datosTicket });
+
+            return () => {
+                const indice = oyentesDatosTicket.indexOf(oyente);
+                if (indice >= 0) oyentesDatosTicket.splice(indice, 1);
             };
         },
         reintentar: revisar,

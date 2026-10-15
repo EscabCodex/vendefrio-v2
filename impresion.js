@@ -390,6 +390,14 @@
         agregar(DOBLE_ALTO);
         partir(distribuidora, ANCHO).forEach(linea);
         agregar(TAMANO_NORMAL);
+        // Teléfono, dirección y CUIT de la distribuidora (T28c), cada uno solo
+        // si el dueño lo cargó.
+        const propios = window.distribuidoraVendeFrio?.datosTicketActuales?.() || {};
+        agregar(SIN_NEGRITA);
+        if (propios.direccion) partir(propios.direccion, ANCHO).forEach(linea);
+        if (propios.telefono) partir("Tel: " + propios.telefono, ANCHO).forEach(linea);
+        if (propios.cuit) partir("CUIT: " + propios.cuit, ANCHO).forEach(linea);
+        agregar(NEGRITA);
         linea(titulo);
         agregar(SIN_NEGRITA);
         agregar(IZQUIERDA);
