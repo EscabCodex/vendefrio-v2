@@ -383,6 +383,23 @@ test("notificaciones: el service worker la muestra y al tocarla abre el pedido",
     expect(android.mostradas[0].titulo).toBe("Pedido nuevo · Almacén Don Pepe");
     expect(android.mostradas[0].opciones.body).toBe("Cargado por Maxi");
     expect(android.mostradas[0].opciones.data).toEqual({ idAviso: "avi_1", idPedido: "ped_1", tipo: "pedidoNuevo" });
+    // Con el logo de VendeFrío (en PNG, que Android sí muestra) y el copo
+    // chico arriba, en vez del ícono de Chrome.
+    expect(android.mostradas[0].opciones.icon).toBe("icon-192.png");
+    expect(android.mostradas[0].opciones.badge).toBe("badge.png");
+    for (const archivo of [android.mostradas[0].opciones.icon, android.mostradas[0].opciones.badge]) {
+        expect(fs.existsSync(path.join(__dirname, "..", archivo))).toBe(true);
+    }
+
+    // El manifiesto trae los PNG del tamaño que dice: con ellos Android
+    // instala la app con su nombre y la notificación dice "VendeFrío".
+    const manifiesto = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"));
+    const pngs = manifiesto.icons.filter(icono => icono.type === "image/png");
+    expect(pngs.map(icono => icono.sizes + " " + icono.purpose)).toEqual(["192x192 any", "512x512 any", "512x512 maskable"]);
+    for (const icono of pngs) {
+        const imagen = fs.readFileSync(path.join(__dirname, "..", icono.src));
+        expect(imagen.readUInt32BE(16) + "x" + imagen.readUInt32BE(20)).toBe(icono.sizes);
+    }
 
     // Con la app a la vista ya sale el aviso de la app; en iPhone, igual se
     // muestra.

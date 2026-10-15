@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v158 - Notificaciones con la app cerrada)
+// VendeFrío - Service Worker (v159 - Notificaciones con el logo de VendeFrío)
 // =====================================================
-const CACHE_NAME = "vendefrio-v158";
+const CACHE_NAME = "vendefrio-v159";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -28,6 +28,11 @@ const ARCHIVOS = [
   "./navegacion3d.css",
   "./manifest.json",
   "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png",
+  "./badge.png",
   "./firebase/firebase-app-compat.js",
   "./firebase/firebase-auth-compat.js",
   "./firebase/firebase-firestore-compat.js",
@@ -138,9 +143,12 @@ self.addEventListener("push", event => {
       const aLaVista = ventanas.some(ventana => ventana.visibilityState === "visible");
       if (aLaVista && !esIphone()) return undefined;
 
+      // icon: el logo grande. badge: el copo chico de la barra de arriba
+      // (Android usa solo la silueta). Los dos en PNG: Android no muestra SVG.
       return self.registration.showNotification(titulo, {
         body: texto,
-        icon: "icon.svg",
+        icon: "icon-192.png",
+        badge: "badge.png",
         tag: aviso.idAviso || undefined,
         data: aviso,
         vibrate: [30, 60, 30]
