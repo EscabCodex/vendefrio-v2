@@ -35,7 +35,7 @@ function mostrarPantalla(nombre) {
     }
 
     document.querySelectorAll(".nav-item").forEach(btn => {
-        btn.classList.toggle("activo", btn.dataset.pantalla === nombre);
+        btn.classList.toggle("activo", btn.dataset.pantalla === nombre || btn.dataset.tambien === nombre);
     });
 
     if (nombre === "menu") actualizarDashboard();
@@ -152,61 +152,6 @@ function crearElementoDashboard(etiqueta, valor, color) {
     return elemento;
 }
 
-function actualizarUltimoPedidoDashboard(historial) {
-    const contenedor = document.getElementById("dashUltimoPedido");
-    if (!contenedor) return;
-
-    contenedor.innerHTML = "";
-    contenedor.onclick = null;
-    contenedor.onkeydown = null;
-    contenedor.classList.remove("clickeable");
-    contenedor.removeAttribute("role");
-    contenedor.removeAttribute("tabindex");
-
-    const ultimo = historial[0];
-
-    if (!ultimo) {
-        const vacio = document.createElement("p");
-        vacio.textContent = "Todav\u00eda no hay pedidos registrados.";
-        contenedor.appendChild(vacio);
-        return;
-    }
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = ultimo.comercio || "Comercio sin nombre";
-
-    const detalle = document.createElement("p");
-    detalle.innerHTML =
-        window.icono("calendario", 13) + " " +
-        (ultimo.fecha || "Sin fecha") +
-        "  \u00b7  " + window.icono("paquete", 13) + " " +
-        (Number(ultimo.cantidad) || 0) +
-        " unidades";
-
-    contenedor.append(titulo, detalle);
-    contenedor.classList.add("clickeable");
-    contenedor.setAttribute("role", "button");
-    contenedor.setAttribute("tabindex", "0");
-    contenedor.setAttribute("title", "Abrir este pedido en el historial");
-
-    // Historial usa la posición en la lista completa (con eliminados y
-    // cancelados, T26).
-    const abrirPedidoEnHistorial = () => {
-        if (typeof abrirHistorialDePedido === "function") {
-            const indice = obtenerHistorial().findIndex(pedido => pedido.id === ultimo.id);
-            if (indice >= 0) abrirHistorialDePedido(indice);
-        }
-    };
-
-    contenedor.onclick = abrirPedidoEnHistorial;
-    contenedor.onkeydown = event => {
-        if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            abrirPedidoEnHistorial();
-        }
-    };
-}
-
 let ubicacionDashboard = null;
 let solicitandoUbicacionDashboard = false;
 
@@ -220,65 +165,201 @@ function actualizarUbicacionDashboard(forzar = false) {
     navigator.geolocation.getCurrentPosition(posicion => { ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude }; solicitandoUbicacionDashboard = false; actualizarDashboard(); }, () => { solicitandoUbicacionDashboard = false; }, { enableHighAccuracy: true, maximumAge: 120000, timeout: 8000 });
 }
 
-function actualizarDashboard() {
-    actualizarUbicacionDashboard();
-    const comercios = obtenerComercios();
-    // Como en Historial: sin eliminados ni cancelados (T26) y, en la nube,
-    // solo los entregados y los "Histórico" (T27).
-    const historial = obtenerPedidosDelHistorial();
-    const resumenProductos = obtenerResumenProductos();
+// -----------------------------------------------------
+// INICIO (T32): resumen de hoy, próxima parada, pedidos de hoy y semana
+// -----------------------------------------------------
 
-    const pedidosHoy = historial.filter(pedido => {
-        return pedidoEstaEnPeriodoDashboard(pedido, 1);
+const ESTADOS_KPI_INICIO = [
+    { id: "aPreparar", texto: "A preparar", estados: ["cargado", "enPreparacion"], etapa: "cargados" },
+    { id: "preparados", texto: "Preparados", estados: ["preparado"], etapa: "preparados" },
+    { id: "enReparto", texto: "En reparto", estados: ["enVehiculo", "enReparto"], etapa: "enReparto" },
+    { id: "entregados", texto: "Entregados", estados: ["entregado"], etapa: "historial" }
+];
+
+// Estado de cada pedido la última vez que se dibujó Inicio: si cambia (por
+// ejemplo, otro celular lo marcó "Preparado"), su fila se ilumina.
+const estadosVistosInicio = new Map();
+let inicioDibujadoUnaVez = false;
+
+function textoPlataInicio(valor) {
+    const numero = Math.round(Number(valor) || 0);
+    return "$ " + numero.toLocaleString("es-AR");
+}
+
+function textoPlataCortoInicio(valor) {
+    const numero = Number(valor) || 0;
+    if (numero >= 1000000) return "$ " + (numero / 1000000).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " M";
+    if (numero >= 10000) return "$ " + Math.round(numero / 1000).toLocaleString("es-AR") + " mil";
+    return textoPlataInicio(numero);
+}
+
+function esDeHoyInicio(pedido) {
+    const fecha = obtenerFechaPedidoDashboard(pedido);
+    if (!fecha) return false;
+    const hoy = new Date();
+    return fecha.getFullYear() === hoy.getFullYear() && fecha.getMonth() === hoy.getMonth() && fecha.getDate() === hoy.getDate();
+}
+
+function estadoInicio(pedido) {
+    if (!usaNubeReal() || typeof pedidoTieneEstados !== "function" || !pedidoTieneEstados(pedido)) return "";
+    return estadoActualDelPedido(pedido);
+}
+
+// Hora en que el pedido pasó a su estado actual (para "Entregados" de hoy).
+function horaDelEstadoInicio(pedido) {
+    const estados = pedido && pedido.estados && typeof pedido.estados === "object" ? Object.values(pedido.estados) : [];
+    return estados.reduce((mayor, entrada) => Math.max(mayor, Number(entrada && entrada.horaCelular) || 0), 0);
+}
+
+function totalInicio(pedido) {
+    return typeof totalDelPedido === "function" ? totalDelPedido(pedido).total : 0;
+}
+
+function unidadesInicio(pedido) {
+    const guardada = Number(pedido && pedido.cantidad);
+    if (Number.isFinite(guardada) && guardada > 0) return guardada;
+    return (Array.isArray(pedido && pedido.productos) ? pedido.productos : [])
+        .reduce((total, item) => total + (Number(item && item.cantidad) || 0), 0);
+}
+
+// Los pedidos que van en "Pedidos de hoy": en la nube, los cargados hoy,
+// los que siguen en camino aunque sean de otro día y los entregados hoy.
+// En el modo personal, los cargados hoy.
+function pedidosDeHoyInicio(pedidos) {
+    return pedidos.filter(pedido => {
+        if (esDeHoyInicio(pedido)) return true;
+        const estado = estadoInicio(pedido);
+        if (!estado) return false;
+        if (estado === "entregado") {
+            const hora = horaDelEstadoInicio(pedido);
+            return hora > 0 && esDeHoyInicio({ timestamp: hora });
+        }
+        return estado !== "cancelado";
+    }).sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+}
+
+function abrirPedidoDesdeInicio(pedido) {
+    if (usaNubeReal() && window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) return;
+    if (typeof abrirHistorialDePedido === "function") {
+        const indice = obtenerHistorial().findIndex(item => item.id === pedido.id);
+        if (indice >= 0) abrirHistorialDePedido(indice);
+    }
+}
+
+function dibujarKpisInicio(pedidosHoy, nube, semana) {
+    const caja = document.getElementById("dashKpis");
+    if (!caja) return;
+    caja.innerHTML = "";
+
+    const kpis = nube
+        ? ESTADOS_KPI_INICIO.map(kpi => ({
+            ...kpi,
+            valor: pedidosHoy.filter(pedido => kpi.estados.includes(estadoInicio(pedido))).length
+        }))
+        : [
+            { id: "hoy", texto: "Pedidos hoy", valor: pedidosHoy.length, accion: "pedidosHoy" },
+            { id: "semana", texto: "Esta semana", valor: semana.pedidos, accion: "pedidosSemana" },
+            { id: "pendientes", texto: "Sin visitar", valor: semana.sinVisitar, accion: "pendientesSemana" }
+        ];
+
+    kpis.forEach(kpi => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "kpiHoy";
+        boton.dataset.kpi = kpi.id;
+        boton.innerHTML = "<strong></strong><span></span>";
+        boton.querySelector("strong").textContent = String(kpi.valor);
+        boton.querySelector("span").textContent = kpi.texto;
+        boton.addEventListener("click", () => {
+            if (kpi.etapa && window.seguimientoVendeFrio?.abrirEtapa?.(kpi.etapa)) return;
+            ejecutarAccionTarjetaDashboard(kpi.accion);
+        });
+        caja.appendChild(boton);
     });
-    const pedidosSemana = historial.filter(pedido => {
-        const fecha = obtenerFechaPedidoDashboard(pedido);
-        return esFechaDeSemanaActual(fecha);
+}
+
+function dibujarPedidosDeHoyInicio(pedidosHoy) {
+    const caja = document.getElementById("dashPedidosDeHoy");
+    if (!caja) return;
+    caja.innerHTML = "";
+
+    if (!pedidosHoy.length) {
+        const vacio = document.createElement("p");
+        vacio.className = "vacioInicio";
+        vacio.textContent = "Todavía no hay pedidos hoy. Tocá + para cargar uno.";
+        caja.appendChild(vacio);
+        return;
+    }
+
+    pedidosHoy.slice(0, 6).forEach(pedido => {
+        const nombre = pedido.comercio || pedido.cliente || "Comercio sin nombre";
+        const estado = estadoInicio(pedido);
+        const fila = document.createElement("button");
+        fila.type = "button";
+        fila.className = "filaInicio";
+
+        const inicial = document.createElement("span");
+        inicial.className = "inicialesInicio";
+        inicial.dataset.tono = String(nombre.length % 4);
+        inicial.textContent = typeof iniciales === "function" ? iniciales(nombre) : nombre.slice(0, 2).toUpperCase();
+
+        const texto = document.createElement("span");
+        texto.className = "textoFilaInicio";
+        const titulo = document.createElement("strong");
+        titulo.textContent = nombre;
+        const detalle = document.createElement("small");
+        const partes = [];
+        if (typeof numeroCortoDelPedido === "function" && pedido.id && estado) partes.push("N° " + numeroCortoDelPedido(pedido));
+        partes.push(unidadesInicio(pedido) + " u");
+        const autor = pedido.autor && pedido.autor.nombre;
+        if (autor) partes.push(autor);
+        detalle.textContent = partes.join(" · ");
+        texto.append(titulo, detalle);
+
+        const derecha = document.createElement("span");
+        derecha.className = "derechaFilaInicio";
+        if (estado) {
+            const chip = document.createElement("span");
+            chip.className = "estadoSeguimiento";
+            chip.dataset.estado = estado;
+            chip.textContent = nombreDeEstadoPedido(estado);
+            derecha.appendChild(chip);
+        }
+        const total = totalInicio(pedido);
+        if (total > 0) {
+            const plata = document.createElement("small");
+            plata.textContent = textoPlataInicio(total);
+            derecha.appendChild(plata);
+        }
+
+        fila.append(inicial, texto, derecha);
+        fila.addEventListener("click", () => abrirPedidoDesdeInicio(pedido));
+
+        const visto = estadosVistosInicio.get(pedido.id);
+        if (inicioDibujadoUnaVez && estado && visto !== undefined && visto !== estado) {
+            fila.classList.add("filaCambio");
+        }
+        caja.appendChild(fila);
     });
-    const visitadosSemana = comercios.filter(comercioVisitadoRecientemente).length;
-    const pendientesSemana = comercios.length - visitadosSemana;
-    const conGps = comercios.filter(
-        tieneGpsValidoDashboard
-    ).length;
 
-    const elementos = {
-        dashPedidosHoy: pedidosHoy.length,
-        dashPedidosSemana: pedidosSemana.length,
-        dashVisitadosSemana: visitadosSemana,
-        dashPendientesSemana: pendientesSemana,
-        dashTotalComercios: comercios.length,
-        dashTotalMarcas: resumenProductos.totalMarcas,
-        dashTotalProductos: resumenProductos.totalProductos,
-        dashConGps: conGps
-    };
+    pedidosHoy.forEach(pedido => estadosVistosInicio.set(pedido.id, estadoInicio(pedido)));
+}
 
-    Object.keys(elementos).forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) elemento.textContent = String(elementos[id]);
-    });
-
-    actualizarUltimoPedidoDashboard(historial);
-
-    // En la nube, Historial está dentro de Pedido (T27b): sin acceso rápido.
-    document.querySelectorAll(".accesoHistorial").forEach(boton => {
-        boton.classList.toggle("oculto", usaNubeReal());
-    });
-
+function dibujarProximaParadaInicio(comercios) {
     const contenedor = document.getElementById("dashProximaParada");
     if (!contenedor) return;
+    contenedor.innerHTML = "";
 
     const pendientes = comercios.filter(comercio => !comercioVisitadoRecientemente(comercio));
 
-    contenedor.innerHTML = "";
-    const botonUbicacion = document.createElement("button"); botonUbicacion.type = "button"; botonUbicacion.className = "btnUbicacionDashboard"; botonUbicacion.innerHTML = window.icono("ubicacion", 14) + (ubicacionDashboard ? " Actualizar mi ubicación" : " Usar mi ubicación"); botonUbicacion.onclick = () => { actualizarUbicacionDashboard(true); };
-    contenedor.appendChild(botonUbicacion);
-
-    if (pendientes.length === 0) {
+    if (!comercios.length || pendientes.length === 0) {
         const mensaje = document.createElement("div");
-        mensaje.style.cssText = "display:flex; align-items:center; gap:10px; color:var(--visitado); font-weight:600;";
-        mensaje.innerHTML = "<span style=\"font-size:24px;\">\ud83c\udf89</span>";
-        const texto = document.createElement("div");
-        texto.textContent = "\u00a1Excelente trabajo! Ya visitaste todos tus comercios esta semana.";
+        mensaje.className = "paradaListo";
+        mensaje.innerHTML = `<span class="paradaIcono" data-tono="ok">${window.icono("check", 22)}</span>`;
+        const texto = document.createElement("p");
+        texto.textContent = comercios.length
+            ? "¡Excelente! Ya visitaste todos tus comercios esta semana."
+            : "Todavía no cargaste comercios.";
         mensaje.appendChild(texto);
         contenedor.appendChild(mensaje);
         return;
@@ -288,44 +369,246 @@ function actualizarDashboard() {
     const sugerido = ubicacionDashboard && conUbicacion.length
         ? conUbicacion.slice().sort((a, b) => distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(a.lat), Number(a.lng)) - distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(b.lat), Number(b.lng)))[0]
         : conUbicacion[0] || pendientes[0];
-    const envoltorio = document.createElement("div");
-    envoltorio.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:12px;";
 
-    const informacion = document.createElement("div");
-    const titulo = document.createElement("h3");
-    titulo.style.cssText = "font-size:16px; margin-bottom:4px;";
-    titulo.innerHTML = window.icono("tienda", 15) + " " + sugerido.nombre;
-
-    const direccion = document.createElement("p");
-    direccion.style.cssText = "font-size:13px; color:var(--texto-sec); margin-bottom:6px;";
-    direccion.innerHTML =
-        window.icono("ubicacion", 13) + " " +
-        (sugerido.direccion || "Direcci\u00f3n pendiente");
-
-    const estado = document.createElement("span");
-    estado.className = "badge badge-pendiente";
-    estado.textContent = "Pendiente esta semana";
-
-    informacion.append(titulo, direccion, estado);
+    // La tarjeta abre la ficha del comercio.
+    const info = document.createElement("button");
+    info.type = "button";
+    info.className = "paradaInfo";
+    info.setAttribute("aria-label", "Ver ficha de " + sugerido.nombre);
+    info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small><span class="chipEstado" data-tono="aviso">Sin visitar esta semana</span></span>`;
+    info.querySelector("strong").textContent = sugerido.nombre;
+    const partes = [sugerido.direccion || "Dirección pendiente"];
+    if (ubicacionDashboard && tieneGpsValidoDashboard(sugerido)) {
+        const km = distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(sugerido.lat), Number(sugerido.lng));
+        partes.push(km < 1 ? "a " + Math.round(km * 100) * 10 + " m" : "a " + km.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " km");
+    }
+    info.querySelector("small").textContent = partes.join(" · ");
+    info.addEventListener("click", () => {
+        if (typeof window.abrirFichaComercio === "function") window.abrirFichaComercio(sugerido.nombre);
+    });
 
     const acciones = document.createElement("div");
-    acciones.className = "accionesDashboard";
+    acciones.className = "paradaAcciones";
 
-    const boton = document.createElement("button");
-    boton.className = "btnAccion agregar";
-    boton.style.cssText = "padding:10px 16px; font-weight:bold; border-radius:10px;";
-    boton.innerHTML = window.icono("documento", 14) + " Pedido";
-    boton.addEventListener("click", () => irAPedidoRapido(sugerido.nombre));
+    const pedido = document.createElement("button");
+    pedido.type = "button";
+    pedido.className = "btnAccion agregar";
+    pedido.innerHTML = window.icono("documento", 18) + " Cargar pedido";
+    pedido.addEventListener("click", () => irAPedidoRapido(sugerido.nombre));
 
-    const botonRuta = document.createElement("button");
-    botonRuta.className = "btnAccion ver";
-    botonRuta.style.cssText = "padding:10px 16px; font-weight:bold; border-radius:10px;";
-    botonRuta.innerHTML = window.icono("mapa", 14) + " Ruta";
-    botonRuta.addEventListener("click", () => mostrarPantalla("rutas"));
+    // "Ir": la navegación propia (navegacion.js) o, si no se puede, Google Maps.
+    const ir = document.createElement("a");
+    ir.className = "btnAccion ver botonIr";
+    ir.target = "_blank";
+    ir.rel = "noopener";
+    ir.innerHTML = window.icono("navegar", 18) + " Ir";
+    const destino = tieneGpsValidoDashboard(sugerido)
+        ? sugerido.lat + "," + sugerido.lng
+        : sugerido.direccion || sugerido.nombre;
+    ir.href = "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + encodeURIComponent(destino);
+    // Con GPS guardado, "Ir" abre la navegación propia (Etapa 5).
+    ir.dataset.navegarA = sugerido.nombre;
 
-    acciones.append(boton, botonRuta);
-    envoltorio.append(informacion, acciones);
-    contenedor.appendChild(envoltorio);
+    acciones.append(pedido, ir);
+    contenedor.append(info, acciones);
+
+    if (!ubicacionDashboard && navigator.geolocation) {
+        const ubicar = document.createElement("button");
+        ubicar.type = "button";
+        ubicar.className = "btnUbicacionDashboard";
+        ubicar.innerHTML = window.icono("mira", 14) + " Usar mi ubicación para elegir la más cercana";
+        ubicar.addEventListener("click", () => actualizarUbicacionDashboard(true));
+        contenedor.appendChild(ubicar);
+    }
+}
+
+function actualizarEncabezadoInicio() {
+    const quien = window.empleadosVendeFrio?.quienSoy?.();
+    const nombre = quien?.nombre || "";
+    const saludo = document.getElementById("dashSaludo");
+    if (saludo) saludo.textContent = nombre ? "Hola, " + nombre.split(" ")[0] : "Hola";
+    const avatar = document.getElementById("botonAvatar");
+    if (avatar) {
+        const inicial = nombre.trim().charAt(0).toLocaleUpperCase("es");
+        avatar.innerHTML = inicial ? "" : window.icono("persona", 22);
+        if (inicial) avatar.textContent = inicial;
+    }
+}
+
+function actualizarDashboard() {
+    actualizarUbicacionDashboard();
+    actualizarEncabezadoInicio();
+
+    const nube = usaNubeReal();
+    const comercios = obtenerComercios();
+    const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
+    const pedidosHoy = pedidosDeHoyInicio(pedidos);
+    const cargadosHoy = pedidos.filter(esDeHoyInicio);
+    const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
+    const visitadosSemana = comercios.filter(comercioVisitadoRecientemente).length;
+    const sinVisitar = comercios.length - visitadosSemana;
+
+    // Resumen de hoy.
+    const hoy = new Date();
+    const fecha = document.getElementById("dashFechaHoy");
+    if (fecha) fecha.textContent = "Hoy · " + hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    const vendido = cargadosHoy.reduce((total, pedido) => total + totalInicio(pedido), 0);
+    const hayPrecios = cargadosHoy.some(pedido => totalInicio(pedido) > 0);
+    const comerciosHoy = new Set(cargadosHoy.map(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es"))).size;
+    const textos = {
+        dashTituloHoy: hayPrecios || nube ? "Vendido hoy" : "Unidades hoy",
+        dashVendidoHoy: hayPrecios || nube
+            ? textoPlataInicio(vendido)
+            : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)),
+        dashResumenHoy: cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
+            comerciosHoy + (comerciosHoy === 1 ? " comercio" : " comercios"),
+        dashVisitadosSemana: visitadosSemana,
+        dashTotalComercios: comercios.length,
+        dashPedidosSemana: pedidosSemana.length,
+        dashVendidoSemana: textoPlataCortoInicio(pedidosSemana.reduce((total, pedido) => total + totalInicio(pedido), 0)),
+        dashPendientesSemana: sinVisitar
+    };
+    Object.keys(textos).forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.textContent = String(textos[id]);
+    });
+    const barra = document.getElementById("dashBarraSemana");
+    if (barra) barra.style.width = (comercios.length ? Math.round(visitadosSemana / comercios.length * 100) : 0) + "%";
+
+    dibujarKpisInicio(pedidosHoy, nube, { pedidos: pedidosSemana.length, sinVisitar });
+    dibujarPedidosDeHoyInicio(nube ? pedidosHoy : cargadosHoy);
+    dibujarProximaParadaInicio(comercios);
+    dibujarPrimerosPasos(comercios, pedidos);
+    dibujarVisitarHoy(comercios, pedidos, cargadosHoy);
+    inicioDibujadoUnaVez = true;
+}
+
+// -----------------------------------------------------
+// Primeros pasos (Etapa 6, T45): en una cuenta nueva, una guía corta que
+// se tilda sola. Se esconde al terminar o con "Ocultar".
+// -----------------------------------------------------
+
+const CLAVE_PRIMEROS_PASOS = "vendefrio_primeros_pasos";
+
+function dibujarPrimerosPasos(comercios, pedidos) {
+    const caja = document.getElementById("dashPrimerosPasos");
+    if (!caja) return;
+    let cerrado = false;
+    try { cerrado = localStorage.getItem(CLAVE_PRIMEROS_PASOS) === "cerrado"; } catch (error) { cerrado = false; }
+
+    const productos = obtenerProductos();
+    const hayProductos = Object.values(productos).some(lista => Array.isArray(lista) && lista.length > 0);
+    const pasos = [
+        { hecho: hayProductos, texto: "Cargá tus productos y precios", accion: () => mostrarPantalla("productos") },
+        { hecho: comercios.length > 0, texto: "Sumá los comercios que visitás", accion: () => mostrarPantalla("comercios") },
+        { hecho: pedidos.length > 0, texto: "Cargá tu primer pedido", accion: () => abrirNuevoPedido() }
+    ];
+    const hechos = pasos.filter(paso => paso.hecho).length;
+    if (cerrado || hechos === pasos.length) {
+        caja.classList.add("oculto");
+        return;
+    }
+
+    caja.classList.remove("oculto");
+    caja.innerHTML = "";
+    const cabecera = document.createElement("div");
+    cabecera.className = "primerosPasosCabecera";
+    cabecera.innerHTML = "<div><strong>Primeros pasos</strong><small></small></div>";
+    cabecera.querySelector("small").textContent = hechos + " de " + pasos.length + " listos";
+    const ocultar = document.createElement("button");
+    ocultar.type = "button";
+    ocultar.className = "ocultarPrimerosPasos";
+    ocultar.textContent = "Ocultar";
+    ocultar.addEventListener("click", () => {
+        try { localStorage.setItem(CLAVE_PRIMEROS_PASOS, "cerrado"); } catch (error) { /* sin lugar */ }
+        caja.classList.add("oculto");
+    });
+    cabecera.appendChild(ocultar);
+    caja.appendChild(cabecera);
+
+    const barra = document.createElement("div");
+    barra.className = "barraSemana";
+    barra.innerHTML = "<span></span>";
+    barra.querySelector("span").style.width = Math.round(hechos / pasos.length * 100) + "%";
+    caja.appendChild(barra);
+
+    pasos.forEach(paso => {
+        const fila = document.createElement("button");
+        fila.type = "button";
+        fila.className = "pasoPrimeros" + (paso.hecho ? " hecho" : "");
+        fila.innerHTML = '<span class="tildePaso">' + (paso.hecho ? window.icono("check", 14) : "") + "</span><span></span>" + (paso.hecho ? "" : window.icono("chevDerecha", 16));
+        fila.children[1].textContent = paso.texto;
+        if (!paso.hecho) fila.addEventListener("click", paso.accion);
+        else fila.disabled = true;
+        caja.appendChild(fila);
+    });
+}
+
+// -----------------------------------------------------
+// "Suelen pedir hoy" (Etapa 6, T46): comercios que en las últimas 8
+// semanas pidieron este mismo día de la semana al menos 2 veces y hoy
+// todavía no tienen pedido.
+// -----------------------------------------------------
+
+const DIAS_SEMANA = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
+
+function comerciosQueSuelenPedirHoy(pedidos, cargadosHoy) {
+    const hoy = new Date();
+    const dia = hoy.getDay();
+    const desde = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 56).getTime();
+    const normalizarNombre = texto => String(texto || "").trim().toLocaleLowerCase("es");
+    const conPedidoHoy = new Set(cargadosHoy.map(pedido => normalizarNombre(pedido.comercio || pedido.cliente)));
+    const dias = new Map();
+    pedidos.forEach(pedido => {
+        const fecha = obtenerFechaPedidoDashboard(pedido);
+        if (!fecha || fecha.getTime() < desde || fecha.getDay() !== dia || esDeHoyInicio(pedido)) return;
+        const clave = normalizarNombre(pedido.comercio || pedido.cliente);
+        if (!clave) return;
+        if (!dias.has(clave)) dias.set(clave, new Set());
+        dias.get(clave).add(fecha.toDateString());
+    });
+    return Array.from(dias.entries())
+        .filter(([clave, fechas]) => fechas.size >= 2 && !conPedidoHoy.has(clave))
+        .map(([clave, fechas]) => ({ clave, veces: fechas.size }))
+        .sort((a, b) => b.veces - a.veces);
+}
+
+function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
+    const seccion = document.getElementById("dashVisitarHoy");
+    const lista = document.getElementById("dashListaVisitarHoy");
+    if (!seccion || !lista) return;
+    const sugeridos = comerciosQueSuelenPedirHoy(pedidos, cargadosHoy)
+        .map(item => ({ ...item, comercio: comercios.find(comercio => String(comercio.nombre || "").trim().toLocaleLowerCase("es") === item.clave) }))
+        .filter(item => item.comercio)
+        .slice(0, 5);
+    seccion.classList.toggle("oculto", sugeridos.length === 0);
+    if (!sugeridos.length) return;
+    const dia = DIAS_SEMANA[new Date().getDay()];
+    document.getElementById("tituloVisitarHoy").textContent = "Suelen pedir los " + dia;
+    lista.innerHTML = "";
+    sugeridos.forEach(item => {
+        const fila = document.createElement("div");
+        fila.className = "filaInicio filaVisitarHoy";
+        const avatar = document.createElement("span");
+        avatar.className = "inicialesInicio";
+        avatar.dataset.tono = String(item.comercio.nombre.length % 4);
+        avatar.textContent = typeof iniciales === "function" ? iniciales(item.comercio.nombre) : String(item.comercio.nombre).trim().slice(0, 2).toUpperCase();
+        const texto = document.createElement("span");
+        texto.className = "textoFilaInicio";
+        const nombre = document.createElement("strong");
+        nombre.textContent = item.comercio.nombre;
+        const detalle = document.createElement("small");
+        detalle.textContent = "Pidió " + item.veces + " de los últimos 8 " + dia;
+        texto.append(nombre, detalle);
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "btnAccion agregar botonPedidoVisitarHoy";
+        boton.innerHTML = window.icono("mas", 16) + " Pedido";
+        boton.setAttribute("aria-label", "Cargar pedido para " + item.comercio.nombre);
+        boton.addEventListener("click", () => irAPedidoRapido(item.comercio.nombre));
+        fila.append(avatar, texto, boton);
+        lista.appendChild(fila);
+    });
 }
 
 function irAPedidoRapido(nombreComercio) {
@@ -368,6 +651,10 @@ function ejecutarAccionTarjetaDashboard(accion) {
     if (accion === "pendientesSemana") {
         abrirComerciosConFiltroDashboard("pendientes");
     }
+
+    if (accion === "vendidoSemana" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas();
+    }
 }
 
 function prepararTarjetasDashboard() {
@@ -392,34 +679,76 @@ function prepararTarjetasDashboard() {
 
 prepararTarjetasDashboard();
 
+document.getElementById("botonAvatar")?.addEventListener("click", () => abrirMenuMas());
+document.getElementById("dashVerTodos")?.addEventListener("click", () => {
+    if (usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial) {
+        if (window.seguimientoVendeFrio.abrirEtapa("cargados")) return;
+    }
+    mostrarPantalla(usaNubeReal() ? "pedido" : "historial");
+});
+window.empleadosVendeFrio?.escucharQuienSoy?.(() => actualizarEncabezadoInicio());
+
 // -----------------------------------------------------
 // NAVEGACI\u00d3N
 // -----------------------------------------------------
 
+// "Más" (T31): es la pantalla de configuración agrupada, que arriba tiene
+// los accesos a Rutas, Estadísticas y las demás secciones.
 function abrirMenuMas() {
-    let panel = document.getElementById("menuMasMovil");
-    if (!panel) {
-        panel = document.createElement("div");
-        panel.id = "menuMasMovil";
-        panel.className = "menuMasMovil";
-        // En la nube, Historial está dentro de Pedido (T27b).
-        const botonHistorialMas = usaNubeReal()
-            ? ""
-            : `<button data-mas="historial"><span>${window.icono("historial", 18)}</span><strong>Historial</strong><b>›</b></button>`;
-        // Cierre del día (T28f): solo el dueño y quien tiene "Cobra", en la nube.
-        const botonCierreMas = window.cierreVendeFrio?.disponible?.()
-            ? `<button data-mas="cierre"><span>${window.icono("recibo", 18)}</span><strong>Cierre del día</strong><b>›</b></button>`
-            : "";
-        panel.innerHTML = `<div class="menuMasContenido"><div class="menuMasEncabezado"><strong>Más opciones</strong><button type="button" class="menuMasCerrar">×</button></div><button data-mas="rutas"><span>${window.icono("mapa", 18)}</span><strong>Rutas</strong><b>›</b></button>${botonCierreMas}<button data-mas="estadisticas"><span>${window.icono("grafico", 18)}</span><strong>Estadísticas</strong><b>›</b></button>${botonHistorialMas}<button data-mas="configuracion"><span>${window.icono("engranaje", 18)}</span><strong>Configuración</strong><b>›</b></button><button data-mas="productos"><span>${window.icono("etiqueta", 18)}</span><strong>Productos y marcas</strong><b>›</b></button></div>`;
-        document.body.appendChild(panel);
-        panel.addEventListener("click", event => { if (event.target === panel || event.target.closest(".menuMasCerrar")) { panel.remove(); return; } const boton = event.target.closest("[data-mas]"); if (!boton) return; panel.remove(); const destino = boton.dataset.mas; if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas(); else if (destino === "cierre" && window.cierreVendeFrio) window.cierreVendeFrio.abrir(); else if (destino === "configuracion" && typeof window.abrirConfiguracion === "function") window.abrirConfiguracion(); else mostrarPantalla(destino); });
-    }
+    if (typeof window.abrirConfiguracion === "function") window.abrirConfiguracion();
+    document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("activo", btn.dataset.pantalla === "mas"));
+    window.scrollTo(0, 0);
 }
+
+document.addEventListener("click", event => {
+    const boton = event.target.closest?.("[data-mas]");
+    if (!boton) return;
+    const destino = boton.dataset.mas;
+    if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas();
+    else if (destino === "cierre" && window.cierreVendeFrio) window.cierreVendeFrio.abrir();
+    else if (destino === "configuracion") abrirMenuMas();
+    else mostrarPantalla(destino);
+});
+
+// Botón "+" de la barra (T31): abre "Nuevo pedido". Si ya se ve la lista
+// de Pedidos (en la nube), usa su botón de "Nuevo pedido".
+function abrirNuevoPedido() {
+    const pedido = pantallas.pedido;
+    if (pedido && !pedido.classList.contains("oculto")) {
+        document.querySelector(".botonNuevoPedido")?.click();
+    } else {
+        mostrarPantalla("pedido");
+    }
+    document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("activo"));
+}
+window.abrirNuevoPedido = abrirNuevoPedido;
+
+// Mientras se carga un pedido (T34) no se ve la barra de abajo: el total y
+// "Guardar pedido" quedan fijos abajo. En el modo personal, la "X" de arriba
+// vuelve a Inicio (en la nube, la flecha vuelve a la lista de Pedidos).
+function actualizarModoCargaPedido() {
+    const pedido = pantallas.pedido;
+    if (!pedido) return;
+    const cargando = !pedido.classList.contains("oculto") && pedido.dataset.vista !== "pedidos";
+    document.documentElement.classList.toggle("enCargaPedido", cargando);
+    document.getElementById("cerrarCargaPedido")?.classList.toggle("oculto", !cargando || usaNubeReal());
+}
+if (pantallas.pedido) {
+    new MutationObserver(actualizarModoCargaPedido)
+        .observe(pantallas.pedido, { attributes: true, attributeFilter: ["class", "data-vista"] });
+}
+document.getElementById("cerrarCargaPedido")?.addEventListener("click", () => mostrarPantalla("menu"));
 
 document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", event => {
         event.preventDefault();
-        const destino = btn.dataset.pantalla;
+        if (btn.dataset.accion === "nuevoPedido") {
+            abrirNuevoPedido();
+            return;
+        }
+        let destino = btn.dataset.pantalla;
+        // "Pedidos" en el modo personal: la lista es Historial.
+        if (destino === "pedido" && !usaNubeReal()) destino = "historial";
         if (destino) mostrarPantalla(destino);
     });
 });
@@ -435,8 +764,9 @@ function mostrarNombreDistribuidora(nombre) {
 
     const conSesion = Boolean(window.cuentaVendeFrio?.usuarioActual());
     const visible = conSesion && Boolean(nombre);
-    texto.textContent = visible ? nombre : "";
-    texto.classList.toggle("oculto", !visible);
+    // Estilo nuevo (T31): sin sesión o sin nombre dice "VendeFrío".
+    texto.textContent = visible ? nombre : "VendeFrío";
+    texto.classList.remove("oculto");
 }
 
 if (window.distribuidoraVendeFrio?.escucharNombre) {
@@ -463,3 +793,51 @@ if (!document.querySelector('script[data-configuracion="true"]')) {
     script.defer = true;
     document.body.appendChild(script);
 });
+
+// Etapa 4: botones en fila (Hoy / Semana / Mes / Todo, Todos / Pendientes /
+// Visitados) en lugar de un desplegable. El desplegable queda escondido y
+// sigue siendo el que manda: el botón le cambia el valor y avisa el cambio,
+// y quien cambia el valor por código llama a sincronizarSegmento.
+function crearSegmentoDeSelect(select, opciones, etiqueta, inicial) {
+    if (!select) return null;
+    select.innerHTML = "";
+    opciones.forEach(([valor, texto]) => {
+        const opcion = document.createElement("option");
+        opcion.value = valor;
+        opcion.textContent = texto;
+        select.appendChild(opcion);
+    });
+    select.value = inicial;
+    select.classList.add("oculto");
+
+    const segmento = document.createElement("div");
+    segmento.className = "segmentoPeriodo";
+    segmento.setAttribute("role", "radiogroup");
+    segmento.setAttribute("aria-label", etiqueta);
+    opciones.forEach(([valor, texto]) => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.dataset.valor = valor;
+        boton.setAttribute("role", "radio");
+        boton.textContent = texto;
+        boton.addEventListener("click", () => {
+            if (select.value === valor) return;
+            select.value = valor;
+            sincronizarSegmento(segmento, valor);
+            select.dispatchEvent(new Event("change"));
+        });
+        segmento.appendChild(boton);
+    });
+    select.after(segmento);
+    sincronizarSegmento(segmento, select.value);
+    return segmento;
+}
+
+function sincronizarSegmento(segmento, valor) {
+    if (!segmento) return;
+    segmento.querySelectorAll("button[data-valor]").forEach(boton => {
+        const activo = boton.dataset.valor === valor;
+        boton.classList.toggle("activo", activo);
+        boton.setAttribute("aria-checked", activo ? "true" : "false");
+    });
+}

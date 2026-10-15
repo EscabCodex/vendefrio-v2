@@ -7,6 +7,10 @@ const listaComerciosAdmin = document.getElementById("listaComerciosAdmin");
 const buscarComercio = document.getElementById("buscarComercio");
 const filtroEstadoComercios = document.getElementById("filtroEstadoComercios");
 const resumenComercios = document.getElementById("resumenComercios");
+// Todos / Pendientes / Visitados con botones (T37).
+const segmentoEstadoComercios = typeof crearSegmentoDeSelect === "function"
+    ? crearSegmentoDeSelect(filtroEstadoComercios, [["todos", "Todos"], ["pendientes", "Pendientes"], ["visitados", "Visitados"]], "Filtrar comercios por visitas", "todos")
+    : null;
 const botonAgregar = document.getElementById("agregarComercio");
 
 const modal = document.getElementById("modal");
@@ -54,12 +58,9 @@ function actualizarResumenComercios(comercios) {
     const pendientes = comercios.length - visitados;
 
     resumenComercios.textContent =
-        "Comercios: " +
-        comercios.length +
-        "  -  Pendientes: " +
-        pendientes +
-        "  -  Visitados: " +
-        visitados;
+        comercios.length + (comercios.length === 1 ? " comercio" : " comercios") +
+        "  ·  " + pendientes + (pendientes === 1 ? " pendiente" : " pendientes") +
+        "  ·  " + visitados + (visitados === 1 ? " visitado" : " visitados") + " esta semana";
 }
 
 function crearBotonComercio(clase, texto, nombre) {
@@ -219,6 +220,7 @@ function renderizarComercios() {
     // Eliminados y cancelados no cuentan (T26).
     const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
     actualizarResumenComercios(todosLosComercios);
+    if (segmentoEstadoComercios && filtroEstadoComercios) sincronizarSegmento(segmentoEstadoComercios, filtroEstadoComercios.value);
 
     const texto = buscarComercio ? buscarComercio.value : "";
     const filtro = filtroEstadoComercios
@@ -242,11 +244,19 @@ function renderizarComercios() {
             return coincideTexto && coincideEstado;
         })
         .sort((a, b) => {
-            const pendienteA = !estaVisitadoEstaSemana(a);
-            const pendienteB = !estaVisitadoEstaSemana(b);
+            // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
+            const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
 
-            if (pendienteA !== pendienteB) {
-                return pendienteA ? -1 : 1;
+            if (orden === "frecuentes") {
+                const diferencia = contarPedidosDelComercio(b.nombre, historialComercios) - contarPedidosDelComercio(a.nombre, historialComercios);
+                if (diferencia) return diferencia;
+            } else if (orden === "pendientes") {
+                const pendienteA = !estaVisitadoEstaSemana(a);
+                const pendienteB = !estaVisitadoEstaSemana(b);
+
+                if (pendienteA !== pendienteB) {
+                    return pendienteA ? -1 : 1;
+                }
             }
 
             return a.nombre.localeCompare(b.nombre, "es");
@@ -295,26 +305,27 @@ function renderizarComercios() {
         datosComercio.className = "datosComercioGrid";
 
         const pedidos = document.createElement("span");
-        pedidos.className = "datoComercio";
+        pedidos.className = "datoComercio datoPedidos";
+        const cantidadPedidos = contarPedidosDelComercio(comercio.nombre, historialComercios);
         pedidos.innerHTML =
             window.icono("paquete", 12) + " " +
-            contarPedidosDelComercio(comercio.nombre, historialComercios) +
-            " pedidos";
+            cantidadPedidos +
+            (cantidadPedidos === 1 ? " pedido" : " pedidos");
 
         const ultimaVisita = document.createElement("span");
-        ultimaVisita.className = "datoComercio";
+        ultimaVisita.className = "datoComercio datoVisita";
         ultimaVisita.innerHTML =
             window.icono("calendario", 12) + " " +
             (comercio.ultimaVisita || "Nunca");
 
         const direccion = document.createElement("span");
-        direccion.className = "datoComercio";
+        direccion.className = "datoComercio datoDireccion";
         direccion.innerHTML = comercio.direccion
             ? window.icono("ubicacion", 12) + " " + comercio.direccion
             : "";
 
         const telefono = document.createElement("span");
-        telefono.className = "datoComercio";
+        telefono.className = "datoComercio datoTelefono";
         telefono.innerHTML = comercio.telefono
             ? window.icono("telefono", 12) + " " + comercio.telefono
             : "";
@@ -328,14 +339,15 @@ function renderizarComercios() {
 
         const visitado = estaVisitadoEstaSemana(comercio);
         const estado = document.createElement("span");
-        estado.className = visitado
-            ? "badge badge-visitado"
-            : "badge badge-pendiente";
-        estado.textContent = visitado
-            ? "Visitado esta semana"
-            : "Pendiente esta semana";
+        estado.className = "chipEstado estadoComercio";
+        estado.dataset.tono = visitado ? "ok" : "aviso";
+        estado.textContent = visitado ? "Visitado" : "Pendiente";
+        estado.title = visitado ? "Visitado esta semana" : "Pendiente esta semana";
 
-        informacion.append(titulo, datosComercio, estado);
+        const filaTitulo = document.createElement("div");
+        filaTitulo.className = "filaTituloComercio";
+        filaTitulo.append(titulo, estado);
+        informacion.append(filaTitulo, datosComercio);
         cabecera.append(avatar, informacion);
         card.appendChild(cabecera);
 

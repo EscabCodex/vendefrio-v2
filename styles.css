@@ -394,7 +394,7 @@ select{
 
 select.activo{
   background:var(--verde);
-  color:white;
+  color:var(--acento-txt);
   font-weight:700;
 }
 
@@ -685,7 +685,7 @@ select.activo{
 
 .btnAccion.agregar{
   background:var(--acento);
-  color:white;
+  color:var(--acento-txt);
   padding:12px 18px;
   font-size:14px;
   box-shadow:none;
@@ -770,7 +770,7 @@ footer button:active{
 #generar{
   flex:2;
   background:var(--acento);
-  color:white;
+  color:var(--acento-txt);
   font-size:16px;
 }
 
@@ -956,7 +956,7 @@ html[data-tema="oscuro"] .toast{
 
 .btnModalConfirmar{
   background:var(--verde);
-  color:white;
+  color:var(--acento-txt);
 }
 
 .btnModalPeligro{
@@ -1121,9 +1121,6 @@ main.container {
 body > nav.bottom-nav {
   display: flex !important;
   position: fixed !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
   visibility: visible !important;
   opacity: 1 !important;
   z-index: 9999 !important;
@@ -2279,7 +2276,7 @@ header h1{
   flex:none;
   place-items:center;
   border-radius:16px;
-  color:#fff;
+  color:var(--acento-txt);
   background:var(--verde);
   font-size:17px;
   font-weight:800;
@@ -2479,19 +2476,19 @@ html[data-texto="grande"]{font-size:17px;}
 html[data-densidad="comodo"] .card,html[data-densidad="comodo"] .configGrupo{padding:16px;margin-bottom:14px;}
 html[data-tema="oscuro"]{--fondo:#111827;--gris-claro:#334049;--gris-texto:#cbd5e1;--superficie:#1f2937;--borde:#374151;--texto:#f9fafb;--texto-sec:#cbd5e1;--acento:#14A098;--acento-oscuro:#7FD9CF;--acento-bg:#163B39;--pendiente:#E07A42;--pendiente-bg:#3A2415;--visitado:#6FBF8F;--visitado-bg:#1C3524;--peligro:#E5675E;--peligro-bg:#3A1917;}
 @media (prefers-color-scheme:dark){html[data-tema="sistema"]{--fondo:#111827;--gris-claro:#334049;--gris-texto:#cbd5e1;--superficie:#1f2937;--borde:#374151;--texto:#f9fafb;--texto-sec:#cbd5e1;--acento:#14A098;--acento-oscuro:#7FD9CF;--acento-bg:#163B39;--pendiente:#E07A42;--pendiente-bg:#3A2415;--visitado:#6FBF8F;--visitado-bg:#1C3524;--peligro:#E5675E;--peligro-bg:#3A1917;}}
-html[data-tema="oscuro"] body{background:#111827;color:#f9fafb;}
-html[data-tema="oscuro"] .card,html[data-tema="oscuro"] .configGrupo,html[data-tema="oscuro"] .bottom-nav{background:#1f2937;color:#f9fafb;border-color:#374151;}
-html[data-tema="oscuro"] .configGrupo h2,html[data-tema="oscuro"] .infoCard h3{color:#f9fafb;}
-html[data-tema="oscuro"] input,html[data-tema="oscuro"] select,html[data-tema="oscuro"] textarea,html[data-tema="oscuro"] .configGrupo select{background:#111827;color:#f9fafb;border-color:#4b5563;}
-@media (prefers-color-scheme:dark){html[data-tema="sistema"] body{background:#111827;color:#f9fafb;}html[data-tema="sistema"] .card,html[data-tema="sistema"] .configGrupo,html[data-tema="sistema"] .bottom-nav{background:#1f2937;color:#f9fafb;}}
+html[data-tema="oscuro"] body{background:var(--fondo);color:var(--texto);}
+html[data-tema="oscuro"] .card,html[data-tema="oscuro"] .configGrupo,html[data-tema="oscuro"] .bottom-nav{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
+html[data-tema="oscuro"] .configGrupo h2,html[data-tema="oscuro"] .infoCard h3{color:var(--texto);}
+html[data-tema="oscuro"] input,html[data-tema="oscuro"] select,html[data-tema="oscuro"] textarea,html[data-tema="oscuro"] .configGrupo select{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+@media (prefers-color-scheme:dark){html[data-tema="sistema"] body{background:var(--fondo);color:var(--texto);}html[data-tema="sistema"] .card,html[data-tema="sistema"] .configGrupo,html[data-tema="sistema"] .bottom-nav{background:var(--superficie);color:var(--texto);}}
 
 /* Refuerzo tema oscuro para todos los controles de Configuración */
 html[data-tema="oscuro"] .configVolver,
 html[data-tema="oscuro"] .configGrupo button,
 html[data-tema="oscuro"] .configGrupo select{
-  color:#f9fafb;
-  background:#111827;
-  border-color:#4b5563;
+  color:var(--texto);
+  background:var(--fondo);
+  border-color:var(--borde-fuerte);
 }
 html[data-tema="oscuro"] .configGrupo,
 html[data-tema="oscuro"] .configInfo,
@@ -2499,8 +2496,8 @@ html[data-tema="oscuro"] .fichaDatos,
 html[data-tema="oscuro"] .fichaEstadistica,
 html[data-tema="oscuro"] .fichaUltimo,
 html[data-tema="oscuro"] .fichaProductos{
-  background:#1f2937;
-  border-color:#374151;
+  background:var(--superficie);
+  border-color:var(--borde);
 }
 html[data-tema="oscuro"] .configGrupo h2,
 html[data-tema="oscuro"] .configGrupo label,
@@ -2509,14 +2506,14 @@ html[data-tema="oscuro"] .configGrupo span,
 html[data-tema="oscuro"] .fichaDatos p,
 html[data-tema="oscuro"] .fichaProductos strong,
 html[data-tema="oscuro"] .fichaUltimo strong{
-  color:#f9fafb;
+  color:var(--texto);
 }
 html[data-tema="oscuro"] .configPeligro{
   color:#fecaca !important;
   background:#450a0a !important;
   border-color:#991b1b !important;
 }
-html[data-tema="oscuro"] option{color:#f9fafb;background:#111827;}
+html[data-tema="oscuro"] option{color:var(--texto);background:var(--fondo);}
 .configSwitch{display:flex!important;grid-template-columns:none!important;align-items:center;gap:9px!important;min-height:44px;}
 .configSwitch input{width:20px;height:20px;min-height:20px;accent-color:var(--verde);}
 
@@ -2532,9 +2529,9 @@ html[data-tema="oscuro"] table,
 html[data-tema="oscuro"] tr,
 html[data-tema="oscuro"] td,
 html[data-tema="oscuro"] th{
-  color:#f3f4f6;
-  background:#1f2937;
-  border-color:#374151;
+  color:var(--texto);
+  background:var(--superficie);
+  border-color:var(--borde);
 }
 
 html[data-tema="oscuro"] h1,
@@ -2551,23 +2548,23 @@ html[data-tema="oscuro"] strong,
 html[data-tema="oscuro"] li,
 html[data-tema="oscuro"] td,
 html[data-tema="oscuro"] th{
-  color:#f3f4f6 !important;
+  color:var(--texto) !important;
 }
 
 html[data-tema="oscuro"] .subtitulo,
 html[data-tema="oscuro"] .datoComercio,
 html[data-tema="oscuro"] small,
 html[data-tema="oscuro"] .estadoRespaldo{
-  color:#cbd5e1 !important;
+  color:var(--texto-sec) !important;
 }
 
 html[data-tema="oscuro"] input,
 html[data-tema="oscuro"] select,
 html[data-tema="oscuro"] textarea,
 html[data-tema="oscuro"] option{
-  color:#f9fafb !important;
-  background:#111827 !important;
-  border-color:#4b5563 !important;
+  color:var(--texto) !important;
+  background:var(--fondo) !important;
+  border-color:var(--borde-fuerte) !important;
 }
 
 html[data-tema="oscuro"] .menuBtn,
@@ -2575,19 +2572,19 @@ html[data-tema="oscuro"] .btnAccion,
 html[data-tema="oscuro"] .btnModalCancelar,
 html[data-tema="oscuro"] .btnModalConfirmar,
 html[data-tema="oscuro"] .btnModalPeligro{
-  border-color:#4b5563;
+  border-color:var(--borde-fuerte);
 }
 
 html[data-tema="oscuro"] .modalContenido{
-  color:#f3f4f6;
-  background:#1f2937;
+  color:var(--texto);
+  background:var(--superficie);
 }
 
 html[data-tema="oscuro"] .detallePedido,
 html[data-tema="oscuro"] .resumenPedido,
 html[data-tema="oscuro"] .mensajeBusquedaPedido{
-  color:#f3f4f6;
-  background:#111827;
+  color:var(--texto);
+  background:var(--fondo);
 }
 
 /* Corrección de Rutas y Resumen Comercial en modo oscuro */
@@ -2599,9 +2596,9 @@ html[data-tema="oscuro"] .resumenComercios,
 html[data-tema="oscuro"] .resumenHistorial,
 html[data-tema="oscuro"] .resumenRuta,
 html[data-tema="oscuro"] .filtroHistorialActivo{
-  color:#f3f4f6 !important;
-  background:#1f2937 !important;
-  border-color:#374151 !important;
+  color:var(--texto) !important;
+  background:var(--superficie) !important;
+  border-color:var(--borde) !important;
 }
 
 html[data-tema="oscuro"] .selectorRuta h3,
@@ -2612,12 +2609,12 @@ html[data-tema="oscuro"] .filaRutaGuardadaItem strong,
 html[data-tema="oscuro"] .filaRutaGuardadaItem small,
 html[data-tema="oscuro"] .seleccionRutaGps,
 html[data-tema="oscuro"] .seleccionRutaSinGps{
-  color:#e5e7eb !important;
+  color:var(--texto) !important;
 }
 
 html[data-tema="oscuro"] .filaRutaGuardadaItem:hover,
 html[data-tema="oscuro"] .filaRutaGuardadaItem:focus{
-  background:#273449 !important;
+  background:var(--superficie-2) !important;
   border-color:#818cf8 !important;
 }
 
@@ -2633,9 +2630,9 @@ html[data-tema="oscuro"] .resumenMensualComercial,
 html[data-tema="oscuro"] .bloquePerfilesComerciales,
 html[data-tema="oscuro"] .bloqueSeguimientoSemanal,
 html[data-tema="oscuro"] .bloqueAlertasComerciales{
-  background:#1f2937 !important;
-  border-color:#374151 !important;
-  color:#f3f4f6 !important;
+  background:var(--superficie) !important;
+  border-color:var(--borde) !important;
+  color:var(--texto) !important;
 }
 
 html[data-tema="oscuro"] .bloqueEstadisticaComercial h3,
@@ -2647,26 +2644,26 @@ html[data-tema="oscuro"] .filaComparativaSemanal,
 html[data-tema="oscuro"] .filaPerfilComercial,
 html[data-tema="oscuro"] .filaSeguimientoSemanal,
 html[data-tema="oscuro"] .filaAlertaComercial{
-  color:#e5e7eb !important;
+  color:var(--texto) !important;
 }
 
 html[data-tema="oscuro"] .filaComparativaSemanal,
 html[data-tema="oscuro"] .filaPerfilComercial,
 html[data-tema="oscuro"] .filaSeguimientoSemanal,
 html[data-tema="oscuro"] .filaAlertaComercial{
-  border-color:#374151 !important;
+  border-color:var(--borde) !important;
 }
 
 html[data-tema="oscuro"] .bloqueEstadisticaComercial li,
 html[data-tema="oscuro"] .panelInteligenciaComercial > p,
 html[data-tema="oscuro"] .resumenMensualComercial p{
-  color:#cbd5e1 !important;
+  color:var(--texto-sec) !important;
 }
 
 /* Estados y botones de comercios en modo oscuro */
 html[data-tema="oscuro"] .btnAccion.agregar,
 html[data-tema="oscuro"] .menuBtn[style*="ecfdf5"]{
-  color:white !important;
+  color:var(--acento-txt) !important;
   background:var(--acento) !important;
   border-color:var(--acento) !important;
 }
@@ -2704,25 +2701,25 @@ html[data-tema="oscuro"] .badge-visitado{
 
 /* Footer de pedidos y repetir pedido en modo oscuro */
 html[data-tema="oscuro"] footer{
-  background:#111827 !important;
-  border-top:1px solid #374151;
+  background:var(--fondo) !important;
+  border-top:1px solid var(--borde);
   box-shadow:0 -4px 14px rgba(0,0,0,.35);
 }
 
 html[data-tema="oscuro"] footer button#reset{
-  color:#bbf7d0 !important;
-  background:#064e3b !important;
+  color:var(--visitado) !important;
+  background:var(--visitado-bg) !important;
 }
 
 html[data-tema="oscuro"] footer button#generar{
-  color:#ecfdf5 !important;
-  background:#047857 !important;
+  color:var(--acento-txt) !important;
+  background:var(--acento) !important;
 }
 
 html[data-tema="oscuro"] .botonRepetirPedido{
-  color:#bfdbfe !important;
-  background:#1e3a8a !important;
-  border:1px solid #3b82f6 !important;
+  color:var(--acento) !important;
+  background:var(--acento-bg) !important;
+  border:1px solid transparent !important;
 }
 
 /* Configuración tipo menú móvil */
@@ -2744,16 +2741,16 @@ html[data-tema="oscuro"] .botonRepetirPedido{
 .configEstado{padding:10px;border-radius:10px;background:#f3f4f6;color:#4b5563;font-size:12px;line-height:1.4;}
 .configAcciones{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .configRestaurar{background:#ecfdf5!important;color:#047857!important;border-color:#86efac!important;}
-html[data-tema="oscuro"] .configMenuPrincipal{background:#374151;}
-html[data-tema="oscuro"] .configFila{background:#1f2937;border-color:#374151;}
-html[data-tema="oscuro"] .configFila:active{background:#273449;}
-html[data-tema="oscuro"] .configFila strong{color:#f9fafb!important;}
-html[data-tema="oscuro"] .configFila small,.configDescripcion{color:#cbd5e1!important;}
+html[data-tema="oscuro"] .configMenuPrincipal{background:var(--borde);}
+html[data-tema="oscuro"] .configFila{background:var(--superficie);border-color:var(--borde);}
+html[data-tema="oscuro"] .configFila:active{background:var(--superficie-2);}
+html[data-tema="oscuro"] .configFila strong{color:var(--texto)!important;}
+html[data-tema="oscuro"] .configFila small,.configDescripcion{color:var(--texto-sec)!important;}
 html[data-tema="oscuro"] .configIcono{background:#312e81;}
 html[data-tema="oscuro"] .configSubVolver{color:#93c5fd;}
-html[data-tema="oscuro"] .configEstado{background:#111827;color:#e5e7eb;}
-html[data-tema="oscuro"] .configDetalle select,html[data-tema="oscuro"] .configDetalle button{background:#111827;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .configRestaurar{background:#064e3b!important;color:#bbf7d0!important;border-color:#10b981!important;}
+html[data-tema="oscuro"] .configEstado{background:var(--fondo);color:var(--texto);}
+html[data-tema="oscuro"] .configDetalle select,html[data-tema="oscuro"] .configDetalle button{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .configRestaurar{background:var(--visitado-bg)!important;color:var(--visitado)!important;border-color:#10b981!important;}
 
 /* Menú de Configuración suelto, tipo lista de aplicación */
 .configMenuPrincipal{
@@ -2773,8 +2770,8 @@ html[data-tema="oscuro"] .configRestaurar{background:#064e3b!important;color:#bb
 .configDetalle{width:100%;padding:0 2px;}
 .configDetalle label{padding:10px 0;border-bottom:1px solid #e5e7eb;}
 .configDetalle label:last-of-type{border-bottom:0;}
-html[data-tema="oscuro"] .configFila{background:transparent;border-color:#374151;}
-html[data-tema="oscuro"] .configDetalle label{border-color:#374151;}
+html[data-tema="oscuro"] .configFila{background:transparent;border-color:var(--borde);}
+html[data-tema="oscuro"] .configDetalle label{border-color:var(--borde);}
 
 /* Filas independientes del menú de Configuración */
 .configMenuPrincipal{
@@ -2794,8 +2791,8 @@ html[data-tema="oscuro"] .configDetalle label{border-color:#374151;}
 }
 html[data-tema="oscuro"] .configFila,
 html[data-tema="oscuro"] .configFila:first-child{
-  border-color:#374151;
-  background:#1f2937;
+  border-color:var(--borde);
+  background:var(--superficie);
   box-shadow:none;
 }
 
@@ -2834,11 +2831,11 @@ html[data-tema="oscuro"] .configMenuPrincipal{
 .fotoCatalogo{display:grid;aspect-ratio:1;place-items:center;border-radius:10px;background:#e6f7ef;color:var(--verde-oscuro);font-size:32px;font-weight:800;}
 .itemCatalogo strong,.itemCatalogo small,.itemCatalogo b{overflow-wrap:anywhere;}
 .itemCatalogo strong{font-size:13px;}.itemCatalogo small{color:#6b7280;font-size:11px;}.itemCatalogo b{color:var(--verde-oscuro);font-size:13px;}
-html[data-tema="oscuro"] .extraVolver,html[data-tema="oscuro"] .estadisticaResumen div,html[data-tema="oscuro"] .itemCatalogo{background:#1f2937;color:#f9fafb;border-color:#374151;}
-html[data-tema="oscuro"] .listaEstadistica{border-color:#374151;}
-html[data-tema="oscuro"] .estadisticaResumen small,html[data-tema="oscuro"] .listaEstadistica p,html[data-tema="oscuro"] .itemCatalogo small{color:#cbd5e1;}
-html[data-tema="oscuro"] .buscadorCatalogo{background:#111827;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .fotoCatalogo{background:#064e3b;color:#bbf7d0;}
+html[data-tema="oscuro"] .extraVolver,html[data-tema="oscuro"] .estadisticaResumen div,html[data-tema="oscuro"] .itemCatalogo{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
+html[data-tema="oscuro"] .listaEstadistica{border-color:var(--borde);}
+html[data-tema="oscuro"] .estadisticaResumen small,html[data-tema="oscuro"] .listaEstadistica p,html[data-tema="oscuro"] .itemCatalogo small{color:var(--texto-sec);}
+html[data-tema="oscuro"] .buscadorCatalogo{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .fotoCatalogo{background:var(--visitado-bg);color:var(--visitado);}
 
 /* Estadísticas: informe completo visible en una sola pantalla */
 .informeEstadisticas{display:grid;gap:8px;}
@@ -2847,20 +2844,20 @@ html[data-tema="oscuro"] .fotoCatalogo{background:#064e3b;color:#bbf7d0;}
 .informeEstadisticas .bloquePerfilesComerciales,
 .informeEstadisticas .bloqueSeguimientoSemanal,
 .informeEstadisticas .bloqueAlertasComerciales{margin:0!important;}
-html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:#374151;}
+html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:var(--borde);}
 
 .filtroPeriodoEstadisticas{display:grid;gap:5px;margin-bottom:8px;color:#4b5563;font-size:12px;font-weight:700;}
 .filtroPeriodoEstadisticas select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#374151;font-size:14px;}
-html[data-tema="oscuro"] .filtroPeriodoEstadisticas{color:#e5e7eb;}
-html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:#111827;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .filtroPeriodoEstadisticas{color:var(--texto);}
+html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
 
 .selectorPeriodoEstadisticas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 10px;padding:4px;border-radius:12px;background:#e5e7eb;}
 .selectorPeriodoEstadisticas button{min-height:42px;padding:7px 4px;border:0;border-radius:9px;background:transparent;color:#4b5563;font-size:12px;font-weight:800;}
 .selectorPeriodoEstadisticas button.activo{background:#fff;color:var(--verde-oscuro);box-shadow:0 1px 4px rgba(15,23,42,.12);}
 .selectorPeriodoOculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:#111827;}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas button{color:#cbd5e1;}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:#374151;color:#bbf7d0;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:var(--fondo);}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas button{color:var(--texto-sec);}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:var(--borde);color:var(--visitado);}
 
 /* Navegación principal compacta y menú Más */
 .menuMasMovil{position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-end;background:rgba(15,23,42,.45);padding:12px;}
@@ -2870,11 +2867,11 @@ html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:#
 .menuMasContenido>button{display:grid;grid-template-columns:32px 1fr;gap:2px 8px;width:100%;min-height:56px;padding:9px;border:0;border-bottom:1px solid #e5e7eb;background:transparent;color:#1f2937;text-align:left;font-size:14px;font-weight:800;}
 .menuMasContenido>button::first-letter{font-size:20px;}
 .menuMasContenido>button small{grid-column:2;color:#6b7280;font-size:11px;font-weight:500;}
-html[data-tema="oscuro"] .menuMasContenido{background:#1f2937;}
-html[data-tema="oscuro"] .menuMasEncabezado,html[data-tema="oscuro"] .menuMasContenido>button{color:#f9fafb;}
-html[data-tema="oscuro"] .menuMasCerrar{background:#374151;color:#f9fafb;}
-html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
-html[data-tema="oscuro"] .menuMasContenido>button small{color:#cbd5e1;}
+html[data-tema="oscuro"] .menuMasContenido{background:var(--superficie);}
+html[data-tema="oscuro"] .menuMasEncabezado,html[data-tema="oscuro"] .menuMasContenido>button{color:var(--texto);}
+html[data-tema="oscuro"] .menuMasCerrar{background:var(--borde);color:var(--texto);}
+html[data-tema="oscuro"] .menuMasContenido>button{border-color:var(--borde);}
+html[data-tema="oscuro"] .menuMasContenido>button small{color:var(--texto-sec);}
 
 /* Menú Más compacto: icono, nombre y flecha */
 .menuMasContenido{gap:0;padding:8px 10px 10px;}
@@ -2883,8 +2880,8 @@ html[data-tema="oscuro"] .menuMasContenido>button small{color:#cbd5e1;}
 .menuMasContenido>button strong{font-size:13px;font-weight:700;}
 .menuMasContenido>button b{color:#9ca3af;font-size:23px;font-weight:400;text-align:right;}
 .menuMasContenido>button small{display:none!important;}
-html[data-tema="oscuro"] .menuMasContenido>button{border-color:#374151;}
-html[data-tema="oscuro"] .menuMasContenido>button b{color:#94a3b8;}
+html[data-tema="oscuro"] .menuMasContenido>button{border-color:var(--borde);}
+html[data-tema="oscuro"] .menuMasContenido>button b{color:var(--texto-sec);}
 
 /* El respaldo deja de mostrarse en el Dashboard; se usa desde Configuración */
 .respaldoDashboardOculto{display:none!important;}
@@ -2900,9 +2897,9 @@ html[data-tema="oscuro"] .menuMasContenido>button b{color:#94a3b8;}
 .itemCatalogo small{color:#6b7280;font-size:11px;}.itemCatalogo strong{font-size:13px;}.itemCatalogo b{color:var(--verde-oscuro);font-size:13px;}
 .btnCatalogoPedido{width:100%;min-height:40px;margin-top:4px;padding:6px;border:0;border-radius:9px;background:#ecfdf5;color:#047857;font-size:11px;font-weight:800;}
 .catalogoVacio{grid-column:1/-1;padding:24px;text-align:center;color:#6b7280;}
-html[data-tema="oscuro"] .itemCatalogo{background:#1f2937;border-color:#374151;}
-html[data-tema="oscuro"] .catalogoFiltros select{background:#111827;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .btnCatalogoPedido{background:#064e3b;color:#bbf7d0;}
+html[data-tema="oscuro"] .itemCatalogo{background:var(--superficie);border-color:var(--borde);}
+html[data-tema="oscuro"] .catalogoFiltros select{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .btnCatalogoPedido{background:var(--visitado-bg);color:var(--visitado);}
 @media(max-width:380px){.grillaCatalogo{grid-template-columns:1fr;}}
 
 /* Edición rápida desde Catálogo */
@@ -2912,14 +2909,14 @@ html[data-tema="oscuro"] .btnCatalogoPedido{background:#064e3b;color:#bbf7d0;}
 .modalCatalogoTitulo{display:flex;align-items:center;justify-content:space-between;font-size:16px;}.cerrarModalCatalogo{border:0;background:transparent;font-size:24px;color:#6b7280;}
 .modalCatalogoContenido label{display:grid;gap:5px;color:#374151;font-size:12px;font-weight:700;}.modalCatalogoContenido input{width:100%;min-height:42px;padding:8px;border:1px solid #d1d5db;border-radius:9px;background:#fff;}
 .accionesModalCatalogo{display:flex;justify-content:flex-end;gap:8px;}.accionesModalCatalogo button{min-height:40px;padding:8px 14px;border:0;border-radius:9px;font-weight:700;}.cancelarEdicionCatalogo{background:#f3f4f6;color:#374151;}.guardarEdicionCatalogo{background:#059669;color:#fff;}
-html[data-tema="oscuro"] .btnCatalogoEditar{border-color:#4b5563;color:#d1d5db;}html[data-tema="oscuro"] .modalCatalogoContenido{background:#1f2937;color:#f9fafb;}html[data-tema="oscuro"] .modalCatalogoContenido label{color:#e5e7eb;}html[data-tema="oscuro"] .modalCatalogoContenido input{background:#111827;color:#f9fafb;border-color:#4b5563;}html[data-tema="oscuro"] .cancelarEdicionCatalogo{background:#374151;color:#f9fafb;}
+html[data-tema="oscuro"] .btnCatalogoEditar{border-color:var(--borde-fuerte);color:var(--texto-sec);}html[data-tema="oscuro"] .modalCatalogoContenido{background:var(--superficie);color:var(--texto);}html[data-tema="oscuro"] .modalCatalogoContenido label{color:var(--texto);}html[data-tema="oscuro"] .modalCatalogoContenido input{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}html[data-tema="oscuro"] .cancelarEdicionCatalogo{background:var(--borde);color:var(--texto);}
 
 /* Editor cuadrado de fotos del Catálogo */
 .editorFotoContenido{justify-items:stretch;}
 .canvasEditorFoto{display:block;width:min(100%,300px);height:auto;aspect-ratio:1;margin:0 auto;border-radius:12px;touch-action:none;cursor:grab;background:#111827;}
 .canvasEditorFoto:active{cursor:grabbing;}
 .zoomEditorFoto{width:100%;accent-color:#059669;}
-html[data-tema="oscuro"] .canvasEditorFoto{border:1px solid #4b5563;}
+html[data-tema="oscuro"] .canvasEditorFoto{border:1px solid var(--borde-fuerte);}
 
 /* Dashboard compacto de trabajo */
 #pantallaMenu>header{padding:16px 15px 14px!important;border-radius:0 0 18px 18px!important;}
@@ -2933,12 +2930,12 @@ html[data-tema="oscuro"] .canvasEditorFoto{border:1px solid #4b5563;}
 #pantallaMenu #dashProximaParada,#pantallaMenu #dashUltimoPedido{margin-bottom:7px!important;padding:11px!important;border-radius:11px!important;box-shadow:0 1px 5px rgba(15,23,42,.08)!important;}
 #pantallaMenu .container>div[style*="grid-template-columns"]{gap:6px!important;}
 #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{min-height:45px!important;padding:9px 6px!important;border-radius:10px!important;font-size:12px!important;box-shadow:none!important;}
-html[data-tema="oscuro"] #pantallaMenu #dashProximaParada h3{color:#f9fafb!important;}
-html[data-tema="oscuro"] #pantallaMenu #dashProximaParada p,html[data-tema="oscuro"] #pantallaMenu #dashUltimoPedido p{color:#cbd5e1!important;}
-html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{background:#1f2937!important;border-color:#374151!important;color:#e5e7eb!important;}
+html[data-tema="oscuro"] #pantallaMenu #dashProximaParada h3{color:var(--texto)!important;}
+html[data-tema="oscuro"] #pantallaMenu #dashProximaParada p,html[data-tema="oscuro"] #pantallaMenu #dashUltimoPedido p{color:var(--texto-sec)!important;}
+html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{background:var(--superficie)!important;border-color:var(--borde)!important;color:var(--texto)!important;}
 
 .btnUbicacionDashboard{display:inline-flex;align-items:center;width:max-content;min-height:34px;margin-top:5px;padding:6px 9px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:11px;font-weight:700;}
-html[data-tema="oscuro"] .btnUbicacionDashboard{background:#064e3b;border-color:#166534;color:#bbf7d0;}
+html[data-tema="oscuro"] .btnUbicacionDashboard{background:var(--visitado-bg);border-color:#166534;color:var(--visitado);}
 
 /* Rework visual de Pedido: compacto y táctil */
 #pantallaPedido>.container{padding-top:8px;}
@@ -2957,8 +2954,8 @@ html[data-tema="oscuro"] .btnUbicacionDashboard{background:#064e3b;border-color:
 #pantallaPedido .observacionesPedido{margin-top:8px!important;}
 #pantallaPedido footer{display:grid;grid-template-columns:.8fr 1.5fr;gap:8px;padding:9px 12px calc(9px + env(safe-area-inset-bottom));}
 #pantallaPedido footer button{min-height:45px;border-radius:10px;font-size:13px;font-weight:800;}
-html[data-tema="oscuro"] #pantallaPedido .resumenPedido{background:#064e3b;border-color:#166534;color:#d1fae5;}
-html[data-tema="oscuro"] #pantallaPedido .fila{border-color:#374151;}
+html[data-tema="oscuro"] #pantallaPedido .resumenPedido{background:var(--visitado-bg);border-color:#166534;color:#d1fae5;}
+html[data-tema="oscuro"] #pantallaPedido .fila{border-color:var(--borde);}
 
 /* Rework visual de Comercios: lista compacta y táctil */
 #pantallaComercios>.container{padding-top:8px;}
@@ -2971,7 +2968,7 @@ html[data-tema="oscuro"] #pantallaPedido .fila{border-color:#374151;}
 #pantallaComercios .accionesComercio button{min-height:36px;padding:6px 9px;border-radius:8px;font-size:11px;}
 #pantallaComercios .badge{padding:4px 7px;border-radius:999px;font-size:10px;}
 #pantallaComercios .pedidoComercioBtn,#pantallaComercios .marcarVisitaBtn,#pantallaComercios .marcarPendienteBtn{min-height:36px;}
-html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937;border-color:#374151;}
+html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:var(--superficie);border-color:var(--borde);}
 
 /* Comercios: la tarjeta abre la ficha; las acciones quedan dentro */
 #pantallaComercios .comercioCard{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;}
@@ -2986,15 +2983,15 @@ html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:#1f2937
 /* Ficha de comercio: acciones visibles y modo oscuro completo */
 .modalFichaComercio .fichaAcciones{display:grid!important;visibility:visible!important;min-height:44px;}
 .modalFichaComercio .fichaAcciones .fichaBoton{display:flex!important;visibility:visible!important;align-items:center;border:1px solid #d1d5db;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:#111827;color:#f3f4f6;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo strong,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos strong{color:#f9fafb;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaCerrar{background:#374151;color:#f9fafb;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:#374151;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:var(--fondo);color:var(--texto);}
+html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo strong,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos strong{color:var(--texto);}
+html[data-tema="oscuro"] .modalFichaComercio .fichaCerrar{background:var(--borde);color:var(--texto);}
+html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:var(--borde);color:var(--texto);border-color:var(--borde-fuerte);}
 @media (prefers-color-scheme: dark){
- html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:#111827;color:#f3f4f6;}
- html[data-tema="sistema"] .modalFichaComercio .fichaUltimo strong,html[data-tema="sistema"] .modalFichaComercio .fichaProductos strong{color:#f9fafb;}
- html[data-tema="sistema"] .modalFichaComercio .fichaCerrar{background:#374151;color:#f9fafb;}
- html[data-tema="sistema"] .modalFichaComercio .fichaBoton.secundario{background:#374151;color:#f9fafb;border-color:#4b5563;}
+ html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:var(--fondo);color:var(--texto);}
+ html[data-tema="sistema"] .modalFichaComercio .fichaUltimo strong,html[data-tema="sistema"] .modalFichaComercio .fichaProductos strong{color:var(--texto);}
+ html[data-tema="sistema"] .modalFichaComercio .fichaCerrar{background:var(--borde);color:var(--texto);}
+ html[data-tema="sistema"] .modalFichaComercio .fichaBoton.secundario{background:var(--borde);color:var(--texto);border-color:var(--borde-fuerte);}
 }
 
 /* Corrección definitiva de ficha: acciones siempre visibles y cierre funcional */
@@ -3002,18 +2999,18 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaBoton.secundario{background:#
 .modalFichaComercio .fichaContenido{display:block!important;width:min(100%,430px);max-height:calc(100dvh - 24px);overflow-y:auto;}
 .modalFichaComercio .fichaAcciones{display:grid!important;visibility:visible!important;position:sticky;bottom:-16px;z-index:3;padding:10px 0 4px;margin-top:10px;background:#fff;}
 .modalFichaComercio .fichaAcciones button{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;align-items:center;justify-content:center;min-height:44px!important;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaContenido,html[data-tema="oscuro"] .modalFichaComercio .fichaAcciones{background:#1f2937!important;color:#f9fafb;}
-html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:#111827!important;color:#f3f4f6;}
-@media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaContenido,html[data-tema="sistema"] .modalFichaComercio .fichaAcciones{background:#1f2937!important;color:#f9fafb;}html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:#111827!important;color:#f3f4f6;}}
+html[data-tema="oscuro"] .modalFichaComercio .fichaContenido,html[data-tema="oscuro"] .modalFichaComercio .fichaAcciones{background:var(--superficie)!important;color:var(--texto);}
+html[data-tema="oscuro"] .modalFichaComercio .fichaDatos,html[data-tema="oscuro"] .modalFichaComercio .fichaUltimo,html[data-tema="oscuro"] .modalFichaComercio .fichaProductos{background:var(--fondo)!important;color:var(--texto);}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaContenido,html[data-tema="sistema"] .modalFichaComercio .fichaAcciones{background:var(--superficie)!important;color:var(--texto);}html[data-tema="sistema"] .modalFichaComercio .fichaDatos,html[data-tema="sistema"] .modalFichaComercio .fichaUltimo,html[data-tema="sistema"] .modalFichaComercio .fichaProductos{background:var(--fondo)!important;color:var(--texto);}}
 
-html[data-tema="oscuro"] .modalFichaComercio .fichaFrecuencia{background:#111827!important;color:#f3f4f6;}
-@media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaFrecuencia{background:#111827!important;color:#f3f4f6;}}
+html[data-tema="oscuro"] .modalFichaComercio .fichaFrecuencia{background:var(--fondo)!important;color:var(--texto);}
+@media(prefers-color-scheme:dark){html[data-tema="sistema"] .modalFichaComercio .fichaFrecuencia{background:var(--fondo)!important;color:var(--texto);}}
 
 /* ================= DASHBOARD (clases del rework) ================= */
 
 .dashboardHeader{
   background:var(--acento);
-  color:white;
+  color:var(--acento-txt);
   padding:16px 18px 14px;
   border-radius:0 0 16px 16px;
 }
@@ -3113,15 +3110,15 @@ html[data-tema="oscuro"] .modalFichaComercio .fichaFrecuencia{background:#111827
 .configCuentaClave input{padding-right:48px!important;}
 .configDetalle .configCuentaVer{position:absolute;top:0;right:0;display:grid;width:44px;min-height:44px;height:100%;padding:0;place-items:center;border:0;background:transparent;color:#6b7280;}
 .configDetalle .configCuentaVer.activo{color:var(--acento);}
-.configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;font-weight:800;}
+.configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);font-weight:800;}
 .configDetalle button:disabled{opacity:.6;}
 .configCuentaError{margin:0;padding:10px;border-radius:10px;background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:600;line-height:1.4;}
 html[data-tema="oscuro"] .configDetalle input[type="email"],
 html[data-tema="oscuro"] .configDetalle input[type="password"],
-html[data-tema="oscuro"] .configDetalle .configCuentaClave input[type="text"]{background:#111827;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;color:#cbd5e1;}
-html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:#fff;}
-html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border:1px solid #f87171;}
+html[data-tema="oscuro"] .configDetalle .configCuentaClave input[type="text"]{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;color:var(--texto-sec);}
+html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
+html[data-tema="oscuro"] .configCuentaError{background:var(--fondo);color:var(--texto);border:1px solid var(--peligro);}
 
 
 /* Subir mis datos a la nube (T11) */
@@ -3151,7 +3148,7 @@ html[data-tema="oscuro"] .configCuentaError{background:#111827;color:#fff;border
 .indicadorNube[data-estado="error"]{border-color:var(--peligro);}
 .indicadorNube[data-estado="espera"]{border-color:var(--pendiente);}
 html.conIndicadorNube #contenedorToasts{bottom:calc(100px + env(safe-area-inset-bottom));}
-html[data-tema="oscuro"] .indicadorNube{background:#1f2937;color:#fff;}
+html[data-tema="oscuro"] .indicadorNube{background:var(--superficie);color:var(--texto);}
 
 /* ================= PANTALLA DE INICIO (T13) ================= */
 html.inicioAbierto,html.inicioAbierto body{overflow:hidden;}
@@ -3176,7 +3173,7 @@ html.inicioAbierto,html.inicioAbierto body{overflow:hidden;}
 .inicioClave input{padding-right:48px;}
 .inicioVer{position:absolute;top:0;right:0;display:grid;place-items:center;width:46px;height:100%;padding:0;border:0;background:transparent;color:var(--texto-sec);}
 .inicioVer.activo{color:var(--acento);}
-.inicioPrincipal{width:100%;min-height:48px;border:1px solid var(--acento);border-radius:10px;background:var(--acento);color:#fff;font-size:16px;font-weight:800;}
+.inicioPrincipal{width:100%;min-height:48px;border:1px solid var(--acento);border-radius:10px;background:var(--acento);color:var(--acento-txt);font-size:16px;font-weight:800;}
 .inicioPrincipal:disabled{opacity:.7;}
 .inicioSinSesion{width:100%;min-height:46px;border:1px solid var(--borde);border-radius:10px;background:transparent;color:var(--texto);font-size:15px;font-weight:700;}
 .inicioEnlace,.inicioVolver{width:100%;min-height:44px;border:0;background:transparent;color:var(--texto-sec);font-size:14px;}
@@ -3188,11 +3185,11 @@ html.inicioAbierto,html.inicioAbierto body{overflow:hidden;}
 .inicioError{margin:0;padding:10px;border-radius:10px;background:#fef2f2;color:#b91c1c;font-size:13px;font-weight:600;line-height:1.4;}
 .inicioSesion .oculto{display:none;}
 /* Modo oscuro: fondo oscuro y letras blancas, también en los avisos. */
-html[data-tema="oscuro"] .inicioSesion{background:#111827;color:#f9fafb;}
-html[data-tema="oscuro"] .inicioOpcion,html[data-tema="oscuro"] .inicioNota{background:#1f2937;color:#f9fafb;border-color:#374151;}
-html[data-tema="oscuro"] .inicioSesion input{background:#1f2937;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .inicioSinSesion{color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px solid #f87171;}
+html[data-tema="oscuro"] .inicioSesion{background:var(--fondo);color:var(--texto);}
+html[data-tema="oscuro"] .inicioOpcion,html[data-tema="oscuro"] .inicioNota{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
+html[data-tema="oscuro"] .inicioSesion input{background:var(--superficie);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .inicioSinSesion{color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .inicioError{background:var(--superficie);color:var(--texto);border:1px solid var(--peligro);}
 
 /* Empleados (T14): código, roles y panel del dueño */
 #configFilaEmpleados.oculto{display:none;}
@@ -3203,7 +3200,7 @@ html[data-tema="oscuro"] .inicioError{background:#1f2937;color:#fff;border:1px s
 #inicioListaRoles{display:grid;gap:8px;}
 .inicioRol{display:flex !important;align-items:center;gap:10px;min-height:46px;padding:0 12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);font-weight:600 !important;}
 .inicioSesion .inicioRol input{width:22px;min-height:22px;height:22px;padding:0;flex-shrink:0;accent-color:var(--acento);}
-html[data-tema="oscuro"] .inicioRol{background:#1f2937;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .inicioRol{background:var(--superficie);color:var(--texto);border-color:var(--borde-fuerte);}
 .empleadoCodigo{display:grid;gap:8px;justify-items:center;padding:14px;border:2px dashed var(--acento);border-radius:12px;text-align:center;}
 .empleadoCodigo strong{font-size:30px;font-weight:800;letter-spacing:.12em;color:var(--texto);}
 .empleadoCodigo small{color:var(--texto-sec);font-size:13px;line-height:1.4;}
@@ -3211,8 +3208,8 @@ html[data-tema="oscuro"] .inicioRol{background:#1f2937;color:#f9fafb;border-colo
 .empleadoFila{display:grid;gap:6px;padding:12px;border:1px solid var(--borde);border-radius:10px;background:var(--superficie);}
 .empleadoFila strong{font-size:15px;color:var(--texto);}
 .empleadoFila small{color:var(--texto-sec);font-size:13px;}
-html[data-tema="oscuro"] .empleadoFila{background:#1f2937;color:#f9fafb;border-color:#374151;}
-html[data-tema="oscuro"] .empleadoCodigo strong{color:#f9fafb;}
+html[data-tema="oscuro"] .empleadoFila{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
+html[data-tema="oscuro"] .empleadoCodigo strong{color:var(--texto);}
 
 /* Nombre de la distribuidora en el inicio (T13) */
 .dashboardMarca{min-width:0;}
@@ -3229,8 +3226,8 @@ html[data-tema="oscuro"] .empleadoCodigo strong{color:#f9fafb;}
 .configDetalle .empleadoFila input[type="text"],
 .configDetalle #empleadoRolNuevo{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#1f2937;font-size:16px;font-weight:500;}
 html[data-tema="oscuro"] .configDetalle .empleadoFila input[type="text"],
-html[data-tema="oscuro"] .configDetalle #empleadoRolNuevo{background:#111827;color:#f9fafb;border-color:#4b5563;}
-html[data-tema="oscuro"] .configDetalle .empleadoBaja{background:#1f2937;border-color:#f87171;color:#fca5a5;}
+html[data-tema="oscuro"] .configDetalle #empleadoRolNuevo{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .configDetalle .empleadoBaja{background:var(--superficie);border-color:var(--peligro);color:var(--peligro);}
 
 /* Permisos por rol (T19): casillas de cada rol en "Editar roles" */
 .rolPermisos{display:grid;gap:8px;margin:4px 0 0;padding:0;border:0;min-width:0;}
@@ -3238,8 +3235,8 @@ html[data-tema="oscuro"] .configDetalle .empleadoBaja{background:#1f2937;border-
 .configDetalle .rolPermisos .inicioRol{margin:0;padding:0 12px;border:1px solid var(--borde);}
 .rolPermisos .inicioRol input{width:22px;min-height:22px;height:22px;margin:0;padding:0;flex-shrink:0;accent-color:var(--acento);}
 .rolPermisos .inicioRol span{font-size:14px;line-height:1.3;}
-html[data-tema="oscuro"] .rolPermisos legend{color:#f9fafb;}
-html[data-tema="oscuro"] .rolPermisos .inicioRol{background:#111827;color:#f9fafb;border-color:#4b5563;}
+html[data-tema="oscuro"] .rolPermisos legend{color:var(--texto);}
+html[data-tema="oscuro"] .rolPermisos .inicioRol{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
 #misPermisos small{color:var(--texto-sec);font-size:13px;}
 
 /* "Todos pueden hacer todo" y roles pendientes de aprobar (T29d) */
@@ -3253,12 +3250,12 @@ html[data-tema="oscuro"] .rolPermisos .inicioRol{background:#111827;color:#f9faf
 .empleadoRolPendiente small{color:var(--texto-sec);}
 .inicioRolAclaracion{display:block;margin-top:2px;color:var(--texto-sec);font-size:12px;font-weight:600;}
 .inicioRol span{line-height:1.25;}
-html[data-tema="oscuro"] .llaveEquipo{background:#1f2937;}
-html[data-tema="oscuro"] .llaveEquipo .configSwitch strong{color:#f9fafb;}
-html[data-tema="oscuro"] .llaveEquipo small{color:#d1d5db;}
-html[data-tema="oscuro"] .empleadoRolPendiente{color:#f9fafb;}
+html[data-tema="oscuro"] .llaveEquipo{background:var(--superficie);}
+html[data-tema="oscuro"] .llaveEquipo .configSwitch strong{color:var(--texto);}
+html[data-tema="oscuro"] .llaveEquipo small{color:var(--texto-sec);}
+html[data-tema="oscuro"] .empleadoRolPendiente{color:var(--texto);}
 html[data-tema="oscuro"] .empleadoRolPendiente small,
-html[data-tema="oscuro"] .inicioRolAclaracion{color:#d1d5db;}
+html[data-tema="oscuro"] .inicioRolAclaracion{color:var(--texto-sec);}
 
 /* Modo personal (T16d): cartel fijo arriba de la barra de abajo. Se corren
    para arriba lo que también va fijo abajo (avisos y botones del pedido). */
@@ -3274,7 +3271,7 @@ html.conCartelPersonal #pantallaPedido main.container{padding-bottom:calc(158px 
 /* Pedidos y seguimiento (T21): vista "Pedidos" de la sección Pedido y ficha del pedido */
 #pantallaPedido[data-vista="pedidos"] main.container>:not(#vistaPedidos),
 #pantallaPedido[data-vista="pedidos"] footer{display:none !important;}
-.botonNuevoPedido{position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));z-index:950;display:flex;align-items:center;justify-content:center;width:60px;height:60px;border:none;border-radius:50%;background:var(--acento);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s ease;}
+.botonNuevoPedido{position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));z-index:950;display:flex;align-items:center;justify-content:center;width:60px;height:60px;border:none;border-radius:50%;background:var(--acento);color:var(--acento-txt);box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;transition:transform .12s ease;}
 .botonNuevoPedido:active{transform:scale(.94);}
 .botonNuevoPedido.oculto{display:none;}
 html.conCartelPersonal .botonNuevoPedido{bottom:calc(92px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
@@ -3287,8 +3284,8 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .filtrosEtapaPedidos::-webkit-scrollbar{display:none;}
 .filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
 .filtroEtapaCantidad{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--gris-claro);color:var(--texto);font-size:11.5px;text-align:center;}
-.filtroEtapa.activo{border-color:var(--acento);background:var(--acento);color:#fff;}
-.filtroEtapa.activo .filtroEtapaCantidad{background:rgba(255,255,255,.25);color:#fff;}
+.filtroEtapa.activo{border-color:var(--acento);background:var(--acento);color:var(--acento-txt);}
+.filtroEtapa.activo .filtroEtapaCantidad{background:rgba(0,0,0,.12);color:var(--acento-txt);}
 .resumenVistaPedidos{margin:0 2px 8px;color:var(--texto-sec);font-size:12px;font-weight:700;}
 .tarjetaSeguimiento{display:flex;align-items:flex-start;gap:11px;margin-bottom:8px;padding:12px;border-radius:12px;cursor:pointer;}
 .tarjetaSeguimiento:active{transform:scale(.99);}
@@ -3338,7 +3335,7 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .incidenciaSeguimiento{display:flex;margin-top:4px;color:var(--peligro);}
 .accionesFichaPedido{display:grid;gap:8px;margin-bottom:14px;}
 .accionesFichaPedido .btnAccion{justify-content:center;width:100%;min-height:46px;}
-.pasoSiguientePedido{background:var(--acento);color:#fff;font-size:15px;font-weight:800;}
+.pasoSiguientePedido{background:var(--acento);color:var(--acento-txt);font-size:15px;font-weight:800;}
 .accionesSecundariasPedido{display:flex;gap:8px;}
 .accionesSecundariasPedido .btnAccion{flex:1;min-width:0;padding:10px 8px;}
 .marcarIncidencia{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
@@ -3347,7 +3344,7 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .motivoIncidencia{margin-top:4px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;}
 .incidenciaFichaPedido small{color:var(--texto-sec);font-size:12px;}
 .incidenciaFichaPedido .avisoIncidencia{margin-top:6px;font-style:italic;}
-.resolverIncidencia{justify-content:center;width:100%;min-height:44px;margin-top:8px;background:var(--acento);color:#fff;}
+.resolverIncidencia{justify-content:center;width:100%;min-height:44px;margin-top:8px;background:var(--acento);color:var(--acento-txt);}
 .pasoSeguimiento.incidencia::before{background:var(--peligro);}
 .pasoSeguimiento.incidencia strong{color:var(--peligro);}
 .pasoSeguimiento.resuelta::before{background:var(--visitado);}
@@ -3357,17 +3354,17 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .errorTextoPedido{margin-top:6px;color:var(--peligro);font-size:13px;font-weight:700;}
 .errorTextoPedido.oculto{display:none;}
 /* Modo oscuro: la regla general deja todos los textos blancos (con !important). */
-html[data-tema="oscuro"] .filtroEtapa{background:#1f2937;border-color:#374151;}
+html[data-tema="oscuro"] .filtroEtapa{background:var(--superficie);border-color:var(--borde);}
 html[data-tema="oscuro"] .filtroEtapa.activo{background:var(--acento);border-color:var(--acento);}
-html[data-tema="oscuro"] .filtroEtapaCantidad{background:#374151;}
-html[data-tema="oscuro"] .filtroEtapa.activo .filtroEtapaCantidad{background:rgba(255,255,255,.25);}
+html[data-tema="oscuro"] .filtroEtapaCantidad{background:var(--borde);}
+html[data-tema="oscuro"] .filtroEtapa.activo .filtroEtapaCantidad{background:rgba(0,0,0,.12);}
 html[data-tema="oscuro"] .resumenVistaPedidos,
 html[data-tema="oscuro"] .datoFichaPedido span,
 html[data-tema="oscuro"] .productoFichaNombre small,
 html[data-tema="oscuro"] .pasoSeguimiento small,
 html[data-tema="oscuro"] .notaSeguimiento,
 html[data-tema="oscuro"] .seccionFichaPedido>h3,
-html[data-tema="oscuro"] .seguimientoVacio p{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .seguimientoVacio p{color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .estadoSeguimiento{color:var(--acento-oscuro) !important;}
 html[data-tema="oscuro"] .estadoSeguimiento[data-estado="enPreparacion"]{color:var(--pendiente) !important;}
 html[data-tema="oscuro"] .estadoSeguimiento[data-estado="preparado"],
@@ -3378,34 +3375,34 @@ html[data-tema="oscuro"] .estadoSeguimiento[data-estado="cancelado"]{color:var(-
 html[data-tema="oscuro"] .sinSubirSeguimiento{color:var(--pendiente) !important;}
 html[data-tema="oscuro"] .marcaFichaPedido{color:var(--acento-oscuro) !important;}
 html[data-tema="oscuro"] .datosFichaPedido,
-html[data-tema="oscuro"] .observacionesFichaPedido{background:#111827;border-color:#374151;}
-html[data-tema="oscuro"] .productoFichaPedido{border-color:#374151;}
+html[data-tema="oscuro"] .observacionesFichaPedido{background:var(--fondo);border-color:var(--borde);}
+html[data-tema="oscuro"] .productoFichaPedido{border-color:var(--borde);}
 html[data-tema="oscuro"] .pasoSeguimiento::before,
-html[data-tema="oscuro"] .pasoSeguimiento::after{background:#4b5563;}
+html[data-tema="oscuro"] .pasoSeguimiento::after{background:var(--borde-fuerte);}
 html[data-tema="oscuro"] .pasoSeguimiento.actual::before{background:var(--acento);box-shadow:0 0 0 3px var(--acento-bg);}
-html[data-tema="oscuro"] .botonVolverPedidos{color:#f9fafb;}
-html[data-tema="oscuro"] .botonVolverPedidos:active{background:#374151;}
+html[data-tema="oscuro"] .botonVolverPedidos{color:var(--texto);}
+html[data-tema="oscuro"] .botonVolverPedidos:active{background:var(--borde);}
 html[data-tema="oscuro"] .incidenciaSeguimiento,
 html[data-tema="oscuro"] .incidenciaFichaPedido>strong,
 html[data-tema="oscuro"] .pasoSeguimiento.incidencia strong,
-html[data-tema="oscuro"] .errorTextoPedido{color:#FCA5A5 !important;}
-html[data-tema="oscuro"] .incidenciaFichaPedido{background:#3B1D1D;border-color:#7F2A25;border-left-color:#F87171;}
+html[data-tema="oscuro"] .errorTextoPedido{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .incidenciaFichaPedido{background:var(--peligro-bg);border-color:#7F2A25;border-left-color:var(--peligro);}
 html[data-tema="oscuro"] .incidenciaFichaPedido small,
-html[data-tema="oscuro"] .explicacionTextoPedido{color:#cbd5e1 !important;}
-html[data-tema="oscuro"] .btnAccion.secundario.marcarIncidencia{background:#3B1D1D !important;color:#FCA5A5 !important;}
+html[data-tema="oscuro"] .explicacionTextoPedido{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .btnAccion.secundario.marcarIncidencia{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
 html[data-tema="oscuro"] .pasoSiguientePedido,
-html[data-tema="oscuro"] .resolverIncidencia{color:#fff !important;}
-html[data-tema="oscuro"] .pasoSeguimiento.incidencia::before{background:#F87171;}
+html[data-tema="oscuro"] .resolverIncidencia{color:var(--acento-txt) !important;}
+html[data-tema="oscuro"] .pasoSeguimiento.incidencia::before{background:var(--peligro);}
 /* Eliminar y cancelar (T26) */
 .peligroPedido{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
 .canceladoFichaPedido{display:grid;gap:3px;margin-bottom:14px;padding:12px;border:1px solid #F1C9C6;border-left:4px solid var(--peligro);border-radius:var(--radius-md);background:var(--peligro-bg);}
 .canceladoFichaPedido>strong{color:var(--peligro);font-size:14px;}
 .motivoCancelacion{margin-top:4px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;}
 .canceladoFichaPedido small{color:var(--texto-sec);font-size:12px;}
-html[data-tema="oscuro"] .btnAccion.secundario.peligroPedido{background:#3B1D1D !important;color:#FCA5A5 !important;}
-html[data-tema="oscuro"] .canceladoFichaPedido{background:#3B1D1D;border-color:#7F2A25;border-left-color:#F87171;}
-html[data-tema="oscuro"] .canceladoFichaPedido>strong{color:#FCA5A5 !important;}
-html[data-tema="oscuro"] .canceladoFichaPedido small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .btnAccion.secundario.peligroPedido{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
+html[data-tema="oscuro"] .canceladoFichaPedido{background:var(--peligro-bg);border-color:#7F2A25;border-left-color:var(--peligro);}
+html[data-tema="oscuro"] .canceladoFichaPedido>strong{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .canceladoFichaPedido small{color:var(--texto-sec) !important;}
 /* Avisos en la app (T23): campanita, lista, aviso emergente y Configuración > Avisos */
 .campanaAvisos{display:none;position:relative;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:42px;margin-left:auto;padding:0;border:none;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;}
 html.conAvisos .campanaAvisos{display:flex;}
@@ -3458,33 +3455,33 @@ html.conAvisos .campanaAvisos{display:flex;}
 .bloqueNotificaciones .configEstado{margin:0;font-size:13px;}
 .bloqueNotificaciones[data-estado="activadas"]{border-color:var(--visitado);}
 .bloqueNotificaciones[data-estado="bloqueadas"],.bloqueNotificaciones[data-estado="instalarIphone"],.bloqueNotificaciones[data-estado="noSePuede"]{border-color:var(--pendiente);}
-.bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:#fff;}
+.bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
 .subtituloAvisos{margin:6px 0 0;font-size:15px;color:var(--texto);}
-html[data-tema="oscuro"] .bloqueNotificaciones{background:#1f2937;color:#f9fafb;}
-html[data-tema="oscuro"] .bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:#fff;}
-html[data-tema="oscuro"] .subtituloAvisos{color:#f9fafb;}
+html[data-tema="oscuro"] .bloqueNotificaciones{background:var(--superficie);color:var(--texto);}
+html[data-tema="oscuro"] .bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
+html[data-tema="oscuro"] .subtituloAvisos{color:var(--texto);}
 @media (prefers-reduced-motion: reduce){.emergenteAviso{transition:none;}}
 /* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
-html[data-tema="oscuro"] .campanaAvisos{color:#f9fafb;}
-html[data-tema="oscuro"] .campanaAvisos:active{background:#374151;}
-html[data-tema="oscuro"] .contadorAvisos{color:#fff !important;background:#DC2626;border-color:#1f2937;}
+html[data-tema="oscuro"] .campanaAvisos{color:var(--texto);}
+html[data-tema="oscuro"] .campanaAvisos:active{background:var(--borde);}
+html[data-tema="oscuro"] .contadorAvisos{color:var(--texto) !important;background:#DC2626;border-color:var(--superficie);}
 html[data-tema="oscuro"] .dashboardHeaderTop .contadorAvisos{border-color:var(--acento);}
-html[data-tema="oscuro"] .itemAviso{background:#1f2937;border-color:#374151;color:#f9fafb;}
-html[data-tema="oscuro"] .itemAviso.noLeido{background:#163B39;border-color:var(--acento);}
-html[data-tema="oscuro"] .itemAviso.noLeido .iconoAviso{background:#111827;}
-html[data-tema="oscuro"] .iconoAviso{background:#163B39;color:var(--acento-oscuro);}
-html[data-tema="oscuro"] [data-tipo="incidencia"] .iconoAviso{background:#3B1D1D;color:#FCA5A5;}
-html[data-tema="oscuro"] [data-tipo="incidenciaResuelta"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .itemAviso{background:var(--superficie);border-color:var(--borde);color:var(--texto);}
+html[data-tema="oscuro"] .itemAviso.noLeido{background:var(--acento-bg);border-color:var(--acento);}
+html[data-tema="oscuro"] .itemAviso.noLeido .iconoAviso{background:var(--fondo);}
+html[data-tema="oscuro"] .iconoAviso{background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] [data-tipo="incidencia"] .iconoAviso{background:var(--peligro-bg);color:var(--peligro);}
+html[data-tema="oscuro"] [data-tipo="incidenciaResuelta"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
 html[data-tema="oscuro"] .detalleAviso,
 html[data-tema="oscuro"] .cuandoAviso,
 html[data-tema="oscuro"] .avisosVacio p,
 html[data-tema="oscuro"] .notaAvisos,
-html[data-tema="oscuro"] .configAviso small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .configAviso small{color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .configAviso em{color:var(--pendiente) !important;}
-html[data-tema="oscuro"] .emergenteAviso{background:#1f2937;border-color:#374151;border-left-color:var(--acento);color:#f9fafb;box-shadow:0 10px 28px rgba(0,0,0,.5);}
-html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidencia"]{border-left-color:#F87171;}
+html[data-tema="oscuro"] .emergenteAviso{background:var(--superficie);border-color:var(--borde);border-left-color:var(--acento);color:var(--texto);box-shadow:0 10px 28px rgba(0,0,0,.5);}
+html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidencia"]{border-left-color:var(--peligro);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="incidenciaResuelta"]{border-left-color:var(--visitado);}
-html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}
+html[data-tema="oscuro"] .cerrarEmergenteAviso{color:var(--texto-sec);}
 /* Checklist de preparación y faltantes (T24): casillas, faltantes, resumen y botón deslizable */
 .infoSeguimiento .progresoTarjeta{color:var(--acento-oscuro);font-weight:700;}
 .faltanteSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
@@ -3540,7 +3537,7 @@ html[data-tema="oscuro"] .cerrarEmergenteAviso{color:#cbd5e1;}
 .deslizador{position:relative;height:60px;margin-top:16px;border-radius:999px;background:var(--acento-bg);overflow:hidden;user-select:none;-webkit-user-select:none;}
 .rellenoDeslizador{position:absolute;top:0;bottom:0;left:0;width:60px;border-radius:999px;background:var(--acento);opacity:.22;transition:width .25s ease, opacity .2s ease;}
 .textoDeslizador{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 12px 0 60px;color:var(--acento-oscuro);font-size:14.5px;font-weight:800;text-align:center;pointer-events:none;transition:opacity .2s ease;}
-.tiradorDeslizador{position:absolute;top:4px;left:4px;z-index:1;display:grid;place-items:center;width:52px;height:52px;padding:0;border:none;border-radius:50%;background:var(--acento);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.2);cursor:grab;touch-action:none;transition:transform .25s ease;}
+.tiradorDeslizador{position:absolute;top:4px;left:4px;z-index:1;display:grid;place-items:center;width:52px;height:52px;padding:0;border:none;border-radius:50%;background:var(--acento);color:var(--acento-txt);box-shadow:0 3px 10px rgba(0,0,0,.2);cursor:grab;touch-action:none;transition:transform .25s ease;}
 .deslizador.arrastrando .tiradorDeslizador,.deslizador.arrastrando .rellenoDeslizador{transition:none;}
 .deslizador.arrastrando .tiradorDeslizador{cursor:grabbing;}
 .deslizador.completo .rellenoDeslizador{opacity:1;}
@@ -3565,23 +3562,23 @@ html[data-tema="oscuro"] .numeroResumen.conFaltantes strong,
 html[data-tema="oscuro"] .faltantesResumen strong{color:var(--pendiente) !important;}
 html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .quienChecklist,
 html[data-tema="oscuro"] .textoDeslizador{color:var(--acento-oscuro) !important;}
-html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .textoChecklist strong{color:#cbd5e1 !important;}
-html[data-tema="oscuro"] .lineaChecklist{border-color:#374151;}
-html[data-tema="oscuro"] .cuadroChecklist{border-color:#6b7280;background:#111827;color:#fff !important;}
+html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .textoChecklist strong{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .lineaChecklist{border-color:var(--borde);}
+html[data-tema="oscuro"] .cuadroChecklist{border-color:#6b7280;background:var(--fondo);color:var(--texto) !important;}
 html[data-tema="oscuro"] .lineaChecklist[data-estado="lista"] .cuadroChecklist{border-color:var(--acento);background:var(--acento);}
 html[data-tema="oscuro"] .lineaChecklist[data-estado="faltante"] .cuadroChecklist{border-color:var(--pendiente);background:var(--pendiente);}
-html[data-tema="oscuro"] .barraChecklist{background:#374151;}
-html[data-tema="oscuro"] .pasoSiguientePedido.incompleto{background:#334049;color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .barraChecklist{background:var(--borde);}
+html[data-tema="oscuro"] .pasoSiguientePedido.incompleto{background:var(--gris-claro);color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .pistaChecklist,
 html[data-tema="oscuro"] .pedidasResumen,
-html[data-tema="oscuro"] .numeroResumen span{color:#cbd5e1 !important;}
-html[data-tema="oscuro"] .numeroResumen{background:#111827;border-color:#374151;}
+html[data-tema="oscuro"] .numeroResumen span{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .numeroResumen{background:var(--fondo);border-color:var(--borde);}
 html[data-tema="oscuro"] .numeroResumen.conFaltantes{background:var(--pendiente-bg);border-color:var(--pendiente);}
-html[data-tema="oscuro"] .pasoContadorFaltante{background:#334049;color:#f9fafb;}
-html[data-tema="oscuro"] .btnAccion.secundario.quitarFaltante{background:#3B1D1D !important;color:#FCA5A5 !important;}
-html[data-tema="oscuro"] .tiradorDeslizador{color:#fff;}
-html[data-tema="oscuro"] [data-tipo="faltante"] .iconoAviso{background:#3A2415;color:var(--pendiente);}
-html[data-tema="oscuro"] [data-tipo="preparado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .pasoContadorFaltante{background:var(--gris-claro);color:var(--texto);}
+html[data-tema="oscuro"] .btnAccion.secundario.quitarFaltante{background:var(--peligro-bg) !important;color:var(--peligro) !important;}
+html[data-tema="oscuro"] .tiradorDeslizador{color:var(--texto);}
+html[data-tema="oscuro"] [data-tipo="faltante"] .iconoAviso{background:var(--pendiente-bg);color:var(--pendiente);}
+html[data-tema="oscuro"] [data-tipo="preparado"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="faltante"]{border-left-color:var(--pendiente);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="preparado"]{border-left-color:var(--visitado);}
 /* Editar el pedido (T25): botón, franja amarilla, productos a revisar y ventana "Editar pedido" */
@@ -3632,20 +3629,20 @@ html[data-tema="oscuro"] .edicionFichaPedido{background:#3A3113;border-color:#6B
 html[data-tema="oscuro"] .edicionFichaPedido small,
 html[data-tema="oscuro"] .tituloSeccionEditar,
 html[data-tema="oscuro"] .resultadoEditarPedido small,
-html[data-tema="oscuro"] .cambiosEditarPedido{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .cambiosEditarPedido{color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .entendidoEdicion{background:#EAB308;color:#422006 !important;}
 html[data-tema="oscuro"] .lineaChecklist.aRevisar,
 html[data-tema="oscuro"] .productoFichaPedido.aRevisar,
 html[data-tema="oscuro"] .filaEditarPedido[data-cambio="nuevo"],
 html[data-tema="oscuro"] .filaEditarPedido[data-cambio="cantidad"]{background:#2E2812;}
-html[data-tema="oscuro"] .filaEditarPedido{border-color:#374151;}
-html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar strong{color:#9ca3af !important;}
-html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar small{color:#FCA5A5 !important;}
-html[data-tema="oscuro"] .resultadoEditarPedido{background:#1f2937;border-color:#374151;color:#f9fafb;}
-html[data-tema="oscuro"] .cambiosEditarPedido{border-color:#4b5563;}
+html[data-tema="oscuro"] .filaEditarPedido{border-color:var(--borde);}
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar strong{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .filaEditarPedido[data-cambio="quitado"] .textoFilaEditar small{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .resultadoEditarPedido{background:var(--superficie);border-color:var(--borde);color:var(--texto);}
+html[data-tema="oscuro"] .cambiosEditarPedido{border-color:var(--borde-fuerte);}
 html[data-tema="oscuro"] .cambiosEditarPedido.conCambios{background:#3A3113;border-color:#6B5A1E;}
 html[data-tema="oscuro"] .pasoSeguimiento.edicion::before{background:#EAB308;}
-html[data-tema="oscuro"] .vistoSeguimiento{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .vistoSeguimiento{color:var(--texto-sec) !important;}
 [data-tipo="pedidoEditado"] .iconoAviso{background:#FEF9E1;color:#A16207;}
 .emergenteAviso[data-tipo="pedidoEditado"]{border-left-color:#EAB308;}
 html[data-tema="oscuro"] [data-tipo="pedidoEditado"] .iconoAviso{background:#3A3113;color:#FACC15;}
@@ -3682,12 +3679,12 @@ html[data-tema="oscuro"] .entregaSeguimiento,
 html[data-tema="oscuro"] .resumenEntregaFicha,
 html[data-tema="oscuro"] .productoFichaNombre .cambioEntregaFicha,
 html[data-tema="oscuro"] .filaEntrega.conCambio .cantidadEntrega{color:var(--pendiente) !important;}
-html[data-tema="oscuro"] .textoFilaEntrega small{color:#cbd5e1 !important;}
-html[data-tema="oscuro"] .filaEntrega{border-color:#374151;}
-html[data-tema="oscuro"] .filaEntrega.conCambio{background:#3A2415;}
-html[data-tema="oscuro"] .pasoContadorEntrega{background:#334049;color:#f9fafb;}
-html[data-tema="oscuro"] .totalEntrega{background:#111827;}
-html[data-tema="oscuro"] [data-tipo="entregado"] .iconoAviso{background:#1C3524;color:var(--visitado);}
+html[data-tema="oscuro"] .textoFilaEntrega small{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .filaEntrega{border-color:var(--borde);}
+html[data-tema="oscuro"] .filaEntrega.conCambio{background:var(--pendiente-bg);}
+html[data-tema="oscuro"] .pasoContadorEntrega{background:var(--gris-claro);color:var(--texto);}
+html[data-tema="oscuro"] .totalEntrega{background:var(--fondo);}
+html[data-tema="oscuro"] [data-tipo="entregado"] .iconoAviso{background:var(--visitado-bg);color:var(--visitado);}
 html[data-tema="oscuro"] .emergenteAviso[data-tipo="entregado"]{border-left-color:var(--visitado);}
 /* Cobro (T28): "A cobrar", cobro en la tarjeta y en la ficha, ventana "¿Cómo pagó?" y foto del comprobante */
 .cobroPendienteSeguimiento{display:flex;width:max-content;margin-top:4px;color:var(--pendiente);}
@@ -3722,13 +3719,13 @@ html[data-tema="oscuro"] .ayudaCobroPendiente,
 html[data-tema="oscuro"] .opcionCobro[data-cobro="pendiente"].activa{color:var(--pendiente) !important;}
 html[data-tema="oscuro"] .cobradoSeguimiento,
 html[data-tema="oscuro"] .datoFichaPedido[data-cobro="cobrado"] strong{color:var(--visitado) !important;}
-html[data-tema="oscuro"] .opcionCobro{background:#111827;border-color:#4b5563;color:#f9fafb;}
+html[data-tema="oscuro"] .opcionCobro{background:var(--fondo);border-color:var(--borde-fuerte);color:var(--texto);}
 html[data-tema="oscuro"] .opcionCobro.activa{background:var(--acento-bg);border-color:var(--acento);color:var(--acento-oscuro) !important;}
 html[data-tema="oscuro"] .opcionCobro[data-cobro="pendiente"].activa{background:var(--pendiente-bg);border-color:var(--pendiente);}
-html[data-tema="oscuro"] .ayudaCobro{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .ayudaCobro{color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .botonVerComprobante{color:var(--acento-oscuro) !important;}
-html[data-tema="oscuro"] .vistaFotoCobro{border-color:#374151;}
-html[data-tema="oscuro"] .fotoComprobante{background:#111827;}
+html[data-tema="oscuro"] .vistaFotoCobro{border-color:var(--borde);}
+html[data-tema="oscuro"] .fotoComprobante{background:var(--fondo);}
 html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitado);}
 
 /* ================= TICKET (T28b) ================= */
@@ -3745,14 +3742,14 @@ html[data-tema="oscuro"] .pasoSeguimiento.cobro::before{background:var(--visitad
 .copiasTicket h2{margin-bottom:8px;}
 .copiasTicket .modalBotones{margin-bottom:calc(64px + env(safe-area-inset-bottom));}
 .botonImprimirGenerado{justify-content:center;width:100%;min-height:46px;margin-top:14px;}
-html[data-tema="oscuro"] .opcionCopias{background:#111827;border-color:#4b5563;color:#f9fafb;}
-html[data-tema="oscuro"] .opcionCopias small{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .opcionCopias{background:var(--fondo);border-color:var(--borde-fuerte);color:var(--texto);}
+html[data-tema="oscuro"] .opcionCopias small{color:var(--texto-sec) !important;}
 html[data-tema="oscuro"] .opcionCopias:active{background:var(--acento-bg);border-color:var(--acento);}
 /* Historial dentro de Pedidos (T27b) */
 .filtrosHistorialPedidos{margin-bottom:8px;padding:10px;}
 .filtrosHistorialPedidos.oculto{display:none;}
 .estadoSeguimiento[data-estado="historico"]{background:var(--gris-claro);color:var(--texto-sec);}
-html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:#374151;color:#e5e7eb !important;}
+html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:var(--borde);color:var(--texto) !important;}
 /* "Salir a repartir" en tanda (T29c): elegir varios pedidos y la barra de abajo */
 .barraTandaPedidos{display:flex;gap:8px;margin:0 0 10px;}
 .barraTandaPedidos.oculto,.barraTandaPedidos .oculto{display:none;}
@@ -3760,23 +3757,23 @@ html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:
 .casillaTanda{display:grid;place-items:center;flex-shrink:0;width:26px;height:26px;margin-top:7px;border:2px solid var(--borde);border-radius:7px;background:var(--superficie);color:transparent;}
 .tarjetaSeguimiento.elegidaTanda{outline:2px solid var(--acento);outline-offset:-2px;background:var(--acento-bg);}
 .casillaTanda svg{visibility:hidden;}
-.elegidaTanda .casillaTanda{border-color:var(--acento);background:var(--acento);color:#fff;}
+.elegidaTanda .casillaTanda{border-color:var(--acento);background:var(--acento);color:var(--acento-txt);}
 .elegidaTanda .casillaTanda svg{visibility:visible;}
 .pieTandaPedidos{position:fixed;left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(100px + env(safe-area-inset-bottom));z-index:950;}
 .pieTandaPedidos.oculto{display:none;}
-.botonSalirEnTanda{justify-content:center;width:100%;min-height:52px;border-radius:14px;background:var(--acento);color:#fff;font-size:16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+.botonSalirEnTanda{justify-content:center;width:100%;min-height:52px;border-radius:14px;background:var(--acento);color:var(--acento-txt);font-size:16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.25);}
 .botonSalirEnTanda:disabled{opacity:.55;box-shadow:none;cursor:default;}
 .listaRepartoTanda{list-style:none;max-height:40vh;margin:12px 0 4px;padding:0;overflow-y:auto;border:1px solid var(--borde);border-radius:var(--radius-md);background:var(--fondo);}
 .listaRepartoTanda li{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--borde);font-size:13.5px;}
 .listaRepartoTanda li:last-child{border-bottom:none;}
 .listaRepartoTanda strong{min-width:0;overflow-wrap:anywhere;}
 .listaRepartoTanda span{flex-shrink:0;color:var(--texto-sec);}
-html[data-tema="oscuro"] .casillaTanda{background:#111827;border-color:#4b5563;}
-html[data-tema="oscuro"] .elegidaTanda .casillaTanda{background:var(--acento);border-color:var(--acento);color:#fff !important;}
-html[data-tema="oscuro"] .botonSalirEnTanda{color:#fff !important;}
-html[data-tema="oscuro"] .listaRepartoTanda{background:#111827;border-color:#374151;}
-html[data-tema="oscuro"] .listaRepartoTanda li{border-color:#374151;}
-html[data-tema="oscuro"] .listaRepartoTanda span{color:#cbd5e1 !important;}
+html[data-tema="oscuro"] .casillaTanda{background:var(--fondo);border-color:var(--borde-fuerte);}
+html[data-tema="oscuro"] .elegidaTanda .casillaTanda{background:var(--acento);border-color:var(--acento);color:var(--acento-txt) !important;}
+html[data-tema="oscuro"] .botonSalirEnTanda{color:var(--texto) !important;}
+html[data-tema="oscuro"] .listaRepartoTanda{background:var(--fondo);border-color:var(--borde);}
+html[data-tema="oscuro"] .listaRepartoTanda li{border-color:var(--borde);}
+html[data-tema="oscuro"] .listaRepartoTanda span{color:var(--texto-sec) !important;}
 
 /* Hoja de reparto impresa (T28e) */
 .imprimirHojaReparto{justify-content:center;width:100%;min-height:44px;margin:0 0 16px;}
