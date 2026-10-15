@@ -1184,6 +1184,35 @@
 
     const LARGO_MAXIMO_MOTIVO_CANCELACION = 300;
 
+    // -------------------------------------------------
+    // "Ticket impreso por" (T28d)
+    // -------------------------------------------------
+    // Cada impresión queda en el mapa "impresiones" del pedido: { copias,
+    // persona, horaCelular }. Solo se agrega, a nombre propio, de a una.
+
+    function anotarImpresion(idPedido, copias) {
+        const { ref, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se imprime.");
+        const idImpresion = generarId("imp");
+
+        enviarCambiosDelPedido(ref, [{
+            ruta: ["impresiones", idImpresion],
+            valor: { copias: copias === 1 ? 1 : 2, persona, horaCelular: Date.now() }
+        }]);
+
+        return idImpresion;
+    }
+
+    // Las impresiones del pedido, la más nueva primero: [{ id, copias,
+    // persona, horaCelular }].
+    function impresionesDelPedido(pedido) {
+        const impresiones = esMapa(pedido && pedido.impresiones) ? pedido.impresiones : {};
+
+        return Object.keys(impresiones)
+            .filter(id => esMapa(impresiones[id]))
+            .map(id => ({ id, ...impresiones[id] }))
+            .sort((a, b) => (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0) || (a.id < b.id ? 1 : -1));
+    }
+
     function esPedidoEliminado(pedido) {
         return Boolean(pedido) && pedido.eliminado === true;
     }
@@ -1941,6 +1970,9 @@
         if (cambio("rutasGuardadas") && typeof renderizarRutasGuardadas === "function") {
             intentar(renderizarRutasGuardadas);
         }
+
+        // Cierre del día (T28f): se recalcula con cada cambio de los pedidos.
+        if (cambio("historial") && window.cierreVendeFrio) intentar(window.cierreVendeFrio.redibujar);
 
         if (pantallaVisible("pantallaEstadisticas") && typeof window.abrirEstadisticas === "function") {
             intentar(window.abrirEstadisticas);
@@ -2777,6 +2809,10 @@
         if (saliendo) return;
         saliendo = true;
 
+        // T29: este celular deja de recibir notificaciones (antes de cerrar
+        // la sesión, que hace falta para borrarlo de la nube).
+        await window.notificacionesVendeFrio?.olvidarEsteCelular?.();
+
         dejarDeEscuchar();
         olvidarModo();
         await vaciarCopiaDeLaNube();
@@ -2910,6 +2946,9 @@
         edicionesSinVer,
         quienesVieronLasEdiciones,
         marcarEdicionesVistas,
+        // "Ticket impreso por" (T28d).
+        anotarImpresion,
+        impresionesDelPedido,
         // Eliminar y cancelar (T26).
         puedeEliminarElPedido,
         puedeCancelarElPedido,

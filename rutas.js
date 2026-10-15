@@ -7,6 +7,8 @@ let mapaLeaflet = null;
 let capaMarcadores = null;
 let rutaOrdenada = [];
 let distanciasRuta = [];
+// Elegidos sin GPS en la última ruta optimizada (salen al pie de la hoja de reparto, T28e).
+let comerciosSinGpsRuta = [];
 let comerciosSeleccionadosRuta = new Set();
 let seleccionRutaInicializada = false;
 let modoPinManual = false;
@@ -1585,6 +1587,9 @@ function optimizarRuta() {
 
             rutaOrdenada = resultado.comercios;
             distanciasRuta = resultado.distancias;
+            comerciosSinGpsRuta = comerciosElegidos
+                .filter(comercio => !comercioTieneGps(comercio))
+                .map(comercio => comercio.nombre);
 
             const nombresSinGps = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
@@ -1716,6 +1721,16 @@ function mostrarRutaEnLista() {
 
     contenedor.appendChild(encabezado);
 
+    // Hoja de reparto impresa (T28e): solo en la nube y con Web Bluetooth.
+    if (rutaOrdenada.length > 0 && window.impresionVendeFrio?.disponible?.()) {
+        const botonHoja = document.createElement("button");
+        botonHoja.type = "button";
+        botonHoja.id = "btnImprimirHojaReparto";
+        botonHoja.className = "btnAccion ver imprimirHojaReparto";
+        botonHoja.innerHTML = window.icono("impresora", 15) + " Imprimir hoja de reparto";
+        contenedor.appendChild(botonHoja);
+    }
+
     rutaOrdenada.forEach((comercio, indice) => {
         const elemento = document.createElement("div");
         elemento.className = "paradaRuta";
@@ -1802,6 +1817,19 @@ document.addEventListener("click", event => {
 
     if (boton.id === "btnOptimizarRuta") {
         optimizarRuta();
+        return;
+    }
+
+    if (boton.id === "btnImprimirHojaReparto") {
+        const distancia = distanciasRuta.reduce((total, metros) => total + (Number(metros) || 0), 0);
+        window.impresionVendeFrio?.imprimirHojaDeReparto?.(
+            rutaOrdenada.map(comercio => ({
+                nombre: comercio.nombre,
+                direccion: comercio.direccion || "",
+                telefono: comercio.telefono || ""
+            })),
+            { distancia: distancia > 0 ? formatearDistanciaTotal(distancia) : "", sinGps: comerciosSinGpsRuta }
+        );
         return;
     }
 

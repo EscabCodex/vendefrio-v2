@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v157 - Todos pueden hacer todo)
+// VendeFrío - Service Worker (v163 - Cierre del día)
 // =====================================================
-const CACHE_NAME = "vendefrio-v157";
+const CACHE_NAME = "vendefrio-v163";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -20,16 +20,24 @@ const ARCHIVOS = [
   "./productosAdmin.js",
   "./historial.js",
   "./impresion.js",
+  "./cierre.js",
   "./seguimiento.js",
   "./avisos.js",
+  "./notificaciones.js",
   "./rutas.js",
   "./navegacion3d.js",
   "./navegacion3d.css",
   "./manifest.json",
   "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-maskable-512.png",
+  "./apple-touch-icon.png",
+  "./badge.png",
   "./firebase/firebase-app-compat.js",
   "./firebase/firebase-auth-compat.js",
   "./firebase/firebase-firestore-compat.js",
+  "./firebase/firebase-messaging-compat.js",
   "./firebase-config.js",
   "./cuenta.js",
   "./distribuidora.js",
@@ -92,4 +100,83 @@ self.addEventListener("fetch", event => {
 
   // Network First
   event.respondWith(respuestaDesdeRedOCache(event.request));
+});
+
+// -------------------------------------------------
+// Notificaciones con la app cerrada (T29)
+// -------------------------------------------------
+// Las manda la función de Vercel (api/notificar.js) por Firebase Cloud
+// Messaging. Llegan acá aunque la app esté cerrada.
+
+function datosDeLaNotificacion(event) {
+  let mensaje = {};
+  try {
+    mensaje = event.data ? event.data.json() : {};
+  } catch (error) {
+    mensaje = {};
+  }
+
+  const datos = mensaje && typeof mensaje.data === "object" && mensaje.data ? mensaje.data : {};
+  const notificacion = mensaje && typeof mensaje.notification === "object" && mensaje.notification ? mensaje.notification : {};
+
+  return {
+    titulo: String(notificacion.title || datos.titulo || "VendeFrío"),
+    texto: String(notificacion.body || datos.texto || ""),
+    aviso: {
+      idAviso: String(datos.idAviso || ""),
+      idPedido: String(datos.idPedido || ""),
+      tipo: String(datos.tipo || "")
+    }
+  };
+}
+
+function esIphone() {
+  return /iPhone|iPad|iPod|Macintosh/i.test(self.navigator && self.navigator.userAgent || "");
+}
+
+self.addEventListener("push", event => {
+  const { titulo, texto, aviso } = datosDeLaNotificacion(event);
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(ventanas => {
+      // Con la app a la vista ya sale el aviso emergente de la app. En
+      // iPhone (y en Safari) se muestra igual: exige que cada una se vea.
+      const aLaVista = ventanas.some(ventana => ventana.visibilityState === "visible");
+      if (aLaVista && !esIphone()) return undefined;
+
+      // icon: el logo grande. badge: el copo chico de la barra de arriba
+      // (Android usa solo la silueta). Los dos en PNG: Android no muestra SVG.
+      return self.registration.showNotification(titulo, {
+        body: texto,
+        icon: "icon-192.png",
+        badge: "badge.png",
+        tag: aviso.idAviso || undefined,
+        data: aviso,
+        vibrate: [30, 60, 30]
+      });
+    })
+  );
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+
+  const aviso = event.notification.data || {};
+  const parametros = new URLSearchParams();
+  if (aviso.idAviso) parametros.set("aviso", aviso.idAviso);
+  if (aviso.idPedido) parametros.set("pedido", aviso.idPedido);
+  if (aviso.tipo) parametros.set("tipo", aviso.tipo);
+  const direccion = new URL("./index.html" + (parametros.toString() ? "?" + parametros.toString() : ""), self.registration.scope).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(ventanas => {
+      // Si la app ya está abierta, se trae al frente y abre el pedido ahí.
+      const abierta = ventanas.find(ventana => new URL(ventana.url).origin === self.location.origin);
+      if (abierta) {
+        abierta.postMessage({ accion: "abrirAviso", aviso });
+        return abierta.focus();
+      }
+      return self.clients.openWindow(direccion);
+    })
+  );
 });

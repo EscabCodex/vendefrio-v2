@@ -51,7 +51,7 @@
                     <button class="configFila oculto" data-config-seccion="avisos" id="configFilaAvisos">
                         <span class="configIcono">${window.icono("campana",20)}</span>
                         <span><strong>Avisos</strong>
-                        <small>Elegí qué avisos recibir</small></span><b>›</b>
+                        <small>Qué avisos recibir y notificaciones</small></span><b>›</b>
                     </button>
 
                     <button class="configFila oculto" data-config-seccion="impresora" id="configFilaImpresora">
@@ -193,6 +193,57 @@
                 <strong id="cuentaNombreDistribuidora">${escaparTexto(nombre) || "…"}</strong>
             </p>
             ${esDueno ? `<button type="button" data-accion="editarNombreDistribuidora">Cambiar nombre</button>` : ""}
+        `;
+    }
+
+    // --- Datos de la distribuidora para el ticket (T28c) ---
+    // Solo el dueño: teléfono y, si tiene, dirección y CUIT. En el ticket
+    // sale cada dato solo si está cargado.
+    let editandoDatosTicket = false;
+
+    function htmlDatosTicket() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        if (!distribuidora || !distribuidora.datosTicket || !usuario || usuario.isAnonymous) return "";
+        if (!distribuidora.idActual() || distribuidora.idActual() !== usuario.uid) return "";
+
+        const datos = distribuidora.datosTicket();
+        const largos = distribuidora.largosDatosTicket;
+
+        if (editandoDatosTicket) {
+            return `
+                <form class="configCuentaFormulario" id="formDatosTicket" novalidate>
+                    <label>${window.icono("telefono",15)} Teléfono de la distribuidora
+                        <input type="tel" id="datosTicketTelefono" autocomplete="tel"
+                            maxlength="${largos.telefono}" value="${escaparTexto(datos.telefono)}">
+                    </label>
+                    <label>${window.icono("ubicacion",15)} Dirección (si tiene local a la calle)
+                        <input type="text" id="datosTicketDireccion" autocomplete="street-address"
+                            maxlength="${largos.direccion}" value="${escaparTexto(datos.direccion)}">
+                    </label>
+                    <label>${window.icono("documento",15)} CUIT (si tiene)
+                        <input type="text" id="datosTicketCuit" inputmode="numeric"
+                            maxlength="${largos.cuit}" value="${escaparTexto(datos.cuit)}">
+                    </label>
+                    <p class="configEstado">Los que dejes vacíos no salen en el ticket.</p>
+                    <button type="submit" class="configCuentaIngresar">Guardar datos del ticket</button>
+                    <button type="button" data-accion="cancelarDatosTicket">Cancelar</button>
+                </form>
+            `;
+        }
+
+        const filas = [
+            datos.telefono ? "Teléfono: " + escaparTexto(datos.telefono) : "",
+            datos.direccion ? "Dirección: " + escaparTexto(datos.direccion) : "",
+            datos.cuit ? "CUIT: " + escaparTexto(datos.cuit) : ""
+        ].filter(Boolean);
+
+        return `
+            <p class="configEstado" id="cuentaDatosTicket">
+                Datos para el ticket<br>
+                ${filas.length ? `<strong>${filas.join("<br>")}</strong>` : "Todavía sin cargar: el ticket sale solo con el nombre."}
+            </p>
+            <button type="button" data-accion="editarDatosTicket">${filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket"}</button>
         `;
     }
 
@@ -1046,12 +1097,87 @@
 
         return `
             ${problema}
+            ${htmlNotificaciones()}
+            <h3 class="subtituloAvisos">Qué avisos recibís</h3>
             ${casillas}
             <p class="configEstado">
                 Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda
                 en la nube: vale en cualquier celular donde entres.
             </p>
+            ${htmlQueSuena()}
             <button type="button" data-accion="verAvisos">Ver mis avisos</button>
+        `;
+    }
+
+    // --- Notificaciones con la app cerrada (T29): en este celular ---
+    function htmlNotificaciones() {
+        const notificaciones = window.notificacionesVendeFrio;
+        if (!notificaciones || !notificaciones.disponible()) return "";
+
+        const estado = notificaciones.estado();
+        const error = notificaciones.error();
+        const textos = {
+            instalarIphone: `En iPhone, las notificaciones llegan solo con la app instalada.
+                En Safari, tocá <strong>Compartir</strong> (el cuadrado con la flecha) y después
+                <strong>Agregar a inicio</strong>. Abrí VendeFrío desde ese ícono y volvé acá.
+                Hace falta iOS 16.4 o más nuevo.`,
+            noSePuede: `Este celular o este navegador no puede recibir notificaciones.
+                En Android, usá Chrome. En iPhone, hace falta iOS 16.4 o más nuevo y la app
+                instalada en la pantalla de inicio.`,
+            bloqueadas: `Las notificaciones están bloqueadas para VendeFrío en este celular.
+                Para permitirlas en Android: mantené apretado el ícono de VendeFrío, tocá
+                <strong>Información de la app</strong> y después <strong>Notificaciones</strong>
+                (o, en Chrome, los tres puntos > Configuración > Configuración de sitios >
+                Notificaciones). Después volvé acá.`,
+            apagadas: "Prendelas para que te suenen los avisos aunque tengas la app cerrada. Valen solo para este celular.",
+            activando: "Activando… Si el celular pregunta, tocá «Permitir».",
+            activadas: "<strong>Activadas en este celular.</strong> Te suenan los avisos aunque tengas la app cerrada."
+        };
+
+        let boton = "";
+        if (estado === "apagadas") {
+            boton = `<button type="button" data-accion="activarNotificaciones">Activar notificaciones en este celular</button>`;
+        } else if (estado === "activando") {
+            boton = `<button type="button" disabled>Activando…</button>`;
+        } else if (estado === "activadas") {
+            boton = `<button type="button" data-accion="desactivarNotificaciones">Desactivar en este celular</button>`;
+        }
+
+        return `
+            <div class="bloqueNotificaciones" id="bloqueNotificaciones" data-estado="${escaparTexto(estado)}">
+                <strong>Notificaciones con la app cerrada</strong>
+                <p class="configEstado">${textos[estado] || textos.apagadas}</p>
+                ${error && estado === "apagadas" ? `<p class="configEstado configAvisoProblema">${escaparTexto(error)}</p>` : ""}
+                ${boton}
+            </div>
+        `;
+    }
+
+    // Qué suena con la app cerrada: por persona, vale en cualquier celular.
+    function htmlQueSuena() {
+        const notificaciones = window.notificacionesVendeFrio;
+        const avisos = window.avisosVendeFrio;
+        if (!notificaciones || !notificaciones.disponible() || notificaciones.estado() !== "activadas") return "";
+
+        const casillas = avisos.tipos().map(tipo => {
+            const recibe = avisos.recibe(tipo.id);
+            return `
+                <label class="configSwitch configAviso">
+                    <input type="checkbox" class="casillaSuena" value="${escaparTexto(tipo.id)}"
+                        ${recibe && notificaciones.suena(tipo.id) ? "checked" : ""} ${recibe ? "" : "disabled"}>
+                    <span><strong>${escaparTexto(tipo.nombre)}</strong>
+                    ${recibe ? "" : "<br><small>No lo recibís: prendelo arriba, en «Qué avisos recibís».</small>"}</span>
+                </label>
+            `;
+        }).join("");
+
+        return `
+            <h3 class="subtituloAvisos">Qué suena con la app cerrada</h3>
+            ${casillas}
+            <p class="configEstado">
+                Lo que no suena igual te queda en la campanita. Vale en todos los
+                celulares donde actives las notificaciones.
+            </p>
         `;
     }
 
@@ -1188,6 +1314,7 @@
                 </p>
                 ${htmlNombreDueno()}
                 ${htmlNombreDistribuidora()}
+                ${htmlDatosTicket()}
                 ${htmlDistribuidora()}
                 ${enLaNube ? "" : `
                 <p class="configEstado">
@@ -1281,7 +1408,7 @@
                 ? "Tu cuenta de empleado"
                 : "Ingresá con tu email y contraseña"],
             empleados: ["Empleados", "Códigos, fichas, roles y bajas de tus empleados"],
-            avisos: ["Avisos", "Elegí qué avisos recibir"],
+            avisos: ["Avisos", "Elegí qué avisos recibir y activá las notificaciones"],
             impresora: ["Impresora", "Impresora Bluetooth para los tickets de los pedidos"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
@@ -1979,6 +2106,17 @@
             detalle("cuenta");
         }
 
+        if (accion === "editarDatosTicket") {
+            editandoDatosTicket = true;
+            detalle("cuenta");
+            document.getElementById("datosTicketTelefono")?.focus();
+        }
+
+        if (accion === "cancelarDatosTicket") {
+            editandoDatosTicket = false;
+            detalle("cuenta");
+        }
+
         if (accion === "editarNombreDueno") {
             editandoNombreDueno = true;
             detalle("cuenta");
@@ -2119,6 +2257,26 @@
                     error.classList.remove("oculto");
                 }
             });
+    });
+
+    // Datos del ticket (T28c).
+    document.addEventListener("submit", event => {
+        if (event.target.id !== "formDatosTicket") return;
+
+        event.preventDefault();
+
+        const valor = id => (document.getElementById(id)?.value || "").trim();
+        window.distribuidoraVendeFrio.cambiarDatosTicket({
+            telefono: valor("datosTicketTelefono"),
+            direccion: valor("datosTicketDireccion"),
+            cuit: valor("datosTicketCuit")
+        })
+            .then(() => {
+                editandoDatosTicket = false;
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
+            })
+            .catch(fallo => mostrarAviso("No se guardaron los datos", fallo.message));
     });
 
     // Nombre del dueño (T18).
@@ -2299,6 +2457,29 @@
         window.avisosVendeFrio?.abrirLista?.();
     });
 
+    // Notificaciones con la app cerrada (T29).
+    document.addEventListener("change", event => {
+        const casilla = event.target.closest?.(".casillaSuena");
+        if (!casilla || !window.notificacionesVendeFrio) return;
+
+        window.notificacionesVendeFrio.cambiarSuena(casilla.value, casilla.checked)
+            .catch(error => {
+                casilla.checked = !casilla.checked;
+                mostrarAviso("No se guardó el cambio", error.message);
+            });
+    });
+
+    document.addEventListener("click", event => {
+        const notificaciones = window.notificacionesVendeFrio;
+        if (!notificaciones) return;
+
+        if (event.target.closest?.('[data-accion="activarNotificaciones"]')) {
+            notificaciones.activar().catch(error => mostrarAviso("No se pudieron activar", error.message));
+        } else if (event.target.closest?.('[data-accion="desactivarNotificaciones"]')) {
+            notificaciones.desactivar();
+        }
+    });
+
     // Impresora (T28b): abre la lista de Chrome y guarda la elegida.
     document.addEventListener("click", event => {
         if (!event.target.closest?.('[data-accion="cambiarImpresora"]')) return;
@@ -2368,6 +2549,15 @@
         window.distribuidoraVendeFrio.escucharNombreDueno?.(nombreDueno => {
             const texto = document.getElementById("cuentaNombreDueno");
             if (texto) texto.textContent = nombreDueno || "Todavía sin cargar";
+        });
+
+        // Datos del ticket (T28c): si los cambian en otro celular, se
+        // redibuja Cuenta, salvo que se esté escribiendo algo.
+        window.distribuidoraVendeFrio.escucharDatosTicket?.(() => {
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta !== "cuenta" || !caja || caja.classList.contains("oculto")) return;
+            if (editandoNombre || editandoNombreDueno || editandoDatosTicket) return;
+            if (document.getElementById("cuentaDatosTicket")) detalle("cuenta");
         });
     }
 
@@ -2456,6 +2646,33 @@
             }
         });
         actualizarFilasSegunCuenta();
+    }
+
+    // Notificaciones (T29): la sección se actualiza al activarlas o al
+    // cambiar qué suena (también desde otro celular).
+    function conectarNotificaciones() {
+        let ultimo = "";
+        window.notificacionesVendeFrio.escuchar(() => {
+            const notificaciones = window.notificacionesVendeFrio;
+            const tipos = window.avisosVendeFrio?.tipos?.() || [];
+            const texto = JSON.stringify([notificaciones.disponible(), notificaciones.estado(), notificaciones.error(),
+                tipos.map(tipo => notificaciones.suena(tipo.id))]);
+            if (texto === ultimo) return;
+            ultimo = texto;
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "avisos" && caja && !caja.classList.contains("oculto")) {
+                detalle("avisos");
+            }
+        });
+    }
+
+    if (window.notificacionesVendeFrio) {
+        conectarNotificaciones();
+    } else {
+        window.addEventListener("load", () => {
+            if (window.notificacionesVendeFrio) conectarNotificaciones();
+        }, { once: true });
     }
 
     if (window.avisosVendeFrio) {

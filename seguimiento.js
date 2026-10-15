@@ -1271,6 +1271,18 @@
             });
         }
 
+        // Ticket impreso (T28d): quién, cuándo y cuántas copias.
+        (window.nubeVendeFrio?.impresionesDelPedido?.(pedido) || []).forEach(impresion => {
+            entradas.push({
+                id: impresion.id,
+                tipo: "impresion",
+                titulo: "Ticket impreso",
+                persona: impresion.persona,
+                hora: Number(impresion.horaCelular) || 0,
+                nota: impresion.copias === 1 ? "Una copia (comercio)" : "Dos copias (comercio y distribuidora)"
+            });
+        });
+
         entradas.sort((a, b) => {
             const diferencia = b.hora - a.hora;
             if (diferencia !== 0) return diferencia;

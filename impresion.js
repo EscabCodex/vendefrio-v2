@@ -390,6 +390,15 @@
         agregar(DOBLE_ALTO);
         partir(distribuidora, ANCHO).forEach(linea);
         agregar(TAMANO_NORMAL);
+        // Datos de la distribuidora (T28c): cada uno solo si está cargado.
+        const propios = window.distribuidoraVendeFrio?.datosTicket?.() || {};
+        if (propios.direccion || propios.telefono || propios.cuit) {
+            agregar(SIN_NEGRITA);
+            if (propios.direccion) partir(propios.direccion, ANCHO).forEach(linea);
+            if (propios.telefono) partir("Tel.: " + propios.telefono, ANCHO).forEach(linea);
+            if (propios.cuit) partir("CUIT: " + propios.cuit, ANCHO).forEach(linea);
+            agregar(NEGRITA);
+        }
         linea(titulo);
         agregar(SIN_NEGRITA);
         agregar(IZQUIERDA);
@@ -531,7 +540,9 @@
         return error && error.name === "NotFoundError" && /cancel/i.test(String(error.message || ""));
     }
 
-    function mostrarError(error, idPedido, copias) {
+    // reintentar(elegir): vuelve a imprimir lo mismo; con elegir, abre la
+    // lista de Chrome aunque haya una impresora guardada.
+    function mostrarError(error, reintentar) {
         if (esCancelacion(error)) return;
 
         const nombre = impresoraGuardada()?.nombre || "la impresora";
@@ -541,7 +552,7 @@
                 titulo: "No se encontró la impresora",
                 mensaje: "No se pudo conectar con " + nombre + ". Revisá que esté prendida, con papel y cerca del celular. También podés elegirla de la lista.",
                 boton: "Elegir de la lista",
-                accion: () => imprimirPedido(idPedido, { elegir: true, copias })
+                accion: () => reintentar(true)
             });
             return;
         }
@@ -549,9 +560,9 @@
         if (error && error.codigo === "corte") {
             abrirModal({
                 titulo: "Se cortó la impresión",
-                mensaje: "Se perdió la conexión con " + nombre + " y puede haber salido solo una parte del ticket. Revisá que esté prendida y cerca, y volvé a intentar.",
+                mensaje: "Se perdió la conexión con " + nombre + " y puede haber salido solo una parte. Revisá que esté prendida y cerca, y volvé a intentar.",
                 boton: "Reintentar",
-                accion: () => imprimirPedido(idPedido, { copias })
+                accion: () => reintentar(false)
             });
             return;
         }
@@ -561,7 +572,7 @@
                 titulo: "No se pudo imprimir",
                 mensaje: "Esa impresora no recibe tickets de VendeFrío. Elegí la impresora térmica (por ejemplo, MTP-3).",
                 boton: "Elegir de la lista",
-                accion: () => imprimirPedido(idPedido, { elegir: true, copias })
+                accion: () => reintentar(true)
             });
             return;
         }
@@ -573,12 +584,12 @@
 
         // Sin Bluetooth prendido, o la lista no se pudo abrir (por ejemplo,
         // pasó mucho tiempo desde que se tocó el botón).
-        console.error("No se pudo imprimir el ticket.", error);
+        console.error("No se pudo imprimir.", error);
         abrirModal({
             titulo: "No se pudo imprimir",
             mensaje: "Revisá que el Bluetooth del celular esté prendido y que la impresora esté cerca, y volvé a intentar.",
             boton: "Reintentar",
-            accion: () => imprimirPedido(idPedido, { elegir: !impresoraGuardada(), copias })
+            accion: () => reintentar(!impresoraGuardada())
         });
     }
 
@@ -671,25 +682,11 @@
     // Imprimir
     // -------------------------------------------------
 
-    // Imprime el ticket del pedido: las dos copias o, con copias: 1, solo
-    // la del comercio. Con elegir, abre la lista de Chrome aunque haya una
-    // impresora guardada.
-    async function imprimirPedido(idPedido, opciones) {
-        const id = String(idPedido || "");
-        const copias = opciones && opciones.copias === 1 ? 1 : 2;
-        if (imprimiendo || !hayBluetooth()) return;
-
-        const pedido = buscarPedido(id);
-        if (!puedeImprimir(pedido)) {
-            mostrarError(errorDeImpresion("pedido", "Este pedido ya no se puede imprimir."), id, copias);
-            return;
-        }
-
-        // El ticket se arma con lo que se ve ahora (antes de conectar).
-        const bytes = armarTicket(pedido, copias);
-        const elegir = Boolean(opciones && opciones.elegir);
-
-        imprimiendo = id;
+    // Conecta con la impresora (la guardada o, con elegir o si no hay, la
+    // que se elija de la lista de Chrome) y manda los bytes. clave dice qué
+    // se está imprimiendo (el id del pedido o "hoja") mientras dura.
+    async function mandarAImpresora(clave, bytes, elegir) {
+        imprimiendo = clave;
         avisar();
 
         try {
@@ -707,13 +704,262 @@
             }
 
             await escribir(destino, bytes);
-            mostrarToast("Ticket impreso");
-        } catch (error) {
-            mostrarError(error, id, copias);
         } finally {
             imprimiendo = "";
             avisar();
         }
+    }
+
+    // Imprime el ticket del pedido: las dos copias o, con copias: 1, solo
+    // la del comercio. Con elegir, abre la lista de Chrome aunque haya una
+    // impresora guardada.
+    async function imprimirPedido(idPedido, opciones) {
+        const id = String(idPedido || "");
+        const copias = opciones && opciones.copias === 1 ? 1 : 2;
+        const reintentar = elegir => imprimirPedido(id, { elegir, copias });
+        if (imprimiendo || !hayBluetooth()) return;
+
+        const pedido = buscarPedido(id);
+        if (!puedeImprimir(pedido)) {
+            mostrarError(errorDeImpresion("pedido", "Este pedido ya no se puede imprimir."), reintentar);
+            return;
+        }
+
+        // El ticket se arma con lo que se ve ahora (antes de conectar).
+        const bytes = armarTicket(pedido, copias);
+
+        try {
+            await mandarAImpresora(id, bytes, Boolean(opciones && opciones.elegir));
+        } catch (error) {
+            mostrarError(error, reintentar);
+            return;
+        }
+
+        mostrarToast("Ticket impreso");
+        // Queda anotado en el pedido (T28d): se ve en el seguimiento.
+        try {
+            window.nubeVendeFrio?.anotarImpresion?.(id, copias);
+        } catch (error) {
+            console.error("No se pudo anotar la impresión en el pedido.", error);
+        }
+    }
+
+    // -------------------------------------------------
+    // Hoja de reparto (T28e)
+    // -------------------------------------------------
+    // Desde Rutas, después de "Optimizar ruta": los comercios en el orden de
+    // la ruta, cada uno con su dirección, su teléfono, sus pedidos sin
+    // entregar (número, estado, unidades y total) y lo que debe de antes
+    // (entregados con el cobro pendiente). Al final, el total a cobrar.
+
+    const ESTADOS_SIN_ENTREGAR = ["cargado", "enPreparacion", "preparado", "enReparto"];
+
+    function mismoComercio(a, b) {
+        return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+    }
+
+    function pedidosDelComercio(nombre) {
+        const nube = window.nubeVendeFrio;
+        const sinEntregar = [];
+        const aCobrar = [];
+
+        obtenerHistorial().forEach(pedido => {
+            if (!pedido || pedido.eliminado === true || !mismoComercio(pedido.comercio, nombre)) return;
+
+            const estado = estadoActualDelPedido(pedido);
+            if (ESTADOS_SIN_ENTREGAR.includes(estado)) sinEntregar.push(pedido);
+            else if (nube?.cobroPendiente?.(pedido)) aCobrar.push(pedido);
+        });
+
+        const porFecha = (a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0);
+        return { sinEntregar: sinEntregar.sort(porFecha), aCobrar: aCobrar.sort(porFecha) };
+    }
+
+    function resumenDelPedidoParaLaHoja(pedido) {
+        const nube = window.nubeVendeFrio;
+        const entrega = nube.entregaDelPedido(pedido);
+        const unidades = entrega.lineas.reduce((suma, linea) => suma + linea.entregada, 0);
+        return { unidades, total: nube.montoACobrar(pedido), sinPrecio: entrega.total.sinPrecio };
+    }
+
+    // paradas: [{ nombre, direccion, telefono }] en el orden de la ruta.
+    // datos: { distancia, sinGps: [nombre] }.
+    function datosDeLaHoja(paradas, datos) {
+        let totalACobrar = 0;
+        let cantidadPedidos = 0;
+
+        const lista = paradas.map((comercio, indice) => {
+            const { sinEntregar, aCobrar } = pedidosDelComercio(comercio.nombre);
+            const resumen = pedido => {
+                const datosPedido = resumenDelPedidoParaLaHoja(pedido);
+                totalACobrar += datosPedido.total;
+                cantidadPedidos += 1;
+                return { pedido, ...datosPedido };
+            };
+
+            return {
+                numero: indice + 1,
+                nombre: String(comercio.nombre || "SIN NOMBRE").trim(),
+                direccion: String(comercio.direccion || "").trim(),
+                telefono: String(comercio.telefono || "").trim(),
+                sinEntregar: sinEntregar.map(resumen),
+                aCobrar: aCobrar.map(resumen)
+            };
+        });
+
+        return {
+            paradas: lista,
+            totalACobrar: Math.round(totalACobrar * 100) / 100,
+            cantidadPedidos,
+            distancia: String(datos && datos.distancia || ""),
+            sinGps: (datos && Array.isArray(datos.sinGps) ? datos.sinGps : []).map(nombre => String(nombre || "").trim()).filter(Boolean)
+        };
+    }
+
+    function armarHoja(paradas, datos) {
+        const hoja = datosDeLaHoja(paradas, datos);
+        const bytes = [].concat(INICIAR, SALIR_MODO_CHINO, TABLA_850);
+        const agregar = comandos => comandos.forEach(byte => bytes.push(byte));
+        const linea = texto => {
+            agregar(codificar(texto));
+            bytes.push(SALTO);
+        };
+        const separador = () => linea("-".repeat(ANCHO));
+        const distribuidora = String(window.distribuidoraVendeFrio?.nombreActual?.() || "").trim() || "VendeFrío";
+
+        agregar(CENTRO);
+        agregar(NEGRITA);
+        agregar(DOBLE_ALTO);
+        partir(distribuidora, ANCHO).forEach(linea);
+        agregar(TAMANO_NORMAL);
+        linea("HOJA DE REPARTO");
+        agregar(SIN_NEGRITA);
+        linea(textoFechaHora(Date.now()));
+        agregar(IZQUIERDA);
+        linea(hoja.paradas.length + (hoja.paradas.length === 1 ? " parada" : " paradas") +
+            (hoja.distancia ? " · " + hoja.distancia : ""));
+        separador();
+
+        const lineaDePedido = (prefijo, item) => {
+            const estado = nombreDeEstadoPedido(estadoActualDelPedido(item.pedido)) || "";
+            partir(prefijo + "N° " + numeroCortoDelPedido(item.pedido) + (estado ? " · " + estado : ""), ANCHO - 3)
+                .forEach(texto => linea("   " + texto));
+            const total = item.total || !item.sinPrecio ? textoPrecio(item.total) : "Sin precio";
+            dosColumnas("   " + item.unidades + (item.unidades === 1 ? " unidad" : " unidades"), total).forEach(linea);
+        };
+
+        hoja.paradas.forEach(parada => {
+            agregar(NEGRITA);
+            agregar(DOBLE_ALTO);
+            partir(parada.numero + ". [ ] " + parada.nombre, ANCHO).forEach(linea);
+            agregar(TAMANO_NORMAL);
+            agregar(SIN_NEGRITA);
+            if (parada.direccion) partir(parada.direccion, ANCHO - 3).forEach(texto => linea("   " + texto));
+            if (parada.telefono) partir("Tel.: " + parada.telefono, ANCHO - 3).forEach(texto => linea("   " + texto));
+            if (!parada.sinEntregar.length && !parada.aCobrar.length) linea("   Sin pedidos para entregar");
+            parada.sinEntregar.forEach(item => lineaDePedido("Pedido ", item));
+            parada.aCobrar.forEach(item => lineaDePedido("A cobrar (ya entregado) ", item));
+            separador();
+        });
+
+        linea("Pedidos: " + hoja.cantidadPedidos);
+        agregar(NEGRITA);
+        agregar(DOBLE_ALTO);
+        dosColumnas("A COBRAR", textoPrecio(hoja.totalACobrar)).forEach(linea);
+        agregar(TAMANO_NORMAL);
+        agregar(SIN_NEGRITA);
+
+        if (hoja.sinGps.length) {
+            separador();
+            linea("Sin GPS (no entran en la ruta):");
+            hoja.sinGps.forEach(nombre => partir("- " + nombre, ANCHO).forEach(linea));
+        }
+
+        bytes.push(SALTO, SALTO, SALTO, SALTO, SALTO);
+        return new Uint8Array(bytes);
+    }
+
+    async function imprimirHojaDeReparto(paradas, datos, opciones) {
+        const lista = Array.isArray(paradas) ? paradas.filter(Boolean) : [];
+        if (imprimiendo || !disponible() || !lista.length) return;
+
+        const bytes = armarHoja(lista, datos);
+        try {
+            await mandarAImpresora("hoja", bytes, Boolean(opciones && opciones.elegir));
+        } catch (error) {
+            mostrarError(error, elegir => imprimirHojaDeReparto(lista, datos, { elegir }));
+            return;
+        }
+        mostrarToast("Hoja de reparto impresa");
+    }
+
+    // -------------------------------------------------
+    // Otras hojas (T28f, Cierre del día)
+    // -------------------------------------------------
+    // lineas: [{ tipo, texto, izquierda, derecha }], con tipo "titulo"
+    // (centrado, negrita y doble alto), "centro", "subtitulo" (negrita),
+    // "texto", "dos" (dos columnas), "total" (dos columnas, negrita y doble
+    // alto) o "separador".
+    function armarLineas(lineas) {
+        const bytes = [].concat(INICIAR, SALIR_MODO_CHINO, TABLA_850);
+        const agregar = comandos => comandos.forEach(byte => bytes.push(byte));
+        const linea = texto => {
+            agregar(codificar(texto));
+            bytes.push(SALTO);
+        };
+
+        lineas.forEach(item => {
+            const texto = String(item && item.texto || "");
+            const tipo = item && item.tipo;
+
+            if (tipo === "titulo") {
+                agregar(CENTRO);
+                agregar(NEGRITA);
+                agregar(DOBLE_ALTO);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(TAMANO_NORMAL);
+                agregar(SIN_NEGRITA);
+                agregar(IZQUIERDA);
+            } else if (tipo === "centro") {
+                agregar(CENTRO);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(IZQUIERDA);
+            } else if (tipo === "subtitulo") {
+                agregar(NEGRITA);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(SIN_NEGRITA);
+            } else if (tipo === "dos") {
+                dosColumnas(String(item.izquierda || ""), String(item.derecha || "")).forEach(linea);
+            } else if (tipo === "total") {
+                agregar(NEGRITA);
+                agregar(DOBLE_ALTO);
+                dosColumnas(String(item.izquierda || ""), String(item.derecha || "")).forEach(linea);
+                agregar(TAMANO_NORMAL);
+                agregar(SIN_NEGRITA);
+            } else if (tipo === "separador") {
+                linea("-".repeat(ANCHO));
+            } else {
+                partir(texto, ANCHO).forEach(linea);
+            }
+        });
+
+        bytes.push(SALTO, SALTO, SALTO, SALTO, SALTO);
+        return new Uint8Array(bytes);
+    }
+
+    // opciones: { clave, aviso, elegir }.
+    async function imprimirLineas(lineas, opciones) {
+        const lista = Array.isArray(lineas) ? lineas : [];
+        const clave = String(opciones && opciones.clave || "hoja");
+        if (imprimiendo || !disponible() || !lista.length) return;
+
+        try {
+            await mandarAImpresora(clave, armarLineas(lista), Boolean(opciones && opciones.elegir));
+        } catch (error) {
+            mostrarError(error, elegir => imprimirLineas(lista, { ...opciones, elegir }));
+            return;
+        }
+        mostrarToast(String(opciones && opciones.aviso || "Impreso"));
     }
 
     // Configuración > Impresora: elegir otra de la lista (no imprime).
@@ -752,6 +998,11 @@
                 if (indice >= 0) oyentes.splice(indice, 1);
             };
         },
+        // Hoja de reparto (T28e).
+        imprimirHojaDeReparto,
+        // Cierre del día (T28f).
+        imprimirLineas,
+        datosDeLaHoja,
         // Para probar sin impresora: los bytes del ticket.
         armarTicket(idPedido, copias) {
             const pedido = buscarPedido(idPedido);

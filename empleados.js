@@ -243,6 +243,10 @@
         if (saliendo) return;
         saliendo = true;
 
+        // T29: este celular deja de recibir notificaciones (antes de cerrar
+        // la sesión, que hace falta para borrarlo de la nube).
+        await window.notificacionesVendeFrio?.olvidarEsteCelular?.();
+
         try {
             localStorage.removeItem(CLAVE_EMPLEADO);
             localStorage.removeItem(DB_MODO_NUBE);
