@@ -197,7 +197,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
     await expect.poll(async () => (await celularesDe(idDistribuidora, "dueno")).docs.map(doc => doc.data().token)).toEqual([tokenDueno]);
 
     // Segundo celular: un empleado entra con un código y también las activa.
-    await page.locator(".configSubVolver").click();
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="empleados"]').click();
     await page.getByRole("button", { name: "Generar código para un empleado nuevo" }).click();
     const codigo = (await page.locator("#empleadoCodigoGenerado strong").textContent()).trim();
@@ -250,7 +250,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
 
     // El dueño silencia "Pedido nuevo": el siguiente le llega a la
     // campanita, pero no suena.
-    await page.locator(".configSubVolver").click();
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="avisos"]').click();
     const suenaPedidoNuevo = page.locator('.casillaSuena[value="pedidoNuevo"]');
     await expect(suenaPedidoNuevo).toBeChecked();

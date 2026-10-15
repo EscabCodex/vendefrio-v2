@@ -308,7 +308,7 @@
                     </fieldset>
                     <p class="inicioError oculto" role="alert"></p>
                     <button type="submit" class="inicioPrincipal">Guardar y entrar</button>
-                    <button type="button" class="inicioVolver" data-inicio="volverPersonal">‹ Volver</button>
+                    <button type="button" class="inicioVolver" data-inicio="volverPersonal">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="ingresar" class="inicioFormulario oculto" id="inicioFormIngresar" novalidate>
@@ -326,7 +326,7 @@
                     <button type="button" class="inicioEnlace" data-inicio="irRegistrarse">
                         ¿Es tu primera vez? <strong>Registrarse</strong>
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">‹ Volver</button>
+                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="registrarse" class="inicioFormulario oculto" id="inicioFormRegistrarse" novalidate>
@@ -355,7 +355,7 @@
                     <button type="button" class="inicioEnlace" data-inicio="irIngresar">
                         ¿Ya tenés cuenta? <strong>Ingresar</strong>
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">‹ Volver</button>
+                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="empleadoCodigo" class="inicioFormulario oculto" id="inicioFormEmpleado" novalidate>
@@ -371,7 +371,7 @@
                     </label>
                     <p class="inicioError oculto" role="alert"></p>
                     <button type="submit" class="inicioPrincipal">Entrar</button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">‹ Volver</button>
+                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="empleadoDatos" class="inicioFormulario oculto" id="inicioFormDatosEmpleado" novalidate>
@@ -423,7 +423,7 @@
                     <button type="button" class="inicioPrincipal oculto" id="inicioReintentar"
                         data-inicio="reintentar">Reintentar</button>
                     <button type="button" class="inicioVolver oculto" id="inicioSalirCuenta"
-                        data-inicio="salirCuenta">‹ Salir de la cuenta</button>
+                        data-inicio="salirCuenta">${icono("salir", 18)} Salir de la cuenta</button>
                 </div>
 
                 <div data-paso="datosPropios" class="oculto">
@@ -439,7 +439,7 @@
                     <button type="button" class="inicioSinSesion" data-inicio="noSubir">
                         No subirlos y usar la nube
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="salirCuenta">‹ Salir de la cuenta</button>
+                    <button type="button" class="inicioVolver" data-inicio="salirCuenta">${icono("salir", 18)} Salir de la cuenta</button>
                 </div>
 
                 <div data-paso="confirmarNoSubir" class="oculto">
@@ -454,7 +454,7 @@
                     <button type="button" class="inicioPrincipal" data-inicio="usarNubeSinSubir">
                         Sí, usar la nube
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="volverDatosPropios">‹ Volver</button>
+                    <button type="button" class="inicioVolver" data-inicio="volverDatosPropios">${icono("flechaIzquierda", 18)} Volver</button>
                 </div>
             </div>
         `;

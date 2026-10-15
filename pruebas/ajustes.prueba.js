@@ -38,10 +38,10 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     expect(acentoDespues).not.toBe(acentoAntes);
 
     // El tamaño del texto agranda la pantalla de verdad.
-    const altoAntes = await page.locator(".configSubVolver").evaluate(el => el.getBoundingClientRect().height);
+    const altoAntes = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
     await detalle.locator(".ajSegmento label", { hasText: "Muy grande" }).click();
     expect(await raiz(page, "texto")).toBe("enorme");
-    const altoDespues = await page.locator(".configSubVolver").evaluate(el => el.getBoundingClientRect().height);
+    const altoDespues = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
     expect(altoDespues).toBeGreaterThan(altoAntes * 1.15);
 
     // El espaciado separa más las filas.

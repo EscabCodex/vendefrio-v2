@@ -156,7 +156,7 @@
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
                 filaLlave("menu", "azul", "Más en la barra de abajo", "Para llegar a Más con el pulgar", "masEnBarra") +
-                filaLlave("flechaIzquierda", "verde", "Volver flotante", "El botón volver te acompaña al bajar", "volverFlotante") +
+                filaLlave("flechaIzquierda", "verde", "Volver siempre a mano", "La flecha y la casita quedan arriba al bajar", "volverFlotante") +
                 filaLlave("chispa", "naranja", "Menos movimiento", "Saca las animaciones y transiciones", "movimiento") +
                 filaAccion("refrescar", "rojo", "Restablecer apariencia", "Todo como al principio", 'data-accion="restablecer"', "ajPeligro"));
     }
@@ -287,6 +287,7 @@
         raiz.dataset.movimiento = valorDe(d, "movimiento") === true ? "reducido" : "normal";
         raiz.dataset.barra = valorDe(d, "barraNombres") === false ? "iconos" : "nombres";
         raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
+        raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
     }
 

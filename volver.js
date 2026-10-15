@@ -1,22 +1,17 @@
 // =====================================================
-// VendeFrío - volver.js (T51)
-// Botón volver en todas las pantallas menos Inicio. Arriba a la izquierda,
-// en su lugar, y cuando la pantalla baja se "desprende" y queda flotando
-// para tenerlo siempre a mano. El flotante solo toca el botón volver de la
-// pantalla, así cada pantalla sigue volviendo a donde ya volvía.
+// VendeFrío - volver.js (T51, T52)
+// Botón volver en todas las pantallas menos Inicio, arriba a la izquierda,
+// y al lado una casita para ir a Inicio cuando el volver no lleva ahí.
+// Los dos van en una barrita pegajosa (sticky) al principio de la pantalla:
+// son los mismos botones, que se quedan quietos mientras la pantalla baja
+// por debajo. Sin copias ni saltos.
 // =====================================================
 (function () {
-    // Botones volver que ya tenía cada pantalla, del más adentro al más afuera.
-    const PROPIOS = [
-        ".configSubVolver",
-        ".botonVolverPedidos",
-        "#cerrarCargaPedido",
-        ".extraVolver",
-        ".botonVolverPantalla:not(.volverGenerico)",
-        ".configHeader .configVolver"
-    ];
-    // Los que ya vuelven a Inicio no necesitan la casita al lado.
-    const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido", ".extraVolver", ".configHeader .configVolver"];
+    // Botones volver que ya tenía cada pantalla en su encabezado.
+    const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
+    // Los que llevan a Inicio no necesitan la casita al lado.
+    const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
+    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
 
     function preferencia(campo) {
@@ -28,9 +23,8 @@
     }
 
     function seVe(elemento) {
-        if (!elemento || elemento.closest(".oculto")) return false;
-        if (!elemento.getClientRects().length) return false;
-        return getComputedStyle(elemento).visibility !== "hidden";
+        if (!elemento || elemento.hidden || elemento.closest(".oculto")) return false;
+        return elemento.getClientRects().length > 0;
     }
 
     function pantallaVisible() {
@@ -38,45 +32,12 @@
     }
 
     function irA(destino) {
-        if (typeof window.mostrarPantalla !== "function") return;
-        window.mostrarPantalla(destino);
+        if (typeof window.mostrarPantalla === "function") window.mostrarPantalla(destino);
     }
 
-    // Las pantallas sin botón propio reciben uno igual al de Rutas: las de la
-    // barra (Pedidos, Comercios, Catálogo, Historial) vuelven a Inicio, y
-    // Estadísticas y Cierre del día, que se abren desde Más, vuelven a Más.
-    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre"];
-    function ponerGenerico(pantalla) {
-        if (!pantalla || pantalla.id === "pantallaMenu") return null;
-        const encabezado = pantalla.querySelector(":scope > header");
-        if (!encabezado) return null;
-        let boton = encabezado.querySelector(":scope > .volverGenerico");
-        if (!boton) {
-            boton = document.createElement("button");
-            boton.type = "button";
-            boton.className = "botonVolverPantalla volverGenerico";
-            boton.dataset.volver = DESDE_MAS.includes(pantalla.id) ? "mas" : "menu";
-            boton.setAttribute("aria-label", "Volver a " + DESTINOS[boton.dataset.volver]);
-            boton.title = boton.getAttribute("aria-label");
-            boton.innerHTML = window.icono ? window.icono("flechaIzquierda", 22) : "←";
-            encabezado.insertBefore(boton, encabezado.firstChild);
-        }
-        return boton;
-    }
-
-    function botonDeLaPantalla(pantalla) {
-        if (!pantalla || pantalla.id === "pantallaMenu") return null;
-        for (const selector of PROPIOS) {
-            const propio = [...pantalla.querySelectorAll(selector)].find(seVe);
-            if (propio) return propio;
-        }
-        return null;
-    }
-
-    function crearBoton(id, clase, icono, nombre) {
+    function crearBoton(clase, icono, nombre) {
         const boton = document.createElement("button");
         boton.type = "button";
-        if (id) boton.id = id;
         boton.className = clase;
         boton.setAttribute("aria-label", nombre);
         boton.title = nombre;
@@ -84,56 +45,65 @@
         return boton;
     }
 
-    // Casita para ir directo a Inicio, al lado del volver de la pantalla.
-    function ponerInicio(pantalla, mostrar) {
-        const encabezado = pantalla?.querySelector(":scope > header");
-        let casita = encabezado?.querySelector(":scope > .botonInicioPantalla");
-        if (!casita && encabezado && mostrar) {
-            casita = crearBoton("", "botonInicioPantalla", "casa", "Ir a Inicio");
-            const despues = [...encabezado.children].find(hijo => {
-                return !hijo.matches("button.botonVolverPantalla, .botonVolverPedidos, #cerrarCargaPedido, .configVolver");
-            });
-            encabezado.insertBefore(casita, despues || null);
+    // Arma la barrita de la pantalla: mueve ahí los botones volver de su
+    // encabezado (con sus mismos eventos), y suma el genérico y la casita.
+    function prepararBarra(pantalla) {
+        const encabezado = pantalla.querySelector(":scope > header");
+        let barra = pantalla.querySelector(":scope > .barraVolver");
+        if (!barra) {
+            if (!encabezado) return null;
+            barra = document.createElement("div");
+            barra.className = "barraVolver";
+            pantalla.insertBefore(barra, pantalla.firstChild);
+            const destino = DESDE_MAS.includes(pantalla.id) ? "mas" : "menu";
+            const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", "Volver a " + DESTINOS[destino]);
+            generico.dataset.volver = destino;
+            barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"));
         }
-        if (casita && casita.hidden !== !mostrar) casita.hidden = !mostrar;
+        // Los que llegan tarde al encabezado (Pedidos agrega su flecha
+        // después) también pasan a la barra, antes del genérico.
+        if (encabezado) {
+            [...encabezado.children].filter(hijo => PROPIOS.some(selector => hijo.matches(selector))).forEach(boton => {
+                barra.insertBefore(boton, barra.querySelector(".volverGenerico"));
+            });
+        }
+        return barra;
     }
 
-    const grupo = document.createElement("div");
-    grupo.className = "volverFlotanteGrupo";
-    const flotante = crearBoton("volverFlotante", "volverFlotante", "flechaIzquierda", "Volver atrás");
-    const inicioFlotante = crearBoton("inicioFlotante", "volverFlotante inicioFlotante", "casa", "Ir a Inicio");
-    [flotante, inicioFlotante].forEach(boton => {
-        boton.tabIndex = -1;
-        grupo.appendChild(boton);
-    });
-    document.body.appendChild(grupo);
-
-    let objetivo = null;
-
-    function mostrarFlotante(boton, mostrar) {
-        boton.classList.toggle("visible", mostrar);
-        boton.tabIndex = mostrar ? 0 : -1;
-        boton.setAttribute("aria-hidden", mostrar ? "false" : "true");
+    function enSeccionDeMas() {
+        return seVe(document.getElementById("configDetalle"));
     }
 
     function actualizar() {
         const pantalla = pantallaVisible();
-        // Primero el botón propio de la pantalla; si no tiene, el genérico.
-        const propio = botonDeLaPantalla(pantalla);
-        const generico = ponerGenerico(pantalla);
-        if (generico && generico.hidden !== Boolean(propio)) generico.hidden = Boolean(propio);
-        objetivo = propio || generico;
+        if (!pantalla || pantalla.id === "pantallaMenu") return;
+        const barra = prepararBarra(pantalla);
+        if (!barra) return;
 
-        const activado = preferencia("volverFlotante") !== false;
-        const caja = objetivo ? objetivo.getBoundingClientRect() : null;
-        // Se desprende cuando el de arriba ya casi no se ve.
-        const desprendido = Boolean(caja) && caja.bottom < caja.height * 0.4;
-        const mostrar = activado && desprendido;
-        const yaVaAInicio = Boolean(objetivo) && VAN_A_INICIO.some(selector => objetivo.matches(selector));
-        const conCasita = Boolean(objetivo) && !yaVaAInicio;
-        if (pantalla) ponerInicio(pantalla, conCasita);
-        mostrarFlotante(flotante, mostrar);
-        mostrarFlotante(inicioFlotante, mostrar && conCasita);
+        const generico = barra.querySelector(".volverGenerico");
+        const casita = barra.querySelector(".botonInicioPantalla");
+        const propio = [...barra.children].find(boton => {
+            return boton !== generico && boton !== casita && !boton.hidden && !boton.classList.contains("oculto");
+        });
+        if (generico.hidden !== Boolean(propio)) generico.hidden = Boolean(propio);
+        const volver = propio || generico;
+
+        // En una sección de Más, la flecha de arriba vuelve a la lista de
+        // Más y el título dice en qué sección estás.
+        const titulo = pantalla.querySelector(".configHeader h1");
+        if (titulo) {
+            const seccion = enSeccionDeMas()
+                ? (document.querySelector("#configDetalle .configSubVolver")?.textContent || "").replace("‹", "").trim()
+                : "";
+            const texto = seccion || "Más";
+            if (titulo.textContent !== texto) titulo.textContent = texto;
+        }
+
+        const vaAInicio = VAN_A_INICIO.some(selector => volver.matches(selector))
+            || (volver.matches(".configVolver") && !enSeccionDeMas());
+        if (casita.hidden !== vaAInicio) casita.hidden = vaAInicio;
+        const botones = vaAInicio ? "1" : "2";
+        if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
     }
 
     let pedido = false;
@@ -146,32 +116,35 @@
         });
     }
 
-    flotante.addEventListener("click", () => {
-        if (!objetivo) return;
-        objetivo.click();
-        setTimeout(pedirActualizar, 60);
-    });
-
-    inicioFlotante.addEventListener("click", () => irA("menu"));
+    // Al bajar, los botones se marcan como "despegados" (con más sombra).
+    function marcarDespegado() {
+        const despegado = window.scrollY > 6 && preferencia("volverFlotante") !== false;
+        if (document.documentElement.classList.contains("volverDespegado") !== despegado) {
+            document.documentElement.classList.toggle("volverDespegado", despegado);
+        }
+    }
 
     document.addEventListener("click", event => {
-        if (event.target.closest?.(".botonInicioPantalla")) irA("menu");
-        const boton = event.target.closest?.(".botonVolverPantalla");
-        if (boton) {
-            const destino = boton.dataset.volver || "menu";
-            irA(destino in DESTINOS ? destino : "menu");
+        if (event.target.closest?.(".configHeader .configVolver, .barraVolver .configVolver") && enSeccionDeMas()) {
+            // En una sección de Más, la flecha vuelve a la lista de Más.
+            event.stopPropagation();
+            event.preventDefault();
+            document.querySelector("#configDetalle .configSubVolver")?.click();
+            window.scrollTo(0, 0);
+        } else if (event.target.closest?.(".botonInicioPantalla")) {
+            irA("menu");
+        } else {
+            const boton = event.target.closest?.(".botonVolverPantalla");
+            if (boton) irA(DESTINOS[boton.dataset.volver] ? boton.dataset.volver : "menu");
         }
-        // Al cambiar de pantalla o de sección, se vuelve a mirar.
         setTimeout(pedirActualizar, 60);
-        setTimeout(pedirActualizar, 400);
     }, true);
 
-    window.addEventListener("scroll", pedirActualizar, { passive: true });
-    window.addEventListener("resize", pedirActualizar);
+    window.addEventListener("scroll", marcarDespegado, { passive: true });
     window.addEventListener("load", pedirActualizar);
-    // Pantallas que se abren por código (avisos, voz, "Pantalla al abrir").
+    // Pantallas que se abren o cambian por código.
     new MutationObserver(pedirActualizar).observe(document.body, {
-        attributes: true, attributeFilter: ["class"], subtree: true
+        attributes: true, attributeFilter: ["class", "data-vista"], subtree: true
     });
 
     window.volverVendeFrio = { actualizar };
