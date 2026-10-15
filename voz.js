@@ -369,8 +369,8 @@
     // Por qué falló la última pregunta a la IA, en palabras simples.
     let porQueFallo = "";
 
-    async function preguntarALaNube(tipo, datos) {
-        if (!preferenciaIA("iaNube")) return null;
+    async function preguntarALaNube(tipo, datos, forzar = false) {
+        if (!forzar && !preferenciaIA("iaNube")) return null;
         const usuario = window.firebase?.auth?.().currentUser;
         if (!usuario) {
             porQueFallo = "La IA en la nube necesita que entres con la cuenta de la distribuidora.";
@@ -398,6 +398,16 @@
             porQueFallo = error?.message === "tiempo" ? "La IA en la nube tardó demasiado. Probá de nuevo." : "No hay conexión con la IA en la nube.";
             return null;
         }
+    }
+
+    // Botón «Probar la IA en la nube» (Más > Trabajo): una pregunta corta
+    // que dice si anda o qué falta, aunque la llave esté apagada.
+    async function probarIANube() {
+        porQueFallo = "";
+        const resultado = await preguntarALaNube("comando", { texto: "abrir los pedidos", comercios: [], productos: [] }, true);
+        if (resultado?.accion === "pantalla") return "Anda bien: la IA en la nube respondió.";
+        if (resultado) return "La IA respondió, pero algo raro: " + JSON.stringify(resultado);
+        return porQueFallo || "La IA en la nube no respondió.";
     }
 
     function nombresDeComercios() {
@@ -954,5 +964,5 @@
     const pantallaPedido = document.getElementById("pantallaPedido");
     if (pantallaPedido) new MutationObserver(() => agregarBotonDictado()).observe(pantallaPedido, { childList: true, subtree: true });
 
-    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, interpretarConIA, leerPedidoConIA, estadoIACelular, leerPedido, escuchar, abrirDictado, comando: empezarComando };
+    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, escuchar, abrirDictado, comando: empezarComando };
 }());

@@ -1680,7 +1680,9 @@
                 // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
                 grupo("Voz con IA",
                     filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
-                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube")) +
+                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube") +
+                    filaAccion("chispa", "violeta", "Probar la IA en la nube", "Dice si anda o qué le falta", 'data-accion="probarIA"')) +
+                `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden></p>` +
                 nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
             window.vozVendeFrio?.estadoIACelular?.().then(estado => {
                 const texto = document.getElementById("estadoIACelular");
@@ -1871,6 +1873,17 @@
             // Con la nube real se frena antes de elegir el archivo (T16b).
             if (frenarRespaldoEnLaNube()) return;
             document.getElementById("importarRespaldo")?.click();
+        }
+
+        if (accion === "probarIA") {
+            const resultado = document.getElementById("resultadoProbarIA");
+            if (resultado) {
+                resultado.hidden = false;
+                resultado.textContent = "Probando…";
+            }
+            window.vozVendeFrio?.probarIANube?.().then(texto => {
+                if (resultado) resultado.textContent = texto;
+            });
         }
 
         if (accion === "rutas") {
