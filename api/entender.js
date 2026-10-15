@@ -71,7 +71,7 @@ const INSTRUCCIONES = {
 - llegue: avisa que llegó al comercio al que estaba yendo.
 - nada: no es un pedido para la app.
 En "comercio" poné el nombre exacto de la lista de comercios, o "" si no nombra ninguno o no está en la lista. En "pantalla" poné la pantalla solo si la acción es pantalla; si no, "".`,
-    pedido: `Sos el asistente de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Te llega un pedido dictado o pegado de un mensaje de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad (unidades; una docena son 12). Usá solo productos de la lista del catálogo, con la marca y el producto escritos exactamente como en la lista. Si el texto nombra un comercio de la lista de comercios, ponelo exacto en "comercio"; si no, "". Lo que no esté en el catálogo va en "sinEntender", tal como lo dijeron. Ignorá saludos y relleno.`
+    pedido: `Sos el asistente de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Te llega un pedido dictado o pegado de un mensaje de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad (unidades; una docena son 12). Usá solo productos de la lista del catálogo, con la marca y el producto escritos exactamente como en la lista. Si el texto nombra un comercio de la lista de comercios, ponelo exacto en "comercio"; si no, "". Lo que no esté en el catálogo va en "sinEntender", tal como lo dijeron. Los cambios o devoluciones (por ejemplo «tengo 2 cambio de ñoquis») no son productos pedidos: ponelos en "sinEntender" empezando con «cambio:». Si una palabra encabeza varios productos («Ravioles 3 ricota, 5 pollo»), vale para todos. Ignorá saludos y relleno.`
 };
 
 function appDeVercel() {
@@ -104,15 +104,19 @@ async function preguntarAClaude({ instrucciones, esquema, mensaje }) {
         throw error;
     }
     const Anthropic = require("@anthropic-ai/sdk");
-    const cliente = new Anthropic({ apiKey: clave, timeout: 15000, maxRetries: 1 });
+    const cliente = new Anthropic({ apiKey: clave, timeout: 12000, maxRetries: 1 });
     const respuesta = await cliente.messages.create({
         model: MODELO,
-        max_tokens: 2048,
+        max_tokens: 4096,
         system: instrucciones,
         output_config: { effort: "low", format: { type: "json_schema", schema: esquema } },
         messages: [{ role: "user", content: mensaje }]
     });
-    if (respuesta.stop_reason === "refusal" || respuesta.stop_reason === "max_tokens") return null;
+    if (respuesta.stop_reason === "refusal" || respuesta.stop_reason === "max_tokens") {
+        const error = new Error("La IA cortó la respuesta (" + respuesta.stop_reason + ").");
+        error.status = 200;
+        throw error;
+    }
     const texto = respuesta.content.filter(bloque => bloque.type === "text").map(bloque => bloque.text).join("");
     return JSON.parse(texto);
 }
@@ -205,7 +209,9 @@ function crearManejador({ obtenerApp, preguntar }) {
         } catch (error) {
             if (error.sinConfigurar) return responder(response, 503, { ok: false, codigo: "sinConfigurar", message: error.message });
             console.warn("La IA no respondió.", error?.status || "", error?.message || "");
-            return responder(response, 502, { ok: false, message: "La IA no respondió." });
+            // El detalle ayuda a saber qué arreglar (clave mal copiada, sin saldo, etc.).
+            const detalle = ((error?.status ? error.status + " " : "") + String(error?.message || "")).slice(0, 200);
+            return responder(response, 502, { ok: false, message: "La IA no respondió.", detalle });
         }
     };
 }

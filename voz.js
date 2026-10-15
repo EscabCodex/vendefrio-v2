@@ -317,7 +317,7 @@
     };
     const INSTRUCCIONES_IA = {
         comando: "Sos el asistente de voz de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Te llega lo que dijo un vendedor, en español rioplatense. Elegí una acción: nuevoPedido (cargar un pedido), ir (que lo guíe hasta un comercio), visitado (ya pasó por un comercio), ficha (ver datos de un comercio), pantalla (abrir: pedido, menu, comercios, catalogo, rutas, estadisticas o cierre), proximaParada (a dónde ir ahora), llegue (llegó al comercio) o nada (no es para la app). En comercio poné el nombre exacto de la lista, o \"\". En pantalla poné la pantalla solo si la acción es pantalla; si no, \"\".",
-        pedido: "Sos el asistente de VendeFrío. Te llega un pedido dictado o pegado de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad en unidades (una docena son 12), usando solo productos del catálogo, con marca y producto escritos exactamente como en la lista. Si nombra un comercio de la lista, ponelo exacto en comercio; si no, \"\". Lo que no esté en el catálogo va en sinEntender. Ignorá saludos y relleno."
+        pedido: "Sos el asistente de VendeFrío. Te llega un pedido dictado o pegado de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad en unidades (una docena son 12), usando solo productos del catálogo, con marca y producto escritos exactamente como en la lista. Si nombra un comercio de la lista, ponelo exacto en comercio; si no, \"\". Lo que no esté en el catálogo va en sinEntender. Los cambios o devoluciones (por ejemplo «tengo 2 cambio de ñoquis») no son productos pedidos: ponelos en sinEntender empezando con «cambio:». Si una palabra encabeza varios productos («Ravioles 3 ricota, 5 pollo»), vale para todos. Ignorá saludos y relleno."
     };
 
     function preferenciaIA(campo) {
@@ -366,24 +366,36 @@
         }
     }
 
+    // Por qué falló la última pregunta a la IA, en palabras simples.
+    let porQueFallo = "";
+
     async function preguntarALaNube(tipo, datos) {
         if (!preferenciaIA("iaNube")) return null;
         const usuario = window.firebase?.auth?.().currentUser;
-        if (!usuario) return null;
+        if (!usuario) {
+            porQueFallo = "La IA en la nube necesita que entres con la cuenta de la distribuidora.";
+            return null;
+        }
         try {
             const respuesta = await conTiempo(fetch("/api/entender", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + await usuario.getIdToken() },
                 body: JSON.stringify({ tipo, ...datos })
-            }), 25000);
+            }), 30000);
             const cuerpo = await respuesta.json().catch(() => ({}));
             if (!respuesta.ok) {
-                console.warn("La IA en la nube respondió " + respuesta.status + ".", cuerpo.codigo || cuerpo.message || "");
+                console.warn("La IA en la nube respondió " + respuesta.status + ".", cuerpo.codigo || "", cuerpo.message || "", cuerpo.detalle || "");
+                porQueFallo = cuerpo.codigo === "sinConfigurar" ? "Falta configurar Vercel: " + (cuerpo.message || "")
+                    : respuesta.status === 401 ? "Tu sesión venció: salí de la cuenta y volvé a entrar."
+                        : respuesta.status === 429 ? "Muchos pedidos seguidos a la IA. Esperá un minuto."
+                            : "La IA en la nube falló (error " + respuesta.status + (cuerpo.detalle ? ": " + cuerpo.detalle : "") + ").";
                 return null;
             }
+            if (!cuerpo.resultado) porQueFallo = "La IA en la nube no pudo leerlo" + (cuerpo.detalle ? " (" + cuerpo.detalle + ")" : "") + ".";
             return cuerpo.resultado || null;
         } catch (error) {
             console.warn("No se pudo usar la IA en la nube.", error?.message || "");
+            porQueFallo = error?.message === "tiempo" ? "La IA en la nube tardó demasiado. Probá de nuevo." : "No hay conexión con la IA en la nube.";
             return null;
         }
     }
@@ -399,6 +411,7 @@
         const mensaje = "Comercios:\n" + (comercios.join("\n") || "(ninguno)")
             + (tipo === "pedido" ? "\n\nCatálogo (marca | producto):\n" + productos.map(item => item.marca + " | " + item.producto).join("\n") : "")
             + "\n\nLo que dijo:\n" + texto;
+        porQueFallo = preferenciaIA("iaNube") ? "" : "La IA del celular no pudo leerlo. Probá prender «IA en la nube» en Más > Trabajo.";
         return (await preguntarAlCelular(tipo, mensaje)) || (await preguntarALaNube(tipo, { texto, comercios, productos }));
     }
 
@@ -436,7 +449,8 @@
         return {
             comercio: comercioPorNombre(resultado.comercio),
             productos,
-            sinEntender: (resultado.sinEntender || []).map(item => String(item)).filter(Boolean)
+            sinEntender: (resultado.sinEntender || []).map(item => String(item)).filter(item => item && !/^cambio:/i.test(item)),
+            cambios: (resultado.sinEntender || []).map(item => String(item)).filter(item => /^cambio:/i.test(item)).map(item => item.replace(/^cambio:\s*/i, ""))
         };
     }
 
@@ -622,16 +636,23 @@
         return NUMEROS[palabra] || 0;
     }
 
+    const UNIDADES_MEDIDA = new Set(["kg", "kilo", "kilos", "k", "l", "lt", "lts", "litro", "litros", "gr", "grs", "g", "gramos", "cc", "ml"]);
+    // Cambios o devoluciones: se muestran aparte y no se suman al pedido.
+    const ES_CAMBIO = /\b(cambio|cambios|cambiar|cambiame|devolucion|devoluciones|devuelvo|devolver|vencido|vencidos|vencida|vencidas)\b/;
+
     // De un texto ("tres helados de un kilo y dos palitos") saca los
     // productos del catálogo con su cantidad, y el comercio si lo nombra.
+    // Entiende también mensajes de WhatsApp como «Ravioles 3 ricota, 5 pollo
+    // y verduras, 4 ñoquis»: el «Ravioles» del principio vale para lo que
+    // sigue, y una «y» sin cantidad después es parte del nombre.
     function leerPedido(texto) {
         const catalogo = productosDelCatalogo();
-        // Las comas y los renglones separan productos: quedan como " y ".
-        let limpio = normalizar(String(texto || "").replace(/[,;\n]+/g, " y "));
+        // Las comas y los renglones separan productos.
+        let limpio = normalizar(String(texto || "").replace(/[,;\n]+/g, " qqsep "));
         let comercio = null;
 
         // "Pedido para X: ..." o "para X ..." al principio.
-        const conComercio = limpio.match(/^(?:(?:nuevo )?pedido )?(?:para|de) (.+?)(?: dos puntos| :|,| que | quiero | mandame | manda | necesito |$)/);
+        const conComercio = limpio.match(/^(?:(?:nuevo )?pedido )?(?:para|de) (.+?)(?: dos puntos| :| qqsep| que | quiero | mandame | manda | necesito |$)/);
         if (conComercio) {
             const posible = buscarComercio(conComercio[1]);
             if (posible) {
@@ -654,38 +675,14 @@
             .replace(/\b(\d+|un|una|dos|tres|cuatro|cinco|seis) docenas?\b/g, (todo, n) => String(cantidadDe(n) * 12));
 
         const RELLENO = new Set(["hola", "buenas", "buen", "buenos", "dia", "dias", "tardes", "noches", "gracias", "porfa", "favor", "che",
-            "saludos", "quiero", "queria", "mandame", "manda", "mandar", "necesito", "traeme", "trae", "me", "nos", "hoy", "manana", "pedido", "nuevo", "son", "seria"]);
-        const tramos = (" " + limpio + " ")
-            .split(/ (?:y|mas|tambien|ademas|e) /)
-            .map(tramo => tramo.split(" ").filter(palabra => palabra && !RELLENO.has(palabra)).join(" ").replace(/^por /, "").trim())
-            .filter(Boolean);
+            "saludos", "quiero", "queria", "mandame", "manda", "mandar", "necesito", "traeme", "trae", "me", "nos", "hoy", "manana", "pedido", "nuevo", "son", "seria", "tengo"]);
+        const sinRelleno = tramo => tramo.split(" ").filter(palabra => palabra && !RELLENO.has(palabra)).join(" ").replace(/^por /, "").trim();
+        const empiezaConCantidad = tramo => cantidadDe(tramo.split(" ")[0]) > 0;
 
-        const encontrados = [];
-        const sinEntender = [];
-        tramos.forEach(tramo => {
-            const palabras = tramo.split(" ");
-            let cantidad = 0;
-            let resto = palabras;
-            // Cantidad adelante ("3 helados", "tres helados"); un número
-            // después de "de" es del producto ("helado de un kilo").
-            const indice = palabras.findIndex((palabra, i) => cantidadDe(palabra) && palabras[i - 1] !== "de" && i < palabras.length - 1);
-            if (indice === 0) {
-                cantidad = cantidadDe(palabras[0]);
-                resto = palabras.slice(1);
-            }
-            // O al final ("helado x 3", "helados por tres").
-            const alFinal = tramo.match(/(?:x|por) ?(\d+|[a-z]+)$/);
-            if (!cantidad && alFinal && cantidadDe(alFinal[1])) {
-                cantidad = cantidadDe(alFinal[1]);
-                resto = tramo.slice(0, alFinal.index).trim().split(" ");
-            }
-            if (!cantidad) cantidad = 1;
-            resto = resto.filter(palabra => !["unidad", "unidades", "caja", "cajas", "de"].includes(palabra));
-            const buscado = normalizarProducto(resto.join(" "));
-            if (!buscado) return;
-
+        function mejorDelCatalogo(buscado) {
             let mejor = null;
             let puntaje = 0;
+            if (!buscado) return { mejor, puntaje };
             catalogo.forEach(item => {
                 const valor = Math.max(parecido(item.clave, buscado), parecido(item.claveMarca, buscado));
                 if (valor > puntaje) {
@@ -693,15 +690,104 @@
                     mejor = item;
                 }
             });
-            if (mejor && puntaje >= 0.45) {
-                const existente = encontrados.find(item => item.marca === mejor.marca && item.producto === mejor.producto);
-                if (existente) existente.cantidad += cantidad;
-                else encontrados.push({ marca: mejor.marca, producto: mejor.producto, cantidad, dicho: tramo });
+            return { mejor, puntaje };
+        }
+
+        const encontrados = [];
+        const sinEntender = [];
+        const cambios = [];
+        let contexto = "";
+
+        // Cantidad y lo que queda de un tramo. Cambia el contexto si el tramo
+        // empieza con una palabra suelta antes del número («ravioles 3 ricota»).
+        function partir(tramo) {
+            const palabras = tramo.split(" ");
+            const esNumero = (palabra, i) => cantidadDe(palabra) && palabras[i - 1] !== "de" && !UNIDADES_MEDIDA.has(palabras[i + 1] || "");
+            let cantidad = 0;
+            let resto = palabras;
+            let delante = "";
+            if (cantidadDe(palabras[0]) && palabras.length > 1) {
+                cantidad = cantidadDe(palabras[0]);
+                resto = palabras.slice(1);
             } else {
-                sinEntender.push(tramo);
+                const indice = palabras.findIndex((palabra, i) => i > 0 && i < palabras.length - 1 && esNumero(palabra, i));
+                if (indice > 0) {
+                    delante = palabras.slice(0, indice).join(" ");
+                    cantidad = cantidadDe(palabras[indice]);
+                    resto = palabras.slice(indice + 1);
+                }
             }
+            // O al final ("helado x 3", "helados por tres").
+            const alFinal = tramo.match(/(?:x|por) ?(\d+|[a-z]+)$/);
+            if (!cantidad && alFinal && cantidadDe(alFinal[1])) {
+                cantidad = cantidadDe(alFinal[1]);
+                resto = tramo.slice(0, alFinal.index).trim().split(" ");
+            }
+            resto = resto.filter(palabra => !["unidad", "unidades", "caja", "cajas", "de"].includes(palabra));
+            return { cantidad, resto: resto.join(" "), delante };
+        }
+
+        // Busca un tramo en el catálogo. Con anotar, lo suma al pedido y
+        // devuelve si lo encontró; sin anotar, solo qué tan parecido es.
+        function leerTramo(tramo, anotar) {
+            const { cantidad, resto, delante } = partir(tramo);
+            const propio = normalizarProducto((delante ? delante + " " : "") + resto);
+            // Un título sin cantidad («Ravioles:») que empieza el nombre de
+            // varios productos no es un producto: vale para lo que sigue.
+            if (!cantidad && !delante && propio && catalogo.filter(item => item.clave.startsWith(propio + " ")).length >= 2) {
+                if (anotar) contexto = tramo;
+                return anotar ? true : null;
+            }
+            let { mejor, puntaje } = mejorDelCatalogo(propio);
+            if (!delante && contexto) {
+                const conContexto = mejorDelCatalogo(normalizarProducto(contexto + " " + resto));
+                if (conContexto.puntaje > puntaje) ({ mejor, puntaje } = conContexto);
+            }
+            if (!anotar) return mejor && puntaje >= 0.45 ? mejor : null;
+            if (!mejor || puntaje < 0.45) return false;
+            if (delante) contexto = delante;
+            const total = cantidad || 1;
+            const existente = encontrados.find(item => item.marca === mejor.marca && item.producto === mejor.producto);
+            if (existente) existente.cantidad += total;
+            else encontrados.push({ marca: mejor.marca, producto: mejor.producto, cantidad: total, dicho: tramo });
+            return true;
+        }
+
+        limpio.split(/ ?qqsep ?/).forEach(segmento => {
+            segmento = segmento.trim();
+            if (!segmento) return;
+            if (ES_CAMBIO.test(segmento)) {
+                const dicho = sinRelleno(segmento);
+                if (dicho) cambios.push(dicho);
+                return;
+            }
+            // «y», «más», «también» separan solo si después viene una
+            // cantidad; si no, son parte del nombre («pollo y verduras»).
+            const piezas = (" " + segmento + " ").split(/ (?:y|mas|tambien|ademas|e) /).map(pieza => pieza.trim()).filter(Boolean);
+            const tramos = [];
+            piezas.forEach(pieza => {
+                if (!tramos.length || empiezaConCantidad(pieza)) tramos.push([pieza]);
+                else tramos[tramos.length - 1].push(pieza);
+            });
+            tramos.forEach(grupo => {
+                const junto = sinRelleno(grupo.join(" y "));
+                if (!junto) return;
+                // Va cada parte por separado solo si cada una es un producto
+                // distinto («helado y palito»); si no, junto («pollo y verduras»).
+                const partes = grupo.map(sinRelleno).filter(Boolean);
+                const deCadaParte = partes.map(parte => leerTramo(parte, false));
+                const juntoVale = grupo.length === 1 || deCadaParte.some(item => !item)
+                    || new Set(deCadaParte.map(item => item.marca + "|" + item.producto)).size < deCadaParte.length;
+                if (juntoVale) {
+                    if (!leerTramo(junto, true)) sinEntender.push(junto);
+                    return;
+                }
+                partes.forEach(parte => {
+                    if (!leerTramo(parte, true)) sinEntender.push(parte);
+                });
+            });
         });
-        return { comercio, productos: encontrados, sinEntender };
+        return { comercio, productos: encontrados, sinEntender, cambios };
     }
 
     let hojaDictado = null;
@@ -794,6 +880,12 @@
             fila.querySelector("small").textContent = item.marca;
             caja.appendChild(fila);
         });
+        if (lectura.cambios?.length) {
+            const cambios = document.createElement("p");
+            cambios.className = "cambiosDictado";
+            cambios.textContent = "Cambios (no se suman): " + lectura.cambios.map(tramo => "«" + tramo + "»").join(", ");
+            caja.appendChild(cambios);
+        }
         if (lectura.sinEntender.length) {
             const aviso = document.createElement("p");
             aviso.className = "sinEntenderDictado";
@@ -815,7 +907,7 @@
                     } else {
                         boton.disabled = false;
                         boton.lastChild.textContent = " Entender con IA";
-                        hojaDictado.querySelector(".estadoDictado").textContent = "La IA no pudo leerlo. Revisá la conexión o probá de nuevo.";
+                        hojaDictado.querySelector(".estadoDictado").textContent = porQueFallo || "La IA no pudo leerlo. Revisá la conexión o probá de nuevo.";
                     }
                 });
                 caja.appendChild(boton);

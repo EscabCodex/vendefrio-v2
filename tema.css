@@ -1181,6 +1181,7 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 .sinEntenderDictado{margin:0;font-size:13px;color:var(--pendiente);}
 /* T54: IA para la voz */
 .botonEntenderIA{align-self:flex-start;margin-top:8px;}
+.cambiosDictado{margin:0;font-size:13px;color:var(--texto-sec);}
 .ventanaVoz.pensando .textoVoz{opacity:.75;}
 
 /* ---------- Primeros pasos y "Suelen pedir hoy" (Etapa 6, T45 y T46) ---------- */

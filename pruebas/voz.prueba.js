@@ -103,6 +103,29 @@ test("voz: comandos desde Inicio y pedido dictado o pegado", async ({ page }, te
     await expect(dictado.locator(".sinEntenderDictado")).toContainText("banana");
     await capturar(page, "voz-02-pedido-pegado");
 
+    // Un mensaje real de WhatsApp: «Ravioles» vale para lo que sigue, la «y»
+    // de «pollo y verduras» es del nombre y los cambios no se suman.
+    const mensaje = await page.evaluate(() => {
+        agregarMarca("Donna Wheat");
+        agregarMarca("Los Aromos");
+        ["Ravioles de ricota", "Ravioles de pollo y verdura", "Ravioles cuatro quesos", "Ravioles de jamón y muzzarella"]
+            .forEach(nombre => agregarProducto("Donna Wheat", { nombre, precio: 3000 }));
+        ["Ñoquis", "Tubo de criolla"].forEach(nombre => agregarProducto("Los Aromos", { nombre, precio: 2000 }));
+        const lectura = vozVendeFrio.leerPedido("Kiosco La Esquina\nRavioles 3 ricota,5 pollo y verduras, 4 cuatro queso, 4 jamón muzza y 4 ñoquis, 6 tubos los aromos\nTengo 2 cambio de ñoquis");
+        return {
+            comercio: lectura.comercio?.nombre,
+            productos: lectura.productos.map(item => item.cantidad + " " + item.producto),
+            sinEntender: lectura.sinEntender,
+            cambios: lectura.cambios
+        };
+    });
+    expect(mensaje).toEqual({
+        comercio: "Kiosco La Esquina",
+        productos: ["3 Ravioles de ricota", "5 Ravioles de pollo y verdura", "4 Ravioles cuatro quesos", "4 Ravioles de jamón y muzzarella", "4 Ñoquis", "6 Tubo de criolla"],
+        sinEntender: [],
+        cambios: ["2 cambio de noquis"]
+    });
+
     // Dictado: suma lo que se dice.
     await page.evaluate(() => { window.__fraseVoz = "un helado de un kilo más"; });
     await dictado.getByRole("button", { name: "Dictar" }).click();

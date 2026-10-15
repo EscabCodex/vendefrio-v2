@@ -22,12 +22,15 @@ const { crearManejador } = require("../api/entender.js");
 
 const appAdmin = getApps().find(app => app.name === "pruebasIA") || initializeApp({ projectId: "demo-vendefrio" }, "pruebasIA");
 const preguntas = [];
+// Si tiene un error, la IA falsa falla como lo haría la de verdad.
+let errorDeLaIA = null;
 const manejador = crearManejador({
     obtenerApp: () => appAdmin,
     // La IA falsa: entiende el pedido de la prueba y, de yapa, inventa un
     // producto y un comercio que no existen (la función los tiene que sacar).
     preguntar: async ({ mensaje }) => {
         preguntas.push(mensaje);
+        if (errorDeLaIA) throw errorDeLaIA;
         return {
             comercio: "Kiosco La Esquina",
             productos: [
@@ -142,6 +145,14 @@ test("ia: la del celular y la de la nube entienden lo que la voz gratis no", asy
     const dictado = page.locator(".ventanaDictado");
     await dictado.getByLabel("Texto del pedido").fill("Buenas! Para el de la esquina: media docena de los de kilo, una docena de bombones, 2 tortas heladas y un sorbete de mango");
     await expect(dictado.locator(".sinEntenderDictado")).toBeVisible();
+
+    // Si la IA falla (por ejemplo, una clave mal copiada), dice por qué.
+    errorDeLaIA = Object.assign(new Error("invalid x-api-key"), { status: 401 });
+    await dictado.getByRole("button", { name: "Entender con IA" }).click();
+    await expect(dictado.locator(".estadoDictado")).toHaveText("La IA en la nube falló (error 502: 401 invalid x-api-key).");
+    errorDeLaIA = null;
+    preguntas.length = 0;
+
     await dictado.getByRole("button", { name: "Entender con IA" }).click();
     await expect(dictado.locator(".productoDictado")).toHaveCount(2);
     await expect(dictado.locator(".productoDictado").nth(0)).toContainText("6 ×Helado 1 kg");

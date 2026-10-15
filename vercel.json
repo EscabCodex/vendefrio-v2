@@ -5,6 +5,9 @@
     },
     "api/notificar.js": {
       "maxDuration": 15
+    },
+    "api/entender.js": {
+      "maxDuration": 30
     }
   }
 }
