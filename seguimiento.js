@@ -3632,6 +3632,21 @@
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
     window.seguimientoVendeFrio = {
+        // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
+        abrirEtapa(etapa) {
+            if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;
+            etapaActual = etapa;
+            if (idFichaAbierta) cerrarFicha();
+            if (pantalla.classList.contains("oculto")) {
+                entrarPorLaBarra = true;
+                mostrarPantalla("pedido");
+            } else {
+                cambiarVista("pedidos");
+            }
+            window.scrollTo(0, 0);
+            return true;
+        },
+
         abrirPedido(id) {
             const pedido = enLaNube() ? buscarPedido(String(id || "")) : null;
             if (!pedido || pedido.eliminado === true || !estadoActualDelPedido(pedido)) return false;

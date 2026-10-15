@@ -20,7 +20,7 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await capturar(page, "personal-02-inicio");
 
     // Nuevo pedido: comercio, productos y observaciones.
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await page.locator("#cliente").fill("Anibal");
     await page.locator(".tituloMarca").first().click();
@@ -41,8 +41,8 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await expect(ventana).toBeHidden();
 
     // Historial: el pedido quedó guardado en el celular.
-    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.getByRole("button", { name: "Historial", exact: true }).click();
+    // En el modo personal, "Pedidos" de la barra abre Historial.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#pantallaHistorial")).toBeVisible();
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
     await capturar(page, "personal-05-historial");
@@ -50,5 +50,5 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     // Sigue ahí después de cerrar y abrir la app.
     await page.reload();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
-    await expect(page.locator("#dashUltimoPedido")).toContainText("Anibal");
+    await expect(page.locator("#dashPedidosDeHoy")).toContainText("Anibal");
 });

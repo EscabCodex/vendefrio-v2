@@ -23,74 +23,59 @@
         elemento.id = "pantallaConfiguracion";
         elemento.className = "oculto pantallaConfiguracion";
 
+        // "Más" (T31): la persona y la conexión arriba, los accesos a otras
+        // secciones y la configuración en grupos, con filas de una línea.
+        const fila = (seccion, icono, titulo, extra = "") => `
+                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
+                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
+                        <strong>${titulo}</strong>
+                        <small class="configValor" data-valor="${seccion}"></small>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                    </button>`;
+
         elemento.innerHTML = `
             <header class="configHeader">
-                <button class="configVolver" type="button">‹</button>
+                <button class="configVolver" type="button" aria-label="Volver">${window.icono("flechaIzquierda", 22)}</button>
                 <div>
-                    <h1>Configuración</h1>
-                    <p>Personalizá VendeFrío</p>
+                    <h1>Más</h1>
                 </div>
             </header>
             <main class="container">
-                <input class="configBuscador" id="buscarConfiguracion" type="search"
+                <input class="configBuscador oculto" id="buscarConfiguracion" type="search"
                     placeholder="Buscar en configuración">
 
                 <div class="configMenuPrincipal">
-                    <button class="configFila" data-config-seccion="cuenta">
-                        <span class="configIcono">${window.icono("persona",20)}</span>
-                        <span><strong>Cuenta</strong>
-                        <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small></span><b>›</b>
+                    <button class="configFila configPerfil" data-config-seccion="cuenta" aria-label="Cuenta">
+                        <span class="configAvatar" id="configAvatar">${window.icono("persona", 24)}</span>
+                        <span class="configPerfilTexto">
+                            <strong id="configPerfilNombre">Cuenta</strong>
+                            <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small>
+                            <small class="configPerfilConexion oculto" id="configPerfilConexion" data-conexion-texto></small>
+                        </span>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
                     </button>
 
-                    <button class="configFila oculto" data-config-seccion="empleados" id="configFilaEmpleados">
-                        <span class="configIcono">${window.icono("persona",20)}</span>
-                        <span><strong>Empleados</strong>
-                        <small>Códigos de ingreso para tus empleados</small></span><b>›</b>
-                    </button>
+                    <div class="masAccesos" id="masAccesos"></div>
 
-                    <button class="configFila oculto" data-config-seccion="avisos" id="configFilaAvisos">
-                        <span class="configIcono">${window.icono("campana",20)}</span>
-                        <span><strong>Avisos</strong>
-                        <small>Qué avisos recibir y notificaciones</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
+                    <div class="configLista">
+                        ${fila("avisos", "campana", "Avisos", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("navegacion", "bicicleta", "Cómo hacés el recorrido")}
+                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
+                    </div>
 
-                    <button class="configFila oculto" data-config-seccion="impresora" id="configFilaImpresora">
-                        <span class="configIcono">${window.icono("impresora",20)}</span>
-                        <span><strong>Impresora</strong>
-                        <small>Impresora Bluetooth para los tickets</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">Distribuidora</h2>
+                    <div class="configLista">
+                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("respaldo", "nube", "Datos y respaldo")}
+                    </div>
 
-                    <button class="configFila" data-config-seccion="apariencia">
-                        <span class="configIcono">${window.icono("paleta",20)}</span>
-                        <span><strong>Apariencia</strong>
-                        <small>Elegí tema, texto y densidad</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="respaldo">
-                        <span class="configIcono">${window.icono("disquete",20)}</span>
-                        <span><strong>Datos y respaldo</strong>
-                        <small>${usaNubeReal()
-                            ? "Respaldo de los datos de la nube"
-                            : "Copias, restauración y frecuencia automática"}</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="trabajo">
-                        <span class="configIcono">${window.icono("maletin",20)}</span>
-                        <span><strong>Preferencias de trabajo</strong>
-                        <small>Ordená comercios, productos y pedidos</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="navegacion">
-                        <span class="configIcono">${window.icono("bicicleta",20)}</span>
-                        <span><strong>Navegación</strong>
-                        <small>Bicicleta, mapa y seguimiento GPS</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="seguridad">
-                        <span class="configIcono">${window.icono("escudo",20)}</span>
-                        <span><strong>Seguridad y aplicación</strong>
-                        <small>Permisos, ayuda e información de VendeFrío</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">App</h2>
+                    <div class="configLista">
+                        ${fila("apariencia", "luna", "Apariencia")}
+                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                    </div>
                 </div>
 
                 <div class="configDetalle oculto" id="configDetalle"></div>
@@ -138,6 +123,7 @@
         d[campo] = valor;
         guardar(d);
         aplicar();
+        actualizarMas();
     }
 
     function abrir() {
@@ -152,6 +138,54 @@
         pantalla().querySelector(".configDetalle")
             .classList.add("oculto");
         pantalla().querySelector(".configBuscador").value = "";
+        actualizarMas();
+    }
+
+    // --- "Más" (T31): persona, accesos y el valor de cada fila ---
+    function inicialDe(nombre) {
+        const limpio = String(nombre || "").trim();
+        return limpio ? limpio.charAt(0).toLocaleUpperCase("es") : "";
+    }
+
+    function actualizarMas() {
+        if (!pantalla()) return;
+
+        const quien = window.empleadosVendeFrio?.quienSoy?.();
+        const nombre = quien?.nombre || "";
+        const titulo = document.getElementById("configPerfilNombre");
+        if (titulo) titulo.textContent = nombre || "Cuenta";
+        const avatar = document.getElementById("configAvatar");
+        if (avatar) avatar.innerHTML = inicialDe(nombre) || window.icono("persona", 24);
+        const conexion = document.getElementById("configPerfilConexion");
+        const indicador = document.getElementById("indicadorNube");
+        if (conexion) {
+            conexion.classList.toggle("oculto", !usaNubeReal() || !indicador);
+            if (indicador) {
+                conexion.textContent = indicador.textContent;
+                conexion.dataset.estado = indicador.dataset.estado || "";
+            }
+        }
+
+        const accesos = document.getElementById("masAccesos");
+        if (accesos) {
+            const tarjeta = (destino, icono, texto) =>
+                `<button type="button" class="masAcceso" data-mas="${destino}"><span data-color="${destino}">${window.icono(icono, 22)}</span><strong>${texto}</strong></button>`;
+            accesos.innerHTML =
+                tarjeta("rutas", "mapa", "Rutas") +
+                tarjeta("estadisticas", "grafico", "Estadísticas") +
+                (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
+                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "") +
+                tarjeta("productos", "etiqueta", "Productos y marcas");
+        }
+
+        const valores = {
+            apariencia: { sistema: "Automática", claro: "Clara", oscuro: "Oscura" }[leer().tema || "sistema"],
+            impresora: window.impresionVendeFrio?.impresoraGuardada?.()?.nombre || "Sin elegir",
+            navegacion: "Bicicleta"
+        };
+        document.querySelectorAll(".configValor[data-valor]").forEach(valor => {
+            valor.textContent = valores[valor.dataset.valor] || "";
+        });
     }
 
     function escaparTexto(texto) {
@@ -2435,6 +2469,7 @@
     }
 
     window.abrirConfiguracion = abrir;
+    window.actualizarMasVendeFrio = actualizarMas;
     // Avisos (T23): "Elegir qué avisos recibir" abre directo esa sección.
     window.abrirConfiguracionEn = seccion => {
         abrir();
@@ -2496,8 +2531,10 @@
 
     // configuracion.js se carga aparte desde menu.js y puede llegar antes que cuenta.js.
     function conectarCuenta() {
+        window.empleadosVendeFrio?.escucharQuienSoy?.(actualizarMas);
         window.cuentaVendeFrio.escuchar(() => {
             actualizarResumenCuenta();
+            actualizarMas();
 
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {

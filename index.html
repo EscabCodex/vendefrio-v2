@@ -25,88 +25,42 @@
 <section id="pantallaMenu">
   <header class="dashboardHeader">
     <div class="dashboardHeaderTop">
+      <div class="inicioLogo" aria-hidden="true">VF</div>
       <div class="dashboardMarca">
-        <h1>VendeFrío</h1>
-        <p id="dashNombreDistribuidora" class="dashNombreDistribuidora oculto"></p>
+        <p class="inicioDistribuidora"><span id="dashNombreDistribuidora" class="dashNombreDistribuidora">VendeFrío</span><span class="puntoConexion oculto" data-conexion role="img" aria-label="Conexión"></span></p>
+        <h1 id="dashSaludo">Hola</h1>
       </div>
-      <span class="badgeActivo">Reparto Activo</span>
-    </div>
-
-    <div class="resumenDashboardGrid">
-      <div class="tarjetaDashboard tarjetaDashboardVerde clickeableDashboard" data-dashboard-accion="pedidosHoy" role="button" tabindex="0" title="Abrir pedidos de hoy">
-        <div class="tarjetaIcono" data-ico="paquete" data-ico-tam="16"></div>
-        <div class="tarjetaInfo">
-          <span>Pedidos hoy</span>
-          <strong id="dashPedidosHoy">0</strong>
-        </div>
-      </div>
-
-      <div class="tarjetaDashboard tarjetaDashboardAzul clickeableDashboard" data-dashboard-accion="visitadosSemana" role="button" tabindex="0" title="Abrir comercios visitados esta semana">
-        <div class="tarjetaIcono" data-ico="ubicacion" data-ico-tam="16"></div>
-        <div class="tarjetaInfo">
-          <span>Visitados</span>
-          <strong id="dashVisitadosSemana">0</strong>
-        </div>
-      </div>
-
-      <div class="tarjetaDashboard tarjetaDashboardVioleta clickeableDashboard" data-dashboard-accion="pedidosSemana" role="button" tabindex="0" title="Abrir pedidos de esta semana">
-        <div class="tarjetaIcono" data-ico="calendario" data-ico-tam="16"></div>
-        <div class="tarjetaInfo">
-          <span>Pedidos semana</span>
-          <strong id="dashPedidosSemana">0</strong>
-        </div>
-      </div>
-
-      <div class="tarjetaDashboard tarjetaDashboardNaranja clickeableDashboard" data-dashboard-accion="pendientesSemana" role="button" tabindex="0" title="Abrir comercios pendientes esta semana">
-        <div class="tarjetaIcono">⏰</div>
-        <div class="tarjetaInfo">
-          <span>Pendientes</span>
-          <strong id="dashPendientesSemana">0</strong>
-        </div>
-      </div>
-    </div>
-
-    <div class="totalesDashboard">
-      <div class="totalItem">
-        <span>Comercios</span>
-        <strong id="dashTotalComercios">0</strong>
-      </div>
-      <div class="totalItem">
-        <span>Marcas</span>
-        <strong id="dashTotalMarcas">0</strong>
-      </div>
-      <div class="totalItem">
-        <span>Productos</span>
-        <strong id="dashTotalProductos">0</strong>
-      </div>
-      <div class="totalItem">
-        <span>GPS</span>
-        <strong id="dashConGps">0</strong>
-      </div>
+      <button id="botonAvatar" class="botonAvatar" type="button" aria-label="Más" title="Más opciones y configuración"></button>
     </div>
   </header>
 
   <main class="container">
-    <h2 class="seccionTitulo"><i data-ico="rayo" data-ico-tam="14"></i> Próxima Parada Sugerida</h2>
+    <section class="resumenHoy" id="resumenHoy" aria-label="Resumen de hoy">
+      <p class="resumenHoyFecha" id="dashFechaHoy">Hoy</p>
+      <small id="dashTituloHoy">Vendido hoy</small>
+      <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
+      <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+      <div class="kpisHoy" id="dashKpis"></div>
+    </section>
 
-    <div id="dashProximaParada" class="card cardProximaParada">
-      <p>Buscando próximo comercio pendiente...</p>
+    <h2 class="seccionTitulo">Próxima parada</h2>
+    <div id="dashProximaParada" class="card cardProximaParada"></div>
+
+    <div class="bloqueCabecera">
+      <h2 class="seccionTitulo">Pedidos de hoy</h2>
+      <button type="button" class="enlaceVerTodos" id="dashVerTodos">Ver todos</button>
     </div>
+    <div id="dashPedidosDeHoy" class="card listaInicio" aria-live="polite"></div>
 
-    <h2 class="seccionTitulo"><i data-ico="recibo" data-ico-tam="14"></i> Último pedido</h2>
-
-    <div id="dashUltimoPedido" class="card ultimoPedidoDashboard">
-      <p>Buscando último pedido...</p>
-    </div>
-
-    <h2 class="seccionTitulo"><i data-ico="herramientas" data-ico-tam="14"></i> Accesos Rápidos</h2>
-
-    <div class="accesosRapidosGrid">
-      <button class="menuBtn accesoRutas" onclick="mostrarPantalla('rutas')"><i data-ico="mapa" data-ico-tam="15"></i> Rutas</button>
-      <button class="menuBtn accesoEstadisticas" onclick="abrirEstadisticas()"><i data-ico="grafico" data-ico-tam="15"></i> Estadísticas</button>
-      <button class="menuBtn accesoHistorial" onclick="mostrarPantalla('historial')"><i data-ico="historial" data-ico-tam="15"></i> Historial</button>
-      <button class="menuBtn accesoConfig" onclick="abrirConfiguracion()"><i data-ico="engranaje" data-ico-tam="15"></i> Configuración</button>
-      <button class="menuBtn accesoProductos" onclick="mostrarPantalla('productos')"><i data-ico="etiqueta" data-ico-tam="15"></i> Productos</button>
+    <h2 class="seccionTitulo">Esta semana</h2>
+    <div class="card semanaInicio" id="dashSemana">
+      <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
+      <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
+      <div class="miniSemana">
+        <button type="button" data-dashboard-accion="pedidosSemana" class="clickeableDashboard"><strong id="dashPedidosSemana">0</strong><small>pedidos</small></button>
+        <button type="button" data-dashboard-accion="vendidoSemana" class="clickeableDashboard"><strong id="dashVendidoSemana">$ 0</strong><small>vendido</small></button>
+        <button type="button" data-dashboard-accion="pendientesSemana" class="clickeableDashboard"><strong id="dashPendientesSemana">0</strong><small>sin visitar</small></button>
+      </div>
     </div>
 
     <section class="card cardRespaldo">
@@ -351,48 +305,23 @@
 
 <nav class="bottom-nav" aria-label="Navegación principal">
   <button class="nav-item activo" data-pantalla="menu" type="button">
-    <span class="nav-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        <path d="M3 10.8 12 3l9 7.8"></path>
-        <path d="M5.5 9.8V21h13V9.8"></path>
-        <path d="M9.5 21v-6h5v6"></path>
-      </svg>
-    </span>
+    <span class="nav-icon" aria-hidden="true" data-ico="casa" data-ico-tam="22"></span>
     Inicio
   </button>
-
-  <button class="nav-item" data-pantalla="pedido" type="button">
-    <span class="nav-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        <path d="M5 4.5h10l4 4V20H5z"></path>
-        <path d="M15 4.5V9h4"></path>
-        <path d="M8.5 13h7"></path>
-        <path d="M8.5 16.5h5"></path>
-      </svg>
-    </span>
-    Pedido
+  <button class="nav-item" data-pantalla="pedido" data-tambien="historial" type="button">
+    <span class="nav-icon" aria-hidden="true" data-ico="lista" data-ico-tam="22"></span>
+    Pedidos
   </button>
-
+  <button class="nav-item nav-nuevo" data-accion="nuevoPedido" type="button" aria-label="Nuevo pedido">
+    <span class="nav-icon" aria-hidden="true" data-ico="mas" data-ico-tam="26"></span>
+  </button>
   <button class="nav-item" data-pantalla="comercios" type="button">
-    <span class="nav-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        <path d="M4 10h16v10H4z"></path>
-        <path d="M3 10 5 4h14l2 6"></path>
-        <path d="M8 10v2a2 2 0 0 0 4 0v-2a2 2 0 0 0 4 0v-2"></path>
-        <path d="M8 20v-5h8v5"></path>
-      </svg>
-    </span>
+    <span class="nav-icon" aria-hidden="true" data-ico="tienda" data-ico-tam="22"></span>
     Comercios
   </button>
-
   <button class="nav-item" data-pantalla="catalogo" type="button">
-    <span class="nav-icon" aria-hidden="true" data-ico="bolsa" data-ico-tam="19"></span>
+    <span class="nav-icon" aria-hidden="true" data-ico="bolsa" data-ico-tam="22"></span>
     Catálogo
-  </button>
-
-  <button class="nav-item" data-pantalla="mas" type="button">
-    <span class="nav-icon" aria-hidden="true" data-ico="menu" data-ico-tam="19"></span>
-    Más
   </button>
 </nav>
 

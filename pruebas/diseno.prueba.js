@@ -2,7 +2,7 @@
 // principal en la nube, con datos de prueba, y saca una captura de cada una
 // en claro y oscuro. Sirve para revisar el estilo nuevo pantalla por pantalla.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, abrirMas } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -48,6 +48,6 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
     await capturar(page, "diseno-06-catalogo");
 
-    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await abrirMas(page);
     await capturar(page, "diseno-07-mas");
 });

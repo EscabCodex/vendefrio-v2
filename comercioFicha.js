@@ -129,6 +129,7 @@
     }
 
     window.cerrarFichaComercio = cerrarFicha;
+    window.abrirFichaComercio = abrirFicha;
 
     document.addEventListener("click", event => {
         const tarjeta = event.target.closest(".comercioCard");

@@ -17,6 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
+const { abrirMas } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -139,7 +140,7 @@ async function registrarDistribuidora(page, testInfo) {
 }
 
 async function cargarPedido(page, comercio) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator("#cliente").fill(comercio);
@@ -153,8 +154,7 @@ async function cargarPedido(page, comercio) {
 }
 
 async function abrirConfiguracionEn(page, seccion) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
-    await page.locator(".menuMasContenido").getByRole("button", { name: /Configuración/ }).click();
+    await abrirMas(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 
