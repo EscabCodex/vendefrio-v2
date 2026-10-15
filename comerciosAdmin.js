@@ -244,11 +244,19 @@ function renderizarComercios() {
             return coincideTexto && coincideEstado;
         })
         .sort((a, b) => {
-            const pendienteA = !estaVisitadoEstaSemana(a);
-            const pendienteB = !estaVisitadoEstaSemana(b);
+            // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
+            const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
 
-            if (pendienteA !== pendienteB) {
-                return pendienteA ? -1 : 1;
+            if (orden === "frecuentes") {
+                const diferencia = contarPedidosDelComercio(b.nombre, historialComercios) - contarPedidosDelComercio(a.nombre, historialComercios);
+                if (diferencia) return diferencia;
+            } else if (orden === "pendientes") {
+                const pendienteA = !estaVisitadoEstaSemana(a);
+                const pendienteB = !estaVisitadoEstaSemana(b);
+
+                if (pendienteA !== pendienteB) {
+                    return pendienteA ? -1 : 1;
+                }
             }
 
             return a.nombre.localeCompare(b.nombre, "es");

@@ -223,23 +223,28 @@
         </div>
       </div>
 
-      <div class="accionesSeleccionRuta">
+      <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
+
+      <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
         <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
-          Todos
+          <i data-ico="check" data-ico-tam="15"></i> Todos
         </button>
 
         <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
-          Pendientes
+          <i data-ico="reloj" data-ico-tam="15"></i> Pendientes
         </button>
 
         <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
-          Limpiar
+          <i data-ico="cerrarX" data-ico-tam="15"></i> Ninguno
         </button>
       </div>
 
-      <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
+      <label class="buscadorSeleccionRuta">
+        <i data-ico="buscar" data-ico-tam="17"></i>
+        <input id="buscarSeleccionRuta" type="search" placeholder="Buscar comercio" aria-label="Buscar comercio para la ruta">
+      </label>
 
-      <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
+      <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
     </div>
 
     <details class="card tarjetaUbicacionesRuta">

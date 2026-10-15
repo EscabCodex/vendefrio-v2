@@ -62,6 +62,20 @@
         return preferencias().navegador === "google";
     }
 
+    // Más > Cómo hacés el recorrido (T50).
+    function zoomPreferido() {
+        const zoom = Number(preferencias().zoom);
+        return [15, 17, 18].includes(zoom) ? zoom : 17;
+    }
+
+    function sigueSolo() {
+        return preferencias().seguimiento !== false;
+    }
+
+    function velocidadVoz() {
+        return { lenta: 0.85, rapida: 1.2 }[preferencias().velocidadVoz] || 1.02;
+    }
+
     // -------------------------------------------------
     // Utilidades
     // -------------------------------------------------
@@ -204,7 +218,7 @@
             const voces = window.speechSynthesis.getVoices();
             const voz = voces.find(v => v.lang === "es-AR") || voces.find(v => /^es/i.test(v.lang));
             if (voz) frase.voice = voz;
-            frase.rate = 1.02;
+            frase.rate = velocidadVoz();
             window.speechSynthesis.speak(frase);
         } catch (error) {
             // Sin voz en este celular: quedan las indicaciones en pantalla.
@@ -335,7 +349,7 @@
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
             seguir = true;
             pantalla.querySelector(".centrarNavegacion").classList.add("oculto");
-            if (posicion && mapa) mapa.setView(posicion, Math.max(mapa.getZoom(), 17));
+            if (posicion && mapa) mapa.setView(posicion, Math.max(mapa.getZoom(), zoomPreferido()));
         });
 
         // La hoja: tocar el asa o deslizar para arriba o abajo.
@@ -401,8 +415,8 @@
             L.polyline(camino.puntos, { className: "lineaCamino", color: "#1F5FE0", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: camino.recto ? "2 10" : null })
         ]).addTo(mapa);
         if (marcadorYo) marcadorYo.bringToFront?.();
-        if (seguir && camino.puntos.length > 1) {
-            mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 130], paddingBottomRight: [30, 240], maxZoom: 17 });
+        if ((seguir || !sigueSolo()) && camino.puntos.length > 1) {
+            mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 130], paddingBottomRight: [30, 240], maxZoom: zoomPreferido() });
         }
     }
 
@@ -624,7 +638,8 @@
         const comercio = paradaActual();
         camino = null;
         llego = false;
-        seguir = true;
+        seguir = sigueSolo();
+        pantalla.querySelector(".centrarNavegacion")?.classList.toggle("oculto", seguir);
         pasosAnunciados.clear();
         pantalla.classList.remove("llego");
         abrirHoja(false);
@@ -687,7 +702,9 @@
         empezarParada();
         empezarGps();
         // Pedir la pantalla prendida mientras se navega (si el celular deja).
-        navigator.wakeLock?.request?.("screen").then(candado => { pantalla.candado = candado; }).catch(() => {});
+        if (preferencias().pantallaEncendida !== false) {
+            navigator.wakeLock?.request?.("screen").then(candado => { pantalla.candado = candado; }).catch(() => {});
+        }
         return true;
     }
 

@@ -403,6 +403,26 @@ function aplicarFiltroProductosPedido() {
     }
 }
 
+// Más > Preferencias de trabajo > "Productos en el pedido" (T50): como en
+// el catálogo, de la A a la Z o los más pedidos primero.
+function ordenarProductosDelPedido(productos) {
+    const orden = window.preferenciasVendeFrio?.valor("ordenProductos") || "marca";
+    const lista = productos.slice();
+    if (orden === "alfabetico") {
+        return lista.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
+    }
+    if (orden === "frecuencia") {
+        const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const veces = new Map();
+        pedidos.forEach(pedido => (pedido.productos || []).forEach(item => {
+            const nombre = String(item.nombre || item.producto || "");
+            veces.set(nombre, (veces.get(nombre) || 0) + (Number(item.cantidad) || 0));
+        }));
+        return lista.sort((a, b) => (veces.get(b.nombre) || 0) - (veces.get(a.nombre) || 0));
+    }
+    return lista;
+}
+
 function crearMarca(nombreMarca, productos, indiceMarca) {
     const card = document.createElement("div");
     card.className = "marca";
@@ -431,7 +451,7 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
         vacio.textContent = "Esta marca todav\u00eda no tiene productos.";
         cuerpo.appendChild(vacio);
     } else {
-        productos.forEach(producto => {
+        ordenarProductosDelPedido(productos).forEach(producto => {
             const fila = document.createElement("div");
             fila.className = "fila";
             fila.dataset.producto = producto.nombre;
@@ -957,7 +977,7 @@ function generarPedido() {
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
     if (modalPedido) modalPedido.classList.remove("oculto");
-    if (navigator.vibrate) navigator.vibrate(35);
+    if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
 
     return true;
 }

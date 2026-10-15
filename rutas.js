@@ -618,10 +618,11 @@ function crearControlesRutasGuardadas() {
     panel.className = "rutasGuardadasPanel";
 
     const titulo = document.createElement("h3");
-    titulo.textContent = "Rutas guardadas";
+    titulo.innerHTML = '<span class="iconoRutasGuardadas">' + window.icono("disquete", 18) + "</span>";
+    titulo.append(document.createTextNode("Rutas guardadas"));
 
     const ayuda = document.createElement("p");
-    ayuda.textContent = "Guard\u00e1 esta selecci\u00f3n para volver a usarla m\u00e1s adelante.";
+    ayuda.textContent = "Guard\u00e1 esta selecci\u00f3n con un nombre para volver a usarla.";
 
     const fila = document.createElement("div");
     fila.className = "filaRutaGuardada";
@@ -629,12 +630,13 @@ function crearControlesRutasGuardadas() {
     const entrada = document.createElement("input");
     entrada.id = "nombreRutaGuardada";
     entrada.type = "text";
-    entrada.placeholder = "Ej.: Ruta lunes";
+    entrada.placeholder = "Nombre, por ej. Ruta lunes";
+    entrada.setAttribute("aria-label", "Nombre de la ruta");
 
     const selectorDia = document.createElement("select");
     selectorDia.id = "diaRutaGuardada";
     [
-        ["", "D\u00eda (opcional)"],
+        ["", "Sin d\u00eda fijo"],
         ["lunes", "Lunes"],
         ["martes", "Martes"],
         ["miercoles", "Mi\u00e9rcoles"],
@@ -653,7 +655,8 @@ function crearControlesRutasGuardadas() {
     botonGuardar.id = "guardarRutaActual";
     botonGuardar.type = "button";
     botonGuardar.className = "btnAccion agregar";
-    botonGuardar.textContent = "Guardar";
+    botonGuardar.innerHTML = window.icono("disquete", 16) + " Guardar ruta";
+    selectorDia.setAttribute("aria-label", "D\u00eda de la ruta");
     botonGuardar.addEventListener("click", guardarRutaActual);
 
     fila.append(entrada, selectorDia, botonGuardar);
@@ -911,15 +914,20 @@ function actualizarEstadoSeleccionRuta() {
         return comercioTieneGps(comercio) && comercio.origenGps === "manual";
     }).length;
 
-    estado.textContent =
-        seleccionados.length +
-        " seleccionados - " +
-        conGps +
-        " ubicados - " +
-        manuales +
-        " manuales - " +
-        sinGps +
-        " sin ubicaci\u00f3n";
+    // Resumen en chips (T50): elegidos, con GPS y sin ubicaci\u00f3n.
+    estado.innerHTML = "";
+    [
+        ["check", seleccionados.length + (seleccionados.length === 1 ? " elegido" : " elegidos"), ""],
+        ["ubicacion", conGps + " con GPS" + (manuales ? " (" + manuales + " a mano)" : ""), "listo"],
+        ["alerta", sinGps + " sin ubicaci\u00f3n", sinGps ? "falta" : ""]
+    ].forEach(([icono, texto, tono]) => {
+        const chip = document.createElement("span");
+        chip.className = "chipResumenRuta";
+        if (tono) chip.dataset.tono = tono;
+        chip.innerHTML = window.icono(icono, 14);
+        chip.append(document.createTextNode(" " + texto));
+        estado.appendChild(chip);
+    });
 }
 
 function renderizarSeleccionRuta() {
@@ -927,8 +935,19 @@ function renderizarSeleccionRuta() {
     if (!contenedor) return;
 
     contenedor.innerHTML = "";
+    const busqueda = normalizarTexto(document.getElementById("buscarSeleccionRuta")?.value || "");
+    const comercios = obtenerComerciosSeleccionRuta().filter(comercio => {
+        return !busqueda || normalizarTexto(comercio.nombre + " " + (comercio.direccion || "")).includes(busqueda);
+    });
 
-    obtenerComerciosSeleccionRuta().forEach(comercio => {
+    if (comercios.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.className = "vacioSeleccionRuta";
+        vacio.textContent = busqueda ? "Ning\u00fan comercio coincide con la b\u00fasqueda." : "Todav\u00eda no cargaste comercios.";
+        contenedor.appendChild(vacio);
+    }
+
+    comercios.forEach(comercio => {
         const etiqueta = document.createElement("label");
         etiqueta.className = "opcionSeleccionRuta";
 
@@ -948,21 +967,44 @@ function renderizarSeleccionRuta() {
             actualizarEstadoSeleccionRuta();
         });
 
+        const avatar = document.createElement("span");
+        avatar.className = "inicialesSeleccionRuta";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.textContent = String(comercio.nombre || "?").trim().split(/\s+/).slice(0, 2).map(palabra => palabra.charAt(0)).join("").toUpperCase();
+
         const texto = document.createElement("span");
-        texto.textContent = comercio.nombre;
+        texto.className = "textoSeleccionRuta";
+        const nombre = document.createElement("strong");
+        nombre.textContent = comercio.nombre;
+        const detalle = document.createElement("small");
+        const visitado = comercioEstaVisitadoEstaSemana(comercio);
+        detalle.textContent = (comercio.direccion ? comercio.direccion + " \u00b7 " : "") + (visitado ? "Visitado" : "Pendiente");
+        texto.append(nombre, detalle);
 
         const estado = document.createElement("small");
-        estado.textContent = obtenerEtiquetaOrigenGps(comercio);
+        estado.innerHTML = window.icono(comercioTieneGps(comercio) ? "ubicacion" : "alerta", 12);
+        const origen = String(comercio.origenGps || "").toLowerCase();
+        const etiquetaCorta = !comercioTieneGps(comercio) ? "Sin ubicaci\u00f3n"
+            : origen === "manual" ? "Pin a mano"
+            : origen === "maps" ? "Aproximado"
+            : "Con GPS";
+        estado.append(document.createTextNode(" " + etiquetaCorta));
+        estado.title = obtenerEtiquetaOrigenGps(comercio);
         estado.className = comercioTieneGps(comercio)
             ? "seleccionRutaGps"
             : "seleccionRutaSinGps";
+        texto.appendChild(estado);
 
-        etiqueta.append(checkbox, texto, estado);
+        etiqueta.append(checkbox, avatar, texto);
         contenedor.appendChild(etiqueta);
     });
 
     actualizarEstadoSeleccionRuta();
 }
+
+document.addEventListener("input", evento => {
+    if (evento.target.id === "buscarSeleccionRuta") renderizarSeleccionRuta();
+});
 
 function inicializarSeleccionRuta() {
     const comercios = obtenerComerciosSeleccionRuta();
