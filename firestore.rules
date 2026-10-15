@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -47,6 +47,10 @@ rules_version = '2';
 //     rutas/{id}
 //     avisos/{idPersona}/recibidos/{idAviso}   avisos de cada persona (T23)
 //     preferenciasAvisos/{idPersona}   qué avisos recibe cada persona (T23)
+//     celulares/{idCelular}         token de cada celular que activó las
+//                                   notificaciones con la app cerrada (T29)
+//     preferenciasNotificaciones/{idPersona}   qué avisos le suenan a cada
+//                                   persona con la app cerrada (T29)
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
 // Todo lo que no figura acá queda bloqueado.
@@ -985,6 +989,49 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(["apagados"])
           && request.resource.data.apagados is list
           && request.resource.data.apagados.size() <= 20;
+
+        allow delete: if false;
+      }
+
+      // Notificaciones con la app cerrada (T29). Cada celular que las activó
+      // guarda su dirección para Firebase Cloud Messaging (el token), a
+      // nombre de la cuenta que lo usa. Cada uno lee y cambia solo los
+      // suyos; el dueño también puede borrar los de cualquiera. La función
+      // de Vercel los lee con la cuenta de servicio, que no pasa por estas
+      // reglas.
+      match /celulares/{idCelular} {
+        allow get: if esMiembro(idDistribuidora)
+          && resource.data.uid == request.auth.uid;
+
+        allow create, update: if esMiembro(idDistribuidora)
+          && idCelular.matches('^[A-Za-z0-9_-]{1,100}$')
+          && (resource == null || resource.data.uid == request.auth.uid)
+          && request.resource.data.keys().hasAll(["idPersona", "uid", "token", "plataforma", "actualizado"])
+          && request.resource.data.keys().hasOnly(["idPersona", "uid", "token", "plataforma", "actualizado"])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.idPersona == miIdPersona(idDistribuidora)
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.plataforma in ["android", "iphone", "otro"]
+          && request.resource.data.actualizado is number;
+
+        allow delete: if esMiembro(idDistribuidora)
+          && (resource.data.uid == request.auth.uid || esDueno(idDistribuidora));
+      }
+
+      // Qué avisos suenan con la app cerrada (T29): cada persona lo suyo.
+      // Aparte de preferenciasAvisos, así la versión anterior de la app no
+      // lo borra al guardar lo que recibe.
+      match /preferenciasNotificaciones/{idPersona} {
+        allow read: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora);
+
+        allow create, update: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora)
+          && request.resource.data.keys().hasOnly(["silenciados"])
+          && request.resource.data.silenciados is list
+          && request.resource.data.silenciados.size() <= 20;
 
         allow delete: if false;
       }
