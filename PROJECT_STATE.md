@@ -768,6 +768,32 @@ Ideas que el dueño aprobó al probar T28b, para hacer después, cada una en su 
 
 **Cómo trabaja el equipo (contado por el dueño, 2026-10-13):** se arman de 10 a 15 pedidos por mañana, de a uno, para repartir ese día. A veces se juntan a la tarde en el depósito a armar los pedidos del día siguiente: quedan preparados en la cámara de frío y a la mañana solo los cargan en el vehículo y salen a repartir, sin entrar más temprano. Los pedidos se toman sobre todo los lunes y martes (y el miércoles si no llegan); un pedido puede quedar cargado sin armar, armarse otro día y entregarse días después (de martes a viernes). Por eso lo que cuente "el día" (cierre de caja, hoja de reparto) tiene que mirar la entrega y el cobro, no la carga. El dueño lo describe como un emprendimiento grande, no como una empresa: la app tiene que adaptarse a esa forma de trabajar, no obligar a otra.
 
+### Bloque H — Rework visual (Etapa 4)
+
+El dueño aprobó el 2026-10-15 el estilo "D · Mezcla": formas y modo claro del estilo B (azul hielo #1F5FE0, tarjetas redondeadas de 24px, botones píldora, barra de abajo flotante) y modo oscuro con los colores del C (fondo casi negro y acento lima #C8F04A), según el modo del celular. Maquetas de las 13 pantallas, de día y de noche: `/mnt/project-files/rediseno/` del Proyecto de Claude (`maquetas/tema-d.css` y `base.css`). Ya decidido con el dueño:
+- Barra de abajo: Inicio · Pedidos · [+ Nuevo pedido] · Comercios · Catálogo. "Más" se abre desde el avatar de arriba a la derecha.
+- Indicador de conexión: puntito al lado del nombre de la distribuidora (reemplaza "Reparto Activo").
+- Los estados y números se actualizan solos cuando otro celular cambia un pedido, y la fila que cambió se ilumina un momento.
+- Próxima parada: tocar la tarjeta abre la ficha del comercio; "Ir" abre la navegación de Google Maps; se saca "Ver ruta" (Rutas queda en "Más").
+- Pedidos absorbe Historial (Hoy / Semana / Mes / Todo). En "Más", el lugar de Historial lo toma Equipo.
+- Catálogo une Catálogo con Productos y marcas.
+- Configuración agrupada en "Más" (Trabajo diario, Distribuidora, App), filas de una línea con su valor; las explicaciones van adentro de cada opción.
+- Guardar el GPS de un comercio pasa de Rutas a la ficha del comercio ("Actualizar con mi GPS").
+
+Cada tarea cambia cómo se ve, no lo que hace: los datos, las reglas de la nube y los permisos quedan igual.
+
+- [ ] **T30 — Base visual nueva.** Colores, letra, tarjetas, botones, campos, etiquetas de estado, ventanas que suben desde abajo y la barra de abajo flotante con el "+" en el medio, en claro y oscuro, para todas las pantallas a la vez. Esfuerzo: Alto.
+- [ ] **T31 — "Más" agrupado y encabezado nuevo.** Encabezado con logo, nombre de la distribuidora con el puntito de conexión, campanita y avatar; el avatar abre "Más": tarjeta de la persona con la conexión, accesos a Rutas, Estadísticas y Equipo, y la configuración en grupos. Esfuerzo: Alto.
+- [ ] **T32 — Inicio nuevo.** Resumen de hoy (vendido, pedidos, comercios, a preparar, en reparto, entregados), próxima parada (tarjeta que abre la ficha, "Cargar pedido" e "Ir" a Google Maps), pedidos de hoy en vivo con la fila que cambia iluminada, y la semana. Sin accesos rápidos sueltos. Esfuerzo: Alto.
+- [ ] **T33 — Pedidos con Historial adentro.** Lista con buscador y filtros Hoy / Semana / Mes / Todo, estados en vivo. Esfuerzo: Medio.
+- [ ] **T34 — Cargar pedido nuevo.** Un "+" por producto que se convierte en contador, total fijo abajo, sin la barra de abajo mientras se carga. Esfuerzo: Alto.
+- [ ] **T35 — Ficha del pedido nueva.** Línea de pasos del estado, un solo botón principal con el próximo paso, el resto en el menú "⋯". Esfuerzo: Alto.
+- [ ] **T36 — Catálogo unido con Productos y marcas.** Una sola pantalla para ver, buscar, agregar al pedido y (quien puede) editar productos y marcas. Esfuerzo: Alto.
+- [ ] **T37 — Comercios y ficha del comercio.** Lista y ficha con el estilo nuevo; "Actualizar con mi GPS" en la ficha. Esfuerzo: Medio.
+- [ ] **T38 — Rutas, Estadísticas, Equipo, Avisos y Cierre del día con el estilo nuevo.** Esfuerzo: Medio.
+- [ ] **M10 — Prueba en celulares reales (dueño).** Android e iPhone, modo claro y oscuro, app instalada (PWA). Anotar lo que se vea mal.
+- [ ] **M11 — Cierre de la 1.0 (dueño).** Prueba en el trabajo diario con la app nueva; lo que falte pasa a "Después de la 1.0".
+
 ## Decisiones abiertas de la migración
 
 - Cerrada antes de T16e (2026-10-11): qué hacer con los datos viejos del celular que no están en la nube (se muestra qué falta y se deja borrar solo con el archivo descargado) y con las claves de modo. Ver "Solo nube" en Decisiones tomadas.

@@ -21,7 +21,7 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Avisos dentro de la app y notificaciones con la app cerrada.
 - Trabajo sin conexión con sincronización automática.
 
-**Etapa 4 — Pulido y cierre**
+**Etapa 4 — Pulido y cierre** (estilo aprobado el 2026-10-15; tareas T30 a T38 en el Bloque H de `PROJECT_STATE.md`)
 - Rework visual completo de la app. Incluye pasar el indicador de conexión (T12) arriba a la derecha del nombre, en lugar de "Reparto Activo".
 - Pruebas en celulares reales, modo claro y oscuro, y PWA.
 - Cierre de la 1.0 y prueba en el trabajo diario.
@@ -29,6 +29,14 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
 
 ## Después de la 1.0
+
+**Etapa 5 — Navegación propia y voz** (idea del dueño, 2026-10-15; se detalla con él antes de programar)
+- Navegación estilo Uber o DiDi, pero del lado del cliente: mapa 2D con la posición en todo momento y una línea azul con el camino; abajo, una hoja que se desliza hacia arriba con los datos del comercio y todas sus opciones (cargar pedido, llamar, entregar).
+- Indicaciones paso a paso con voz ("en 150 m doblá a la izquierda"), para dejar de usar Google Maps. Necesita un servicio de calles (por ejemplo OpenRouteService u OSRM, con plan gratis) y la voz del celular. Una app web no sigue el GPS con la pantalla apagada.
+- Comandos por voz ("próxima parada", "marcar entregado"), con el reconocimiento de voz de Chrome en Android y con internet.
+- Cargar pedidos con un audio, como un audio de WhatsApp: se pasa a texto y se arma el pedido con los productos del catálogo para revisarlo antes de guardar. Pasar a texto con buena calidad probablemente necesite un servicio pago; hay que decidirlo.
+
+Otras ideas:
 
 1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.
 2. **Operación comercial:** cuentas corrientes y comprobantes simples (el ticket impreso del pedido ya entra en la 1.0, T28b).
