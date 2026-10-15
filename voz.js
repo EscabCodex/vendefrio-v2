@@ -91,55 +91,132 @@
     }
 
     // -------------------------------------------------
-    // Comandos (T43)
+    // Comandos (T43, más humanos desde T53)
+    //
+    // No hace falta decir la frase exacta: se busca la intención en
+    // cualquier parte de lo dicho («che, llevame a lo de Don Pepe»,
+    // «haceme un pedido para el kiosco de la esquina», «¿cuánto vendí?»)
+    // y el comercio se encuentra aunque se nombre a medias.
     // -------------------------------------------------
 
+    // Palabras que no cambian lo que se pide.
+    const SIN_PESO = new Set(["a", "al", "de", "del", "la", "el", "lo", "los", "las", "un", "una", "unos", "unas", "para", "en",
+        "que", "por", "favor", "porfa", "porfavor", "dale", "che", "bueno", "eh", "este", "ahi", "alla", "aca", "ahora", "ya",
+        "mismo", "hasta", "hacia", "con", "me", "le", "les", "nos", "y", "o", "gracias", "rapido", "vos", "sr", "senor", "senora"]);
+    // Palabras de rubro: «lo de Don Pepe» es «Almacén Don Pepe».
+    const RUBROS = new Set(["almacen", "kiosco", "kiosko", "maxikiosco", "super", "supermercado", "autoservicio", "despensa",
+        "polirrubro", "minimercado", "mercado", "drugstore", "comercio", "negocio", "local", "carniceria", "verduleria", "panaderia"]);
+
+    function palabrasConPeso(texto) {
+        return normalizar(texto).split(" ").filter(palabra => palabra && !SIN_PESO.has(palabra));
+    }
+
+    // El comercio nombrado en cualquier parte del texto (o null).
+    function buscarComercioEn(texto, minimo = 0.6) {
+        const palabras = palabrasConPeso(texto);
+        if (!palabras.length || typeof obtenerComercios !== "function") return null;
+        let mejor = null;
+        let puntaje = 0;
+        obtenerComercios().forEach(comercio => {
+            const nombre = palabrasConPeso(comercio.nombre);
+            if (!nombre.length) return;
+            const claves = [nombre.join(" ")];
+            const sinRubro = nombre.filter(palabra => !RUBROS.has(palabra));
+            if (sinRubro.length && sinRubro.length < nombre.length) claves.push(sinRubro.join(" "));
+            const largo = nombre.length + 1;
+            for (let i = 0; i < palabras.length; i++) {
+                for (let j = i + 1; j <= Math.min(palabras.length, i + largo); j++) {
+                    const tramo = palabras.slice(i, j).join(" ");
+                    claves.forEach(clave => {
+                        const valor = parecido(clave, tramo);
+                        if (valor > puntaje) {
+                            puntaje = valor;
+                            mejor = comercio;
+                        }
+                    });
+                }
+            }
+        });
+        return puntaje >= minimo ? mejor : null;
+    }
+
+    // Lo que queda después de la frase que dispara la orden.
+    function despues(dicho, coincidencia) {
+        return dicho.slice(coincidencia.index + coincidencia[0].length).trim();
+    }
+
     const PANTALLAS = [
-        [/^(abrir |ver |ir a )?(los )?pedidos$/, "pedido"],
-        [/^(abrir |ver |ir a )?(el )?inicio$/, "menu"],
-        [/^(abrir |ver |ir a )?(los )?comercios$/, "comercios"],
-        [/^(abrir |ver |ir a )?(el )?catalogo$/, "catalogo"],
-        [/^(abrir |ver |ir a )?(las )?rutas?$/, "rutas"],
-        [/^(abrir |ver |ir a )?(las )?estadisticas$/, "estadisticas"],
-        [/^(abrir |ver |ir a )?(el )?cierre( del dia)?$/, "cierre"]
+        [/\b(pedidos|historial|ordenes)\b/, "pedido"],
+        [/\b(inicio|principal|home|menu)\b/, "menu"],
+        [/\b(comercios|clientes|negocios|locales)\b/, "comercios"],
+        [/\b(catalogo|productos|precios|mercaderia)\b/, "catalogo"],
+        [/\b(rutas?|mapa|recorridos?)\b/, "rutas"],
+        [/\b(estadisticas?|numeros|graficos|cuanto (vendi|vendimos|llevo vendido|se vendio)|como vengo|como venimos|ventas)\b/, "estadisticas"],
+        [/\b(cierre|cerrar (el )?dia|cerrar (la )?caja|caja del dia|rendicion|rendir)\b/, "cierre"]
     ];
+
+    const DICE = {
+        llegue: /\b(llegue|llegamos|(ya )?(estoy|estamos) (aca|ahi|en la puerta)|marca(r|me)? (la )?llegada)\b/,
+        visitado: /\b(marca(r|me|lo|la|le)? (como )?visitad[oa]|visitad[oa]|ya (pase|fui|estuve|visite)( por| en| a| al)?|visite|pase por)\b/,
+        nuevoPedido: /(\b(nuevo pedido|pedido nuevo|otro pedido)\b|\b(cargar|carga|cargame|cargale|hacer|hace|haceme|hacele|armar|arma|armame|armale|tomar|toma|tomame|tomale|anotar|anota|anotame|anotale|empezar|empeza|arrancar|arranca|iniciar|inicia|crear|crea|levantar|levanta|abrir|abri|abrime)( (un|el|otro|nuevo))? pedido\b|\bquiere(n)? (pedir|encargar|hacer (un )?pedido)\b|\b(le )?(vendo|venderle|vendemos)\b|^pedido\b)/,
+        ir: /\b(ir|irme|vamos|vamo|voy|vayamos|llevame|lleva|llevarme|navegar|navega|naveguemos|guiame|guia|como (llego|voy|hago para ir|se llega)|donde (queda|esta)|indicaciones|camino|ruta)\b/,
+        proximaParada: /\b((la )?(proxima|siguiente) (parada|visita|cliente|comercio|entrega)|(a )?donde (voy|sigo|tengo que ir|vamos|me toca)|adonde (voy|sigo|vamos)|(que|quien|cual) sigue|a quien (le )?toca|que me toca)\b/,
+        ver: /\b(abri|abrir|abrime|abre|ver|veo|mira|mirar|mostra|mostrame|mostrar|muestra|muestrame|pasame|ficha|datos|info|informacion|telefono|direccion|busca|buscar|buscame)\b/
+    };
 
     // Qué pidió: { accion, comercio?, pantalla? } o null.
     function interpretar(texto) {
         const dicho = normalizar(texto);
         if (!dicho) return null;
+        let noEncontrado = null;
+        const conComercio = (accion, resto) => {
+            const comercio = buscarComercioEn(resto);
+            if (comercio) return { accion, comercio };
+            if (palabrasConPeso(resto).length && !noEncontrado) noEncontrado = { accion: "noEncontrado", texto: palabrasConPeso(resto).join(" ") };
+            return null;
+        };
+        let partes;
 
-        if (/^(proxima parada|siguiente parada|a donde voy|adonde voy)$/.test(dicho)) return { accion: "proximaParada" };
-        if (/^(llegue|ya llegue|marcar llegada)$/.test(dicho)) return { accion: "llegue" };
+        if (DICE.llegue.test(dicho)) return { accion: "llegue" };
 
-        let partes = dicho.match(/^(?:nuevo pedido|cargar (?:un )?pedido|hacer (?:un )?pedido|pedido)(?: (?:para|de|a|en))? (.+)$/);
+        partes = dicho.match(DICE.visitado);
         if (partes) {
-            const comercio = buscarComercio(partes[1]);
-            return comercio ? { accion: "nuevoPedido", comercio } : { accion: "noEncontrado", texto: partes[1] };
-        }
-        if (/^(nuevo pedido|cargar (un )?pedido|hacer (un )?pedido)$/.test(dicho)) return { accion: "nuevoPedido" };
-
-        partes = dicho.match(/^(?:ir|navegar|llevame|vamos|como llego) (?:a|al|hasta|hacia) (.+)$/);
-        if (partes) {
-            const comercio = buscarComercio(partes[1]);
-            return comercio ? { accion: "ir", comercio } : { accion: "noEncontrado", texto: partes[1] };
-        }
-
-        partes = dicho.match(/^marcar (?:como )?visitado (?:a |al )?(.+)$/);
-        if (partes) {
-            const comercio = buscarComercio(partes[1]);
-            return comercio ? { accion: "visitado", comercio } : { accion: "noEncontrado", texto: partes[1] };
+            const orden = conComercio("visitado", despues(dicho, partes)) || conComercio("visitado", dicho.slice(0, partes.index));
+            if (orden) return orden;
         }
 
-        partes = dicho.match(/^(?:abrir|ver|mostrar) (?:a |al )?(.+)$/);
+        partes = dicho.match(DICE.nuevoPedido);
+        if (partes) {
+            const resto = despues(dicho, partes);
+            const orden = conComercio("nuevoPedido", resto);
+            if (orden) return orden;
+            if (!palabrasConPeso(resto).length) return { accion: "nuevoPedido" };
+        }
+
+        partes = dicho.match(DICE.ir);
+        if (partes) {
+            const orden = conComercio("ir", despues(dicho, partes));
+            if (orden) return orden;
+        }
+
+        if (DICE.proximaParada.test(dicho)) return { accion: "proximaParada" };
+
         for (const [patron, pantalla] of PANTALLAS) {
             if (patron.test(dicho)) return { accion: "pantalla", pantalla };
         }
+
+        partes = dicho.match(DICE.ver);
         if (partes) {
-            const comercio = buscarComercio(partes[1]);
+            const orden = conComercio("ficha", despues(dicho, partes));
+            if (orden) return orden;
+        }
+
+        // Solo el nombre del comercio: su ficha.
+        if (palabrasConPeso(dicho).length <= 5) {
+            const comercio = buscarComercioEn(dicho, 0.75);
             if (comercio) return { accion: "ficha", comercio };
         }
-        return null;
+        return noEncontrado;
     }
 
     function decir(texto) {
@@ -213,13 +290,17 @@
         reconocimiento.lang = "es-AR";
         reconocimiento.interimResults = true;
         reconocimiento.continuous = false;
-        reconocimiento.maxAlternatives = 1;
+        reconocimiento.maxAlternatives = 3;
         let final = "";
+        let alternativas = [];
         reconocimiento.onresult = evento => {
             let parcial = "";
             for (let i = evento.resultIndex; i < evento.results.length; i++) {
                 const resultado = evento.results[i];
-                if (resultado.isFinal) final += resultado[0].transcript;
+                if (resultado.isFinal) {
+                    final += resultado[0].transcript;
+                    alternativas = Array.from(resultado).slice(1).map(item => item.transcript);
+                }
                 else parcial += resultado[0].transcript;
             }
             alParcial?.((final + " " + parcial).trim());
@@ -227,7 +308,7 @@
         reconocimiento.onerror = evento => alError?.(evento.error || "error");
         reconocimiento.onend = () => {
             if (escuchando === reconocimiento) escuchando = null;
-            alFinal?.(final.trim());
+            alFinal?.(final.trim(), alternativas.map(item => item.trim()).filter(Boolean));
         };
         try {
             reconocimiento.start();
@@ -270,12 +351,13 @@
                 <h2 id="tituloVoz">Te escucho</h2>
                 <p class="textoVoz" aria-live="polite"></p>
                 <div class="ejemplosVoz">
-                    <small>Podés decir, por ejemplo:</small>
-                    <span>«Próxima parada»</span>
-                    <span>«Nuevo pedido para Almacén Don Pepe»</span>
-                    <span>«Ir a Kiosco La Esquina»</span>
-                    <span>«Abrir pedidos»</span>
-                    <span>«Marcar visitado Super Norte»</span>
+                    <small>Hablá normal. Por ejemplo:</small>
+                    <span>«¿A dónde voy ahora?»</span>
+                    <span>«Haceme un pedido para lo de Don Pepe»</span>
+                    <span>«Llevame al kiosco de la esquina»</span>
+                    <span>«Mostrame los pedidos»</span>
+                    <span>«Ya pasé por Super Norte»</span>
+                    <span>«¿Cuánto vendí?»</span>
                 </div>
                 <div class="modalBotones"><button type="button" class="btnModalSecundario cerrarVoz">Cerrar</button></div>
             </div>`;
@@ -303,13 +385,16 @@
                 const mensaje = textoDeError(codigo);
                 if (mensaje) texto.textContent = mensaje;
             },
-            alFinal: final => {
+            alFinal: (final, alternativas = []) => {
                 ventana.classList.remove("escuchando");
                 if (!final) return;
                 texto.textContent = "«" + final + "»";
-                if (interpretar(final)) {
+                // Si el celular escuchó otra cosa parecida, prueba también esa.
+                const entendido = [final, ...alternativas].find(frase => interpretar(frase)?.accion && interpretar(frase).accion !== "noEncontrado")
+                    || (interpretar(final) ? final : null);
+                if (entendido) {
                     cerrarVentana();
-                    ejecutar(final);
+                    ejecutar(entendido);
                 } else {
                     texto.textContent = "No entendí «" + final + "». Tocá el micrófono y probá de nuevo.";
                 }
