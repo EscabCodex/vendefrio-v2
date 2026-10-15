@@ -4,6 +4,7 @@
     "test": "npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-vendefrio \"playwright test -c pruebas\""
   },
   "dependencies": {
+    "firebase-admin": "^13.10.0",
     "servor": "^4.0.2"
   },
   "devDependencies": {

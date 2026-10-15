@@ -3451,6 +3451,17 @@ html.conAvisos .campanaAvisos{display:flex;}
 .configAviso small{color:var(--texto-sec);font-weight:500;}
 .configAviso em{font-style:normal;color:var(--pendiente);}
 .configAvisoProblema{border:1px solid var(--peligro);}
+/* Notificaciones con la app cerrada (T29) */
+.bloqueNotificaciones{display:grid;gap:8px;padding:12px;border:2px solid var(--acento);border-radius:12px;background:var(--superficie);color:var(--texto);}
+.bloqueNotificaciones > strong{font-size:16px;}
+.bloqueNotificaciones .configEstado{margin:0;font-size:13px;}
+.bloqueNotificaciones[data-estado="activadas"]{border-color:var(--visitado);}
+.bloqueNotificaciones[data-estado="bloqueadas"],.bloqueNotificaciones[data-estado="instalarIphone"],.bloqueNotificaciones[data-estado="noSePuede"]{border-color:var(--pendiente);}
+.bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:#fff;}
+.subtituloAvisos{margin:6px 0 0;font-size:15px;color:var(--texto);}
+html[data-tema="oscuro"] .bloqueNotificaciones{background:#1f2937;color:#f9fafb;}
+html[data-tema="oscuro"] .bloqueNotificaciones [data-accion="activarNotificaciones"]{background:var(--acento);border-color:var(--acento);color:#fff;}
+html[data-tema="oscuro"] .subtituloAvisos{color:#f9fafb;}
 @media (prefers-reduced-motion: reduce){.emergenteAviso{transition:none;}}
 /* Modo oscuro: fondo oscuro y letras blancas (la regla general deja los textos blancos). */
 html[data-tema="oscuro"] .campanaAvisos{color:#f9fafb;}

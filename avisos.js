@@ -20,6 +20,8 @@
 // - Rol pendiente de aprobar (T29d): al dueño, cuando un empleado elige un
 //   rol con "Cobra". No es de un pedido: al tocarlo abre Configuración >
 //   Empleados.
+// - Notificaciones con la app cerrada (T29): cuando la nube guarda un aviso,
+//   notificaciones.js le pide a la función de Vercel que lo mande.
 // - Se muestran los últimos 50 y, una vez por día, se borran los que se
 //   leyeron hace más de 7 días.
 // =====================================================
@@ -314,7 +316,11 @@
         para.forEach(idPersona => {
             tanda.set(refDistribuidora.collection("avisos").doc(idPersona).collection("recibidos").doc(idAviso), datos);
         });
-        tanda.commit().catch(error => console.warn("No se pudo dejar un aviso.", error));
+        // Cuando la nube lo guardó, se pide la notificación con la app
+        // cerrada (T29).
+        tanda.commit()
+            .then(() => window.notificacionesVendeFrio?.avisoDejado?.(idAviso, para))
+            .catch(error => console.warn("No se pudo dejar un aviso.", error));
     }
 
     // Rol pendiente de aprobar (T29d): el empleado se lo deja al dueño, sin
@@ -326,7 +332,8 @@
         if (!destinatarios("rolPendiente", ["dueno"]).length) return;
 
         const roles = (nombresRoles || []).map(nombre => "«" + nombre + "»").join(", ");
-        refDistribuidora.collection("avisos").doc("dueno").collection("recibidos").doc(generarId("avi")).set({
+        const idAviso = generarId("avi");
+        refDistribuidora.collection("avisos").doc("dueno").collection("recibidos").doc(idAviso).set({
             tipo: "rolPendiente",
             idPedido: "",
             idEmpleado: yo.idPersona,
@@ -335,7 +342,9 @@
             persona: { idPersona: persona.idPersona, nombre: persona.nombre, uid: persona.uid },
             horaCelular: Date.now(),
             leido: null
-        }).catch(error => console.warn("No se pudo dejar el aviso del rol pendiente.", error));
+        })
+            .then(() => window.notificacionesVendeFrio?.avisoDejado?.(idAviso, ["dueno"]))
+            .catch(error => console.warn("No se pudo dejar el aviso del rol pendiente.", error));
     }
 
     function alHacerAlgo(accion) {
@@ -900,6 +909,8 @@
         cambiarPreferencia,
         sinLeer: () => (yo ? sinLeer() : 0),
         abrirLista,
+        // T29: lo usa notificaciones.js al abrir el pedido de una notificación.
+        marcarLeido,
         // T29d: lo llama empleados.js cuando el empleado elige un rol con "Cobra".
         avisarRolPendiente: roles => alHacerAlgo({ accion: "rolPendiente", roles }),
         escuchar(oyente) {

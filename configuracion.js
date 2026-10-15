@@ -51,7 +51,7 @@
                     <button class="configFila oculto" data-config-seccion="avisos" id="configFilaAvisos">
                         <span class="configIcono">${window.icono("campana",20)}</span>
                         <span><strong>Avisos</strong>
-                        <small>Elegí qué avisos recibir</small></span><b>›</b>
+                        <small>Qué avisos recibir y notificaciones</small></span><b>›</b>
                     </button>
 
                     <button class="configFila oculto" data-config-seccion="impresora" id="configFilaImpresora">
@@ -1046,12 +1046,87 @@
 
         return `
             ${problema}
+            ${htmlNotificaciones()}
+            <h3 class="subtituloAvisos">Qué avisos recibís</h3>
             ${casillas}
             <p class="configEstado">
                 Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda
                 en la nube: vale en cualquier celular donde entres.
             </p>
+            ${htmlQueSuena()}
             <button type="button" data-accion="verAvisos">Ver mis avisos</button>
+        `;
+    }
+
+    // --- Notificaciones con la app cerrada (T29): en este celular ---
+    function htmlNotificaciones() {
+        const notificaciones = window.notificacionesVendeFrio;
+        if (!notificaciones || !notificaciones.disponible()) return "";
+
+        const estado = notificaciones.estado();
+        const error = notificaciones.error();
+        const textos = {
+            instalarIphone: `En iPhone, las notificaciones llegan solo con la app instalada.
+                En Safari, tocá <strong>Compartir</strong> (el cuadrado con la flecha) y después
+                <strong>Agregar a inicio</strong>. Abrí VendeFrío desde ese ícono y volvé acá.
+                Hace falta iOS 16.4 o más nuevo.`,
+            noSePuede: `Este celular o este navegador no puede recibir notificaciones.
+                En Android, usá Chrome. En iPhone, hace falta iOS 16.4 o más nuevo y la app
+                instalada en la pantalla de inicio.`,
+            bloqueadas: `Las notificaciones están bloqueadas para VendeFrío en este celular.
+                Para permitirlas en Android: mantené apretado el ícono de VendeFrío, tocá
+                <strong>Información de la app</strong> y después <strong>Notificaciones</strong>
+                (o, en Chrome, los tres puntos > Configuración > Configuración de sitios >
+                Notificaciones). Después volvé acá.`,
+            apagadas: "Prendelas para que te suenen los avisos aunque tengas la app cerrada. Valen solo para este celular.",
+            activando: "Activando… Si el celular pregunta, tocá «Permitir».",
+            activadas: "<strong>Activadas en este celular.</strong> Te suenan los avisos aunque tengas la app cerrada."
+        };
+
+        let boton = "";
+        if (estado === "apagadas") {
+            boton = `<button type="button" data-accion="activarNotificaciones">Activar notificaciones en este celular</button>`;
+        } else if (estado === "activando") {
+            boton = `<button type="button" disabled>Activando…</button>`;
+        } else if (estado === "activadas") {
+            boton = `<button type="button" data-accion="desactivarNotificaciones">Desactivar en este celular</button>`;
+        }
+
+        return `
+            <div class="bloqueNotificaciones" id="bloqueNotificaciones" data-estado="${escaparTexto(estado)}">
+                <strong>Notificaciones con la app cerrada</strong>
+                <p class="configEstado">${textos[estado] || textos.apagadas}</p>
+                ${error && estado === "apagadas" ? `<p class="configEstado configAvisoProblema">${escaparTexto(error)}</p>` : ""}
+                ${boton}
+            </div>
+        `;
+    }
+
+    // Qué suena con la app cerrada: por persona, vale en cualquier celular.
+    function htmlQueSuena() {
+        const notificaciones = window.notificacionesVendeFrio;
+        const avisos = window.avisosVendeFrio;
+        if (!notificaciones || !notificaciones.disponible() || notificaciones.estado() !== "activadas") return "";
+
+        const casillas = avisos.tipos().map(tipo => {
+            const recibe = avisos.recibe(tipo.id);
+            return `
+                <label class="configSwitch configAviso">
+                    <input type="checkbox" class="casillaSuena" value="${escaparTexto(tipo.id)}"
+                        ${recibe && notificaciones.suena(tipo.id) ? "checked" : ""} ${recibe ? "" : "disabled"}>
+                    <span><strong>${escaparTexto(tipo.nombre)}</strong>
+                    ${recibe ? "" : "<br><small>No lo recibís: prendelo arriba, en «Qué avisos recibís».</small>"}</span>
+                </label>
+            `;
+        }).join("");
+
+        return `
+            <h3 class="subtituloAvisos">Qué suena con la app cerrada</h3>
+            ${casillas}
+            <p class="configEstado">
+                Lo que no suena igual te queda en la campanita. Vale en todos los
+                celulares donde actives las notificaciones.
+            </p>
         `;
     }
 
@@ -1281,7 +1356,7 @@
                 ? "Tu cuenta de empleado"
                 : "Ingresá con tu email y contraseña"],
             empleados: ["Empleados", "Códigos, fichas, roles y bajas de tus empleados"],
-            avisos: ["Avisos", "Elegí qué avisos recibir"],
+            avisos: ["Avisos", "Elegí qué avisos recibir y activá las notificaciones"],
             impresora: ["Impresora", "Impresora Bluetooth para los tickets de los pedidos"],
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
@@ -2299,6 +2374,29 @@
         window.avisosVendeFrio?.abrirLista?.();
     });
 
+    // Notificaciones con la app cerrada (T29).
+    document.addEventListener("change", event => {
+        const casilla = event.target.closest?.(".casillaSuena");
+        if (!casilla || !window.notificacionesVendeFrio) return;
+
+        window.notificacionesVendeFrio.cambiarSuena(casilla.value, casilla.checked)
+            .catch(error => {
+                casilla.checked = !casilla.checked;
+                mostrarAviso("No se guardó el cambio", error.message);
+            });
+    });
+
+    document.addEventListener("click", event => {
+        const notificaciones = window.notificacionesVendeFrio;
+        if (!notificaciones) return;
+
+        if (event.target.closest?.('[data-accion="activarNotificaciones"]')) {
+            notificaciones.activar().catch(error => mostrarAviso("No se pudieron activar", error.message));
+        } else if (event.target.closest?.('[data-accion="desactivarNotificaciones"]')) {
+            notificaciones.desactivar();
+        }
+    });
+
     // Impresora (T28b): abre la lista de Chrome y guarda la elegida.
     document.addEventListener("click", event => {
         if (!event.target.closest?.('[data-accion="cambiarImpresora"]')) return;
@@ -2456,6 +2554,33 @@
             }
         });
         actualizarFilasSegunCuenta();
+    }
+
+    // Notificaciones (T29): la sección se actualiza al activarlas o al
+    // cambiar qué suena (también desde otro celular).
+    function conectarNotificaciones() {
+        let ultimo = "";
+        window.notificacionesVendeFrio.escuchar(() => {
+            const notificaciones = window.notificacionesVendeFrio;
+            const tipos = window.avisosVendeFrio?.tipos?.() || [];
+            const texto = JSON.stringify([notificaciones.disponible(), notificaciones.estado(), notificaciones.error(),
+                tipos.map(tipo => notificaciones.suena(tipo.id))]);
+            if (texto === ultimo) return;
+            ultimo = texto;
+
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta === "avisos" && caja && !caja.classList.contains("oculto")) {
+                detalle("avisos");
+            }
+        });
+    }
+
+    if (window.notificacionesVendeFrio) {
+        conectarNotificaciones();
+    } else {
+        window.addEventListener("load", () => {
+            if (window.notificacionesVendeFrio) conectarNotificaciones();
+        }, { once: true });
     }
 
     if (window.avisosVendeFrio) {
