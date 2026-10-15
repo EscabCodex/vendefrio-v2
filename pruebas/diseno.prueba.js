@@ -41,6 +41,17 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "diseno-04-nuevo-pedido");
 
+    // Mientras se carga, la barra de abajo se esconde; la flecha vuelve a
+    // Pedidos. Historial va adentro de Pedidos, con Hoy / Semana / Mes / Todo.
+    await expect(page.locator(".bottom-nav")).toBeHidden();
+    await page.getByRole("button", { name: "Volver a Pedidos" }).click();
+    await expect(page.locator(".bottom-nav")).toBeVisible();
+    await page.locator(".filtroEtapa[data-etapa='historial']").click();
+    await page.locator(".filtrosHistorialPedidos").getByRole("radio", { name: "Mes" }).click();
+    await expect(page.locator(".filtrosHistorialPedidos").getByRole("radio", { name: "Mes" })).toHaveAttribute("aria-checked", "true");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await capturar(page, "diseno-04b-historial");
+
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
     await expect(page.locator("#pantallaComercios")).toBeVisible();
     await capturar(page, "diseno-05-comercios");

@@ -40,10 +40,20 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await ventana.click({ position: { x: 10, y: 10 } });
     await expect(ventana).toBeHidden();
 
+    // Mientras se carga un pedido la barra se esconde; la X vuelve a Inicio.
+    await expect(page.locator(".bottom-nav")).toBeHidden();
+    await page.locator("#cerrarCargaPedido").click();
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+
     // Historial: el pedido quedó guardado en el celular.
     // En el modo personal, "Pedidos" de la barra abre Historial.
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#pantallaHistorial")).toBeVisible();
+    await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
+    // Período con botones (T33): el de hoy aparece en "Hoy" y en "Mes".
+    await page.locator("#pantallaHistorial").getByRole("radio", { name: "Hoy" }).click();
+    await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
+    await page.locator("#pantallaHistorial").getByRole("radio", { name: "Mes" }).click();
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
     await capturar(page, "personal-05-historial");
 

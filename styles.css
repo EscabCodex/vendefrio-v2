@@ -2712,14 +2712,14 @@ html[data-tema="oscuro"] footer button#reset{
 }
 
 html[data-tema="oscuro"] footer button#generar{
-  color:#ecfdf5 !important;
-  background:#047857 !important;
+  color:var(--acento-txt) !important;
+  background:var(--acento) !important;
 }
 
 html[data-tema="oscuro"] .botonRepetirPedido{
-  color:#bfdbfe !important;
-  background:#1e3a8a !important;
-  border:1px solid #3b82f6 !important;
+  color:var(--acento) !important;
+  background:var(--acento-bg) !important;
+  border:1px solid transparent !important;
 }
 
 /* Configuración tipo menú móvil */

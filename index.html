@@ -87,6 +87,7 @@
 
 <section id="pantallaPedido" class="oculto">
   <header>
+    <button id="cerrarCargaPedido" class="botonCerrarCarga oculto" type="button" aria-label="Cerrar" title="Volver a Inicio"><i data-ico="cerrarX" data-ico-tam="22"></i></button>
     <div class="logo" data-ico="documento" data-ico-tam="22"></div>
     <div>
       <h1>Nuevo Pedido</h1>
@@ -102,13 +103,11 @@
       <div id="listaVistaPedidos"></div>
     </div>
 
-    <div id="resumenPedido" class="resumenPedido" aria-live="polite">
-      <span>Unidades: <strong id="totalUnidadesPedido">0</strong></span>
-      <span>Productos: <strong id="totalTiposPedido">0</strong></span>
-    </div>
-
-    <section class="card">
-      <label>Comercio</label>
+    <section class="card clientePedido">
+      <div class="clientePedidoCabecera">
+        <label for="cliente">Comercio</label>
+        <button id="reset" type="button" class="vaciarPedido">Vaciar</button>
+      </div>
       <input id="cliente" list="listaComercios" placeholder="Elegí un comercio">
       <datalist id="listaComercios"></datalist>
     </section>
@@ -121,9 +120,12 @@
     </section>
   </main>
 
-  <footer>
-    <button id="reset">Vaciar</button>
-    <button id="generar">Generar Pedido</button>
+  <footer class="piePedido">
+    <div class="piePedidoResumen" aria-live="polite">
+      <small><span id="totalTiposPedido">0</span> <span id="palabraTiposPedido">productos</span> · <span id="totalUnidadesPedido">0</span> unidades</small>
+      <strong id="totalPlataPedido">$ 0</strong>
+    </div>
+    <button id="generar" type="button">Guardar pedido</button>
   </footer>
 </section>
 

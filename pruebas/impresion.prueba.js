@@ -36,7 +36,8 @@ async function imprimirTicket(page, comercio, copias = "Dos copias") {
     if (!(await ficha.isVisible())) {
         await page.locator(".tarjetaSeguimiento", { hasText: comercio }).first().click();
     }
-    await ficha.getByRole("button", { name: "Imprimir ticket" }).click();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await ficha.getByRole("menuitem", { name: "Imprimir ticket" }).click();
     await page.locator("#modalCopiasTicket").getByRole("button", { name: new RegExp(copias) }).click();
     await expect(page.locator("#contenedorToasts")).toContainText("Ticket impreso");
     return textoImpreso(page);

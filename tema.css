@@ -250,8 +250,6 @@ html .toast{border-radius:999px;}
 /* ---------- Lo que se apoya arriba de la barra flotante ---------- */
 /* La barra ahora termina 80px arriba del borde (antes 64px). */
 
-html #pantallaPedido footer{bottom:calc(88px + env(safe-area-inset-bottom)) !important;background:transparent;border:0;box-shadow:none;}
-html.conCartelPersonal #pantallaPedido footer{bottom:calc(96px + var(--alto-cartel-personal) + env(safe-area-inset-bottom)) !important;}
 html .indicadorNube{bottom:calc(88px + env(safe-area-inset-bottom));}
 html .cartelModoPersonal{left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(88px + env(safe-area-inset-bottom));border-radius:16px;}
 html.conCartelPersonal .botonNuevoPedido{bottom:calc(108px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
@@ -569,3 +567,255 @@ html .filtroEtapa.activo,
 html .filtroEtapa.activo .filtroEtapaCantidad{color:var(--acento-txt) !important;}
 .kpiHoy{padding:10px 6px 9px;}
 .kpiHoy span{font-size:10.5px;}
+
+/* ---------- Cargar pedido (T34) ---------- */
+
+html.enCargaPedido body > nav.bottom-nav{display:none !important;}
+html.enCargaPedido body{padding-bottom:0;}
+html.enCargaPedido .indicadorNube{display:none;}
+html #pantallaPedido main.container{padding-bottom:calc(120px + env(safe-area-inset-bottom)) !important;}
+html #pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(170px + env(safe-area-inset-bottom)) !important;}
+html.conCartelPersonal.enCargaPedido .cartelModoPersonal{bottom:calc(96px + env(safe-area-inset-bottom));}
+
+.botonCerrarCarga,
+html .botonVolverPedidos{
+  width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;padding:0;
+  border:var(--borde-tarjeta);border-radius:50%;
+  background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);cursor:pointer;
+}
+.botonCerrarCarga.oculto,html .botonVolverPedidos.oculto{display:none;}
+html.enCargaPedido #pantallaPedido > header .logo{display:none;}
+html #pantallaPedido > header p{display:none;}
+
+html .clientePedido{display:grid;gap:8px;}
+.clientePedidoCabecera{display:flex;align-items:center;justify-content:space-between;}
+html .clientePedido label{font-size:13px;font-weight:700;color:var(--texto-sec);margin:0;}
+html #reset.vaciarPedido{flex:0 0 auto;width:auto;min-height:0;margin:0;box-shadow:none;border-radius:999px;border:0;background:transparent;color:var(--peligro);font-size:14px;font-weight:700;padding:6px 2px;cursor:pointer;}
+html #cliente{min-height:52px;font-size:16px;font-weight:600;}
+
+html .accionesBusquedaPedido{display:grid;gap:10px;margin:4px 0 12px;}
+html .buscadorPedido,
+html[data-tema] input.buscadorPedido{
+  min-height:52px;border-radius:999px !important;
+  padding-left:44px !important;
+  background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px !important;
+}
+html .botonRepetirPedido{
+  justify-self:start;display:inline-flex;align-items:center;gap:6px;
+  min-height:38px;padding:0 14px;border:0;border-radius:999px;
+  background:var(--acento-bg) !important;color:var(--acento-oscuro) !important;font-size:13.5px;font-weight:700;
+}
+html[data-tema="oscuro"] .botonRepetirPedido{color:var(--acento) !important;}
+
+.chipsMarcasPedido{
+  display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  margin:0 calc(-1 * max(16px, env(safe-area-inset-left))) 6px;
+  padding:2px max(16px, env(safe-area-inset-left)) 6px;
+}
+.chipsMarcasPedido::-webkit-scrollbar{display:none;}
+.chipsMarcasPedido.oculto{display:none;}
+.chipMarca{
+  display:inline-flex;align-items:center;gap:8px;flex-shrink:0;
+  min-height:40px;padding:0 16px;
+  border:1px solid var(--borde);border-radius:999px;
+  background:var(--superficie);color:var(--texto);
+  font-size:14.5px;font-weight:600;cursor:pointer;
+}
+.chipMarca small{font-size:13px;font-weight:700;color:var(--texto-ter);}
+.chipMarca.activo{background:var(--texto);border-color:var(--texto);color:var(--fondo);}
+html[data-tema="oscuro"] .chipMarca.activo{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
+.chipMarca.activo small{color:inherit;opacity:.7;}
+
+html #pantallaPedido .marca{
+  margin:0 0 14px;padding:0;border:0 !important;border-radius:0;
+  background:transparent !important;box-shadow:none !important;overflow:visible;
+}
+html #pantallaPedido .tituloMarca{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin:10px 6px 8px;padding:0;min-height:0;
+  background:transparent !important;color:var(--texto-sec) !important;border:0;border-radius:0;
+  font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;box-shadow:none;cursor:default;
+}
+html #pantallaPedido .tituloMarca span{color:var(--texto-sec);}
+.contadorMarca{font-size:13.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .contadorMarca{color:var(--acento);}
+html #pantallaPedido .listaProdutos{
+  padding:0;border:var(--borde-tarjeta);border-radius:var(--radius-lg);
+  background:var(--superficie);box-shadow:var(--sombra);overflow:hidden;
+}
+html #pantallaPedido .listaProdutos .fila{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:68px;margin:0;padding:10px 12px 10px 16px;
+  border:0;border-bottom:1px solid var(--borde);border-radius:0;background:transparent;
+}
+html #pantallaPedido .listaProdutos .fila:last-child{border-bottom:0;}
+.nombreProductoPedido{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:15.5px;font-weight:600;color:var(--texto);overflow-wrap:anywhere;}
+.nombreProductoPedido small{font-size:13.5px;font-weight:500;color:var(--texto-sec);}
+
+/* El "+" que se convierte en contador. */
+html #pantallaPedido .controlesCantidad{
+  display:flex;align-items:center;flex-shrink:0;gap:0;
+  height:46px;padding:0;border-radius:999px;
+  background:transparent;
+}
+html #pantallaPedido .controlesCantidad .botonCantidad{
+  width:44px;height:44px;min-height:0;min-width:0;padding:0;margin:0;
+  display:grid;place-items:center;
+  border:0;border-radius:50%;background:transparent;color:inherit;box-shadow:none;
+}
+html #pantallaPedido .controlesCantidad select{
+  width:34px;min-height:0;height:44px;padding:0 !important;margin:0;
+  border:0 !important;border-radius:0 !important;box-shadow:none !important;
+  background:transparent !important;color:inherit !important;
+  font-size:17px;font-weight:800;text-align:center;text-align-last:center;
+  -webkit-appearance:none;appearance:none;
+}
+html #pantallaPedido .controlesCantidad[data-cantidad="0"] .botonMenos,
+html #pantallaPedido .controlesCantidad[data-cantidad="0"] .botonBorrar,
+html #pantallaPedido .controlesCantidad[data-cantidad="0"] select{display:none;}
+html #pantallaPedido .controlesCantidad[data-cantidad="0"] .botonMas{
+  border:1px solid var(--borde-fuerte);color:var(--acento-oscuro);background:var(--superficie);
+}
+html[data-tema="oscuro"] #pantallaPedido .controlesCantidad[data-cantidad="0"] .botonMas{color:var(--acento);}
+html #pantallaPedido .controlesCantidad:not([data-cantidad="0"]){
+  background:var(--acento);color:var(--acento-txt);padding:0 2px;
+}
+html #pantallaPedido .controlesCantidad[data-cantidad="1"] .botonMenos{display:none;}
+html #pantallaPedido .controlesCantidad:not([data-cantidad="1"]) .botonBorrar{display:none;}
+
+/* Total fijo abajo. */
+html #pantallaPedido footer.piePedido{
+  position:fixed;left:0;right:0;bottom:0 !important;z-index:1200;
+  display:flex !important;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px max(16px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:var(--superficie) !important;border:0;border-top:1px solid var(--borde) !important;
+  box-shadow:0 -8px 24px -12px rgba(15,27,45,.18);
+}
+html #pantallaPedido[data-vista="pedidos"] footer.piePedido{display:none !important;}
+.piePedidoResumen{display:flex;flex-direction:column;min-width:0;}
+.piePedidoResumen small{font-size:13px;color:var(--texto-sec);white-space:nowrap;}
+.piePedidoResumen strong{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--texto);}
+html #pantallaPedido footer.piePedido #generar{
+  flex-shrink:0;min-height:52px;padding:0 24px;
+  border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);
+  font-size:16px;font-weight:800;box-shadow:var(--sombra-acento);
+}
+
+/* ---------- Ficha del pedido (T35) ---------- */
+
+html .fichaPedido{background:var(--fondo);padding:14px 16px 16px;}
+html .fichaPedido .modalBotones .btnModalSecundario{border-radius:999px;}
+.tarjetaFichaPedido{
+  display:grid;gap:4px;margin-bottom:12px;padding:16px;
+  border:var(--borde-tarjeta);border-radius:var(--radius-lg);
+  background:var(--superficie);box-shadow:var(--sombra);
+}
+.numeroFichaPedido{margin:0;font-size:13px;font-weight:700;color:var(--texto-ter);letter-spacing:.02em;}
+html .fichaPedido .tarjetaFichaPedido h2{margin:0;font-size:22px;font-weight:800;text-align:left;}
+.direccionFichaPedido{margin:0;font-size:14px;color:var(--texto-sec);}
+html .tarjetaFichaPedido .etiquetasFichaPedido{justify-content:flex-start;margin:6px 0 2px;}
+
+.lineaPasosPedido{
+  list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  margin:14px 0 2px;padding:0;
+}
+.pasoLinea{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0;}
+.pasoLinea::before{
+  content:"";position:absolute;top:7px;right:50%;width:100%;height:2px;background:var(--borde-fuerte);z-index:0;
+}
+.pasoLinea:first-child::before{display:none;}
+.pasoLinea[data-paso="hecho"]::before,.pasoLinea[data-paso="salteado"]::before,.pasoLinea[data-paso="actual"]::before{background:var(--acento);}
+.puntoPaso{
+  position:relative;z-index:1;width:16px;height:16px;border-radius:50%;
+  border:2px solid var(--borde-fuerte);background:var(--superficie);
+}
+.pasoLinea[data-paso="hecho"] .puntoPaso{border-color:var(--acento);background:var(--acento);}
+.pasoLinea[data-paso="salteado"] .puntoPaso{border-color:var(--acento);background:var(--superficie);border-style:dashed;}
+.pasoLinea[data-paso="actual"] .puntoPaso{border-color:var(--acento);background:var(--acento);box-shadow:0 0 0 4px var(--acento-bg);}
+.pasoLinea strong{font-size:11px;font-weight:700;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.pasoLinea[data-paso="actual"] strong{color:var(--texto);}
+.pasoLinea small{font-size:11px;color:var(--texto-ter);}
+
+html .datosFichaPedido{
+  padding:12px 16px;border:var(--borde-tarjeta);border-radius:var(--radius-lg);
+  background:var(--superficie);box-shadow:var(--sombra);gap:8px;
+}
+html .datoFichaPedido{font-size:14px;}
+html .seccionFichaPedido>h3{font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--texto-ter);}
+html .observacionesFichaPedido{
+  margin:0;padding:12px 14px;border-radius:16px;
+  background:var(--pendiente-bg);color:var(--texto);font-size:14.5px;
+}
+
+html .accionesFichaPedido{gap:10px;}
+html .accionesFichaPedido .pasoSiguientePedido{min-height:54px;font-size:16px;border-radius:999px;box-shadow:var(--sombra-acento);}
+html .pistaChecklist{text-align:center;font-size:13px;color:var(--texto-sec);}
+.botonMenuFicha{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:46px;border:var(--borde-tarjeta);border-radius:999px;
+  background:var(--superficie);color:var(--texto);font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:var(--sombra);
+}
+.botonMenuFicha[aria-expanded="true"]{background:var(--superficie-2);}
+.menuFichaPedido{
+  display:grid;overflow:hidden;
+  border:var(--borde-tarjeta);border-radius:var(--radius-lg);
+  background:var(--superficie);box-shadow:var(--sombra);
+}
+.menuFichaPedido.oculto{display:none;}
+html .menuFichaPedido .opcionMenuFicha{
+  display:flex;align-items:center;justify-content:flex-start !important;gap:12px;
+  width:100%;min-height:54px;margin:0;padding:0 18px;
+  border:0;border-bottom:1px solid var(--borde);border-radius:0;
+  background:transparent !important;color:var(--texto) !important;
+  font-size:15.5px;font-weight:600;text-align:left;box-shadow:none;
+}
+html .menuFichaPedido .opcionMenuFicha:last-child{border-bottom:0;}
+html .menuFichaPedido .marcarIncidencia{color:var(--pendiente) !important;}
+html .menuFichaPedido .peligroPedido{color:var(--peligro) !important;}
+html .menuFichaPedido .opcionMenuFicha:active{background:var(--superficie-2) !important;}
+
+/* ---------- Pedidos con Historial (T33) ---------- */
+
+html .segmentoPeriodo{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  padding:4px;border-radius:999px;
+  background:var(--superficie-2);
+}
+html .segmentoPeriodo button{
+  border:0;border-radius:999px;padding:8px 4px;
+  background:transparent;color:var(--texto-sec);
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+}
+html .segmentoPeriodo button.activo{
+  background:var(--superficie);color:var(--texto);
+  box-shadow:0 1px 3px rgba(0,0,0,.12);
+}
+html[data-tema="oscuro"] .segmentoPeriodo button.activo{background:var(--acento);color:var(--acento-txt);}
+html .filtrosHistorial{display:flex;flex-direction:column;gap:10px;}
+html .filtrosHistorial input[type="search"]{border-radius:999px;}
+
+html .tarjetaSeguimiento{
+  align-items:center;gap:12px;
+  padding:14px;margin-bottom:10px;
+  border-radius:var(--radius-md) !important;
+}
+html .tarjetaSeguimiento .avatar{width:44px;height:44px;border-radius:14px;font-weight:700;}
+html .filaSeguimientoArriba{align-items:center;}
+html .filaSeguimientoArriba h3{font-size:15px;font-weight:700;}
+html .infoSeguimiento .subtitulo{color:var(--texto-sec);}
+html .infoSeguimiento .autorSeguimiento{color:var(--texto-ter);font-size:11.5px;}
+html .infoSeguimiento .badge{margin-top:6px;margin-right:4px;border-radius:999px;font-size:11.5px;}
+html .seguimientoVacio{text-align:center;padding:28px 18px;}
+html .seguimientoVacio h3{font-size:16px;margin-bottom:4px;}
+html .seguimientoVacio p{color:var(--texto-sec);}
+html .verMasSeguimiento{width:100%;border-radius:999px;}
+@keyframes tarjetaCambio{
+  0%,70%{box-shadow:0 0 0 2px var(--acento),var(--sombra);}
+  100%{box-shadow:var(--sombra);}
+}
+html .tarjetaSeguimiento.filaCambio{animation:tarjetaCambio 2.4s ease-out;}
+
+/* Mientras se carga un pedido, el cartel del modo personal no tapa el pie. */
+html.enCargaPedido .cartelModoPersonal{display:none !important;}
+html .clientePedidoCabecera label{margin:0;}

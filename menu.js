@@ -591,6 +591,22 @@ function abrirNuevoPedido() {
 }
 window.abrirNuevoPedido = abrirNuevoPedido;
 
+// Mientras se carga un pedido (T34) no se ve la barra de abajo: el total y
+// "Guardar pedido" quedan fijos abajo. En el modo personal, la "X" de arriba
+// vuelve a Inicio (en la nube, la flecha vuelve a la lista de Pedidos).
+function actualizarModoCargaPedido() {
+    const pedido = pantallas.pedido;
+    if (!pedido) return;
+    const cargando = !pedido.classList.contains("oculto") && pedido.dataset.vista !== "pedidos";
+    document.documentElement.classList.toggle("enCargaPedido", cargando);
+    document.getElementById("cerrarCargaPedido")?.classList.toggle("oculto", !cargando || usaNubeReal());
+}
+if (pantallas.pedido) {
+    new MutationObserver(actualizarModoCargaPedido)
+        .observe(pantallas.pedido, { attributes: true, attributeFilter: ["class", "data-vista"] });
+}
+document.getElementById("cerrarCargaPedido")?.addEventListener("click", () => mostrarPantalla("menu"));
+
 document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", event => {
         event.preventDefault();

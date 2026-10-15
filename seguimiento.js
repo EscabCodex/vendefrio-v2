@@ -537,12 +537,6 @@
 
     const fechaHistorial = document.createElement("select");
     fechaHistorial.setAttribute("aria-label", "Filtrar historial por fecha");
-    [["todos", "Todos los pedidos"], ["hoy", "Solo los de hoy"], ["semana", "Esta semana"]].forEach(([valor, texto]) => {
-        const opcion = document.createElement("option");
-        opcion.value = valor;
-        opcion.textContent = texto;
-        fechaHistorial.appendChild(opcion);
-    });
 
     const avisoFiltroHistorial = crear("div", "filtroHistorialActivo oculto");
     const textoAvisoHistorial = crear("span", "");
@@ -552,6 +546,8 @@
 
     barraHistorial.append(buscadorHistorial, fechaHistorial, avisoFiltroHistorial);
     filtros.after(barraHistorial);
+    // Hoy / Semana / Mes / Todo (T33), del mismo modo que en el modo personal.
+    const segmentoHistorial = typeof crearSegmentoPeriodo === "function" ? crearSegmentoPeriodo(fechaHistorial) : null;
 
     buscadorHistorial.addEventListener("input", () => {
         busquedaHistorial = buscadorHistorial.value;
@@ -579,6 +575,7 @@
 
         if (buscadorHistorial.value !== busquedaHistorial) buscadorHistorial.value = busquedaHistorial;
         fechaHistorial.value = periodoHistorial;
+        if (segmentoHistorial) sincronizarSegmentoPeriodo(segmentoHistorial, periodoHistorial);
 
         const aviso = idPedidoHistorial
             ? "Mostrando solamente el pedido seleccionado"
@@ -604,6 +601,27 @@
             boton.append(crear("span", "filtroEtapaNombre", etapa.nombre), crear("span", "filtroEtapaCantidad", String(cantidad)));
             filtros.appendChild(boton);
         });
+    }
+
+    // En vivo (T33): la tarjeta que cambió de estado (o que llegó nueva)
+    // desde el último dibujo se ilumina un momento.
+    const estadosVistos = new Map();
+    let listaDibujadaUnaVez = false;
+
+    function huellaDelRegistro(registro) {
+        const pedido = registro.pedido;
+        return [registro.estado, tieneIncidencia(pedido) ? "i" : "", cobroDe(pedido) ? "c" : ""].join("|");
+    }
+
+    function recordarEstados(registros) {
+        registros.forEach(registro => estadosVistos.set(String(registro.pedido.id || ""), huellaDelRegistro(registro)));
+        listaDibujadaUnaVez = true;
+    }
+
+    function cambioDesdeLaUltimaVez(registro) {
+        if (!listaDibujadaUnaVez) return false;
+        const visto = estadosVistos.get(String(registro.pedido.id || ""));
+        return visto !== huellaDelRegistro(registro);
     }
 
     function crearTarjeta(registro) {
@@ -668,6 +686,7 @@
         if (sinSubir(pedido)) info.append(etiquetaSinSubir());
 
         tarjeta.append(avatar, info);
+        if (cambioDesdeLaUltimaVez(registro)) tarjeta.classList.add("filaCambio");
 
         // Elegir varios (T29c): la tarjeta se marca en vez de abrir la ficha.
         if (eligiendo) {
@@ -703,6 +722,9 @@
             .sort((a, b) => horaParaOrdenar(b.pedido) - horaParaOrdenar(a.pedido));
 
         dibujarFiltros(registros, historial);
+        // Los que no se ven en esta etapa igual se recuerdan, para que no se
+        // iluminen todos al cambiar de pestaña.
+        if (!listaDibujadaUnaVez || deLaEtapa.length === 0) recordarEstados(registros.concat(historial));
         dibujarBarraHistorial(enHistorial);
         dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
@@ -740,6 +762,7 @@
         }
 
         deLaEtapa.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
+        recordarEstados(registros.concat(historial));
 
         if (deLaEtapa.length > mostrando) {
             const verMas = crear("button", "btnAccion secundario verMasSeguimiento", "Ver más (" + (deLaEtapa.length - mostrando) + ")");
@@ -1317,6 +1340,34 @@
 
     let redibujoPendiente = 0;
 
+    // Línea de pasos de la ficha (T35): cada paso con la hora en que pasó.
+    const PASOS_LINEA = [
+        { estados: ["cargado"], nombre: "Cargado" },
+        { estados: ["enPreparacion"], nombre: "Armando" },
+        { estados: ["preparado"], nombre: "Preparado" },
+        { estados: ["enVehiculo", "enReparto"], nombre: "En reparto" },
+        { estados: ["entregado"], nombre: "Entregado" }
+    ];
+
+    function dibujarLineaPasos(pedido, estado) {
+        const linea = crear("ol", "lineaPasosPedido");
+        linea.setAttribute("aria-label", "Pasos del pedido");
+        const entradas = Object.values(pedido.estados || {}).filter(entrada => entrada && typeof entrada === "object");
+        const actual = PASOS_LINEA.findIndex(paso => paso.estados.includes(estado));
+
+        PASOS_LINEA.forEach((paso, indice) => {
+            const hora = entradas
+                .filter(entrada => paso.estados.includes(entrada.estado))
+                .reduce((mayor, entrada) => Math.max(mayor, Number(entrada.horaCelular) || 0), 0);
+            const item = crear("li", "pasoLinea");
+            if (actual >= 0 && indice < actual) item.dataset.paso = hora ? "hecho" : "salteado";
+            if (indice === actual) item.dataset.paso = "actual";
+            item.append(crear("span", "puntoPaso"), crear("strong", "", paso.nombre), crear("small", "", hora && indice <= actual ? textoHora(hora) : "—"));
+            linea.appendChild(item);
+        });
+        return linea;
+    }
+
     function dibujarFicha() {
         const cuerpo = document.getElementById("cuerpoFichaPedido");
         if (!cuerpo || !idFichaAbierta) return;
@@ -1413,7 +1464,16 @@
             datos.appendChild(fila);
         }
 
-        cuerpo.append(titulo, etiquetas);
+        // Encabezado (T35): número, comercio con su estado y la línea de pasos.
+        const numero = crear("p", "numeroFichaPedido", "Pedido N° " + numeroCortoDelPedido(pedido));
+        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(String(pedido.comercio || "")) : null;
+        const direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
+        const tarjeta = crear("div", "tarjetaFichaPedido");
+        tarjeta.append(numero, titulo);
+        if (direccion) tarjeta.appendChild(direccion);
+        tarjeta.appendChild(etiquetas);
+        if (estado !== "cancelado") tarjeta.appendChild(dibujarLineaPasos(pedido, estado));
+        cuerpo.append(tarjeta);
 
         const incidencia = dibujarIncidencias(pedido);
         if (incidencia) cuerpo.appendChild(incidencia);
@@ -1713,6 +1773,35 @@
         if (cancelar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Cancelar pedido", "cancelar"));
         if (eliminar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
         if (peligro.children.length) acciones.appendChild(peligro);
+
+        // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
+        // entrega). Lo demás va en "Más opciones" (⋯).
+        const opciones = Array.from(acciones.querySelectorAll(
+            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .accionesSecundariasPedido .btnAccion"
+        ));
+        if (opciones.length) {
+            const menu = crear("div", "menuFichaPedido oculto");
+            menu.id = "menuFichaPedido";
+            menu.setAttribute("role", "menu");
+            opciones.forEach(boton => {
+                boton.classList.add("opcionMenuFicha");
+                boton.setAttribute("role", "menuitem");
+                menu.appendChild(boton);
+            });
+            acciones.querySelectorAll(".accionesSecundariasPedido").forEach(caja => { if (!caja.children.length) caja.remove(); });
+
+            const abrir = crear("button", "botonMenuFicha");
+            abrir.type = "button";
+            abrir.setAttribute("aria-label", "Más opciones");
+            abrir.setAttribute("aria-expanded", "false");
+            abrir.setAttribute("aria-controls", "menuFichaPedido");
+            abrir.innerHTML = (window.icono ? window.icono("puntos", 20) : "⋯") + "<span>Más opciones</span>";
+            abrir.addEventListener("click", () => {
+                const abierto = menu.classList.toggle("oculto") === false;
+                abrir.setAttribute("aria-expanded", String(abierto));
+            });
+            acciones.append(abrir, menu);
+        }
 
         return acciones;
     }
@@ -3667,7 +3756,7 @@
             idPedidoHistorial = String(idPedido || "");
             // Como antes: el buscador muestra el comercio elegido.
             busquedaHistorial = comercioHistorial;
-            periodoHistorial = ["hoy", "semana"].includes(periodo) ? periodo : "todos";
+            periodoHistorial = ["hoy", "semana", "mes"].includes(periodo) ? periodo : "todos";
             if (idFichaAbierta) cerrarFicha();
 
             if (pantalla.classList.contains("oculto")) {
