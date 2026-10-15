@@ -1,4 +1,4 @@
-// VendeFrío - Pedidos por WhatsApp (T53 a T57), con los emuladores de
+// VendeFrío - Pedidos por WhatsApp (T55 a T59), con los emuladores de
 // Firebase. Nunca se manda un mensaje de verdad: WhatsApp (Meta) y el
 // servicio de audio a texto se reemplazan por unos falsos, y las funciones de
 // Vercel (api/whatsapp*.js) corren acá mismo.
@@ -136,7 +136,7 @@ test("whatsapp: ronda de pedidos uno por uno y compartir a VendeFrío", async ({
     // la app con ?compartido=1 (acá se deja a mano, sin service worker).
     await page.evaluate(async () => {
         const cache = await caches.open("vendefrio-compartido");
-        await cache.put("./compartido/datos", new Response(JSON.stringify({ texto: "Hola! Para Almacén Don Pepe: 2 helados de 1 kg y 3 palitos bombón, gracias", audio: { tipo: "audio/ogg" } })));
+        await cache.put("./compartido/datos", new Response(JSON.stringify({ texto: "Almacén Don Pepe: 2 helados de 1 kg, 3 palitos bombón", audio: { tipo: "audio/ogg" } })));
         await cache.put("./compartido/audio", new Response(new Uint8Array([79, 103, 103, 83, 0, 2]), { headers: { "Content-Type": "audio/ogg" } }));
     });
     await page.goto("/?compartido=1");
@@ -200,7 +200,8 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
     });
     await page.getByRole("button", { name: "Revisar la conexión" }).click();
     await expect(page.locator(".waEstado li.ok")).toHaveCount(3);
-    await page.locator("#waTituloAutomatico").scrollIntoViewIfNeeded();
+    // El título queda debajo de la flecha y la casita, que se quedan arriba.
+    await page.evaluate(() => window.scrollBy(0, document.getElementById("waTituloAutomatico").getBoundingClientRect().top - 110));
     await capturar(page, "whatsapp-04-automatico");
 
     // La ronda automática: a los que tienen teléfono, con su nombre.
@@ -272,13 +273,23 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
     expect(marcado.estado).toBe("cargado");
     expect(marcado.atendido.nombre).toBe("Jere");
 
-    // El que no se entendió se carga a mano: abre "Nuevo pedido" para revisar.
+    // El que no se entendió: «Entender con IA» (la de «Voz con IA», acá una
+    // falsa) y después se carga a mano, revisándolo en "Nuevo pedido".
+    await page.evaluate(() => {
+        window.vozVendeFrio.leerPedidoConIA = async texto => ({
+            comercio: obtenerComercios().find(comercio => comercio.nombre === "Super Norte"),
+            productos: texto.includes("alfajores") ? [{ marca: "Frío Sur", producto: "Palito bombón", cantidad: 2 }] : [],
+            sinEntender: []
+        });
+        window.whatsappVendeFrio.abrir();
+    });
+    await carla.getByRole("button", { name: "Entender con IA" }).click();
+    await expect(carla.locator(".waEtiqueta")).toHaveText("Se entendió todo");
+    await expect(carla.locator(".waProductos")).toContainText("2 × Palito bombón");
     await carla.getByRole("button", { name: "Cargar pedido" }).click();
     await expect(page.locator("#obs")).toHaveValue("WhatsApp: «Hola, quiero 2 cajas de alfajores»");
-    await expect(page.locator("#cliente")).toHaveValue("");
-    await page.locator("#cliente").fill("Super Norte");
-    await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
-    await page.locator(".listaProdutos .fila", { hasText: "Palito bombón" }).getByRole("button", { name: "Aumentar cantidad" }).click();
+    await expect(page.locator("#cliente")).toHaveValue("Super Norte");
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("2");
     await page.locator("#generar").click();
     await expect(page.locator("#modalPedido")).toBeVisible();
     await expect.poll(async () => (await nube.doc(`distribuidoras/${idDistribuidora}/whatsapp/wamid_nuevo`).get()).data().estado).toBe("cargado");

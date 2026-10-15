@@ -42,6 +42,8 @@ Plan detallado en el Bloque I de `PROJECT_STATE.md` (T40 a T44).
 
 Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
 
+**Pedidos por WhatsApp** (pedido del dueño, 2026-10-15). Mandar a muchos comercios "¿tenías pedido?" con su nombre y que las respuestas, en texto o audio, queden como pedido. Lo gratis anda sin cuentas (un toque por comercio y "Compartir a VendeFrío"); lo automático usa la API oficial de WhatsApp de Meta, que cobra por mensaje, y queda apagado hasta que el dueño conecte la cuenta (M16). Plan en el Bloque K de `PROJECT_STATE.md` (T55 a T59).
+
 ## Después de la 1.0
 
 1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.

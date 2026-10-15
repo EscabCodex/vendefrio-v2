@@ -1,18 +1,18 @@
 // =====================================================
 // VendeFrío - whatsapp.js
-// Pedidos por WhatsApp (T53 a T57), en Más > WhatsApp:
-// - Ronda de pedidos (T53): un mensaje con el nombre de cada comercio
+// Pedidos por WhatsApp (T55 a T59), en Más > WhatsApp:
+// - Ronda de pedidos (T55): un mensaje con el nombre de cada comercio
 //   ("Hola {nombre}, ¿tenías pedido?"). Sin cuentas, la app abre WhatsApp
 //   con el texto listo, uno por uno, y vos tocás "Enviar". Con WhatsApp
 //   automático prendido, el dueño lo manda a todos con un toque.
-// - Compartir a VendeFrío (T54): un mensaje o un audio compartido desde
+// - Compartir a VendeFrío (T56): un mensaje o un audio compartido desde
 //   WhatsApp abre "Dictar o pegar pedido" con lo que se entendió.
-// - Mensajes para revisar (T55): con WhatsApp automático, las respuestas de
+// - Mensajes para revisar (T57): con WhatsApp automático, las respuestas de
 //   los comercios llegan solas (api/whatsapp.js) y la app arma el pedido de
 //   cada una: se carga con un toque, o todos los que se entendieron juntos.
-// - WhatsApp automático (T56) y audios a texto (T57): ajustes del dueño,
+// - WhatsApp automático (T58) y audios a texto (T59): ajustes del dueño,
 //   apagados hasta que se conecte la cuenta de Meta (M16) y la clave de
-//   audio a texto (M17) en Vercel.
+//   audio a texto (M14) en Vercel.
 // =====================================================
 
 (function () {
@@ -22,6 +22,11 @@
     const LARGO_MAXIMO_OBS = 240;
     // Palabras de cortesía que no son productos ("sí, dale, mandame…").
     const CORTESIA = /\b(si|dale|bueno|buenisimo|ok|okey|joya|genial|perfecto|como estas|todo bien|un abrazo|abrazo|saludos|muchas|muchisimas|gracias|pasame|pasa|traeme|trae|por favor|porfa|esta semana|para el martes|el martes|te pido|quiero|necesito)\b/g;
+
+    const CANTIDAD = /\d|\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|docena|media)\b/;
+
+    // Lo que entendió la IA de un mensaje (T54, «Voz con IA»): id → { texto, lectura }.
+    const lecturasIA = new Map();
 
     let elegidos = new Set();
     let ronda = null;
@@ -182,13 +187,19 @@
     function leerMensaje(mensaje) {
         const lector = window.vozVendeFrio?.leerPedido;
         const texto = normalizar(mensaje && mensaje.texto).replace(CORTESIA, " ");
-        const lectura = lector && texto.trim() ? lector(texto) : { comercio: null, productos: [], sinEntender: [] };
+        const deIA = mensaje && lecturasIA.get(mensaje.id);
+        const lectura = deIA && deIA.texto === mensaje.texto
+            ? deIA.lectura
+            : lector && texto.trim() ? lector(texto) : { comercio: null, productos: [], sinEntender: [] };
         const comercio = comercioDelMensaje(mensaje || {}, lectura);
+        // Lo que no se entendió y tiene una cantidad parece un producto
+        // ("2 cajas de alfajores"); lo demás es charla ("soy del kiosco").
+        const dudosos = (lectura.sinEntender || []).filter(tramo => CANTIDAD.test(tramo));
         return {
             comercio,
             productos: lectura.productos || [],
-            sinEntender: lectura.sinEntender || [],
-            completo: Boolean(comercio && lectura.productos.length && !lectura.sinEntender.length)
+            sinEntender: dudosos,
+            completo: Boolean(comercio && lectura.productos.length && !dudosos.length)
         };
     }
 
@@ -215,6 +226,24 @@
             observaciones.dispatchEvent(new Event("input", { bubbles: true }));
         }
         return true;
+    }
+
+    // «Entender con IA» (T54): la misma IA de «Voz con IA» lee el mensaje.
+    async function entenderConIA(id, boton) {
+        const mensaje = mensajes.find(item => item.id === id);
+        const leer = window.vozVendeFrio?.leerPedidoConIA;
+        if (!mensaje || !leer) return;
+        boton.disabled = true;
+        boton.lastChild.textContent = " Pensando…";
+        let lectura = null;
+        try {
+            lectura = await leer(String(mensaje.texto || ""));
+        } catch (error) {
+            console.warn("La IA no pudo leer el mensaje.", error);
+        }
+        if (lectura) lecturasIA.set(id, { texto: mensaje.texto, lectura });
+        else if (typeof mostrarToast === "function") mostrarToast("La IA no respondió. Revisá que «Voz con IA» esté prendida en Más > Trabajo.", "error");
+        redibujar();
     }
 
     async function marcarMensaje(id, estado) {
@@ -448,6 +477,8 @@
                 redibujar();
             } else if (accion === "cargar") {
                 cargarUno(boton.dataset.id);
+            } else if (accion === "ia") {
+                entenderConIA(boton.dataset.id, boton);
             } else if (accion === "descartar") {
                 marcarMensaje(boton.dataset.id, "descartado");
             } else if (accion === "cargarEntendidos") {
@@ -591,7 +622,7 @@
             if (mensaje.tipo === "audio" && !mensaje.texto) {
                 const motivos = {
                     apagado: "Prendé «Pasar audios a texto» para que se lea solo. Mientras, escuchalo en WhatsApp.",
-                    sinClave: "Falta la clave de audio a texto en Vercel (M17). Escuchalo en WhatsApp.",
+                    sinClave: "Falta la clave de audio a texto en Vercel (M14). Escuchalo en WhatsApp.",
                     error: "No se pudo pasar a texto. Escuchalo en WhatsApp."
                 };
                 cuerpo = `<p class="waTextoMensaje">${ico("microfono", 15)} Audio. ${escapar(motivos[mensaje.sinTexto] || motivos.error)}</p>`;
@@ -608,10 +639,13 @@
             const etiqueta = lectura.completo
                 ? `<span class="waEtiqueta entendido">Se entendió todo</span>`
                 : `<span class="waEtiqueta revisar">Para revisar</span>`;
+            const conIA = !lectura.completo && mensaje.texto && window.vozVendeFrio?.leerPedidoConIA && !lecturasIA.has(mensaje.id)
+                ? `<button type="button" class="waBotonSecundario waBotonIA" data-wa="ia" data-id="${escapar(mensaje.id)}">${ico("chispa", 16)}<span> Entender con IA</span></button>`
+                : "";
             return `
                 <article class="waMensaje" data-id="${escapar(mensaje.id)}">
-                    <header><strong>${escapar(quien)}</strong><small>${escapar(horaCorta(mensaje.hora))}</small>${etiqueta}</header>
-                    ${cuerpo}${productos}${faltan}${sinComercio}
+                    <header><strong>${escapar(quien)}</strong><small>${lectura.comercio && mensaje.nombrePerfil && !mensaje.idComercio ? escapar(mensaje.nombrePerfil) + " · " : ""}${escapar(horaCorta(mensaje.hora))}</small>${etiqueta}</header>
+                    ${cuerpo}${productos}${faltan}${sinComercio}${conIA}
                     <div class="waBotonesMensaje">
                         <button type="button" class="waBotonSecundario" data-wa="descartar" data-id="${escapar(mensaje.id)}">Descartar</button>
                         <button type="button" class="waBotonPrincipal" data-wa="cargar" data-id="${escapar(mensaje.id)}">${ico("notaLapiz", 16)} Cargar pedido</button>
@@ -662,12 +696,13 @@
                     <input type="checkbox" class="ajLlave" id="waLlaveActivo" role="switch" aria-label="Usar WhatsApp automático" ${config.activo ? "checked" : ""}>
                 </label>
                 <label class="waFilaLlave">
-                    <span><strong>Pasar audios a texto</strong><small>Servicio pago, menos de 1 centavo de dólar por minuto (M17).</small></span>
+                    <span><strong>Pasar audios a texto</strong><small>Servicio pago, menos de 1 centavo de dólar por minuto (M14).</small></span>
                     <input type="checkbox" class="ajLlave" id="waLlaveAudios" role="switch" aria-label="Pasar audios a texto" ${config.audios ? "checked" : ""}>
                 </label>
                 <label class="waCampo" for="waPlantilla">Nombre de la plantilla en Meta</label>
                 <input type="text" id="waPlantilla" value="${escapar(config.plantilla)}" maxlength="80" autocomplete="off" autocapitalize="off">
-                <p class="waAyuda">Código de la distribuidora (para Vercel): <code>${escapar(idDistribuidora())}</code> <button type="button" class="waEnlace" data-wa="copiarCodigo">Copiar</button></p>
+                <p class="waAyuda">Código de la distribuidora (para Vercel):</p>
+                <p class="waCodigo"><code>${escapar(idDistribuidora())}</code><button type="button" class="waEnlace" data-wa="copiarCodigo">Copiar</button></p>
                 <button type="button" class="waBotonSecundario" data-wa="revisarConexion">${ico("refrescar", 16)} Revisar la conexión</button>
                 ${estado}
             </section>`;
@@ -725,7 +760,7 @@
     }
 
     // -------------------------------------------------
-    // Compartir a VendeFrío (T54)
+    // Compartir a VendeFrío (T56)
     // -------------------------------------------------
 
     function blobABase64(blob) {
@@ -783,7 +818,7 @@
         } catch (error) {
             const textos = {
                 muyLargo: "El audio es muy largo para pasarlo a texto. Escuchalo y dictalo.",
-                sinClave: "Falta la clave de audio a texto (M17). Escuchalo y dictalo.",
+                sinClave: "Falta la clave de audio a texto (M14). Escuchalo y dictalo.",
                 apagado: "«Pasar audios a texto» está apagado. Escuchalo y dictalo."
             };
             estado.textContent = textos[error.codigo] || "No se pudo pasar a texto. Escuchalo y dictalo.";

@@ -1,4 +1,4 @@
-// VendeFrío - Lo que comparten las funciones de WhatsApp (T56, T57).
+// VendeFrío - Lo que comparten las funciones de WhatsApp (T58, T59).
 // Vercel no publica como función los archivos de "api" que empiezan con "_".
 //
 // Variables de entorno (se cargan en Vercel, nunca en el repo; tarea M16):
@@ -7,7 +7,7 @@
 //   WHATSAPP_SECRETO_APP         el "App secret" de la app de Meta (firma los avisos)
 //   WHATSAPP_TOKEN_VERIFICACION  una palabra que elige el dueño, para conectar el webhook
 //   WHATSAPP_DISTRIBUIDORA       el código de la distribuidora (se ve en Más > WhatsApp)
-//   AUDIO_A_TEXTO_CLAVE          clave del servicio de audio a texto (opcional, M17)
+//   AUDIO_A_TEXTO_CLAVE          clave del servicio de audio a texto (opcional, M14)
 //   FIREBASE_CUENTA_DE_SERVICIO  la misma de las notificaciones (M8)
 const { initializeApp, getApps, cert } = require("firebase-admin/app");
 

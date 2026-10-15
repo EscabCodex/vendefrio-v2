@@ -1794,7 +1794,7 @@ html,body{overflow-x:clip !important;}
 html .inicioVolver{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--texto-sec);font-weight:700;}
 .statsFilaTexto > .statsChips{justify-content:flex-start;}
 
-/* ===== Pedidos por WhatsApp (T53 a T57) ===== */
+/* ===== Pedidos por WhatsApp (T55 a T59) ===== */
 [data-color="whatsapp"]{background:var(--visitado-bg) !important;color:var(--visitado) !important;}
 .pantallaWhatsapp .container{display:grid;gap:14px;padding-bottom:110px;}
 .waTarjeta{display:grid;gap:10px;min-width:0;padding:16px;border:var(--borde-tarjeta);border-radius:var(--radius-lg);background:var(--superficie);box-shadow:var(--sombra);}
@@ -1880,3 +1880,10 @@ html[data-tema="oscuro"] .waFilaRonda a{color:var(--acento);}
 .waAudioCompartido{display:grid;gap:6px;margin:4px 0 8px;}
 .waAudioCompartido audio{width:100%;}
 .waConfirmar{z-index:1200;}
+html .pantallaWhatsapp .waMensaje > header{position:static;display:flex;margin:0;padding:0;min-height:0;border:0;border-radius:0;background:none;box-shadow:none;}
+html .pantallaWhatsapp .waProductos li{margin:0;padding:0;border:0;background:none;}
+html .pantallaWhatsapp label.waComercio{margin:0;padding:8px 14px;}
+html .pantallaWhatsapp label.waFilaLlave{margin:0;}
+.waCodigo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 0;}
+.waCodigo code{flex:1;min-width:0;}
+.waBotonIA{min-height:44px;font-size:14px;}

@@ -1,4 +1,4 @@
-// VendeFrío - Función de Vercel: "Ronda de pedidos" automática (T56)
+// VendeFrío - Función de Vercel: "Ronda de pedidos" automática (T58)
 //
 // La app la llama desde Más > WhatsApp, solo el dueño:
 //   POST /api/whatsapp-enviar

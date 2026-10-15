@@ -1,4 +1,4 @@
-// VendeFrío - Función de Vercel: audio compartido a texto (T57)
+// VendeFrío - Función de Vercel: audio compartido a texto (T59)
 //
 // Cuando alguien comparte un audio de WhatsApp a VendeFrío, la app lo manda
 // acá para pasarlo a texto:

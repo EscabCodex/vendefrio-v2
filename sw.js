@@ -64,7 +64,7 @@ const ARCHIVOS = [
 // Mapas ya vistos (T40): cache aparte, que no se borra al actualizar la app.
 // Se guardan como mucho MAXIMO_MAPAS cuadraditos; los más viejos se van.
 const CACHE_MAPAS = "vendefrio-mapas-v1";
-// Lo compartido desde WhatsApp (T54): se guarda un momento hasta que la app
+// Lo compartido desde WhatsApp (T56): se guarda un momento hasta que la app
 // lo lee, y no se borra al actualizar la app.
 const CACHE_COMPARTIDO = "vendefrio-compartido";
 const MAXIMO_MAPAS = 600;
@@ -140,7 +140,7 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// "Compartir a VendeFrío" (T54): Android manda acá el texto o el audio que
+// "Compartir a VendeFrío" (T56): Android manda acá el texto o el audio que
 // se compartió desde WhatsApp (ver "share_target" en manifest.json). Se guarda
 // en un cache aparte y se abre la app, que lo lee y arma el pedido.
 function esCompartido(request) {

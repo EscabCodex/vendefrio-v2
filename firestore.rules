@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T56)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -51,7 +51,7 @@ rules_version = '2';
 //                                   notificaciones con la app cerrada (T29)
 //     preferenciasNotificaciones/{idPersona}   qué avisos le suenan a cada
 //                                   persona con la app cerrada (T29)
-//     whatsapp/{idMensaje}          mensajes que llegaron por WhatsApp (T56):
+//     whatsapp/{idMensaje}          mensajes que llegaron por WhatsApp (T58):
 //                                   los guarda solo la función de Vercel
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
@@ -912,7 +912,7 @@ service cloud.firestore {
       // guardaba solo la lista y borraría los permisos) no puede escribirla.
       // config/equipo (T29d): la llave "Todos pueden hacer todo"
       // ({ todosPuedenTodo }), solo el dueño. No se borra.
-      // config/whatsapp (T56): WhatsApp automático y audios a texto, solo el
+      // config/whatsapp (T58): WhatsApp automático y audios a texto, solo el
       // dueño.
       match /config/{id} {
         allow read: if esMiembro(idDistribuidora);
@@ -1061,7 +1061,7 @@ service cloud.firestore {
           && (resource.data.uid == request.auth.uid || esDueno(idDistribuidora));
       }
 
-      // Mensajes de WhatsApp (T56). Los crea solo la función de Vercel
+      // Mensajes de WhatsApp (T58). Los crea solo la función de Vercel
       // (api/whatsapp.js, con la cuenta de servicio, que no pasa por estas
       // reglas). Cualquiera del equipo los lee y los marca "cargado" (se armó
       // el pedido) o "descartado", con quién y cuándo en "atendido". No se

@@ -1,4 +1,4 @@
-// VendeFrío - Función de Vercel: mensajes que llegan por WhatsApp (T56, T57)
+// VendeFrío - Función de Vercel: mensajes que llegan por WhatsApp (T58, T59)
 //
 // Es el "webhook" (la dirección a la que Meta avisa cada mensaje nuevo):
 //   GET  /api/whatsapp   Meta lo llama una vez al conectarlo, con la palabra
@@ -24,8 +24,17 @@ const NOMBRE_APP = "whatsapp";
 const LARGO_MAXIMO_TEXTO = 2000;
 const LARGO_MAXIMO_CUERPO = 1024 * 1024;
 
+// Si Vercel ya leyó el mensaje como JSON, se rearma como lo escribe Meta
+// (acentos como \uXXXX y "/" como "\/") para poder revisar la firma.
+function comoLoEscribeMeta(objeto) {
+    return Buffer.from(JSON.stringify(objeto)
+        .replace(/\//g, "\\/")
+        .replace(/[\u007f-\uffff]/g, letra => "\\u" + letra.charCodeAt(0).toString(16).padStart(4, "0")), "utf8");
+}
+
 async function leerCrudo(request) {
     if (Buffer.isBuffer(request.body)) return request.body;
+    if (request.body && typeof request.body === "object") return comoLoEscribeMeta(request.body);
     if (typeof request.body === "string") return Buffer.from(request.body, "utf8");
     const partes = [];
     let largo = 0;
