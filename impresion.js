@@ -386,7 +386,10 @@
         const hora = Number(pedido.timestamp) || 0;
 
         agregar(CENTRO);
+        // El nombre del comercio va arriba de todo, en negrita y del tamaño
+        // normal (pedido por el dueño).
         agregar(NEGRITA);
+        partir(String(pedido.comercio || "SIN NOMBRE").trim(), ANCHO).forEach(linea);
         agregar(DOBLE_ALTO);
         partir(distribuidora, ANCHO).forEach(linea);
         agregar(TAMANO_NORMAL);
@@ -406,7 +409,6 @@
         agregar(NEGRITA);
         linea("Pedido N° " + numero);
         agregar(SIN_NEGRITA);
-        partir("Comercio: " + String(pedido.comercio || "SIN NOMBRE").trim(), ANCHO).forEach(linea);
         // Dirección y teléfono del comercio, solo si están cargados.
         if (datos.direccion) partir("Dirección: " + datos.direccion, ANCHO).forEach(linea);
         if (datos.telefono) partir("Teléfono: " + datos.telefono, ANCHO).forEach(linea);

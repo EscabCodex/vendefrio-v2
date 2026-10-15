@@ -468,6 +468,10 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
 test("nube: datos de la distribuidora en el ticket", async ({ page }, testInfo) => {
     // El Chromium de prueba no trae Bluetooth: se simula solo para armar el ticket.
     await page.addInitScript(() => {
+        // Sin el recordatorio de respaldo, que a veces aparece justo al abrir "Más".
+        try {
+            localStorage.setItem("vendefrio_recordatorio_respaldo_nube", new Date().toISOString().slice(0, 10));
+        } catch (error) { /* sin almacenamiento */ }
         Object.defineProperty(navigator, "bluetooth", { value: { requestDevice() {} }, configurable: true });
     });
     await registrarDistribuidora(page, testInfo);
@@ -480,6 +484,10 @@ test("nube: datos de la distribuidora en el ticket", async ({ page }, testInfo) 
 
     // Sin datos cargados, el ticket queda como antes.
     const antes = await textoDelTicket();
+    // El comercio va arriba de todo (antes del nombre de la distribuidora).
+    expect(antes.indexOf("Almacén Don Pepe".replace("é", "\x82"))).toBeGreaterThanOrEqual(0);
+    expect(antes.indexOf("Almac")).toBeLessThan(antes.indexOf("Distribuidora Prueba"));
+    expect(antes).not.toContain("Comercio:");
     expect(antes).not.toContain("CUIT");
     expect(antes).not.toContain("Tel: ");
 
