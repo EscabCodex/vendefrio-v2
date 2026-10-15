@@ -1792,3 +1792,4 @@ html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[da
 html,body{overflow-x:clip !important;}
 /* Pantallas de entrada: "Volver" con la flecha nueva, sin el "‹" viejo (T52). */
 html .inicioVolver{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--texto-sec);font-weight:700;}
+.statsFilaTexto > .statsChips{justify-content:flex-start;}
