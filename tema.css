@@ -1616,3 +1616,82 @@ html .opcionSeleccionRuta input:checked{background:var(--acento) !important;bord
 html[data-tema="oscuro"] .ajSegmento input:checked + span{color:var(--acento-txt) !important;}
 html .ajSegmento input:checked + span{color:var(--texto) !important;}
 html[data-tema="oscuro"] .ajSegmento input:checked + span{color:var(--acento-txt) !important;}
+
+/* ---------- Botón volver en toda la app y flotante (T51) ---------- */
+html .botonVolverPantalla{
+  width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;padding:0;margin:0;
+  border:var(--borde-tarjeta);border-radius:50%;
+  background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);cursor:pointer;
+}
+html .botonVolverPantalla[hidden]{display:none !important;}
+html .botonVolverPantalla:active,html .volverFlotante:active{transform:scale(.94);}
+body > section > header:has(> .botonVolverPantalla:not([hidden])) > .logo,
+body > section > header:has(> .botonVolverPedidos:not(.oculto)) > .logo{display:none;}
+.volverFlotanteGrupo{
+  position:fixed;z-index:1050;
+  top:calc(10px + env(safe-area-inset-top, 0px));
+  left:max(12px, env(safe-area-inset-left, 0px));
+  display:flex;gap:8px;pointer-events:none;
+}
+.volverFlotante{
+  width:46px;height:46px;display:grid;place-items:center;padding:0;
+  border:var(--borde-tarjeta);border-radius:50%;
+  background:color-mix(in srgb, var(--superficie) 88%, transparent);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  color:var(--texto);box-shadow:var(--sombra-flotante);cursor:pointer;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(-14px) scale(.85);
+  transition:opacity .2s ease, transform .22s ease, visibility 0s linear .22s;
+}
+.volverFlotante.visible{
+  opacity:1;visibility:visible;pointer-events:auto;transform:none;
+  transition:opacity .2s ease, transform .22s ease, visibility 0s;
+}
+html[data-movimiento="reducido"] .volverFlotante{transition:none;}
+.volverFlotante:not(.visible){position:absolute;}
+.inicioFlotante.visible{transition-delay:.04s;}
+html .botonInicioPantalla{
+  width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;padding:0;margin:0;
+  border:var(--borde-tarjeta);border-radius:50%;
+  background:var(--superficie);color:var(--acento-oscuro);box-shadow:var(--sombra);cursor:pointer;
+}
+html[data-tema="oscuro"] .botonInicioPantalla{color:var(--acento);}
+html .botonInicioPantalla[hidden]{display:none !important;}
+body > section > header:has(> .botonInicioPantalla:not([hidden])) > .logo{display:none;}
+html .configHeader{gap:8px;}
+html[data-tema="oscuro"] .volverFlotante{color:var(--acento);}
+
+/* "Más" también en la barra de abajo, cerca del pulgar (T51). */
+html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 10px;}
+html body > nav.bottom-nav .nav-item{min-width:0;}
+html[data-mas-barra="no"] body > nav.bottom-nav .nav-mas{display:none;}
+
+/* Rutas: tarjetas desplegables (T51). */
+html .tarjetaDesplegable > summary{list-style:none;cursor:pointer;margin-bottom:0;}
+html .tarjetaDesplegable > summary::-webkit-details-marker{display:none;}
+html .tarjetaDesplegable > summary > div:not(.iconoTarjetaRuta){flex:1;min-width:0;}
+html .tarjetaDesplegable > summary::after{
+  content:"";margin:0 6px 0 auto;width:9px;height:9px;flex-shrink:0;
+  border-right:2px solid var(--texto-ter);border-bottom:2px solid var(--texto-ter);
+  transform:rotate(45deg) translateY(-3px);transition:transform .2s ease;
+}
+html .tarjetaDesplegable[open] > summary{margin-bottom:12px;}
+html .tarjetaDesplegable[open] > summary::after{transform:rotate(-135deg) translateY(-3px);}
+html .tarjetaDesplegable .ayudaDesplegable{margin:0 0 4px;color:var(--texto-sec);font-size:13px;}
+html .tarjetaSeleccionRuta .estadoSeleccionRuta{margin:8px 0 0;gap:5px;}
+html .tarjetaSeleccionRuta .chipResumenRuta{min-height:26px;padding:0 9px;font-size:12px;}
+html .tarjetaRutasGuardadas .rutasGuardadasPanel{margin:0;padding:0;background:transparent;}
+html .tarjetaRutasGuardadas .rutasGuardadasPanel > h3,
+html .tarjetaRutasGuardadas .rutasGuardadasPanel > p{display:none;}
+html .tarjetaRutasGuardadas .filaRutaGuardadaItem{background:var(--superficie-2) !important;}
+html .opcionSeleccionRuta{grid-template-columns:24px 40px minmax(0,1fr);column-gap:16px !important;padding-left:4px !important;}
+html body > nav.bottom-nav .nav-item{font-size:10.5px;letter-spacing:-.01em;}
+html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 8px;}
+/* Botones + y − del mapa legibles en los dos temas (T51). */
+html .leaflet-bar{border:var(--borde-tarjeta) !important;border-radius:12px !important;overflow:hidden;box-shadow:var(--sombra) !important;}
+html .leaflet-bar a{background:var(--superficie) !important;color:var(--texto) !important;border-bottom-color:var(--borde) !important;}
+html .leaflet-control-attribution{background:color-mix(in srgb, var(--superficie) 80%, transparent) !important;color:var(--texto-sec) !important;}
+html .leaflet-control-attribution a{color:var(--acento-oscuro) !important;}
+html[data-tema="oscuro"] .leaflet-control-attribution a{color:var(--acento) !important;}
+/* Estadísticas y Cierre del día usan la flecha de arriba, como las demás (T51). */
+html .pantallaExtra .extraVolver,html #pantallaEstadisticas .extraVolver{display:none !important;}

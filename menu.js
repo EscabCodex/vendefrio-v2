@@ -696,7 +696,7 @@ window.empleadosVendeFrio?.escucharQuienSoy?.(() => actualizarEncabezadoInicio()
 // los accesos a Rutas, Estadísticas y las demás secciones.
 function abrirMenuMas() {
     if (typeof window.abrirConfiguracion === "function") window.abrirConfiguracion();
-    document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("activo"));
+    document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("activo", btn.dataset.pantalla === "mas"));
     window.scrollTo(0, 0);
 }
 

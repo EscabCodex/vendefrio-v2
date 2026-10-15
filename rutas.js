@@ -317,6 +317,7 @@ function crearModalOpcionesRutaGuardada() {
         if (entrada) entrada.value = nuevoNombre;
         if (selectorDia) selectorDia.value = ruta && ruta.dia ? ruta.dia : "";
         const panel = document.getElementById("rutasGuardadasPanel");
+        panel?.closest("details")?.setAttribute("open", "");
         if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 }
@@ -610,7 +611,8 @@ function detenerNavegacionApp(mostrarMensaje = true) {
 }
 
 function crearControlesRutasGuardadas() {
-    const tarjeta = document.querySelector(".tarjetaSeleccionRuta");
+    // T51: las rutas guardadas tienen su propia tarjeta desplegable.
+    const tarjeta = document.querySelector(".tarjetaRutasGuardadas") || document.querySelector(".tarjetaSeleccionRuta");
     if (!tarjeta || document.getElementById("rutasGuardadasPanel")) return;
 
     const panel = document.createElement("div");
@@ -782,6 +784,12 @@ function renderizarRutasGuardadas() {
 
     lista.innerHTML = "";
     const rutas = obtenerRutasGuardadas();
+    const resumen = document.getElementById("resumenRutasGuardadas");
+    if (resumen) {
+        resumen.textContent = rutas.length === 0
+            ? "Guard\u00e1 esta selecci\u00f3n para volver a usarla."
+            : rutas.length + (rutas.length === 1 ? " ruta guardada" : " rutas guardadas");
+    }
 
     if (rutas.length === 0) {
         const vacio = document.createElement("p");

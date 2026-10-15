@@ -92,6 +92,10 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     // Rutas: comercios para esta ruta, con buscador y resumen.
     await page.evaluate(() => mostrarPantalla("rutas"));
     const tarjeta = page.locator(".tarjetaSeleccionRuta");
+    // Desplegable (T51): cerrada muestra el resumen; se abre al tocarla.
+    await expect(tarjeta.locator(".chipResumenRuta").first()).toBeVisible();
+    await expect(page.getByLabel("Buscar comercio para la ruta")).toBeHidden();
+    await tarjeta.locator("summary").click();
     await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(3);
     await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("1 elegido");
     await tarjeta.getByRole("button", { name: "Todos" }).click();

@@ -191,6 +191,7 @@
 
 <section id="pantallaRutas" class="oculto">
   <header>
+    <button class="botonVolverPantalla" data-volver="mas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
     <div class="logo" data-ico="mapa" data-ico-tam="22"></div>
     <div>
       <h1>Rutas</h1>
@@ -214,16 +215,15 @@
 
       <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
     </div>
-    <div class="card tarjetaSeleccionRuta">
-      <div class="encabezadoTarjetaRuta">
+    <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
+      <summary class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
         <div>
           <h2>Comercios para esta ruta</h2>
-          <p>Elegí qué paradas querés incluir en la próxima ruta.</p>
+          <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
         </div>
-      </div>
-
-      <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
+      </summary>
+      <p class="ayudaDesplegable">Elegí qué paradas querés incluir en la próxima ruta.</p>
 
       <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
         <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
@@ -245,9 +245,19 @@
       </label>
 
       <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
-    </div>
+    </details>
 
-    <details class="card tarjetaUbicacionesRuta">
+    <details class="card tarjetaRutasGuardadas tarjetaDesplegable">
+      <summary class="encabezadoTarjetaRuta">
+        <div class="iconoTarjetaRuta" data-ico="disquete" data-ico-tam="19"></div>
+        <div>
+          <h2>Rutas guardadas</h2>
+          <p id="resumenRutasGuardadas">Guardá esta selección para volver a usarla.</p>
+        </div>
+      </summary>
+    </details>
+
+    <details class="card tarjetaUbicacionesRuta tarjetaDesplegable">
       <summary class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
         <div>
@@ -336,6 +346,10 @@
   <button class="nav-item" data-pantalla="catalogo" data-tambien="productos" type="button">
     <span class="nav-icon" aria-hidden="true" data-ico="bolsa" data-ico-tam="22"></span>
     Catálogo
+  </button>
+  <button class="nav-item nav-mas" data-pantalla="mas" type="button">
+    <span class="nav-icon" aria-hidden="true" data-ico="menu" data-ico-tam="22"></span>
+    Más
   </button>
 </nav>
 
@@ -496,6 +510,7 @@
 <script src="voz.js"></script>
 <script src="novedades.js"></script>
 <script src="exportar.js"></script>
+<script src="volver.js"></script>
 
 <script>
   // Hidrata todos los placeholders de íconos (data-ico) presentes en el HTML estático.

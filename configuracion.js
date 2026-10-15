@@ -85,13 +85,13 @@
     // Valor de cada ajuste, o el de fábrica si nunca se tocó.
     const DEFECTOS = {
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
-        movimiento: false, barraNombres: true, frecuenciaRespaldo: "semanal",
+        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true
     };
-    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres"];
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
 
     function valorDe(d, campo) {
         return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
@@ -155,6 +155,8 @@
                 </div>`) +
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
+                filaLlave("menu", "azul", "Más en la barra de abajo", "Para llegar a Más con el pulgar", "masEnBarra") +
+                filaLlave("flechaIzquierda", "verde", "Volver flotante", "El botón volver te acompaña al bajar", "volverFlotante") +
                 filaLlave("chispa", "naranja", "Menos movimiento", "Saca las animaciones y transiciones", "movimiento") +
                 filaAccion("refrescar", "rojo", "Restablecer apariencia", "Todo como al principio", 'data-accion="restablecer"', "ajPeligro"));
     }
@@ -225,7 +227,7 @@
                     <div class="configLista">
                         ${fila("avisos", "campana", "Avisos", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
                         ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("navegacion", "bicicleta", "Cómo hacés el recorrido")}
+                        ${fila("navegacion", "bicicleta", "Recorrido")}
                         ${fila("trabajo", "maletin", "Preferencias de trabajo")}
                     </div>
 
@@ -284,6 +286,7 @@
         raiz.dataset.acento = valorDe(d, "acento");
         raiz.dataset.movimiento = valorDe(d, "movimiento") === true ? "reducido" : "normal";
         raiz.dataset.barra = valorDe(d, "barraNombres") === false ? "iconos" : "nombres";
+        raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
     }
 

@@ -222,6 +222,8 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     const aviso = page.locator("#modalAviso");
+    // "Comercios para esta ruta" es desplegable (T51).
+    await page.locator(".tarjetaSeleccionRuta > summary").click();
     await page.locator("#seleccionarTodosRuta").click();
     await page.locator("#btnOptimizarRuta").click();
     await expect(aviso).toContainText("1. Kiosco Luna");
