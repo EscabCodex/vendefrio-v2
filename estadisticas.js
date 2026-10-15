@@ -8,9 +8,26 @@
         const s = document.createElement("section");
         s.id = "pantallaEstadisticas";
         s.className = "oculto pantallaExtra pantallaEstadisticas";
-        s.innerHTML = `<header><div class="logo">${window.icono("grafico",22)}</div><div><h1>Estadísticas</h1><p>Una vista clara de cómo se mueve tu negocio</p></div></header><main class="container"><button class="extraVolver" type="button">‹ Volver</button><div class="selectorPeriodoEstadisticas" aria-label="Filtrar estadísticas por período"><button type="button" data-periodo="hoy">Hoy</button><button type="button" data-periodo="semana">Semana</button><button type="button" data-periodo="mes">Mes</button><button type="button" class="activo" data-periodo="todo">Todo</button></div><select id="filtroPeriodoEstadisticas" class="selectorPeriodoOculto" aria-label="Período"><option value="hoy">Hoy</option><option value="semana">Esta semana</option><option value="mes">Este mes</option><option value="todo" selected>Todo</option></select><div id="contenidoEstadisticas" class="informeEstadisticas"></div></main></section>`;
+        s.innerHTML = `<header><div class="logo">${window.icono("grafico",22)}</div><div><h1>Estadísticas</h1><p>Una vista clara de cómo se mueve tu negocio</p></div></header><main class="container"><button class="extraVolver" type="button">‹ Volver</button><div class="selectorPeriodoEstadisticas" aria-label="Filtrar estadísticas por período"><button type="button" data-periodo="hoy">Hoy</button><button type="button" data-periodo="semana">Semana</button><button type="button" data-periodo="mes">Mes</button><button type="button" class="activo" data-periodo="todo">Todo</button></div><select id="filtroPeriodoEstadisticas" class="selectorPeriodoOculto" aria-label="Período"><option value="hoy">Hoy</option><option value="semana">Esta semana</option><option value="mes">Este mes</option><option value="todo" selected>Todo</option></select><div id="contenidoEstadisticas" class="informeEstadisticas"></div><button type="button" class="btnAccion secundario descargarPlanilla" id="descargarPlanillaEstadisticas">${window.icono("descargar",16)} Descargar planilla del período</button></main></section>`;
         document.body.insertBefore(s, document.querySelector("nav.bottom-nav"));
         s.querySelector(".extraVolver").addEventListener("click", () => { s.classList.add("oculto"); mostrarPantalla("menu"); });
+        // Planilla para el contador (T47): todos los pedidos del período
+        // (también los que no se entregaron), sin los eliminados.
+        s.querySelector("#descargarPlanillaEstadisticas").addEventListener("click", () => {
+            const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
+            const ahora = new Date();
+            const inicio = new Date(ahora); inicio.setHours(0, 0, 0, 0);
+            if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
+            if (periodo === "mes") inicio.setDate(1);
+            const pedidos = (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).filter(pedido => {
+                if (!pedido || pedido.eliminado === true) return false;
+                if (periodo === "todo") return true;
+                const fecha = fechaPedido(pedido);
+                return fecha && fecha >= inicio && fecha <= ahora;
+            });
+            const nombres = { hoy: "de hoy", semana: "de la semana", mes: "del mes", todo: "todos" };
+            window.exportarVendeFrio?.descargar(pedidos, "VendeFrío pedidos " + (nombres[periodo] || "") + " " + ahora.toISOString().slice(0, 10));
+        });
         return s;
     }
 

@@ -1178,3 +1178,42 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 .ventanaDictado .productoDictado span{font-weight:600;}
 .ventanaDictado .productoDictado small{grid-column:3;color:var(--texto-sec);font-size:12px;}
 .sinEntenderDictado{margin:0;font-size:13px;color:var(--pendiente);}
+
+/* ---------- Primeros pasos y "Suelen pedir hoy" (Etapa 6, T45 y T46) ---------- */
+
+.primerosPasos{display:grid;gap:10px;}
+.primerosPasos.oculto{display:none;}
+.primerosPasosCabecera{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.primerosPasosCabecera div{display:grid;gap:2px;}
+.primerosPasosCabecera strong{font-size:17px;}
+.primerosPasosCabecera small{color:var(--texto-sec);font-size:12.5px;font-weight:600;}
+.ocultarPrimerosPasos{border:0;background:transparent;color:var(--texto-sec);font-weight:600;font-size:13px;padding:8px 4px;min-height:0;margin:0;cursor:pointer;}
+.pasoPrimeros{
+  display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:10px;
+  width:100%;min-height:48px;padding:8px 12px;margin:0;border:0;border-radius:14px;
+  background:var(--superficie-2);color:var(--texto);font:inherit;font-size:14.5px;font-weight:600;text-align:left;cursor:pointer;
+}
+.pasoPrimeros.hecho{opacity:.65;cursor:default;}
+.pasoPrimeros.hecho span:nth-child(2){text-decoration:line-through;}
+.tildePaso{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--borde-fuerte);}
+.pasoPrimeros.hecho .tildePaso{border-color:var(--visitado);background:var(--visitado);color:#fff;}
+#dashVisitarHoy.oculto{display:none;}
+.filaVisitarHoy{cursor:default;}
+.botonPedidoVisitarHoy{min-height:38px !important;padding:0 14px !important;font-size:13.5px;display:inline-flex;align-items:center;gap:4px;}
+
+/* ---------- Qué hay de nuevo y ayuda (Etapa 6, T45 y T49) ---------- */
+
+.contenidoNovedades{display:grid;gap:12px;}
+.etiquetaVersion{justify-self:start;padding:4px 10px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:12px;font-weight:700;}
+html[data-tema="oscuro"] .etiquetaVersion{color:var(--acento);}
+.contenidoNovedades h2{margin:0;font-size:21px;}
+.listaNovedades{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-height:55vh;overflow-y:auto;}
+.listaNovedades li{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;}
+.iconoNovedad{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .iconoNovedad{color:var(--acento);}
+.listaNovedades strong{font-size:15px;}
+.listaNovedades p{margin:2px 0 0;font-size:13.5px;color:var(--texto-sec);line-height:1.4;}
+.ayudaVendeFrio{display:grid;gap:4px;margin-top:12px;padding:12px;border-radius:16px;background:var(--superficie-2);}
+.ayudaVendeFrio strong{font-size:14px;margin-top:4px;}
+.ayudaVendeFrio p{margin:0;font-size:13px;color:var(--texto-sec);line-height:1.45;}
+html .descargarPlanilla{width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;}

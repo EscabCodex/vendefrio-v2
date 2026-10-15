@@ -35,6 +35,8 @@
   </header>
 
   <main class="container">
+    <section id="dashPrimerosPasos" class="card primerosPasos oculto" aria-label="Primeros pasos"></section>
+
     <section class="resumenHoy" id="resumenHoy" aria-label="Resumen de hoy">
       <p class="resumenHoyFecha" id="dashFechaHoy">Hoy</p>
       <small id="dashTituloHoy">Vendido hoy</small>
@@ -45,6 +47,11 @@
 
     <h2 class="seccionTitulo">Próxima parada</h2>
     <div id="dashProximaParada" class="card cardProximaParada"></div>
+
+    <section id="dashVisitarHoy" class="oculto" aria-labelledby="tituloVisitarHoy">
+      <h2 class="seccionTitulo" id="tituloVisitarHoy">Suelen pedir hoy</h2>
+      <div class="card listaInicio" id="dashListaVisitarHoy"></div>
+    </section>
 
     <div class="bloqueCabecera">
       <h2 class="seccionTitulo">Pedidos de hoy</h2>
@@ -482,6 +489,8 @@
 <script src="rutas.js"></script>
 <script src="navegacion.js"></script>
 <script src="voz.js"></script>
+<script src="novedades.js"></script>
+<script src="exportar.js"></script>
 
 <script>
   // Hidrata todos los placeholders de íconos (data-ico) presentes en el HTML estático.

@@ -1626,11 +1626,22 @@
         if (seccion === "seguridad") {
             caja.innerHTML += `
                 <p class="configEstado">
-                    VendeFrío Lite<br>
+                    VendeFrío · versión ${window.novedadesVendeFrio?.version || "1.0"}<br>
                     ${window.nubeVendeFrio?.modoNube?.()
                         ? "Los datos se guardan en la nube de tu distribuidora."
                         : "Los datos se guardan en este dispositivo."}
                 </p>
+
+                <button type="button" data-novedades>
+                    Ver qué hay de nuevo
+                </button>
+
+                <div class="ayudaVendeFrio">
+                    <strong>Ayuda</strong>
+                    <p>Si algo no anda: cerrá la app del todo y abrila de nuevo con internet (así se actualiza). Si sigue, sacale una captura a la pantalla y mandásela a quien administra VendeFrío en tu distribuidora.</p>
+                    <strong>Instalar la app</strong>
+                    <p>En Android, desde Chrome: menú ⋮ › «Instalar app». En iPhone, desde Safari: Compartir › «Agregar a inicio». Tus datos de la nube no se pierden al reinstalar.</p>
+                </div>
 
                 <button type="button" data-accion="restablecer">
                     Restablecer preferencias visuales

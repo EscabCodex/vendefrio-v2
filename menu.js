@@ -478,7 +478,137 @@ function actualizarDashboard() {
     dibujarKpisInicio(pedidosHoy, nube, { pedidos: pedidosSemana.length, sinVisitar });
     dibujarPedidosDeHoyInicio(nube ? pedidosHoy : cargadosHoy);
     dibujarProximaParadaInicio(comercios);
+    dibujarPrimerosPasos(comercios, pedidos);
+    dibujarVisitarHoy(comercios, pedidos, cargadosHoy);
     inicioDibujadoUnaVez = true;
+}
+
+// -----------------------------------------------------
+// Primeros pasos (Etapa 6, T45): en una cuenta nueva, una guía corta que
+// se tilda sola. Se esconde al terminar o con "Ocultar".
+// -----------------------------------------------------
+
+const CLAVE_PRIMEROS_PASOS = "vendefrio_primeros_pasos";
+
+function dibujarPrimerosPasos(comercios, pedidos) {
+    const caja = document.getElementById("dashPrimerosPasos");
+    if (!caja) return;
+    let cerrado = false;
+    try { cerrado = localStorage.getItem(CLAVE_PRIMEROS_PASOS) === "cerrado"; } catch (error) { cerrado = false; }
+
+    const productos = obtenerProductos();
+    const hayProductos = Object.values(productos).some(lista => Array.isArray(lista) && lista.length > 0);
+    const pasos = [
+        { hecho: hayProductos, texto: "Cargá tus productos y precios", accion: () => mostrarPantalla("productos") },
+        { hecho: comercios.length > 0, texto: "Sumá los comercios que visitás", accion: () => mostrarPantalla("comercios") },
+        { hecho: pedidos.length > 0, texto: "Cargá tu primer pedido", accion: () => abrirNuevoPedido() }
+    ];
+    const hechos = pasos.filter(paso => paso.hecho).length;
+    if (cerrado || hechos === pasos.length) {
+        caja.classList.add("oculto");
+        return;
+    }
+
+    caja.classList.remove("oculto");
+    caja.innerHTML = "";
+    const cabecera = document.createElement("div");
+    cabecera.className = "primerosPasosCabecera";
+    cabecera.innerHTML = "<div><strong>Primeros pasos</strong><small></small></div>";
+    cabecera.querySelector("small").textContent = hechos + " de " + pasos.length + " listos";
+    const ocultar = document.createElement("button");
+    ocultar.type = "button";
+    ocultar.className = "ocultarPrimerosPasos";
+    ocultar.textContent = "Ocultar";
+    ocultar.addEventListener("click", () => {
+        try { localStorage.setItem(CLAVE_PRIMEROS_PASOS, "cerrado"); } catch (error) { /* sin lugar */ }
+        caja.classList.add("oculto");
+    });
+    cabecera.appendChild(ocultar);
+    caja.appendChild(cabecera);
+
+    const barra = document.createElement("div");
+    barra.className = "barraSemana";
+    barra.innerHTML = "<span></span>";
+    barra.querySelector("span").style.width = Math.round(hechos / pasos.length * 100) + "%";
+    caja.appendChild(barra);
+
+    pasos.forEach(paso => {
+        const fila = document.createElement("button");
+        fila.type = "button";
+        fila.className = "pasoPrimeros" + (paso.hecho ? " hecho" : "");
+        fila.innerHTML = '<span class="tildePaso">' + (paso.hecho ? window.icono("check", 14) : "") + "</span><span></span>" + (paso.hecho ? "" : window.icono("chevDerecha", 16));
+        fila.children[1].textContent = paso.texto;
+        if (!paso.hecho) fila.addEventListener("click", paso.accion);
+        else fila.disabled = true;
+        caja.appendChild(fila);
+    });
+}
+
+// -----------------------------------------------------
+// "Suelen pedir hoy" (Etapa 6, T46): comercios que en las últimas 8
+// semanas pidieron este mismo día de la semana al menos 2 veces y hoy
+// todavía no tienen pedido.
+// -----------------------------------------------------
+
+const DIAS_SEMANA = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
+
+function comerciosQueSuelenPedirHoy(pedidos, cargadosHoy) {
+    const hoy = new Date();
+    const dia = hoy.getDay();
+    const desde = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 56).getTime();
+    const normalizarNombre = texto => String(texto || "").trim().toLocaleLowerCase("es");
+    const conPedidoHoy = new Set(cargadosHoy.map(pedido => normalizarNombre(pedido.comercio || pedido.cliente)));
+    const dias = new Map();
+    pedidos.forEach(pedido => {
+        const fecha = obtenerFechaPedidoDashboard(pedido);
+        if (!fecha || fecha.getTime() < desde || fecha.getDay() !== dia || esDeHoyInicio(pedido)) return;
+        const clave = normalizarNombre(pedido.comercio || pedido.cliente);
+        if (!clave) return;
+        if (!dias.has(clave)) dias.set(clave, new Set());
+        dias.get(clave).add(fecha.toDateString());
+    });
+    return Array.from(dias.entries())
+        .filter(([clave, fechas]) => fechas.size >= 2 && !conPedidoHoy.has(clave))
+        .map(([clave, fechas]) => ({ clave, veces: fechas.size }))
+        .sort((a, b) => b.veces - a.veces);
+}
+
+function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
+    const seccion = document.getElementById("dashVisitarHoy");
+    const lista = document.getElementById("dashListaVisitarHoy");
+    if (!seccion || !lista) return;
+    const sugeridos = comerciosQueSuelenPedirHoy(pedidos, cargadosHoy)
+        .map(item => ({ ...item, comercio: comercios.find(comercio => String(comercio.nombre || "").trim().toLocaleLowerCase("es") === item.clave) }))
+        .filter(item => item.comercio)
+        .slice(0, 5);
+    seccion.classList.toggle("oculto", sugeridos.length === 0);
+    if (!sugeridos.length) return;
+    const dia = DIAS_SEMANA[new Date().getDay()];
+    document.getElementById("tituloVisitarHoy").textContent = "Suelen pedir los " + dia;
+    lista.innerHTML = "";
+    sugeridos.forEach(item => {
+        const fila = document.createElement("div");
+        fila.className = "filaInicio filaVisitarHoy";
+        const avatar = document.createElement("span");
+        avatar.className = "inicialesInicio";
+        avatar.dataset.tono = String(item.comercio.nombre.length % 4);
+        avatar.textContent = typeof iniciales === "function" ? iniciales(item.comercio.nombre) : String(item.comercio.nombre).trim().slice(0, 2).toUpperCase();
+        const texto = document.createElement("span");
+        texto.className = "textoFilaInicio";
+        const nombre = document.createElement("strong");
+        nombre.textContent = item.comercio.nombre;
+        const detalle = document.createElement("small");
+        detalle.textContent = "Pidió " + item.veces + " de los últimos 8 " + dia;
+        texto.append(nombre, detalle);
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "btnAccion agregar botonPedidoVisitarHoy";
+        boton.innerHTML = window.icono("mas", 16) + " Pedido";
+        boton.setAttribute("aria-label", "Cargar pedido para " + item.comercio.nombre);
+        boton.addEventListener("click", () => irAPedidoRapido(item.comercio.nombre));
+        fila.append(avatar, texto, boton);
+        lista.appendChild(fila);
+    });
 }
 
 function irAPedidoRapido(nombreComercio) {
