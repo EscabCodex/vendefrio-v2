@@ -196,6 +196,57 @@
         `;
     }
 
+    // --- Datos de la distribuidora para el ticket (T28c) ---
+    // Solo el dueño: teléfono y, si tiene, dirección y CUIT. En el ticket
+    // sale cada dato solo si está cargado.
+    let editandoDatosTicket = false;
+
+    function htmlDatosTicket() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        if (!distribuidora || !distribuidora.datosTicket || !usuario || usuario.isAnonymous) return "";
+        if (!distribuidora.idActual() || distribuidora.idActual() !== usuario.uid) return "";
+
+        const datos = distribuidora.datosTicket();
+        const largos = distribuidora.largosDatosTicket;
+
+        if (editandoDatosTicket) {
+            return `
+                <form class="configCuentaFormulario" id="formDatosTicket" novalidate>
+                    <label>${window.icono("telefono",15)} Teléfono de la distribuidora
+                        <input type="tel" id="datosTicketTelefono" autocomplete="tel"
+                            maxlength="${largos.telefono}" value="${escaparTexto(datos.telefono)}">
+                    </label>
+                    <label>${window.icono("ubicacion",15)} Dirección (si tiene local a la calle)
+                        <input type="text" id="datosTicketDireccion" autocomplete="street-address"
+                            maxlength="${largos.direccion}" value="${escaparTexto(datos.direccion)}">
+                    </label>
+                    <label>${window.icono("documento",15)} CUIT (si tiene)
+                        <input type="text" id="datosTicketCuit" inputmode="numeric"
+                            maxlength="${largos.cuit}" value="${escaparTexto(datos.cuit)}">
+                    </label>
+                    <p class="configEstado">Los que dejes vacíos no salen en el ticket.</p>
+                    <button type="submit" class="configCuentaIngresar">Guardar datos del ticket</button>
+                    <button type="button" data-accion="cancelarDatosTicket">Cancelar</button>
+                </form>
+            `;
+        }
+
+        const filas = [
+            datos.telefono ? "Teléfono: " + escaparTexto(datos.telefono) : "",
+            datos.direccion ? "Dirección: " + escaparTexto(datos.direccion) : "",
+            datos.cuit ? "CUIT: " + escaparTexto(datos.cuit) : ""
+        ].filter(Boolean);
+
+        return `
+            <p class="configEstado" id="cuentaDatosTicket">
+                Datos para el ticket<br>
+                ${filas.length ? `<strong>${filas.join("<br>")}</strong>` : "Todavía sin cargar: el ticket sale solo con el nombre."}
+            </p>
+            <button type="button" data-accion="editarDatosTicket">${filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket"}</button>
+        `;
+    }
+
     // --- Nombre del dueño (T18) ---
     // Solo para el dueño de la distribuidora: así figura en lo que hace,
     // en vez de su email.
@@ -1263,6 +1314,7 @@
                 </p>
                 ${htmlNombreDueno()}
                 ${htmlNombreDistribuidora()}
+                ${htmlDatosTicket()}
                 ${htmlDistribuidora()}
                 ${enLaNube ? "" : `
                 <p class="configEstado">
@@ -2054,6 +2106,17 @@
             detalle("cuenta");
         }
 
+        if (accion === "editarDatosTicket") {
+            editandoDatosTicket = true;
+            detalle("cuenta");
+            document.getElementById("datosTicketTelefono")?.focus();
+        }
+
+        if (accion === "cancelarDatosTicket") {
+            editandoDatosTicket = false;
+            detalle("cuenta");
+        }
+
         if (accion === "editarNombreDueno") {
             editandoNombreDueno = true;
             detalle("cuenta");
@@ -2194,6 +2257,26 @@
                     error.classList.remove("oculto");
                 }
             });
+    });
+
+    // Datos del ticket (T28c).
+    document.addEventListener("submit", event => {
+        if (event.target.id !== "formDatosTicket") return;
+
+        event.preventDefault();
+
+        const valor = id => (document.getElementById(id)?.value || "").trim();
+        window.distribuidoraVendeFrio.cambiarDatosTicket({
+            telefono: valor("datosTicketTelefono"),
+            direccion: valor("datosTicketDireccion"),
+            cuit: valor("datosTicketCuit")
+        })
+            .then(() => {
+                editandoDatosTicket = false;
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
+            })
+            .catch(fallo => mostrarAviso("No se guardaron los datos", fallo.message));
     });
 
     // Nombre del dueño (T18).
@@ -2466,6 +2549,15 @@
         window.distribuidoraVendeFrio.escucharNombreDueno?.(nombreDueno => {
             const texto = document.getElementById("cuentaNombreDueno");
             if (texto) texto.textContent = nombreDueno || "Todavía sin cargar";
+        });
+
+        // Datos del ticket (T28c): si los cambian en otro celular, se
+        // redibuja Cuenta, salvo que se esté escribiendo algo.
+        window.distribuidoraVendeFrio.escucharDatosTicket?.(() => {
+            const caja = document.getElementById("configDetalle");
+            if (seccionAbierta !== "cuenta" || !caja || caja.classList.contains("oculto")) return;
+            if (editandoNombre || editandoNombreDueno || editandoDatosTicket) return;
+            if (document.getElementById("cuentaDatosTicket")) detalle("cuenta");
         });
     }
 

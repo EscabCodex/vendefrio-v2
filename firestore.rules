@@ -752,9 +752,17 @@ service cloud.firestore {
 
       // El dueño puede cambiar el nombre de la distribuidora y el suyo
       // (nombreDueno, T18: obligatorio, hasta 60 caracteres), nunca quién es
-      // el dueño.
+      // el dueño. También los datos del ticket (T28c): teléfono, dirección y
+      // CUIT, cada uno un texto (vacío si no lo tiene).
       allow update: if esDueno(idDistribuidora)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "nombreDueno"])
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["nombre", "nombreDueno", "telefono", "direccion", "cuit"])
+        && request.resource.data.get("telefono", "") is string
+        && request.resource.data.get("telefono", "").size() <= 40
+        && request.resource.data.get("direccion", "") is string
+        && request.resource.data.get("direccion", "").size() <= 80
+        && request.resource.data.get("cuit", "") is string
+        && request.resource.data.get("cuit", "").size() <= 20
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() <= 80
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["nombreDueno"])
