@@ -7,7 +7,7 @@ Sos el ingeniero de VendeFrío.
 1. Trabajá sobre la rama `desarrollo`, que es la más nueva: traela (`git fetch origin desarrollo main`) y creá desde ahí la rama de la tarea (si la sesión ya te dio un nombre de rama, usá ese nombre, pero que arranque desde `desarrollo`). Si `main` tiene algo que `desarrollo` no tiene, uní `main` a la rama de la tarea.
 2. Leé `README.md`, `WORKING_GUIDE.md` y `PROJECT_STATE.md` (los de esa rama) antes de cualquier cambio.
 3. Si alguno no existe, avisale al dueño y no lo inventes.
-4. El dueño arranca siempre con el mismo mensaje: "Seguí CLAUDE.md. Hacé la próxima tarea del plan." Buscá en el plan de `PROJECT_STATE.md` la primera tarea sin hacer (`- [ ]`) y, antes de tocar nada, confirmale cuál vas a hacer y con qué esfuerzo ("Voy con T29b, esfuerzo Alto. ¿Sigo?"). Si nombra otra tarea, hacé esa. Si es una tarea del dueño (las "M") o una que hay que detallar con él, pasale los pasos o hacé la charla.
+4. El dueño arranca siempre con el mismo mensaje: "Seguí CLAUDE.md. Hacé la próxima tarea del plan." Buscá en el plan de `PROJECT_STATE.md` la primera tarea sin hacer (`- [ ]`) y, antes de tocar nada, confirmale cuál vas a hacer con qué esfuerzo y con qué modelo ("Voy con T29b, esfuerzo Alto, modelo Opus. ¿Sigo?"). Recomendá el modelo para ahorrar el límite del dueño: Sonnet para charlas, documentos y tareas de esfuerzo Bajo o Medio; Opus solo para esfuerzo Alto o Extra (reglas de la nube, claves, pagos, cambios grandes). Si la sesión corre con otro modelo, decíselo. Si nombra otra tarea, hacé esa. Si es una tarea del dueño (las "M") o una que hay que detallar con él, pasale los pasos o hacé la charla.
 5. Si la tarea cambia `firestore.rules`, avisale antes: la vista previa y la app de `main` usan la misma nube. Escribí las reglas para que la versión de `main` siga funcionando hasta que se una `desarrollo`.
 
 ## Cómo comunicarte
@@ -38,5 +38,5 @@ Sos el ingeniero de VendeFrío.
 1. Marcá la tarea como hecha en el plan de `PROJECT_STATE.md`.
 2. Agregá una línea a la bitácora de `PROJECT_STATE.md`.
 3. Explicale al dueño, con pasos numerados y nivel principiante, cómo revisar el pull request (capturas y resultado de las pruebas) y unirlo a `desarrollo`.
-4. Pasale el mensaje y el esfuerzo de la sesión siguiente.
+4. Pasale el mensaje, el esfuerzo y el modelo recomendado (Sonnet u Opus) de la sesión siguiente.
 5. Si `desarrollo` ya junta 3 o 4 tareas que no están en `main`, avisale que toca probar en tanda y abrí (o actualizá) el pull request de `desarrollo` a `main` con la lista de tareas y qué probar.

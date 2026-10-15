@@ -42,15 +42,16 @@ Cada chat de Claude parte de cero y no garantiza recordar los anteriores. La app
 - **Un chat por tarea.** Los chats largos gastan más límite porque en cada mensaje se vuelve a leer toda la conversación.
 - **Claude Code lee el repo directamente**, así que no hace falta adjuntar archivos. Si el chat es de consulta dentro del Proyecto de Claude, los `.md` ya los tiene.
 - **Siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan." Claude Code busca en el plan la primera tarea sin hacer. Si alguna vez querés otra, nombrala (por ejemplo "Seguí CLAUDE.md. Hacé solo T29c.").
+- **Elegir el modelo para cuidar el límite.** Sonnet gasta bastante menos que Opus. Claude Code te recomienda el modelo al cerrar cada tarea y al confirmar la siguiente: Sonnet para charlas, documentos y tareas de esfuerzo Bajo o Medio; Opus solo para esfuerzo Alto o Extra (reglas de la nube, claves, pagos, cambios grandes).
 - **Fuera de las horas pico** (días de semana, de día) el límite rinde más.
-- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request, y le pasa al dueño el mensaje y el esfuerzo de la sesión siguiente. El dueño une el pull request a `desarrollo` y recién después abre la siguiente sesión.
+- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request, y le pasa al dueño el mensaje, el esfuerzo y el modelo de la sesión siguiente. El dueño une el pull request a `desarrollo` y recién después abre la siguiente sesión.
 
 ## Rutina de cada sesión
 
 1. **Abrir una sesión nueva de Claude Code** sobre el repo `EscabCodex/vendefrio-v2`. Claude Code lee `CLAUDE.md` solo y, desde ahí, los demás documentos.
-2. **Elegir el esfuerzo** de la sesión (Medio, Alto o Extra): el que te pasó Claude Code al terminar la sesión anterior (también figura en cada tarea del plan).
+2. **Elegir el modelo y el esfuerzo** de la sesión (Sonnet u Opus; esfuerzo Bajo, Medio, Alto o Extra): los que te pasó Claude Code al terminar la sesión anterior (también figura en cada tarea del plan).
 3. **Mandar siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan."
-4. **Confirmar:** Claude Code contesta qué tarea va a hacer y con qué esfuerzo (por ejemplo "Voy con T29b, esfuerzo Alto. ¿Sigo?"). Si no coincide con el esfuerzo que elegiste, cambialo en la sesión. Después contestá "Sí".
+4. **Confirmar:** Claude Code contesta qué tarea va a hacer y con qué esfuerzo y modelo (por ejemplo "Voy con T29b, esfuerzo Alto, modelo Opus. ¿Sigo?"). Si no coincide con lo que elegiste, cambialo en la sesión. Después contestá "Sí".
 5. **Esperar el pull request** que abre Claude Code hacia `desarrollo`, con la tarea marcada, la línea de la bitácora, el resultado de las pruebas automáticas y las capturas.
 6. **Revisarlo y unirlo a `desarrollo`** (ver "Revisar un pull request"). Probar a mano en el celular solo si el pull request lo pide.
 7. **Cada 3 o 4 tareas, probar en tanda** y unir `desarrollo` a `main` (ver "Probar en tanda").
