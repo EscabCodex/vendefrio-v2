@@ -893,6 +893,75 @@
         mostrarToast("Hoja de reparto impresa");
     }
 
+    // -------------------------------------------------
+    // Otras hojas (T28f, Cierre del día)
+    // -------------------------------------------------
+    // lineas: [{ tipo, texto, izquierda, derecha }], con tipo "titulo"
+    // (centrado, negrita y doble alto), "centro", "subtitulo" (negrita),
+    // "texto", "dos" (dos columnas), "total" (dos columnas, negrita y doble
+    // alto) o "separador".
+    function armarLineas(lineas) {
+        const bytes = [].concat(INICIAR, SALIR_MODO_CHINO, TABLA_850);
+        const agregar = comandos => comandos.forEach(byte => bytes.push(byte));
+        const linea = texto => {
+            agregar(codificar(texto));
+            bytes.push(SALTO);
+        };
+
+        lineas.forEach(item => {
+            const texto = String(item && item.texto || "");
+            const tipo = item && item.tipo;
+
+            if (tipo === "titulo") {
+                agregar(CENTRO);
+                agregar(NEGRITA);
+                agregar(DOBLE_ALTO);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(TAMANO_NORMAL);
+                agregar(SIN_NEGRITA);
+                agregar(IZQUIERDA);
+            } else if (tipo === "centro") {
+                agregar(CENTRO);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(IZQUIERDA);
+            } else if (tipo === "subtitulo") {
+                agregar(NEGRITA);
+                partir(texto, ANCHO).forEach(linea);
+                agregar(SIN_NEGRITA);
+            } else if (tipo === "dos") {
+                dosColumnas(String(item.izquierda || ""), String(item.derecha || "")).forEach(linea);
+            } else if (tipo === "total") {
+                agregar(NEGRITA);
+                agregar(DOBLE_ALTO);
+                dosColumnas(String(item.izquierda || ""), String(item.derecha || "")).forEach(linea);
+                agregar(TAMANO_NORMAL);
+                agregar(SIN_NEGRITA);
+            } else if (tipo === "separador") {
+                linea("-".repeat(ANCHO));
+            } else {
+                partir(texto, ANCHO).forEach(linea);
+            }
+        });
+
+        bytes.push(SALTO, SALTO, SALTO, SALTO, SALTO);
+        return new Uint8Array(bytes);
+    }
+
+    // opciones: { clave, aviso, elegir }.
+    async function imprimirLineas(lineas, opciones) {
+        const lista = Array.isArray(lineas) ? lineas : [];
+        const clave = String(opciones && opciones.clave || "hoja");
+        if (imprimiendo || !disponible() || !lista.length) return;
+
+        try {
+            await mandarAImpresora(clave, armarLineas(lista), Boolean(opciones && opciones.elegir));
+        } catch (error) {
+            mostrarError(error, elegir => imprimirLineas(lista, { ...opciones, elegir }));
+            return;
+        }
+        mostrarToast(String(opciones && opciones.aviso || "Impreso"));
+    }
+
     // Configuración > Impresora: elegir otra de la lista (no imprime).
     async function cambiarImpresora() {
         if (!hayBluetooth()) return false;
@@ -931,6 +1000,8 @@
         },
         // Hoja de reparto (T28e).
         imprimirHojaDeReparto,
+        // Cierre del día (T28f).
+        imprimirLineas,
         datosDeLaHoja,
         // Para probar sin impresora: los bytes del ticket.
         armarTicket(idPedido, copias) {

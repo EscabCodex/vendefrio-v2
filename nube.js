@@ -1971,6 +1971,9 @@
             intentar(renderizarRutasGuardadas);
         }
 
+        // Cierre del día (T28f): se recalcula con cada cambio de los pedidos.
+        if (cambio("historial") && window.cierreVendeFrio) intentar(window.cierreVendeFrio.redibujar);
+
         if (pantallaVisible("pantallaEstadisticas") && typeof window.abrirEstadisticas === "function") {
             intentar(window.abrirEstadisticas);
         }

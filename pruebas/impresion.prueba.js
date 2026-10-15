@@ -10,6 +10,10 @@
 // 3. Hoja de reparto impresa (T28e): en Rutas, después de "Optimizar ruta",
 //    se imprime la hoja con los comercios en el orden de la ruta, sus
 //    pedidos sin entregar, lo que deben de antes y el total a cobrar.
+// 4. Cierre del día (T28f): sección nueva para el dueño y "Cobra", con la
+//    caja del día (por forma de pago y por persona), los entregados, las
+//    diferencias, los cambios, lo que salió y no se entregó y los
+//    cancelados, y el botón "Imprimir". Un empleado sin "Cobra" no la ve.
 const { test, expect, capturar } = require("./ayudas");
 const {
     registrarDistribuidora,
@@ -242,4 +246,85 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     // Super Norte: el pedido sin entregar y el que debe de antes.
     const superNorte = hoja.slice(hoja.indexOf("2. [ ] Super Norte"));
     expect(superNorte).toMatch(/Pedido N\? [A-Z0-9_]{6} · Cargado|Pedido N\? [A-Z0-9_]{6} \? Cargado/);
+});
+
+test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
+    await usarImpresoraFalsa(page);
+    await registrarDistribuidora(page, testInfo);
+    await irAPedidos(page);
+    for (let i = 0; i < 5; i++) await cargarPedido(page, false);
+
+    // Con las mismas funciones que usa la app: uno entregado y cobrado en
+    // efectivo; otro entregado con un helado menos y cobrado por
+    // transferencia con $ 300 menos; otro salió a repartir y sigue en la
+    // calle; otro cancelado; el último sigue cargado.
+    await page.evaluate(() => {
+        const nube = window.nubeVendeFrio;
+        const ids = obtenerHistorial().filter(item => item.comercio === "Almacén Don Pepe").map(item => item.id);
+        nube.entregarPedido(ids[0], {});
+        const pedido = obtenerHistorial().find(item => item.id === ids[1]);
+        const helado = nube.entregaDelPedido(pedido).lineas.find(linea => linea.item.producto === "Helado 1 kg");
+        nube.entregarPedido(ids[1], { [helado.clave]: { entregada: 1, motivo: "Uno vino roto" } });
+        nube.agregarEstadoAlPedido(ids[2], "enReparto", "");
+        nube.cancelarPedido(ids[3], "Ya no lo quiere");
+        window.__idsCierre = ids;
+    });
+    await expect.poll(() => page.evaluate(() => window.__idsCierre.slice(0, 2)
+        .map(id => obtenerHistorial().find(item => item.id === id).estado).join(","))).toBe("entregado,entregado");
+    await page.evaluate(() => {
+        const ids = window.__idsCierre;
+        window.nubeVendeFrio.registrarCobro(ids[0], { forma: "efectivo", monto: "9800" });
+        window.nubeVendeFrio.registrarCobro(ids[1], { forma: "transferencia", monto: "5000" });
+    });
+    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+
+    // Más > Cierre del día.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await page.locator(".menuMasContenido").getByRole("button", { name: /Cierre del día/ }).click();
+    const cierre = page.locator("#pantallaCierre");
+    await expect(cierre).toBeVisible();
+    await expect(cierre.locator("#nombreDiaCierre")).toContainText("Hoy");
+    const kpis = cierre.locator(".kpisCierre");
+    await expect(kpis).toContainText("5cargados");
+    await expect(kpis).toContainText("2entregados");
+    await expect(kpis).toContainText("1sin entregar");
+    await expect(kpis).toContainText("1con cambios");
+    await expect(kpis).toContainText("1cancelados");
+    await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 14.800");
+    await expect(cierre.locator(".filaCierre", { hasText: "Efectivo" })).toContainText("$ 9.800");
+    await expect(cierre.locator(".filaCierre", { hasText: "Transferencia" })).toContainText("$ 5.000");
+    await expect(cierre.locator(".filaCierre", { hasText: "A cobrar" })).toContainText("$ 0");
+    await expect(cierre.locator(".tarjetaCierre", { hasText: "Por persona que cobró" })).toContainText("Jere");
+    await expect(cierre.locator(".tarjetaCierre", { hasText: "Diferencias con el total" })).toContainText("cobró $ 5.000 de $ 5.300");
+    await expect(cierre.locator(".tarjetaCierre", { hasText: "Entregados con cambios" })).toContainText("−$ 4.500");
+    await expect(cierre.locator(".tarjetaCierre", { hasText: "Salieron y no se entregaron" })).toContainText("En reparto");
+    await capturar(page, "impresion-05-cierre-del-dia");
+    await cierre.locator(".tarjetaCierre", { hasText: "Diferencias con el total" }).scrollIntoViewIfNeeded();
+    await capturar(page, "impresion-06-cierre-del-dia-detalle");
+
+    // Imprimir, abajo de todo.
+    await page.evaluate(() => { window.__bytesImpresos = []; });
+    await cierre.getByRole("button", { name: "Imprimir" }).click();
+    await expect(page.locator("#contenedorToasts")).toContainText("Cierre del día impreso");
+    const impreso = await textoImpreso(page);
+    expect(impreso).toContain("Distribuidora Prueba\nCIERRE DEL D?A");
+    expect(impreso).toMatch(/Efectivo\s+\$ 9\.800/);
+    expect(impreso).toMatch(/Transferencia\s+\$ 5\.000/);
+    expect(impreso).toMatch(/Jere \(2\)\s+\$ 14\.800/);
+    expect(impreso).toMatch(/RECAUDADO\s+\$ 14\.800/);
+    expect(impreso).toMatch(/Cobr\? \$ 5\.000 de \$ 5\.300\s+-\$ 300/);
+
+    // El día anterior está vacío.
+    await cierre.getByRole("button", { name: "Día anterior" }).click();
+    await expect(cierre.locator("#nombreDiaCierre")).toContainText("Ayer");
+    await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 0");
+    await expect(cierre).toContainText("No se entregaron pedidos este día.");
+
+    // Un empleado sin "Cobra" no tiene "Cierre del día" en Más.
+    const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);
+    await empleado.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await expect(empleado.locator(".menuMasContenido")).toContainText("Rutas");
+    await expect(empleado.locator(".menuMasContenido")).not.toContainText("Cierre del día");
+    await contexto.close();
+    expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });

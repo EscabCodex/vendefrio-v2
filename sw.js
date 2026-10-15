@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v162 - Hoja de reparto impresa)
+// VendeFrío - Service Worker (v163 - Cierre del día)
 // =====================================================
-const CACHE_NAME = "vendefrio-v162";
+const CACHE_NAME = "vendefrio-v163";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -20,6 +20,7 @@ const ARCHIVOS = [
   "./productosAdmin.js",
   "./historial.js",
   "./impresion.js",
+  "./cierre.js",
   "./seguimiento.js",
   "./avisos.js",
   "./notificaciones.js",
