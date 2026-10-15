@@ -218,10 +218,10 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     // Rutas: todos los comercios y "Optimizar ruta".
     await abrirMas(page);
     await page.locator(".masAccesos").getByRole("button", { name: /Rutas/ }).click();
-    // Sin internet en la prueba, el mapa no carga: la ruta se arma igual.
+    // El mapa viene dentro de la app (T40): abre aunque no haya internet
+    // (sin internet, sin las calles).
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     const aviso = page.locator("#modalAviso");
-    await expect(aviso).toContainText("Mapa no disponible");
-    await aviso.getByRole("button", { name: "Entendido" }).click();
     await page.locator("#seleccionarTodosRuta").click();
     await page.locator("#btnOptimizarRuta").click();
     await expect(aviso).toContainText("1. Kiosco Luna");

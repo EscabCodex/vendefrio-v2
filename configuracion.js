@@ -180,7 +180,7 @@
         const valores = {
             apariencia: { sistema: "Automática", claro: "Clara", oscuro: "Oscura" }[leer().tema || "sistema"],
             impresora: window.impresionVendeFrio?.impresoraGuardada?.()?.nombre || "Sin elegir",
-            navegacion: "Bicicleta"
+            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "bicicleta"] || "Bicicleta"
         };
         document.querySelectorAll(".configValor[data-valor]").forEach(valor => {
             valor.textContent = valores[valor.dataset.valor] || "";
@@ -1446,7 +1446,7 @@
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
-            navegacion: ["Navegación", "Configurá el recorrido en bicicleta"],
+            navegacion: ["Cómo hacés el recorrido", "Vehículo, navegación y voz"],
             seguridad: ["Seguridad y aplicación", "Información y permisos"]
         };
 
@@ -1575,7 +1575,29 @@
 
         if (seccion === "navegacion") {
             caja.innerHTML += `
-                <p class="configEstado">${window.icono("bicicleta",14)} Vehículo: bicicleta</p>
+                <label>${window.icono("bicicleta",15)} Cómo te movés
+                    <select data-campo="vehiculo">
+                        <option value="bicicleta">Bicicleta</option>
+                        <option value="moto">Moto</option>
+                        <option value="auto">Auto o camioneta</option>
+                        <option value="pie">A pie</option>
+                    </select>
+                </label>
+
+                <label>${window.icono("navegar",15)} Al tocar «Ir»
+                    <select data-campo="navegador">
+                        <option value="app">Navegar con VendeFrío</option>
+                        <option value="google">Abrir Google Maps</option>
+                    </select>
+                </label>
+
+                <label>${window.icono("volumen",15)} Indicaciones con voz
+                    <select data-campo="voz">
+                        <option value="si">Sí, hablar las indicaciones</option>
+                        <option value="no">No, solo en pantalla</option>
+                    </select>
+                </label>
+                <p class="configEstado">La navegación usa los mapas de OpenStreetMap y calcula el camino por calles con internet. Necesita el GPS del comercio (se guarda desde su ficha).</p>
 
                 <label>${window.icono("buscar",15)} Nivel de zoom
                     <select data-campo="zoom">
@@ -1630,6 +1652,9 @@
                 campo === "densidad" ? "compacto" :
                 campo === "frecuenciaRespaldo" ? "semanal" :
                 campo === "zoom" ? "17" :
+                campo === "vehiculo" ? "bicicleta" :
+                campo === "navegador" ? "app" :
+                campo === "voz" ? "si" :
                 "pendientes";
 
             control.value = d[campo] || defecto;

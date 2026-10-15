@@ -177,6 +177,7 @@
         if (ir) {
             const enlace = acceso("navegar", "Ir", "a");
             enlace.href = ir;
+            enlace.dataset.navegarA = comercio.nombre;
             enlace.target = "_blank";
             enlace.rel = "noopener";
             accesos.appendChild(enlace);

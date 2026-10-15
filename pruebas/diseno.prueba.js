@@ -77,10 +77,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     // Rutas, Estadísticas, Cierre del día y Empleados, desde "Más" (T38).
     await page.locator(".masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
-    // Sin internet en la prueba, el mapa no carga.
-    const aviso = page.locator("#modalAviso");
-    await expect(aviso).toContainText("Mapa no disponible");
-    await aviso.getByRole("button", { name: "Entendido" }).click();
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await capturar(page, "diseno-08-rutas");
 
     await abrirMas(page);

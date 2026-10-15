@@ -396,7 +396,7 @@ function dibujarProximaParadaInicio(comercios) {
     pedido.innerHTML = window.icono("documento", 18) + " Cargar pedido";
     pedido.addEventListener("click", () => irAPedidoRapido(sugerido.nombre));
 
-    // "Ir" abre la navegación de Google Maps hacia el comercio.
+    // "Ir": la navegación propia (navegacion.js) o, si no se puede, Google Maps.
     const ir = document.createElement("a");
     ir.className = "btnAccion ver botonIr";
     ir.target = "_blank";
@@ -406,6 +406,8 @@ function dibujarProximaParadaInicio(comercios) {
         ? sugerido.lat + "," + sugerido.lng
         : sugerido.direccion || sugerido.nombre;
     ir.href = "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + encodeURIComponent(destino);
+    // Con GPS guardado, "Ir" abre la navegación propia (Etapa 5).
+    ir.dataset.navegarA = sugerido.nombre;
 
     acciones.append(pedido, ir);
     contenedor.append(info, acciones);

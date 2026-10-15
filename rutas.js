@@ -142,8 +142,7 @@ function inicializarPantallaRutas() {
     crearControlesPinManual();
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
-    cargarModuloNavegacion3D();
-    crearBotonNavegacion3D();
+    crearBotonNavegarRuta();
     renderizarPines();
 }
 
@@ -359,21 +358,27 @@ function cargarModuloNavegacion3D() {
     document.body.appendChild(script);
 }
 
-function crearBotonNavegacion3D() {
+// "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
+// en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
+// dependía de una librería de internet).
+function crearBotonNavegarRuta() {
     const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("btnAbrirNavegacion3D")) return;
+    if (!botonMaps || document.getElementById("btnNavegarRuta")) return;
 
     const boton = document.createElement("button");
-    boton.id = "btnAbrirNavegacion3D";
+    boton.id = "btnNavegarRuta";
     boton.type = "button";
-    boton.className = "btnAccion botonNavegacion3D";
-    boton.textContent = "Abrir navegaci\u00f3n 3D";
+    boton.className = "btnAccion botonNavegarRuta";
+    boton.innerHTML = window.icono("navegar", 16) + " Navegar la ruta";
     boton.addEventListener("click", () => {
-        if (typeof window.iniciarVistaNavegacion3D !== "function") {
-            mostrarAviso("Navegaci\u00f3n no lista", "Esper\u00e1 unos segundos y prob\u00e1 nuevamente.");
+        if (!rutaOrdenada.length) {
+            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar ruta\u00bb y despu\u00e9s \u00abNavegar la ruta\u00bb.");
             return;
         }
-        window.iniciarVistaNavegacion3D(rutaOrdenada);
+        const nombres = rutaOrdenada.map(parada => parada.nombre);
+        if (!window.navegacionVendeFrio?.abrir?.(nombres)) {
+            mostrarAviso("No se pudo navegar", "Las paradas necesitan su ubicaci\u00f3n GPS. Si elegiste Google Maps en M\u00e1s, us\u00e1 el bot\u00f3n de Google Maps.");
+        }
     });
     botonMaps.insertAdjacentElement("afterend", boton);
 }
@@ -1235,12 +1240,8 @@ function iniciarMapa() {
         13
     );
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution: "\u00a9 OpenStreetMap"
-        }
-    ).addTo(mapaLeaflet);
+    window.mapaVendeFrio.capaDeCalles().addTo(mapaLeaflet);
+    mapaLeaflet.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 
     capaMarcadores = L.layerGroup().addTo(mapaLeaflet);
     mapaLeaflet.on("click", manejarClickMapaManual);
