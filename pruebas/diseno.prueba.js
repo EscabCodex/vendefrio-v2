@@ -58,6 +58,11 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
 
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
     await capturar(page, "diseno-06-catalogo");
+    // Catálogo y Productos y marcas son una sola sección (T36).
+    await page.getByRole("tab", { name: "Productos y marcas" }).click();
+    await expect(page.locator("#pantallaProductos")).toBeVisible();
+    await expect(page.locator(".bottom-nav .nav-item.activo")).toHaveText(/Catálogo/);
+    await capturar(page, "diseno-06b-productos-y-marcas");
 
     await abrirMas(page);
     await capturar(page, "diseno-07-mas");

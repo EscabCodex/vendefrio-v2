@@ -174,8 +174,7 @@
                 tarjeta("rutas", "mapa", "Rutas") +
                 tarjeta("estadisticas", "grafico", "Estadísticas") +
                 (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
-                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "") +
-                tarjeta("productos", "etiqueta", "Productos y marcas");
+                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
         }
 
         const valores = {

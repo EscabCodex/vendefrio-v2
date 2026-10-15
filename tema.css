@@ -819,3 +819,79 @@ html .tarjetaSeguimiento.filaCambio{animation:tarjetaCambio 2.4s ease-out;}
 /* Mientras se carga un pedido, el cartel del modo personal no tapa el pie. */
 html.enCargaPedido .cartelModoPersonal{display:none !important;}
 html .clientePedidoCabecera label{margin:0;}
+
+/* ---------- Catálogo unido con Productos y marcas (T36) ---------- */
+
+html .segmentoCatalogo{
+  display:grid;grid-template-columns:1fr 1fr;gap:4px;
+  padding:4px;margin-bottom:12px;border-radius:999px;
+  background:var(--superficie-2);
+}
+html .segmentoCatalogo button{
+  border:0;border-radius:999px;padding:10px 6px;min-height:0;margin:0;
+  background:transparent;color:var(--texto-sec);box-shadow:none;
+  font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
+}
+html .segmentoCatalogo button.activo{background:var(--superficie);color:var(--texto);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+html[data-tema="oscuro"] .segmentoCatalogo button.activo{background:var(--acento);color:var(--acento-txt);}
+html #pantallaCatalogo .extraVolver{display:none;}
+
+html .catalogoFiltros{gap:10px;margin-bottom:12px;}
+html .catalogoFiltros .buscadorCatalogo,
+html[data-tema] .catalogoFiltros input.buscadorCatalogo{
+  min-height:52px;border-radius:999px;padding-left:44px;
+  background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px;
+  border:var(--borde-tarjeta);color:var(--texto);
+}
+html .grillaCatalogo{gap:12px;}
+html .itemCatalogo,
+html[data-tema] .itemCatalogo{
+  position:relative;gap:2px;padding:10px 10px 12px;
+  border:var(--borde-tarjeta);border-radius:var(--radius-md);
+  background:var(--superficie);box-shadow:var(--sombra);
+}
+html .fotoCatalogo,
+html[data-tema] .fotoCatalogo{
+  margin-bottom:8px;border-radius:12px;
+  background:var(--acento-bg);color:var(--acento-oscuro);font-size:34px;
+}
+html[data-tema="oscuro"] .fotoCatalogo{color:var(--acento);}
+html .itemCatalogo small{color:var(--texto-ter);font-size:11.5px;font-weight:600;}
+html .itemCatalogo strong{font-size:14px;line-height:1.25;color:var(--texto);}
+html .pieItemCatalogo{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;}
+html .itemCatalogo b,
+html[data-tema] .itemCatalogo b{color:var(--texto);font-size:15px;font-weight:800;}
+html .btnCatalogoPedido,
+html[data-tema] .btnCatalogoPedido{
+  flex:0 0 38px;width:38px;height:38px;min-height:0;margin:0;padding:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);
+}
+html .btnCatalogoEditar,
+html[data-tema] .btnCatalogoEditar{
+  position:absolute;top:16px;right:16px;
+  width:34px;height:34px;min-height:0;padding:0;
+  display:grid;place-items:center;border-radius:50%;
+  border:0;background:var(--superficie);color:var(--texto-sec);
+  box-shadow:0 1px 4px rgba(0,0,0,.15);
+}
+html .catalogoVacio{grid-column:1/-1;text-align:center;color:var(--texto-sec);padding:24px;}
+
+/* Productos y marcas: misma letra y tarjetas; el color de la marca queda
+   como un punto al lado del nombre. */
+html .tarjetaMarca{border:var(--borde-tarjeta);box-shadow:var(--sombra);border-radius:var(--radius-lg);}
+html .cabeceraMarca{background:var(--superficie);color:var(--texto);padding:14px 14px 10px;border-bottom:1px solid var(--borde);}
+html .cabeceraMarca h2{display:flex;align-items:center;gap:8px;font-size:16px;color:var(--texto);}
+html .cabeceraMarca h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--acento);flex-shrink:0;}
+html .accionesMarca .btnIcono{background:var(--superficie-2);color:var(--texto-sec);border:0;border-radius:50%;}
+html .filaProducto,
+html[data-tema] .filaProducto{border-bottom:1px solid var(--borde);background:transparent;}
+html .filaProducto small{color:var(--texto-sec);}
+html .filaProducto .filaBotones .btnIcono{border-radius:50%;}
+html[data-tema] #pantallaCatalogo input.buscadorCatalogo{
+  padding-left:44px !important;
+  background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px !important;
+}
+html[data-tema="oscuro"] .chipMarca.activo,
+html[data-tema="oscuro"] .chipMarca.activo span,
+html[data-tema="oscuro"] .chipMarca.activo small{color:var(--acento-txt) !important;}
