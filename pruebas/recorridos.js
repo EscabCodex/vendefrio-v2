@@ -33,8 +33,7 @@ async function registrarDistribuidora(page, testInfo) {
 
 // Carga un pedido de 2 helados y 1 palito (sin captura si no se pide).
 async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
-    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await irAPedidos(page);
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator("#cliente").fill(comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
@@ -56,15 +55,21 @@ async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await expect(generado).toBeHidden();
 }
 
-// Abre Configuración desde "Más" y entra a una sección.
+// Abre "Más" desde el avatar de Inicio (estilo nuevo, T31).
+async function abrirMas(page) {
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+}
+
+// Abre una sección de la configuración, que está en "Más".
 async function abrirConfiguracionEn(page, seccion) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
-    await page.locator(".menuMasContenido").getByRole("button", { name: /Configuración/ }).click();
+    await abrirMas(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 
 async function irAPedidos(page) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
 }
 
@@ -152,6 +157,7 @@ function textoDeBytes(bytes) {
 module.exports = {
     registrarDistribuidora,
     cargarPedido,
+    abrirMas,
     abrirConfiguracionEn,
     irAPedidos,
     entrarComoEmpleado,

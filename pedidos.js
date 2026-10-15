@@ -72,7 +72,29 @@ function actualizarResumenPedido() {
 
     if (totalTiposPedido) {
         totalTiposPedido.textContent = String(tipos);
+        const palabra = document.getElementById("palabraTiposPedido");
+        if (palabra) palabra.textContent = tipos === 1 ? "producto" : "productos";
     }
+
+    // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
+    const productosCatalogo = obtenerProductos();
+    let plata = 0;
+    document.querySelectorAll("#productos .marca").forEach(marca => {
+        let enElPedido = 0;
+        marca.querySelectorAll("select").forEach(select => {
+            const cantidad = Number(select.value) || 0;
+            if (!cantidad) return;
+            enElPedido += 1;
+            const producto = (productosCatalogo[select.dataset.marca] || [])
+                .find(item => item && item.nombre === select.dataset.producto);
+            const precio = Number(producto && producto.precio);
+            if (Number.isFinite(precio)) plata += precio * cantidad;
+        });
+        const contador = marca.querySelector(".contadorMarca");
+        if (contador) contador.textContent = enElPedido ? enElPedido + " en el pedido" : "";
+    });
+    const totalPlata = document.getElementById("totalPlataPedido");
+    if (totalPlata) totalPlata.textContent = "$ " + Math.round(plata).toLocaleString("es-AR");
 }
 
 function crearSelect(marca, producto) {
@@ -97,6 +119,8 @@ function crearSelect(marca, producto) {
 
 function actualizarEstadoCantidad(select) {
     select.classList.toggle("activo", select.value !== "0");
+    // El "+" se convierte en contador (T34): los controles saben la cantidad.
+    if (select.parentNode) select.parentNode.dataset.cantidad = select.value;
     actualizarResumenPedido();
     guardarBorradorPedido();
 }
@@ -145,7 +169,9 @@ function crearControlesProducto(marca, producto) {
         "",
         "Volver a cero"
     );
-    botonBorrar.innerHTML = window.icono("tacho", 14);
+    botonBorrar.innerHTML = window.icono("tacho", 17);
+    botonMenos.innerHTML = window.icono("menos", 18);
+    botonMas.innerHTML = window.icono("mas", 18);
 
     botonMenos.addEventListener("click", () => {
         cambiarCantidad(select, -1);
@@ -161,11 +187,12 @@ function crearControlesProducto(marca, producto) {
     });
 
     controles.append(
+        botonBorrar,
         botonMenos,
         select,
-        botonMas,
-        botonBorrar
+        botonMas
     );
+    controles.dataset.cantidad = "0";
 
     return controles;
 }
@@ -343,13 +370,15 @@ function aplicarFiltroProductosPedido() {
         const coincideMarca = termino !== "" && nombreMarca.includes(termino);
         let cantidadFilasVisibles = 0;
 
+        const marcaElegida = !marcaElegidaPedido || marca.dataset.marca === marcaElegidaPedido;
+
         marca.querySelectorAll(".fila").forEach(fila => {
             const textoProducto = fila.querySelector("span");
             const nombreProducto = normalizarTexto(
                 fila.dataset.producto ||
                 (textoProducto ? textoProducto.textContent : "")
             );
-            const visible = termino === "" || coincideMarca || nombreProducto.includes(termino);
+            const visible = marcaElegida && (termino === "" || coincideMarca || nombreProducto.includes(termino));
 
             fila.style.display = visible ? "flex" : "none";
             if (visible) cantidadFilasVisibles += 1;
@@ -360,11 +389,7 @@ function aplicarFiltroProductosPedido() {
 
         const cuerpo = marca.querySelector(".listaProdutos");
         if (cuerpo) {
-            if (termino !== "" && visible) {
-                cuerpo.style.display = "block";
-            } else if (termino === "") {
-                cuerpo.style.display = "none";
-            }
+            cuerpo.style.display = "block";
         }
 
         if (visible) cantidadMarcasVisibles += 1;
@@ -378,6 +403,26 @@ function aplicarFiltroProductosPedido() {
     }
 }
 
+// Más > Preferencias de trabajo > "Productos en el pedido" (T50): como en
+// el catálogo, de la A a la Z o los más pedidos primero.
+function ordenarProductosDelPedido(productos) {
+    const orden = window.preferenciasVendeFrio?.valor("ordenProductos") || "marca";
+    const lista = productos.slice();
+    if (orden === "alfabetico") {
+        return lista.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
+    }
+    if (orden === "frecuencia") {
+        const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const veces = new Map();
+        pedidos.forEach(pedido => (pedido.productos || []).forEach(item => {
+            const nombre = String(item.nombre || item.producto || "");
+            veces.set(nombre, (veces.get(nombre) || 0) + (Number(item.cantidad) || 0));
+        }));
+        return lista.sort((a, b) => (veces.get(b.nombre) || 0) - (veces.get(a.nombre) || 0));
+    }
+    return lista;
+}
+
 function crearMarca(nombreMarca, productos, indiceMarca) {
     const card = document.createElement("div");
     card.className = "marca";
@@ -389,13 +434,16 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
     const nombre = document.createElement("span");
     nombre.textContent = nombreMarca;
 
-    const flecha = document.createElement("span");
-    flecha.textContent = "\u25bc";
-    titulo.append(nombre, flecha);
+    // Estilo nuevo (T34): las marcas van abiertas, una debajo de la otra,
+    // con cuántos productos de cada una hay en el pedido.
+    const contador = document.createElement("small");
+    contador.className = "contadorMarca";
+    titulo.append(nombre, contador);
+    card.dataset.marca = nombreMarca;
 
     const cuerpo = document.createElement("div");
     cuerpo.className = "listaProdutos";
-    cuerpo.style.display = "none";
+    cuerpo.style.display = "block";
 
     if (!Array.isArray(productos) || productos.length === 0) {
         const vacio = document.createElement("p");
@@ -403,13 +451,20 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
         vacio.textContent = "Esta marca todav\u00eda no tiene productos.";
         cuerpo.appendChild(vacio);
     } else {
-        productos.forEach(producto => {
+        ordenarProductosDelPedido(productos).forEach(producto => {
             const fila = document.createElement("div");
             fila.className = "fila";
             fila.dataset.producto = producto.nombre;
 
             const texto = document.createElement("span");
+            texto.className = "nombreProductoPedido";
             texto.textContent = producto.nombre;
+            const precio = Number(producto.precio);
+            if (producto.precio !== null && producto.precio !== undefined && producto.precio !== "" && Number.isFinite(precio)) {
+                const precioTexto = document.createElement("small");
+                precioTexto.textContent = "$ " + precio.toLocaleString("es-AR") + " c/u";
+                texto.appendChild(precioTexto);
+            }
 
             fila.append(
                 texto,
@@ -422,16 +477,59 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
         });
     }
 
+    // Tocar el nombre de la marca la deja arriba de la pantalla.
     titulo.addEventListener("click", () => {
-        document.querySelectorAll(".listaProdutos").forEach(lista => {
-            if (lista !== cuerpo) lista.style.display = "none";
-        });
-
-        cuerpo.style.display = cuerpo.style.display === "none" ? "block" : "none";
+        cuerpo.style.display = "block";
     });
 
     card.append(titulo, cuerpo);
     contenedorProductos.appendChild(card);
+}
+
+// Chips de marcas arriba de los productos (T34): "Todas" o una marca.
+let marcaElegidaPedido = "";
+
+function dibujarChipsMarcasPedido(marcas, productos) {
+    if (!contenedorProductos) return;
+    let chips = document.getElementById("chipsMarcasPedido");
+    if (!chips) {
+        chips = document.createElement("div");
+        chips.id = "chipsMarcasPedido";
+        chips.className = "chipsMarcasPedido";
+        chips.setAttribute("role", "tablist");
+        chips.setAttribute("aria-label", "Marcas");
+        contenedorProductos.parentNode.insertBefore(chips, contenedorProductos);
+    }
+    if (marcaElegidaPedido && !marcas.includes(marcaElegidaPedido)) marcaElegidaPedido = "";
+    chips.innerHTML = "";
+    chips.classList.toggle("oculto", marcas.length < 2);
+
+    const chip = (valor, texto, cantidad) => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "chipMarca" + (marcaElegidaPedido === valor ? " activo" : "");
+        boton.setAttribute("role", "tab");
+        boton.setAttribute("aria-selected", String(marcaElegidaPedido === valor));
+        boton.textContent = texto;
+        if (cantidad !== undefined) {
+            const numero = document.createElement("small");
+            numero.textContent = String(cantidad);
+            boton.appendChild(numero);
+        }
+        boton.addEventListener("click", () => {
+            marcaElegidaPedido = valor;
+            chips.querySelectorAll(".chipMarca").forEach(otro => {
+                const activo = otro === boton;
+                otro.classList.toggle("activo", activo);
+                otro.setAttribute("aria-selected", String(activo));
+            });
+            aplicarFiltroProductosPedido();
+        });
+        return boton;
+    };
+
+    chips.appendChild(chip("", "Todas"));
+    marcas.forEach(marca => chips.appendChild(chip(marca, marca, (productos[marca] || []).length)));
 }
 
 function renderizarPedido() {
@@ -447,6 +545,7 @@ function renderizarPedido() {
             crearMarca(marca, productos[marca], indiceMarca);
         });
 
+    dibujarChipsMarcasPedido(obtenerMarcasOrdenadas(productos), productos);
     restaurarBorradorPedido();
     actualizarResumenPedido();
     aplicarFiltroProductosPedido();
@@ -878,7 +977,7 @@ function generarPedido() {
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
     if (modalPedido) modalPedido.classList.remove("oculto");
-    if (navigator.vibrate) navigator.vibrate(35);
+    if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
 
     return true;
 }
@@ -1588,3 +1687,28 @@ function guardarEdicionPedido() {
 
 window.abrirEdicionPedido = abrirEdicionPedido;
 window.cerrarEdicionPedido = cerrarEdicionPedido;
+
+// Etapa 5 (T44): suma productos al pedido que se está cargando (lo usa el
+// pedido dictado o pegado de voz.js). Cada item: { marca, producto,
+// cantidad }. Devuelve cuántas unidades se sumaron.
+function agregarProductosAlPedido(items, comercio) {
+    if (comercio && inputCliente && !inputCliente.value.trim()) inputCliente.value = comercio;
+    let sumadas = 0;
+    (items || []).forEach(item => {
+        const select = Array.from(document.querySelectorAll(".marca select")).find(elemento =>
+            normalizarTexto(elemento.dataset.marca) === normalizarTexto(item.marca) &&
+            normalizarTexto(elemento.dataset.producto) === normalizarTexto(item.producto));
+        if (!select) return;
+        const antes = Number(select.value) || 0;
+        const despues = Math.min(40, antes + Math.max(0, Math.round(Number(item.cantidad) || 0)));
+        select.value = String(despues);
+        actualizarEstadoCantidad(select);
+        sumadas += despues - antes;
+    });
+    if (buscadorProductosPedido) buscadorProductosPedido.value = "";
+    aplicarFiltroProductosPedido();
+    actualizarResumenPedido();
+    guardarBorradorPedido();
+    return sumadas;
+}
+window.agregarProductosAlPedido = agregarProductosAlPedido;

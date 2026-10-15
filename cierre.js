@@ -239,6 +239,16 @@
                     diaElegido = siguiente;
                     dibujar();
                 }
+            } else if (boton.id === "descargarPlanillaCierre") {
+                // Planilla del día (T47): los pedidos cargados ese día.
+                const fin = diaElegido + DIA;
+                const pedidos = obtenerHistorial().filter(pedido => {
+                    if (!pedido || pedido.eliminado === true) return false;
+                    const hora = Number(pedido.timestamp) || 0;
+                    return hora >= diaElegido && hora < fin;
+                });
+                const dia = new Date(diaElegido);
+                window.exportarVendeFrio?.descargar(pedidos, "VendeFrío cierre " + dia.getFullYear() + "-" + String(dia.getMonth() + 1).padStart(2, "0") + "-" + String(dia.getDate()).padStart(2, "0"));
             } else if (boton.id === "imprimirCierre") {
                 window.impresionVendeFrio?.imprimirLineas?.(lineasParaImprimir(calcular(diaElegido)), {
                     clave: "cierre",
@@ -365,6 +375,7 @@
                     ${window.icono("impresora", 16)} ${impresion.imprimiendo() === "cierre" ? "Imprimiendo…" : "Imprimir"}
                </button>`
             : `<p class="vacioCierre">Para imprimirlo, abrí la app en un celular Android con Chrome.</p>`;
+        const planilla = `<button type="button" class="btnAccion secundario descargarPlanilla" id="descargarPlanillaCierre">${window.icono("descargar", 16)} Descargar planilla del día</button>`;
 
         caja.innerHTML =
             resumen +
@@ -376,7 +387,8 @@
             cambios +
             sinEntregar +
             cancelados +
-            imprimir;
+            imprimir +
+            planilla;
     }
 
     // Lo mismo, para la impresora (impresion.js arma los bytes).

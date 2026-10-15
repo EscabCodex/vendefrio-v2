@@ -17,6 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
+const { abrirMas } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -139,7 +140,7 @@ async function registrarDistribuidora(page, testInfo) {
 }
 
 async function cargarPedido(page, comercio) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Pedido" }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator("#cliente").fill(comercio);
@@ -153,8 +154,7 @@ async function cargarPedido(page, comercio) {
 }
 
 async function abrirConfiguracionEn(page, seccion) {
-    await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
-    await page.locator(".menuMasContenido").getByRole("button", { name: /Configuración/ }).click();
+    await abrirMas(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 
@@ -197,7 +197,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
     await expect.poll(async () => (await celularesDe(idDistribuidora, "dueno")).docs.map(doc => doc.data().token)).toEqual([tokenDueno]);
 
     // Segundo celular: un empleado entra con un código y también las activa.
-    await page.locator(".configSubVolver").click();
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="empleados"]').click();
     await page.getByRole("button", { name: "Generar código para un empleado nuevo" }).click();
     const codigo = (await page.locator("#empleadoCodigoGenerado strong").textContent()).trim();
@@ -250,7 +250,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
 
     // El dueño silencia "Pedido nuevo": el siguiente le llega a la
     // campanita, pero no suena.
-    await page.locator(".configSubVolver").click();
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="avisos"]').click();
     const suenaPedidoNuevo = page.locator('.casillaSuena[value="pedidoNuevo"]');
     await expect(suenaPedidoNuevo).toBeChecked();

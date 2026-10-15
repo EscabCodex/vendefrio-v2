@@ -126,7 +126,8 @@ test("nube: pedido viejo en el vehículo, volver atrás y entregar desde Cargado
     await capturar(page, "nube-10-pedido-viejo-en-reparto");
 
     // Volver un paso atrás: vuelve a "Cargado", el paso que tenía antes.
-    await ficha.getByRole("button", { name: "Volver un paso atrás" }).click();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await ficha.getByRole("menuitem", { name: "Volver un paso atrás" }).click();
     const modal = page.locator("#modalTextoPedido");
     await expect(modal).toContainText("El pedido pasa de «En reparto» a «Cargado»");
     await modal.locator("#campoTextoPedido").fill("Lo bajamos del vehículo");
@@ -299,7 +300,8 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("En preparación");
     await expect(ficha.locator(".pasoSeguimiento.actual")).toContainText("Maxi");
 
-    await ficha.getByRole("button", { name: "Marcar incidencia" }).click();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await ficha.getByRole("menuitem", { name: "Marcar incidencia" }).click();
     const modalTexto = empleado.locator("#modalTextoPedido");
     await expect(modalTexto).toContainText("hasta que alguien del equipo la resuelva");
     await modalTexto.locator("#campoTextoPedido").fill("Falta un helado en la cámara");

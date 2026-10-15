@@ -2030,6 +2030,19 @@
 
         indicador.dataset.estado = estadoIndicador();
         indicador.textContent = textoIndicador();
+
+        // Estilo nuevo (T31): el puntito al lado del nombre de la
+        // distribuidora y el texto en "Más" muestran lo mismo.
+        document.querySelectorAll("[data-conexion]").forEach(punto => {
+            punto.classList.remove("oculto");
+            punto.dataset.estado = indicador.dataset.estado;
+            punto.title = indicador.textContent;
+            punto.setAttribute("aria-label", indicador.textContent);
+        });
+        document.querySelectorAll("[data-conexion-texto]").forEach(texto => {
+            texto.dataset.estado = indicador.dataset.estado;
+            texto.textContent = indicador.textContent;
+        });
     }
 
     // -------------------------------------------------

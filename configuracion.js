@@ -16,6 +16,172 @@
     const pantalla = () =>
         document.getElementById("pantallaConfiguracion");
 
+    // --- Piezas de las secciones de "Más" (T50): grupos con título, filas
+    // con ícono, ajustes a la derecha o abajo y notas cortas. ---
+    const ico = (nombre, tam = 20) => window.icono(nombre, tam);
+
+    function grupo(titulo, filas, clase = "") {
+        return `
+            <section class="ajGrupo ${clase}">
+                ${titulo ? `<h3 class="ajGrupoTitulo">${titulo}</h3>` : ""}
+                <div class="ajTarjeta">${filas}</div>
+            </section>`;
+    }
+
+    function cabezaFila(icono, tono, titulo, ayuda) {
+        return `
+            <span class="ajIcono" data-tono="${tono}">${ico(icono)}</span>
+            <span class="ajTexto"><strong>${titulo}</strong>${ayuda ? `<small>${ayuda}</small>` : ""}</span>`;
+    }
+
+    // Lista desplegable a la derecha.
+    function filaElegir(icono, tono, titulo, ayuda, campo, opciones) {
+        return `
+            <label class="ajFila">
+                ${cabezaFila(icono, tono, titulo, ayuda)}
+                <select data-campo="${campo}" aria-label="${titulo}">
+                    ${opciones.map(([valor, texto]) => `<option value="${valor}">${texto}</option>`).join("")}
+                </select>
+            </label>`;
+    }
+
+    // Botones en fila (pocas opciones cortas), debajo del título.
+    function filaSegmento(icono, tono, titulo, ayuda, campo, opciones) {
+        return `
+            <div class="ajFila ajApilada" role="radiogroup" aria-label="${titulo}">
+                <div class="ajCabeza">${cabezaFila(icono, tono, titulo, ayuda)}</div>
+                <div class="ajSegmento">
+                    ${opciones.map(([valor, texto]) => `
+                        <label><input type="radio" name="aj-${campo}" value="${valor}" data-campo="${campo}"><span>${texto}</span></label>`).join("")}
+                </div>
+            </div>`;
+    }
+
+    function filaLlave(icono, tono, titulo, ayuda, campo) {
+        return `
+            <label class="ajFila">
+                ${cabezaFila(icono, tono, titulo, ayuda)}
+                <input type="checkbox" class="ajLlave" data-campo="${campo}" role="switch" aria-label="${titulo}">
+            </label>`;
+    }
+
+    // Botón con aspecto de fila. extra: atributos (data-accion, id, disabled).
+    function filaAccion(icono, tono, titulo, ayuda, extra, clase = "") {
+        return `
+            <button type="button" class="ajFila ajAccion ${clase}" ${extra} aria-label="${titulo}">
+                ${cabezaFila(icono, tono, titulo, ayuda)}
+                <b aria-hidden="true">${ico("chevDerecha", 18)}</b>
+            </button>`;
+    }
+
+    function filaDato(icono, tono, titulo, valorHtml, idValor = "") {
+        return `
+            <div class="ajFila ajDato">
+                <span class="ajIcono" data-tono="${tono}">${ico(icono)}</span>
+                <span class="ajTexto"><small>${titulo}</small><strong ${idValor ? `id="${idValor}"` : ""}>${valorHtml}</strong></span>
+            </div>`;
+    }
+
+    // Valor de cada ajuste, o el de fábrica si nunca se tocó.
+    const DEFECTOS = {
+        tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
+        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
+        orden: "pendientes", ordenProductos: "marca", inicio: "menu",
+        vibrar: true, precios: true,
+        vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
+        zoom: "17", seguimiento: true, pantallaEncendida: true
+    };
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
+
+    function valorDe(d, campo) {
+        return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
+    }
+
+    // --- Apariencia (T50): el tema con una vista de cómo se ve, el color
+    // principal, el tamaño del texto, el espaciado y el movimiento. ---
+    const TEMAS = [["sistema", "Como el teléfono"], ["claro", "Claro"], ["oscuro", "Oscuro"]];
+    const ACENTOS = [
+        ["original", "Hielo y lima"], ["verde", "Verde"], ["violeta", "Violeta"],
+        ["naranja", "Naranja"], ["rosa", "Rosa"]
+    ];
+
+    // Una app en miniatura: barra de arriba, tarjeta principal, dos filas y la
+    // barra de abajo con el "+".
+    function miniApp(modo) {
+        return `
+            <span class="miniApp" data-modo="${modo}" aria-hidden="true">
+                <i class="miniCabeza"><i></i><i></i></i>
+                <i class="miniHero"><i></i><i></i></i>
+                <i class="miniFila"><i></i><i></i></i>
+                <i class="miniFila"><i></i><i></i></i>
+                <i class="miniBarra"><i></i><i></i><i class="miniMas"></i><i></i><i></i></i>
+            </span>`;
+    }
+
+    function htmlApariencia() {
+        const temas = TEMAS.map(([valor, texto]) => `
+            <label class="ajTema">
+                <input type="radio" name="aj-tema" value="${valor}" data-campo="tema">
+                <span class="vistaTema">
+                    ${valor === "sistema"
+                        ? `<span class="vistaPartida">${miniApp("claro")}${miniApp("oscuro")}</span>`
+                        : miniApp(valor)}
+                </span>
+                <strong>${texto}</strong>
+            </label>`).join("");
+
+        const acentos = ACENTOS.map(([valor, texto]) => `
+            <label class="ajColor" title="${texto}">
+                <input type="radio" name="aj-acento" value="${valor}" data-campo="acento" aria-label="${texto}">
+                <span class="muestraColor" data-acento-muestra="${valor}"><i></i><i></i></span>
+                <small>${texto}</small>
+            </label>`).join("");
+
+        return grupo("Tema",
+                `<div class="ajTemas" role="radiogroup" aria-label="Tema">${temas}</div>`, "ajGrupoTemas") +
+            grupo("Color principal",
+                `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}</div>
+                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro.</p>`) +
+            grupo("Texto y espacio",
+                filaSegmento("texto", "azul", "Tamaño del texto", "", "texto", [
+                    ["chico", "Chico"], ["normal", "Normal"], ["grande", "Grande"], ["enorme", "Muy grande"]
+                ]) +
+                filaSegmento("espaciado", "verde", "Espaciado", "Lugar entre filas y tarjetas", "densidad", [
+                    ["compacto", "Compacto"], ["comodo", "Cómodo"], ["amplio", "Amplio"]
+                ]) +
+                `<div class="ajMuestraTexto" aria-live="polite">
+                    <strong>Almacén Don Pepe</strong>
+                    <small>San Martín 123 · Pidió 2 helados y 1 palito</small>
+                </div>`) +
+            grupo("Más opciones",
+                filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
+                filaLlave("menu", "azul", "Más en la barra de abajo", "Para llegar a Más con el pulgar", "masEnBarra") +
+                filaLlave("flechaIzquierda", "verde", "Volver siempre a mano", "La flecha y la casita quedan arriba al bajar", "volverFlotante") +
+                filaLlave("chispa", "naranja", "Menos movimiento", "Saca las animaciones y transiciones", "movimiento") +
+                filaAccion("refrescar", "rojo", "Restablecer apariencia", "Todo como al principio", 'data-accion="restablecer"', "ajPeligro"));
+    }
+
+    // La muestra se ve con el tamaño elegido, sin salir de la sección.
+    function dibujarMuestraTexto(caja) {
+        const muestra = caja.querySelector(".ajMuestraTexto");
+        if (!muestra) return;
+        muestra.dataset.texto = valorDe(leer(), "texto");
+    }
+
+    // Un dato con su lápiz para cambiarlo.
+    function filaEditable(icono, tono, titulo, valorHtml, idValor, accion, textoBoton) {
+        return `
+            <div class="ajFila ajDato">
+                <span class="ajIcono" data-tono="${tono}">${ico(icono)}</span>
+                <span class="ajTexto"><small>${titulo}</small><strong ${idValor ? `id="${idValor}"` : ""}>${valorHtml}</strong></span>
+                ${accion ? `<button type="button" class="ajEditar" data-accion="${accion}" aria-label="${textoBoton}">${ico("lapiz", 16)}<span>${textoBoton}</span></button>` : ""}
+            </div>`;
+    }
+
+    function nota(texto, tono = "", extra = "") {
+        return `<p class="ajNota" data-tono="${tono}" ${extra}>${ico(tono === "alerta" ? "alerta" : "info", 16)}<span>${texto}</span></p>`;
+    }
+
     function crear() {
         if (pantalla()) return pantalla();
 
@@ -23,74 +189,59 @@
         elemento.id = "pantallaConfiguracion";
         elemento.className = "oculto pantallaConfiguracion";
 
+        // "Más" (T31): la persona y la conexión arriba, los accesos a otras
+        // secciones y la configuración en grupos, con filas de una línea.
+        const fila = (seccion, icono, titulo, extra = "") => `
+                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
+                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
+                        <strong>${titulo}</strong>
+                        <small class="configValor" data-valor="${seccion}"></small>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                    </button>`;
+
         elemento.innerHTML = `
             <header class="configHeader">
-                <button class="configVolver" type="button">‹</button>
+                <button class="configVolver" type="button" aria-label="Volver">${window.icono("flechaIzquierda", 22)}</button>
                 <div>
-                    <h1>Configuración</h1>
-                    <p>Personalizá VendeFrío</p>
+                    <h1>Más</h1>
                 </div>
             </header>
             <main class="container">
-                <input class="configBuscador" id="buscarConfiguracion" type="search"
+                <input class="configBuscador oculto" id="buscarConfiguracion" type="search"
                     placeholder="Buscar en configuración">
 
                 <div class="configMenuPrincipal">
-                    <button class="configFila" data-config-seccion="cuenta">
-                        <span class="configIcono">${window.icono("persona",20)}</span>
-                        <span><strong>Cuenta</strong>
-                        <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small></span><b>›</b>
+                    <button class="configFila configPerfil" data-config-seccion="cuenta" aria-label="Cuenta">
+                        <span class="configAvatar" id="configAvatar">${window.icono("persona", 24)}</span>
+                        <span class="configPerfilTexto">
+                            <strong id="configPerfilNombre">Cuenta</strong>
+                            <small id="configCuentaResumen">Ingresá o salí de tu cuenta</small>
+                            <small class="configPerfilConexion oculto" id="configPerfilConexion" data-conexion-texto></small>
+                        </span>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
                     </button>
 
-                    <button class="configFila oculto" data-config-seccion="empleados" id="configFilaEmpleados">
-                        <span class="configIcono">${window.icono("persona",20)}</span>
-                        <span><strong>Empleados</strong>
-                        <small>Códigos de ingreso para tus empleados</small></span><b>›</b>
-                    </button>
+                    <div class="masAccesos" id="masAccesos"></div>
 
-                    <button class="configFila oculto" data-config-seccion="avisos" id="configFilaAvisos">
-                        <span class="configIcono">${window.icono("campana",20)}</span>
-                        <span><strong>Avisos</strong>
-                        <small>Qué avisos recibir y notificaciones</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
+                    <div class="configLista">
+                        ${fila("avisos", "campana", "Avisos", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("navegacion", "bicicleta", "Recorrido")}
+                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
+                    </div>
 
-                    <button class="configFila oculto" data-config-seccion="impresora" id="configFilaImpresora">
-                        <span class="configIcono">${window.icono("impresora",20)}</span>
-                        <span><strong>Impresora</strong>
-                        <small>Impresora Bluetooth para los tickets</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">Distribuidora</h2>
+                    <div class="configLista">
+                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("respaldo", "nube", "Datos y respaldo")}
+                    </div>
 
-                    <button class="configFila" data-config-seccion="apariencia">
-                        <span class="configIcono">${window.icono("paleta",20)}</span>
-                        <span><strong>Apariencia</strong>
-                        <small>Elegí tema, texto y densidad</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="respaldo">
-                        <span class="configIcono">${window.icono("disquete",20)}</span>
-                        <span><strong>Datos y respaldo</strong>
-                        <small>${usaNubeReal()
-                            ? "Respaldo de los datos de la nube"
-                            : "Copias, restauración y frecuencia automática"}</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="trabajo">
-                        <span class="configIcono">${window.icono("maletin",20)}</span>
-                        <span><strong>Preferencias de trabajo</strong>
-                        <small>Ordená comercios, productos y pedidos</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="navegacion">
-                        <span class="configIcono">${window.icono("bicicleta",20)}</span>
-                        <span><strong>Navegación</strong>
-                        <small>Bicicleta, mapa y seguimiento GPS</small></span><b>›</b>
-                    </button>
-
-                    <button class="configFila" data-config-seccion="seguridad">
-                        <span class="configIcono">${window.icono("escudo",20)}</span>
-                        <span><strong>Seguridad y aplicación</strong>
-                        <small>Permisos, ayuda e información de VendeFrío</small></span><b>›</b>
-                    </button>
+                    <h2 class="configGrupoTitulo">App</h2>
+                    <div class="configLista">
+                        ${fila("apariencia", "luna", "Apariencia")}
+                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                    </div>
                 </div>
 
                 <div class="configDetalle oculto" id="configDetalle"></div>
@@ -129,8 +280,15 @@
 
         document.documentElement.dataset.tema = temaVisual;
         document.documentElement.dataset.temaPreferido = preferencia;
-        document.documentElement.dataset.texto = d.texto || "normal";
-        document.documentElement.dataset.densidad = d.densidad || "compacto";
+        const raiz = document.documentElement;
+        raiz.dataset.texto = valorDe(d, "texto");
+        raiz.dataset.densidad = valorDe(d, "densidad");
+        raiz.dataset.acento = valorDe(d, "acento");
+        raiz.dataset.movimiento = valorDe(d, "movimiento") === true ? "reducido" : "normal";
+        raiz.dataset.barra = valorDe(d, "barraNombres") === false ? "iconos" : "nombres";
+        raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
+        raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
+        raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
     }
 
     function guardarCampo(campo, valor) {
@@ -138,6 +296,9 @@
         d[campo] = valor;
         guardar(d);
         aplicar();
+        actualizarMas();
+        const caja = document.getElementById("configDetalle");
+        if (caja) dibujarMuestraTexto(caja);
     }
 
     function abrir() {
@@ -152,6 +313,53 @@
         pantalla().querySelector(".configDetalle")
             .classList.add("oculto");
         pantalla().querySelector(".configBuscador").value = "";
+        actualizarMas();
+    }
+
+    // --- "Más" (T31): persona, accesos y el valor de cada fila ---
+    function inicialDe(nombre) {
+        const limpio = String(nombre || "").trim();
+        return limpio ? limpio.charAt(0).toLocaleUpperCase("es") : "";
+    }
+
+    function actualizarMas() {
+        if (!pantalla()) return;
+
+        const quien = window.empleadosVendeFrio?.quienSoy?.();
+        const nombre = quien?.nombre || "";
+        const titulo = document.getElementById("configPerfilNombre");
+        if (titulo) titulo.textContent = nombre || "Cuenta";
+        const avatar = document.getElementById("configAvatar");
+        if (avatar) avatar.innerHTML = inicialDe(nombre) || window.icono("persona", 24);
+        const conexion = document.getElementById("configPerfilConexion");
+        const indicador = document.getElementById("indicadorNube");
+        if (conexion) {
+            conexion.classList.toggle("oculto", !usaNubeReal() || !indicador);
+            if (indicador) {
+                conexion.textContent = indicador.textContent;
+                conexion.dataset.estado = indicador.dataset.estado || "";
+            }
+        }
+
+        const accesos = document.getElementById("masAccesos");
+        if (accesos) {
+            const tarjeta = (destino, icono, texto) =>
+                `<button type="button" class="masAcceso" data-mas="${destino}"><span data-color="${destino}">${window.icono(icono, 22)}</span><strong>${texto}</strong></button>`;
+            accesos.innerHTML =
+                tarjeta("rutas", "mapa", "Rutas") +
+                tarjeta("estadisticas", "grafico", "Estadísticas") +
+                (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
+                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
+        }
+
+        const valores = {
+            apariencia: { sistema: "Automática", claro: "Clara", oscuro: "Oscura" }[leer().tema || "sistema"],
+            impresora: window.impresionVendeFrio?.impresoraGuardada?.()?.nombre || "Sin elegir",
+            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "bicicleta"] || "Bicicleta"
+        };
+        document.querySelectorAll(".configValor[data-valor]").forEach(valor => {
+            valor.textContent = valores[valor.dataset.valor] || "";
+        });
     }
 
     function escaparTexto(texto) {
@@ -187,13 +395,9 @@
             `;
         }
 
-        return `
-            <p class="configEstado configNombreDistribuidora">
-                Distribuidora<br>
-                <strong id="cuentaNombreDistribuidora">${escaparTexto(nombre) || "…"}</strong>
-            </p>
-            ${esDueno ? `<button type="button" data-accion="editarNombreDistribuidora">Cambiar nombre</button>` : ""}
-        `;
+        return `<div class="configNombreDistribuidora">${filaEditable("tienda", "azul", "Distribuidora",
+            escaparTexto(nombre) || "…", "cuentaNombreDistribuidora",
+            esDueno ? "editarNombreDistribuidora" : "", "Cambiar nombre")}</div>`;
     }
 
     // --- Datos de la distribuidora para el ticket (T28c) ---
@@ -238,13 +442,9 @@
             datos.cuit ? "CUIT: " + escaparTexto(datos.cuit) : ""
         ].filter(Boolean);
 
-        return `
-            <p class="configEstado" id="cuentaDatosTicket">
-                Datos para el ticket<br>
-                ${filas.length ? `<strong>${filas.join("<br>")}</strong>` : "Todavía sin cargar: el ticket sale solo con el nombre."}
-            </p>
-            <button type="button" data-accion="editarDatosTicket">${filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket"}</button>
-        `;
+        return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
+            filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
+            "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
     }
 
     // --- Nombre del dueño (T18) ---
@@ -274,13 +474,8 @@
             `;
         }
 
-        return `
-            <p class="configEstado">
-                Tu nombre (dueño)<br>
-                <strong id="cuentaNombreDueno">${escaparTexto(nombre) || "Todavía sin cargar"}</strong>
-            </p>
-            <button type="button" data-accion="editarNombreDueno">Cambiar mi nombre</button>
-        `;
+        return filaEditable("persona", "verde", "Tu nombre (dueño)",
+            escaparTexto(nombre) || "Todavía sin cargar", "cuentaNombreDueno", "editarNombreDueno", "Cambiar mi nombre");
     }
 
     function htmlDistribuidora() {
@@ -304,7 +499,7 @@
             : "";
 
         return `
-            <p class="configEstado" id="cuentaDistribuidora">${texto}</p>
+            <p class="ajFila ajEstadoFila" id="cuentaDistribuidora" data-estado="${estado}">${ico(["lista", "creada"].includes(estado) ? "check" : "nube", 16)}<span>${texto}</span></p>
             ${reintentar}
         `;
     }
@@ -484,27 +679,12 @@
     }
 
     function htmlRespaldoNube() {
-        return `
-            <p class="configEstado">
-                <strong>Respaldo de la nube</strong><br>
-                Tus datos están en la nube de tu distribuidora. Descargá un
-                respaldo una vez por semana y guardalo en un lugar seguro,
-                como Google Drive.
-            </p>
-            <p class="configEstado">
-                Último respaldo descargado en este celular:
-                <strong id="configUltimoRespaldoNube">${textoUltimoRespaldoNube()}</strong>
-            </p>
-            <p class="configEstado" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>
-            <div class="configAcciones">
-                <button type="button" data-accion="exportar">Exportar respaldo</button>
-                <button type="button" data-accion="importar">Combinar respaldo</button>
-            </div>
-            <p class="configEstado">
-                "Combinar respaldo" agrega a la nube lo que falte de un archivo,
-                sin borrar nada: lo que ya está en la nube tiene prioridad.
-            </p>
-        `;
+        return grupo("Respaldo de la nube",
+                filaDato("historial", "gris", "Último respaldo descargado en este celular", textoUltimoRespaldoNube(), "configUltimoRespaldoNube") +
+                `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
+                filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
+                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"')) +
+            nota("Descargá un respaldo una vez por semana y guardalo en un lugar seguro, como Google Drive. Al combinar, lo que ya está en la nube tiene prioridad.");
     }
 
     // --- Limpieza de los datos viejos del celular (T16e) ---
@@ -575,33 +755,30 @@
             : limpieza.revision || limpieza.error
                 ? "Revisar de nuevo"
                 : "2. Revisar en la nube";
+        const paso = (numero, hecho, boton) => `
+            <div class="ajPaso${hecho ? " hecho" : ""}">
+                <span class="ajNumeroPaso">${hecho ? ico("check", 16) : numero}</span>
+                ${boton}
+            </div>`;
 
         return `
-            <div class="configMigracion" id="configLimpiezaDatosViejos">
-                <p class="configEstado">
-                    <strong>Datos viejos de este celular</strong><br>
-                    Este celular todavía guarda los datos de antes de usar la
-                    nube: comercios, productos, pedidos, rutas y la copia
-                    interna. La app ya no los usa. Podés borrarlos en tres
-                    pasos. La nube no se toca.
-                </p>
-                <button type="button" data-accion="limpiezaDescargar" ${limpieza.revisando ? "disabled" : ""}>
-                    ${textoDescargar}
-                </button>
-                <button type="button" data-accion="limpiezaRevisar"
-                    ${limpieza.revisando || !descargado ? "disabled" : ""}>
-                    ${textoRevisar}
-                </button>
-                ${limpieza.error ? `<p class="configEstado migracionError" role="alert">${escaparTexto(limpieza.error)}</p>` : ""}
-                ${htmlRevisionLimpieza()}
-                <button type="button" data-accion="limpiezaBorrar" class="configPeligro"
-                    ${limpieza.revisando || !descargado || !limpieza.revision ? "disabled" : ""}>
-                    ${window.icono("tacho",14)} 3. Borrar datos viejos
-                </button>
-                <p class="configEstado">
-                    Quedan tus preferencias, el borrador del pedido y tu sesión.
-                </p>
-            </div>
+            <section class="ajGrupo configMigracion" id="configLimpiezaDatosViejos">
+                <h3 class="ajGrupoTitulo">Datos viejos de este celular</h3>
+                <div class="ajTarjeta">
+                    <div class="ajFila ajTextoLargo">
+                        <span class="ajIcono" data-tono="naranja">${ico("celular")}</span>
+                        <span class="ajTexto"><strong>La app ya no los usa</strong><small>Comercios, productos, pedidos, rutas y la copia interna de antes de la nube. Podés borrarlos en tres pasos. La nube no se toca.</small></span>
+                    </div>
+                    <div class="ajPasos">
+                        ${paso(1, descargado, `<button type="button" data-accion="limpiezaDescargar" ${limpieza.revisando ? "disabled" : ""}>${textoDescargar}</button>`)}
+                        ${paso(2, Boolean(limpieza.revision), `<button type="button" data-accion="limpiezaRevisar" ${limpieza.revisando || !descargado ? "disabled" : ""}>${textoRevisar}</button>`)}
+                        ${limpieza.error ? `<p class="configEstado migracionError" role="alert">${escaparTexto(limpieza.error)}</p>` : ""}
+                        ${htmlRevisionLimpieza()}
+                        ${paso(3, false, `<button type="button" data-accion="limpiezaBorrar" class="configPeligro" ${limpieza.revisando || !descargado || !limpieza.revision ? "disabled" : ""}>${ico("tacho", 14)} 3. Borrar datos viejos</button>`)}
+                    </div>
+                </div>
+            </section>
+            ${nota("Quedan tus preferencias, el borrador del pedido y tu sesión.")}
         `;
     }
 
@@ -662,8 +839,8 @@
                 </small>
             </div>
             <div class="configAcciones">
-                <button type="button" data-accion="copiarCodigo">Copiar</button>
-                <button type="button" data-accion="compartirCodigo">Compartir</button>
+                <button type="button" data-accion="copiarCodigo">${ico("copiar", 16)} Copiar</button>
+                <button type="button" data-accion="compartirCodigo">${ico("compartir", 16)} Compartir</button>
             </div>
         `;
     }
@@ -715,18 +892,21 @@
         `).join("");
 
         return `
-            <li class="empleadoFila">
-                <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
-                <small>Activo · ${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
-                ${pendientes}
-                <div class="configAcciones">
-                    <button type="button" data-accion="cambiarRolesEmpleado" ${datos}>Cambiar roles</button>
-                    <button type="button" data-accion="codigoReingreso" ${datos}
-                        ${generandoCodigo ? "disabled" : ""}>
-                        Código de reingreso
-                    </button>
+            <li class="empleadoFila empleadoTarjeta">
+                <div class="empleadoCabeza">
+                    <span class="empleadoAvatar">${escaparTexto(inicialDe(empleado.nombre) || "?")}</span>
+                    <span class="empleadoTexto">
+                        <strong>${escaparTexto(empleado.nombre) || "Sin nombre todavía"}</strong>
+                        <small>Activo · ${roles.length ? escaparTexto(roles.join(", ")) : "Sin roles"}</small>
+                    </span>
                 </div>
-                <button type="button" data-accion="darDeBaja" class="empleadoBaja" ${datos}>Dar de baja</button>
+                ${pendientes}
+                <div class="empleadoBotones">
+                    <button type="button" data-accion="cambiarRolesEmpleado" aria-label="Cambiar roles" ${datos}>${ico("lapiz", 16)}<span>Roles</span></button>
+                    <button type="button" data-accion="codigoReingreso" aria-label="Código de reingreso" ${datos}
+                        ${generandoCodigo ? "disabled" : ""}>${ico("llave", 16)}<span>Reingreso</span></button>
+                    <button type="button" data-accion="darDeBaja" class="empleadoBaja" aria-label="Dar de baja" ${datos}>${ico("salir", 16)}<span>Baja</span></button>
+                </div>
             </li>
         `;
     }
@@ -735,7 +915,7 @@
         const empleados = window.empleadosVendeFrio;
 
         if (!lista.length) {
-            return `<p class="configEstado">Todavía no entró ningún empleado.</p>`;
+            return `<p class="ajVacio">${ico("usuarios", 22)}<span>Todavía no entró ningún empleado.</span></p>`;
         }
 
         // Al redibujar se conservan las casillas que se están marcando.
@@ -755,11 +935,10 @@
                 <ul class="empleadoLista">
                     ${activos.map(empleado => htmlEmpleadoActivo(empleado, marcadosEnPantalla)).join("")}
                 </ul>
-            ` : `<p class="configEstado">No hay empleados activos.</p>`}
+            ` : `<p class="ajVacio">${ico("usuarios", 22)}<span>No hay empleados activos.</span></p>`}
             ${deBaja.length ? `
-                <p class="configEstado"><strong>Dados de baja</strong><br>
-                    Ya no tienen acceso. Su nombre sigue en el historial.
-                    Para que uno vuelva, generale un código nuevo.</p>
+                <h4 class="ajSubtitulo">Dados de baja</h4>
+                ${nota("Ya no tienen acceso. Su nombre sigue en el historial. Para que uno vuelva, generale un código nuevo.")}
                 <ul class="empleadoLista">
                     ${deBaja.map(empleado => {
                         const roles = empleados.nombresDeRoles(empleado.roles);
@@ -780,7 +959,7 @@
         const empleados = window.empleadosVendeFrio;
 
         if (!lista.length) {
-            return `<p class="configEstado">No hay códigos sin usar.</p>`;
+            return `<p class="ajVacio">${ico("llave", 22)}<span>No hay códigos sin usar.</span></p>`;
         }
 
         const nombrePorId = new Map(ultimaListaEmpleados.map(empleado => [empleado.id, empleado.nombre]));
@@ -795,8 +974,8 @@
                         <li class="empleadoFila">
                             <strong class="empleadoCodigoTexto">${escaparTexto(empleados.formatearCodigo(codigo.codigo))}</strong>
                             <small>${escaparTexto(para)} · vence ${escaparTexto(fechaYHora(codigo.vence))}</small>
-                            <button type="button" data-accion="anularCodigo"
-                                data-codigo="${escaparTexto(codigo.codigo)}">Anular</button>
+                            <button type="button" data-accion="anularCodigo" class="empleadoBaja"
+                                data-codigo="${escaparTexto(codigo.codigo)}">${ico("cerrarX", 15)} Anular</button>
                         </li>
                     `;
                 }).join("")}
@@ -860,15 +1039,16 @@
         const prendida = window.empleadosVendeFrio.todosPuedenTodo();
         return `
             <div class="llaveEquipo">
-                <label class="configSwitch">
-                    <input type="checkbox" id="llaveTodosPuedenTodo" ${prendida ? "checked" : ""}>
-                    <span><strong>Todos pueden hacer todo</strong><br>
+                <label class="ajFila">
+                    <span class="ajIcono" data-tono="verde">${ico("usuarios")}</span>
+                    <span class="ajTexto"><strong>Todos pueden hacer todo</strong>
                     <small id="textoLlaveEquipo">${htmlTextoLlave(prendida)}</small></span>
+                    <input type="checkbox" class="ajLlave" role="switch" id="llaveTodosPuedenTodo" aria-label="Todos pueden hacer todo" ${prendida ? "checked" : ""}>
                 </label>
-                <p class="configEstado">
-                    <small>Siempre, prendida o apagada: cobrar es solo tuyo y de quien tiene
+                <p class="ajFila ajEstadoFila">
+                    ${ico("escudo", 16)}<span>Siempre, prendida o apagada: cobrar es solo tuyo y de quien tiene
                     un rol con «Cobra» aprobado por vos. Editar, eliminar y cancelar un
-                    pedido, solo quien lo cargó y vos.</small>
+                    pedido, solo quien lo cargó y vos.</span>
                 </p>
             </div>
         `;
@@ -884,47 +1064,44 @@
         const empleados = window.empleadosVendeFrio;
 
         if (!empleados || !empleados.esDueno()) {
-            return `
-                <p class="configEstado">
-                    Solo el dueño de la distribuidora, con su cuenta iniciada,
-                    puede ver los empleados y generar códigos.
-                </p>
-            `;
+            return grupo("", `
+                <div class="ajFila ajTextoLargo">
+                    <span class="ajIcono" data-tono="gris">${ico("usuarios")}</span>
+                    <span class="ajTexto"><strong>Solo para el dueño</strong><small>Solo el dueño de la distribuidora, con su cuenta iniciada, puede ver los empleados y generar códigos.</small></span>
+                </div>`);
         }
 
         return `
-            ${htmlLlaveEquipo()}
-            <p class="configEstado">
-                Generá un código y pasáselo al empleado (en persona o por WhatsApp).
-                Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las
-                ${empleados.horasDeVigencia} horas. Hace falta internet.
-            </p>
-            <button type="button" data-accion="generarCodigo" class="configCuentaIngresar"
-                ${generandoCodigo ? "disabled" : ""}>
-                ${generandoCodigo ? "Generando código…" : "Generar código para un empleado nuevo"}
-            </button>
-            ${htmlCodigoGenerado()}
-            <p class="configEstado">
-                <strong>Códigos sin usar</strong><br>
-                Si pasaste un código por error o a la persona equivocada, anulalo.
-            </p>
-            <div id="listaCodigos">${htmlListaCodigos([])}</div>
-            <p class="configEstado">
-                <strong>Tus empleados</strong><br>
-                Si un empleado cambia de celular o se le borran los datos, tocá
-                "Código de reingreso": vuelve a ser el mismo empleado, con su
-                nombre y sus roles.
-            </p>
-            <div id="listaEmpleados">${htmlListaEmpleados([])}</div>
-            <p class="configEstado">
-                <strong>Roles</strong><br>
-                Creá, renombrá o eliminá los roles que pueden elegir tus empleados,
-                y marcá qué permite cada uno. Una persona puede lo que permite
-                cualquiera de sus roles. Vos podés todo. Con «Todos pueden hacer
-                todo» prendida, los permisos deciden solo a quién le llega cada
-                aviso y quién cobra.
-            </p>
-            <div id="editorRoles">${htmlEditorRoles()}</div>
+            ${grupo("Equipo", htmlLlaveEquipo())}
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Sumar un empleado</h3>
+                <div class="ajTarjeta ajTarjetaRelleno">
+                    <div class="ajFila ajTextoLargo">
+                        <span class="ajIcono" data-tono="azul">${ico("llave")}</span>
+                        <span class="ajTexto"><strong>Código de ingreso</strong><small>Pasáselo al empleado en persona o por WhatsApp. Tiene ${empleados.largoCodigo} caracteres, sirve una sola vez y vence a las ${empleados.horasDeVigencia} horas. Hace falta internet.</small></span>
+                    </div>
+                    <button type="button" data-accion="generarCodigo" class="configCuentaIngresar ajBotonPrincipal"
+                        ${generandoCodigo ? "disabled" : ""}>
+                        ${ico("mas", 18)} ${generandoCodigo ? "Generando código…" : "Generar código para un empleado nuevo"}
+                    </button>
+                    ${htmlCodigoGenerado()}
+                </div>
+            </section>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Códigos sin usar</h3>
+                <div id="listaCodigos">${htmlListaCodigos([])}</div>
+                ${nota("Si pasaste un código por error o a la persona equivocada, anulalo.")}
+            </section>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Tus empleados</h3>
+                <div id="listaEmpleados">${htmlListaEmpleados([])}</div>
+                ${nota("Si un empleado cambia de celular o se le borran los datos, tocá «Reingreso»: vuelve a ser el mismo empleado, con su nombre y sus roles.")}
+            </section>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Roles</h3>
+                ${nota("Una persona puede lo que permite cualquiera de sus roles. Vos podés todo. Con «Todos pueden hacer todo» prendida, los permisos deciden solo a quién le llega cada aviso y quién cobra.")}
+                <div id="editorRoles">${htmlEditorRoles()}</div>
+            </section>
         `;
     }
 
@@ -1031,27 +1208,23 @@
         const impresion = window.impresionVendeFrio;
 
         if (!impresion || !impresion.disponible()) {
-            return `
-                <p class="configEstado">
-                    Los tickets se imprimen por Bluetooth desde un celular Android con Chrome,
-                    con tu cuenta o con el código de tu encargado.
-                </p>
-            `;
+            return grupo("", `
+                <div class="ajFila ajTextoLargo">
+                    <span class="ajIcono" data-tono="gris">${ico("impresora")}</span>
+                    <span class="ajTexto"><strong>Impresora no disponible</strong><small>Los tickets se imprimen por Bluetooth desde un celular Android con Chrome, con tu cuenta o con el código de tu encargado.</small></span>
+                </div>`);
         }
 
         const guardada = impresion.impresoraGuardada();
 
-        return `
-            <p class="configEstado">
-                ${guardada
-                    ? `Impresora guardada: <strong>${escaparTexto(guardada.nombre)}</strong>`
-                    : "Todavía no elegiste una impresora: se elige la primera vez que tocás «Imprimir ticket» en un pedido."}
-            </p>
-            <p class="configEstado">
-                Se conecta recién al imprimir, nunca al abrir la app. Vale solo para este celular.
-            </p>
-            <button type="button" data-accion="cambiarImpresora">${guardada ? "Cambiar impresora" : "Elegir impresora"}</button>
-        `;
+        return grupo("Impresora de este celular",
+                filaDato("impresora", guardada ? "verde" : "gris", "Impresora guardada",
+                    guardada ? escaparTexto(guardada.nombre) : "Todavía no elegiste ninguna") +
+                filaAccion("impresora", "azul", guardada ? "Cambiar impresora" : "Elegir impresora",
+                    "Abre la lista de impresoras Bluetooth", 'data-accion="cambiarImpresora"')) +
+            nota(guardada
+                ? "Se conecta recién al imprimir, nunca al abrir la app. Vale solo para este celular."
+                : "También se elige sola la primera vez que tocás «Imprimir ticket» en un pedido. Se conecta recién al imprimir y vale solo para este celular.");
     }
 
     // --- Avisos (T23): qué avisos recibe cada persona ---
@@ -1059,53 +1232,51 @@
         const avisos = window.avisosVendeFrio;
 
         if (!avisos || !avisos.disponible()) {
-            return `
-                <p class="configEstado">
-                    Los avisos son para el equipo de la distribuidora:
-                    hace falta entrar con tu cuenta o con el código de tu encargado.
-                </p>
-            `;
+            return grupo("", `
+                <div class="ajFila ajTextoLargo">
+                    <span class="ajIcono" data-tono="gris">${ico("campana")}</span>
+                    <span class="ajTexto"><strong>Avisos del equipo</strong><small>Son para el equipo de la distribuidora: hace falta entrar con tu cuenta o con el código de tu encargado.</small></span>
+                </div>`);
         }
 
         const empleados = window.empleadosVendeFrio;
         const nombresPermisos = empleados?.permisos?.() || [];
-        const casillas = avisos.tipos().map(tipo => {
+        const ICONOS = { pedidoNuevo: "bolsa", preparado: "paquete", entregado: "check", faltante: "alerta", pedidoEditado: "lapiz", pedidoCancelado: "cerrarX", incidencia: "bandera", incidenciaResuelta: "check", rolPendiente: "usuarios", cobro: "moneda", cobroPendiente: "moneda" };
+        const casillas = avisos.tipos().map((tipo, numero) => {
             const permiso = nombresPermisos.find(item => item.id === tipo.permiso);
             // Los avisos van por los roles, no por "Todos pueden hacer todo" (T29d).
             const sinPermiso = permiso && !empleados.tieneEnSusRoles(tipo.permiso)
-                ? `<br><em>Hoy no te llega: no tenés el permiso "${escaparTexto(permiso.nombre)}".</em>`
+                ? `<em>Hoy no te llega: no tenés el permiso "${escaparTexto(permiso.nombre)}".</em>`
                 : "";
+            const tonos = ["azul", "verde", "violeta", "naranja", "rojo"];
 
             return `
-                <label class="configSwitch configAviso">
-                    <input type="checkbox" class="casillaAviso" value="${escaparTexto(tipo.id)}"
-                        ${avisos.recibe(tipo.id) ? "checked" : ""}>
-                    <span><strong>${escaparTexto(tipo.nombre)}</strong><br>
-                    <small>${escaparTexto(tipo.quien)}${sinPermiso}</small></span>
+                <label class="ajFila configAviso">
+                    <span class="ajIcono" data-tono="${tonos[numero % tonos.length]}">${ico(ICONOS[tipo.id] || "campana")}</span>
+                    <span class="ajTexto"><strong>${escaparTexto(tipo.nombre)}</strong>
+                    <small>${escaparTexto(tipo.quien)}</small>${sinPermiso}</span>
+                    <input type="checkbox" class="casillaAviso ajLlave" role="switch" value="${escaparTexto(tipo.id)}"
+                        aria-label="${escaparTexto(tipo.nombre)}" ${avisos.recibe(tipo.id) ? "checked" : ""}>
                 </label>
             `;
         }).join("");
 
         const problema = ["sinPermiso", "error"].includes(avisos.estado())
-            ? `<p class="configEstado configAvisoProblema">
-                No se pudieron leer tus avisos.
-                ${avisos.estado() === "sinPermiso"
-                    ? "Si sos el dueño, revisá que las reglas nuevas estén publicadas en Firebase."
-                    : "Revisá la señal y volvé a abrir la app."}
-            </p>`
+            ? nota("No se pudieron leer tus avisos. " + (avisos.estado() === "sinPermiso"
+                ? "Si sos el dueño, revisá que las reglas nuevas estén publicadas en Firebase."
+                : "Revisá la señal y volvé a abrir la app."), "alerta", 'role="alert"')
             : "";
 
         return `
             ${problema}
             ${htmlNotificaciones()}
-            <h3 class="subtituloAvisos">Qué avisos recibís</h3>
-            ${casillas}
-            <p class="configEstado">
-                Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda
-                en la nube: vale en cualquier celular donde entres.
-            </p>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo subtituloAvisos">Qué avisos recibís</h3>
+                <div class="ajTarjeta">${casillas}</div>
+            </section>
+            ${nota("Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda en la nube: vale en cualquier celular donde entres.")}
             ${htmlQueSuena()}
-            <button type="button" data-accion="verAvisos">Ver mis avisos</button>
+            ${grupo("", filaAccion("campana", "azul", "Ver mis avisos", "La lista de la campanita", 'data-accion="verAvisos"'))}
         `;
     }
 
@@ -1145,7 +1316,10 @@
 
         return `
             <div class="bloqueNotificaciones" id="bloqueNotificaciones" data-estado="${escaparTexto(estado)}">
-                <strong>Notificaciones con la app cerrada</strong>
+                <div class="cabezaNotificaciones">
+                    <span class="ajIcono" data-tono="${estado === "activadas" ? "verde" : "rojo"}">${ico("campana")}</span>
+                    <strong>Notificaciones con la app cerrada</strong>
+                </div>
                 <p class="configEstado">${textos[estado] || textos.apagadas}</p>
                 ${error && estado === "apagadas" ? `<p class="configEstado configAvisoProblema">${escaparTexto(error)}</p>` : ""}
                 ${boton}
@@ -1162,22 +1336,23 @@
         const casillas = avisos.tipos().map(tipo => {
             const recibe = avisos.recibe(tipo.id);
             return `
-                <label class="configSwitch configAviso">
-                    <input type="checkbox" class="casillaSuena" value="${escaparTexto(tipo.id)}"
+                <label class="ajFila configAviso">
+                    <span class="ajIcono" data-tono="${recibe ? "verde" : "gris"}">${ico(recibe ? "volumen" : "volumenNo")}</span>
+                    <span class="ajTexto"><strong>${escaparTexto(tipo.nombre)}</strong>
+                    ${recibe ? "" : "<small>No lo recibís: prendelo arriba, en «Qué avisos recibís».</small>"}</span>
+                    <input type="checkbox" class="casillaSuena ajLlave" role="switch" value="${escaparTexto(tipo.id)}"
+                        aria-label="${escaparTexto(tipo.nombre)}"
                         ${recibe && notificaciones.suena(tipo.id) ? "checked" : ""} ${recibe ? "" : "disabled"}>
-                    <span><strong>${escaparTexto(tipo.nombre)}</strong>
-                    ${recibe ? "" : "<br><small>No lo recibís: prendelo arriba, en «Qué avisos recibís».</small>"}</span>
                 </label>
             `;
         }).join("");
 
         return `
-            <h3 class="subtituloAvisos">Qué suena con la app cerrada</h3>
-            ${casillas}
-            <p class="configEstado">
-                Lo que no suena igual te queda en la campanita. Vale en todos los
-                celulares donde actives las notificaciones.
-            </p>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo subtituloAvisos">Qué suena con la app cerrada</h3>
+                <div class="ajTarjeta">${casillas}</div>
+            </section>
+            ${nota("Lo que no suena igual te queda en la campanita. Vale en todos los celulares donde actives las notificaciones.")}
         `;
     }
 
@@ -1239,23 +1414,28 @@
             : "";
 
         return `
-            <p class="configEstado">
-                Empleado<br>
-                <strong>${escaparTexto(ficha?.nombre) || "…"}</strong><br>
-                Roles: ${roles.length ? escaparTexto(roles.join(", ")) : "ninguno"}
-            </p>
-            <p class="configEstado" id="misPermisos">${htmlMisPermisos()}</p>
-            <button type="button" data-accion="editarDatosEmpleado">Cambiar mi nombre o mis roles</button>
-            ${htmlNombreDistribuidora()}
-            <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
-            ${htmlSincronizacion()}
-            ${reintentar}
-            <p class="configEstado">
-                <strong>Recomendado:</strong> instalá la app en la pantalla de inicio del
-                celular (Android: menú ⋮ &gt; "Instalar app"; iPhone: Compartir &gt;
-                "Agregar a inicio"). Así el celular no borra los datos de la app.
-            </p>
-            <button type="button" data-accion="salirEmpleado">Salir</button>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Vos</h3>
+                <div class="ajTarjeta">
+                    ${filaEditable("persona", "azul", "Empleado", escaparTexto(ficha?.nombre) || "…", "", "editarDatosEmpleado", "Cambiar mi nombre o mis roles")}
+                    ${filaDato("usuarios", "verde", "Roles", roles.length ? escaparTexto(roles.join(", ")) : "ninguno")}
+                    <div class="ajFila ajTextoLargo">
+                        <span class="ajIcono" data-tono="violeta">${ico("escudo")}</span>
+                        <span class="ajTexto" id="misPermisos">${htmlMisPermisos()}</span>
+                    </div>
+                </div>
+            </section>
+            <section class="ajGrupo">
+                <h3 class="ajGrupoTitulo">Distribuidora</h3>
+                <div class="ajTarjeta">
+                    ${htmlNombreDistribuidora()}
+                    <p class="ajFila ajEstadoFila" id="estadoNube">${ico("nube", 16)}<span>${textos[estadoNube] || ""}</span></p>
+                    ${htmlSincronizacion()}
+                    ${reintentar}
+                </div>
+            </section>
+            ${nota("<strong>Recomendado:</strong> instalá la app en la pantalla de inicio del celular (Android: menú ⋮ &gt; «Instalar app»; iPhone: Compartir &gt; «Agregar a inicio»). Así el celular no borra los datos de la app.")}
+            ${grupo("", filaAccion("salir", "rojo", "Salir", "Cerrar tu sesión en este celular", 'data-accion="salirEmpleado"', "ajPeligro"))}
         `;
     }
 
@@ -1308,14 +1488,21 @@
             const eligiendo = !enLaNube && window.inicioVendeFrio?.ofrecerSubirDatos?.();
 
             return `
-                <p class="configEstado">
-                    Sesión iniciada como<br>
-                    <strong>${escaparTexto(usuario.email)}</strong>
-                </p>
-                ${htmlNombreDueno()}
-                ${htmlNombreDistribuidora()}
-                ${htmlDatosTicket()}
-                ${htmlDistribuidora()}
+                <section class="ajGrupo">
+                    <h3 class="ajGrupoTitulo">Tu cuenta</h3>
+                    <div class="ajTarjeta">
+                        ${filaDato("persona", "azul", "Sesión iniciada como", escaparTexto(usuario.email))}
+                        ${htmlNombreDueno()}
+                    </div>
+                </section>
+                <section class="ajGrupo">
+                    <h3 class="ajGrupoTitulo">Tu distribuidora</h3>
+                    <div class="ajTarjeta">
+                        ${htmlNombreDistribuidora()}
+                        ${htmlDatosTicket()}
+                        ${htmlDistribuidora()}
+                    </div>
+                </section>
                 ${enLaNube ? "" : `
                 <p class="configEstado">
                     ${eligiendo
@@ -1324,9 +1511,7 @@
                 </p>`}
                 ${htmlModoNube()}
                 ${htmlMigracion()}
-                <button type="button" data-accion="salirCuenta">
-                    Salir de la cuenta
-                </button>
+                ${grupo("", filaAccion("salir", "rojo", "Salir de la cuenta", "Tus datos quedan en la nube", 'data-accion="salirCuenta"', "ajPeligro"))}
             `;
         }
 
@@ -1413,7 +1598,7 @@
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
-            navegacion: ["Navegación", "Configurá el recorrido en bicicleta"],
+            navegacion: ["Cómo hacés el recorrido", "Vehículo, navegación y voz"],
             seguridad: ["Seguridad y aplicación", "Información y permisos"]
         };
 
@@ -1445,29 +1630,7 @@
         }
 
         if (seccion === "apariencia") {
-            caja.innerHTML += `
-                <label>${window.icono("paleta",15)} Tema
-                    <select data-campo="tema">
-                        <option value="sistema">Usar tema del teléfono</option>
-                        <option value="claro">Modo claro</option>
-                        <option value="oscuro">Modo oscuro</option>
-                    </select>
-                </label>
-
-                <label>${window.icono("texto",15)} Tamaño de texto
-                    <select data-campo="texto">
-                        <option value="normal">Estándar</option>
-                        <option value="grande">Grande</option>
-                    </select>
-                </label>
-
-                <label>${window.icono("espaciado",15)} Espaciado
-                    <select data-campo="densidad">
-                        <option value="compacto">Compacto</option>
-                        <option value="comodo">Cómodo</option>
-                    </select>
-                </label>
-            `;
+            caja.innerHTML += htmlApariencia();
         }
 
         // Con la nube real, el empleado no ve los respaldos (T14) y el dueño
@@ -1476,12 +1639,7 @@
             (usaNubeReal() && !esDuenoEnLaNube());
 
         if (seccion === "respaldo" && empleadoEnLaNube) {
-            caja.innerHTML += `
-                <p class="configEstado">
-                    Tus datos están en la nube de la distribuidora.
-                    Los respaldos los maneja tu encargado.
-                </p>
-            `;
+            caja.innerHTML += grupo("", nota("Tus datos están en la nube de la distribuidora. Los respaldos los maneja tu encargado."));
         } else if (seccion === "respaldo" && usaNubeReal()) {
             caja.innerHTML += htmlRespaldoNube() + htmlLimpiezaDatosViejos();
         } else if (seccion === "respaldo") {
@@ -1489,118 +1647,96 @@
                 "vendefrio_ultimo_respaldo_automatico"
             );
 
-            caja.innerHTML += `
-                <p class="configEstado">
-                    Última copia interna:
-                    <strong id="configUltimaCopia">
-                        ${ultima
-                            ? new Date(Number(ultima)).toLocaleString("es-AR")
-                            : "Todavía no hay una copia"}
-                    </strong>
-                </p>
-
-                <label>${window.icono("refrescar",15)} Respaldo automático
-                    <select data-campo="frecuenciaRespaldo">
-                        <option value="desactivado">Desactivado</option>
-                        <option value="diario">Todos los días</option>
-                        <option value="semanal">Una vez por semana</option>
-                        <option value="mensual">Una vez por mes</option>
-                    </select>
-                </label>
-
-                <div class="configAcciones">
-                    <button type="button" data-accion="exportar">Exportar</button>
-                    <button type="button" data-accion="importar">Importar archivo</button>
-                </div>
-
-                <button type="button" data-accion="restaurar"
-                    class="configRestaurar">
-                    ${window.icono("restaurarNube",14)} Restaurar última copia interna
-                </button>
-            `;
+            caja.innerHTML +=
+                grupo("Copia en este celular",
+                    filaDato("historial", "gris", "Última copia interna",
+                        ultima ? new Date(Number(ultima)).toLocaleString("es-AR") : "Todavía no hay una copia",
+                        "configUltimaCopia") +
+                    filaElegir("refrescar", "verde", "Respaldo automático", "Cada cuánto se hace la copia", "frecuenciaRespaldo", [
+                        ["desactivado", "Nunca"], ["diario", "Todos los días"], ["semanal", "Cada semana"], ["mensual", "Cada mes"]
+                    ]) +
+                    filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
+                grupo("Archivo de respaldo",
+                    filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
+                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"')) +
+                nota("Guardá el archivo en un lugar seguro, como Google Drive.");
         }
 
         if (seccion === "trabajo") {
-            caja.innerHTML += `
-                <label>${window.icono("tienda",15)} Mostrar primero
-                    <select data-campo="orden">
-                        <option value="pendientes">Comercios pendientes</option>
-                        <option value="frecuentes">Más visitados</option>
-                        <option value="alfabetico">Orden alfabético</option>
-                    </select>
-                </label>
-
-                <label>${window.icono("paquete",15)} Orden de productos
-                    <select data-campo="ordenProductos">
-                        <option value="marca">Por marca</option>
-                        <option value="alfabetico">Alfabético</option>
-                        <option value="frecuencia">Más pedidos</option>
-                    </select>
-                </label>
-            `;
+            caja.innerHTML +=
+                grupo("Listas",
+                    filaElegir("tienda", "verde", "Orden de comercios", "En la lista de Comercios", "orden", [
+                        ["pendientes", "Pendientes"], ["frecuentes", "Más pedidos"], ["alfabetico", "A a Z"]
+                    ]) +
+                    filaElegir("paquete", "naranja", "Orden de productos", "En Nuevo pedido, dentro de cada marca", "ordenProductos", [
+                        ["marca", "Catálogo"], ["alfabetico", "A a Z"], ["frecuencia", "Más pedidos"]
+                    ])) +
+                grupo("Al usar la app",
+                    filaElegir("casa", "azul", "Pantalla al abrir", "Dónde arranca la app", "inicio", [
+                        ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
+                    ]) +
+                    filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
+                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios"));
         }
 
         if (seccion === "navegacion") {
-            caja.innerHTML += `
-                <p class="configEstado">${window.icono("bicicleta",14)} Vehículo: bicicleta</p>
-
-                <label>${window.icono("buscar",15)} Nivel de zoom
-                    <select data-campo="zoom">
-                        <option value="15">Amplio</option>
-                        <option value="17">Normal</option>
-                        <option value="18">Cercano</option>
-                    </select>
-                </label>
-
-                <label class="configSwitch">
-                    <input type="checkbox" data-campo="seguimiento">
-                    <span>Seguimiento automático</span>
-                </label>
-
-                <label class="configSwitch">
-                    <input type="checkbox" data-campo="instrucciones">
-                    <span>Mostrar instrucciones</span>
-                </label>
-
-                <button type="button" data-accion="rutas">
-                    Abrir Rutas
-                </button>
-            `;
+            caja.innerHTML +=
+                grupo("Recorrido",
+                    filaSegmento("bicicleta", "naranja", "Cómo te movés", "", "vehiculo", [
+                        ["bicicleta", "Bici"], ["moto", "Moto"], ["auto", "Auto"], ["pie", "A pie"]
+                    ]) +
+                    filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
+                        ["app", "VendeFrío"], ["google", "Google Maps"]
+                    ])) +
+                grupo("Voz",
+                    filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [
+                        ["si", "Sí"], ["no", "No"]
+                    ]) +
+                    filaSegmento("velocimetro", "violeta", "Velocidad de la voz", "", "velocidadVoz", [
+                        ["lenta", "Lenta"], ["normal", "Normal"], ["rapida", "Rápida"]
+                    ])) +
+                grupo("Mapa",
+                    filaSegmento("buscar", "azul", "Zoom al navegar", "", "zoom", [
+                        ["15", "Lejos"], ["17", "Normal"], ["18", "Cerca"]
+                    ]) +
+                    filaLlave("mira", "verde", "Seguir mi ubicación", "El mapa se mueve con vos", "seguimiento") +
+                    filaLlave("celular", "gris", "Pantalla siempre encendida", "Mientras navegás", "pantallaEncendida")) +
+                grupo("",
+                    filaAccion("mapa", "azul", "Abrir Rutas", "Elegí comercios y armá la ruta del día", 'data-accion="rutas"')) +
+                nota("La navegación usa los mapas de OpenStreetMap y calcula el camino por calles con internet. Necesita el GPS del comercio (se guarda desde su ficha).");
         }
 
         if (seccion === "seguridad") {
-            caja.innerHTML += `
-                <p class="configEstado">
-                    VendeFrío Lite<br>
-                    ${window.nubeVendeFrio?.modoNube?.()
-                        ? "Los datos se guardan en la nube de tu distribuidora."
-                        : "Los datos se guardan en este dispositivo."}
-                </p>
-
-                <button type="button" data-accion="restablecer">
-                    Restablecer preferencias visuales
-                </button>
-            `;
+            caja.innerHTML +=
+                grupo("La app",
+                    filaDato("chispa", "azul", "VendeFrío", "versión " + (window.novedadesVendeFrio?.version || "1.0")) +
+                    filaDato(window.nubeVendeFrio?.modoNube?.() ? "nube" : "celular", "verde", "Tus datos",
+                        window.nubeVendeFrio?.modoNube?.()
+                            ? "En la nube de tu distribuidora"
+                            : "En este dispositivo") +
+                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades")) +
+                grupo("Ayuda",
+                    `<div class="ajFila ajTextoLargo ayudaVendeFrio">
+                        <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
+                        <span class="ajTexto"><strong>Si algo no anda</strong><small>Cerrá la app del todo y abrila de nuevo con internet (así se actualiza). Si sigue, sacale una captura a la pantalla y mandásela a quien administra VendeFrío en tu distribuidora.</small></span>
+                    </div>
+                    <div class="ajFila ajTextoLargo">
+                        <span class="ajIcono" data-tono="azul">${ico("descargar")}</span>
+                        <span class="ajTexto"><strong>Instalar la app</strong><small>En Android, desde Chrome: menú ⋮ › «Instalar app». En iPhone, desde Safari: Compartir › «Agregar a inicio». Tus datos de la nube no se pierden al reinstalar.</small></span>
+                    </div>`) +
+                grupo("",
+                    filaAccion("refrescar", "rojo", "Restablecer preferencias visuales", "Tema, color, texto y espaciado como al principio", 'data-accion="restablecer"', "ajPeligro"));
         }
 
         caja.querySelectorAll("[data-campo]").forEach(control => {
             const campo = control.dataset.campo;
+            const valor = valorDe(d, campo);
 
-            if (control.type === "checkbox") {
-                control.checked = d[campo] === true;
-                return;
-            }
-
-            const defecto =
-                campo === "tema" ? "sistema" :
-                campo === "texto" ? "normal" :
-                campo === "densidad" ? "compacto" :
-                campo === "frecuenciaRespaldo" ? "semanal" :
-                campo === "zoom" ? "17" :
-                "pendientes";
-
-            control.value = d[campo] || defecto;
+            if (control.type === "checkbox") control.checked = valor === true;
+            else if (control.type === "radio") control.checked = control.value === String(valor);
+            else control.value = valor;
         });
+        dibujarMuestraTexto(caja);
 
         menu.classList.add("oculto");
         caja.classList.remove("oculto");
@@ -2141,9 +2277,13 @@
         }
 
         if (accion === "restablecer") {
-            localStorage.removeItem(CLAVE);
+            const d = leer();
+            CAMPOS_VISUALES.forEach(campo => delete d[campo]);
+            guardar(d);
             aplicar();
+            actualizarMas();
             detalle("apariencia");
+            mostrarToast("Apariencia como al principio");
         }
 
         if (accion === "restaurar") {
@@ -2434,7 +2574,19 @@
         respaldoEnInicio.classList.add("respaldoDashboardOculto");
     }
 
+    // "Pantalla al abrir" (T50): una sola vez, al abrir la app en Inicio.
+    window.addEventListener("load", () => {
+        setTimeout(() => {
+            const destino = valorDe(leer(), "inicio");
+            const menuVisible = !document.getElementById("pantallaMenu")?.classList.contains("oculto");
+            if (destino !== "menu" && menuVisible && typeof mostrarPantalla === "function") mostrarPantalla(destino);
+        }, 300);
+    });
+
     window.abrirConfiguracion = abrir;
+    // Para que las otras pantallas lean los ajustes de "Más" (T50).
+    window.preferenciasVendeFrio = { valor: campo => valorDe(leer(), campo) };
+    window.actualizarMasVendeFrio = actualizarMas;
     // Avisos (T23): "Elegir qué avisos recibir" abre directo esa sección.
     window.abrirConfiguracionEn = seccion => {
         abrir();
@@ -2496,8 +2648,10 @@
 
     // configuracion.js se carga aparte desde menu.js y puede llegar antes que cuenta.js.
     function conectarCuenta() {
+        window.empleadosVendeFrio?.escucharQuienSoy?.(actualizarMas);
         window.cuentaVendeFrio.escuchar(() => {
             actualizarResumenCuenta();
+            actualizarMas();
 
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta === "cuenta" && caja && !caja.classList.contains("oculto")) {

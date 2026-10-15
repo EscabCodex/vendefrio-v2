@@ -101,8 +101,27 @@ function coincidePeriodoHistorial(pedido, periodo) {
         return esFechaDeSemanaActual(fecha);
     }
 
+    if (periodo === "mes") {
+        return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
+    }
+
     return true;
 }
+
+// Etapa 4 (T33): el período se elige con botones (Hoy / Semana / Mes /
+// Todo) en vez del desplegable. El desplegable queda escondido y sigue
+// siendo el que manda: el botón le cambia el valor y avisa el cambio.
+const PERIODOS_HISTORIAL = [["hoy", "Hoy"], ["semana", "Semana"], ["mes", "Mes"], ["todos", "Todo"]];
+
+function crearSegmentoPeriodo(select) {
+    return crearSegmentoDeSelect(select, PERIODOS_HISTORIAL, "Período", "todos");
+}
+
+function sincronizarSegmentoPeriodo(segmento, valor) {
+    sincronizarSegmento(segmento, valor);
+}
+
+const segmentoPeriodoHistorial = crearSegmentoPeriodo(filtroFechaHistorial);
 
 function obtenerMarcaPorProductoHistorial(nombreProducto) {
     const buscado = normalizarTexto(nombreProducto);
@@ -902,6 +921,7 @@ function renderizarHistorial() {
     const contenedor = document.getElementById("contenedorHistorial");
     if (!contenedor) return;
 
+    if (filtroFechaHistorial) sincronizarSegmentoPeriodo(segmentoPeriodoHistorial, filtroFechaHistorial.value);
     const pedidos = obtenerPedidosFiltrados();
     contenedor.innerHTML = "";
 

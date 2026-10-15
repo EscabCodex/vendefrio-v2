@@ -1,11 +1,12 @@
 // =====================================================
-// VendeFrío - Service Worker (v163 - Cierre del día)
+// VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v163";
+const CACHE_NAME = "vendefrio-v173";
 const ARCHIVOS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./tema.css",
   "./iconos.js",
   "./productos.js",
   "./comercios.js",
@@ -24,7 +25,20 @@ const ARCHIVOS = [
   "./seguimiento.js",
   "./avisos.js",
   "./notificaciones.js",
+  "./mapa.js",
   "./rutas.js",
+  "./navegacion.js",
+  "./voz.js",
+  "./novedades.js",
+  "./volver.js",
+  "./exportar.js",
+  "./vendor/leaflet/leaflet.js",
+  "./vendor/leaflet/leaflet.css",
+  "./vendor/leaflet/images/marker-icon.png",
+  "./vendor/leaflet/images/marker-icon-2x.png",
+  "./vendor/leaflet/images/marker-shadow.png",
+  "./vendor/leaflet/images/layers.png",
+  "./vendor/leaflet/images/layers-2x.png",
   "./navegacion3d.js",
   "./navegacion3d.css",
   "./manifest.json",
@@ -45,6 +59,33 @@ const ARCHIVOS = [
   "./empleados.js",
   "./inicio.js"
 ];
+
+// Mapas ya vistos (T40): cache aparte, que no se borra al actualizar la app.
+// Se guardan como mucho MAXIMO_MAPAS cuadraditos; los más viejos se van.
+const CACHE_MAPAS = "vendefrio-mapas-v1";
+const MAXIMO_MAPAS = 600;
+
+function esCuadraditoDeMapa(request) {
+  if (request.method !== "GET") return false;
+  const url = new URL(request.url);
+  return url.hostname === "tile.openstreetmap.org";
+}
+
+async function cuadraditoDeMapa(request) {
+  const cache = await caches.open(CACHE_MAPAS);
+  const guardado = await cache.match(request);
+  if (guardado) return guardado;
+
+  const respuesta = await fetch(request);
+  if (respuesta && respuesta.ok) {
+    await cache.put(request, respuesta.clone());
+    const claves = await cache.keys();
+    if (claves.length > MAXIMO_MAPAS) {
+      await Promise.all(claves.slice(0, claves.length - MAXIMO_MAPAS).map(clave => cache.delete(clave)));
+    }
+  }
+  return respuesta;
+}
 
 function esSolicitudGETMismaApp(request) {
   const url = new URL(request.url);
@@ -87,7 +128,7 @@ self.addEventListener("activate", event => {
     caches.keys().then(nombres => {
       return Promise.all(
         nombres
-          .filter(nombre => nombre !== CACHE_NAME)
+          .filter(nombre => nombre !== CACHE_NAME && nombre !== CACHE_MAPAS)
           .map(nombre => caches.delete(nombre))
       );
     })
@@ -96,6 +137,10 @@ self.addEventListener("activate", event => {
 });
 
 self.addEventListener("fetch", event => {
+  if (esCuadraditoDeMapa(event.request)) {
+    event.respondWith(cuadraditoDeMapa(event.request));
+    return;
+  }
   if (!esSolicitudGETMismaApp(event.request)) return;
 
   // Network First

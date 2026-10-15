@@ -142,8 +142,7 @@ function inicializarPantallaRutas() {
     crearControlesPinManual();
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
-    cargarModuloNavegacion3D();
-    crearBotonNavegacion3D();
+    crearBotonNavegarRuta();
     renderizarPines();
 }
 
@@ -318,6 +317,7 @@ function crearModalOpcionesRutaGuardada() {
         if (entrada) entrada.value = nuevoNombre;
         if (selectorDia) selectorDia.value = ruta && ruta.dia ? ruta.dia : "";
         const panel = document.getElementById("rutasGuardadasPanel");
+        panel?.closest("details")?.setAttribute("open", "");
         if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 }
@@ -359,21 +359,27 @@ function cargarModuloNavegacion3D() {
     document.body.appendChild(script);
 }
 
-function crearBotonNavegacion3D() {
+// "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
+// en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
+// dependía de una librería de internet).
+function crearBotonNavegarRuta() {
     const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("btnAbrirNavegacion3D")) return;
+    if (!botonMaps || document.getElementById("btnNavegarRuta")) return;
 
     const boton = document.createElement("button");
-    boton.id = "btnAbrirNavegacion3D";
+    boton.id = "btnNavegarRuta";
     boton.type = "button";
-    boton.className = "btnAccion botonNavegacion3D";
-    boton.textContent = "Abrir navegaci\u00f3n 3D";
+    boton.className = "btnAccion botonNavegarRuta";
+    boton.innerHTML = window.icono("navegar", 16) + " Navegar la ruta";
     boton.addEventListener("click", () => {
-        if (typeof window.iniciarVistaNavegacion3D !== "function") {
-            mostrarAviso("Navegaci\u00f3n no lista", "Esper\u00e1 unos segundos y prob\u00e1 nuevamente.");
+        if (!rutaOrdenada.length) {
+            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar ruta\u00bb y despu\u00e9s \u00abNavegar la ruta\u00bb.");
             return;
         }
-        window.iniciarVistaNavegacion3D(rutaOrdenada);
+        const nombres = rutaOrdenada.map(parada => parada.nombre);
+        if (!window.navegacionVendeFrio?.abrir?.(nombres)) {
+            mostrarAviso("No se pudo navegar", "Las paradas necesitan su ubicaci\u00f3n GPS. Si elegiste Google Maps en M\u00e1s, us\u00e1 el bot\u00f3n de Google Maps.");
+        }
     });
     botonMaps.insertAdjacentElement("afterend", boton);
 }
@@ -605,7 +611,8 @@ function detenerNavegacionApp(mostrarMensaje = true) {
 }
 
 function crearControlesRutasGuardadas() {
-    const tarjeta = document.querySelector(".tarjetaSeleccionRuta");
+    // T51: las rutas guardadas tienen su propia tarjeta desplegable.
+    const tarjeta = document.querySelector(".tarjetaRutasGuardadas") || document.querySelector(".tarjetaSeleccionRuta");
     if (!tarjeta || document.getElementById("rutasGuardadasPanel")) return;
 
     const panel = document.createElement("div");
@@ -613,10 +620,11 @@ function crearControlesRutasGuardadas() {
     panel.className = "rutasGuardadasPanel";
 
     const titulo = document.createElement("h3");
-    titulo.textContent = "Rutas guardadas";
+    titulo.innerHTML = '<span class="iconoRutasGuardadas">' + window.icono("disquete", 18) + "</span>";
+    titulo.append(document.createTextNode("Rutas guardadas"));
 
     const ayuda = document.createElement("p");
-    ayuda.textContent = "Guard\u00e1 esta selecci\u00f3n para volver a usarla m\u00e1s adelante.";
+    ayuda.textContent = "Guard\u00e1 esta selecci\u00f3n con un nombre para volver a usarla.";
 
     const fila = document.createElement("div");
     fila.className = "filaRutaGuardada";
@@ -624,12 +632,13 @@ function crearControlesRutasGuardadas() {
     const entrada = document.createElement("input");
     entrada.id = "nombreRutaGuardada";
     entrada.type = "text";
-    entrada.placeholder = "Ej.: Ruta lunes";
+    entrada.placeholder = "Nombre, por ej. Ruta lunes";
+    entrada.setAttribute("aria-label", "Nombre de la ruta");
 
     const selectorDia = document.createElement("select");
     selectorDia.id = "diaRutaGuardada";
     [
-        ["", "D\u00eda (opcional)"],
+        ["", "Sin d\u00eda fijo"],
         ["lunes", "Lunes"],
         ["martes", "Martes"],
         ["miercoles", "Mi\u00e9rcoles"],
@@ -648,7 +657,8 @@ function crearControlesRutasGuardadas() {
     botonGuardar.id = "guardarRutaActual";
     botonGuardar.type = "button";
     botonGuardar.className = "btnAccion agregar";
-    botonGuardar.textContent = "Guardar";
+    botonGuardar.innerHTML = window.icono("disquete", 16) + " Guardar ruta";
+    selectorDia.setAttribute("aria-label", "D\u00eda de la ruta");
     botonGuardar.addEventListener("click", guardarRutaActual);
 
     fila.append(entrada, selectorDia, botonGuardar);
@@ -774,6 +784,12 @@ function renderizarRutasGuardadas() {
 
     lista.innerHTML = "";
     const rutas = obtenerRutasGuardadas();
+    const resumen = document.getElementById("resumenRutasGuardadas");
+    if (resumen) {
+        resumen.textContent = rutas.length === 0
+            ? "Guard\u00e1 esta selecci\u00f3n para volver a usarla."
+            : rutas.length + (rutas.length === 1 ? " ruta guardada" : " rutas guardadas");
+    }
 
     if (rutas.length === 0) {
         const vacio = document.createElement("p");
@@ -906,15 +922,20 @@ function actualizarEstadoSeleccionRuta() {
         return comercioTieneGps(comercio) && comercio.origenGps === "manual";
     }).length;
 
-    estado.textContent =
-        seleccionados.length +
-        " seleccionados - " +
-        conGps +
-        " ubicados - " +
-        manuales +
-        " manuales - " +
-        sinGps +
-        " sin ubicaci\u00f3n";
+    // Resumen en chips (T50): elegidos, con GPS y sin ubicaci\u00f3n.
+    estado.innerHTML = "";
+    [
+        ["check", seleccionados.length + (seleccionados.length === 1 ? " elegido" : " elegidos"), ""],
+        ["ubicacion", conGps + " con GPS" + (manuales ? " (" + manuales + " a mano)" : ""), "listo"],
+        ["alerta", sinGps + " sin ubicaci\u00f3n", sinGps ? "falta" : ""]
+    ].forEach(([icono, texto, tono]) => {
+        const chip = document.createElement("span");
+        chip.className = "chipResumenRuta";
+        if (tono) chip.dataset.tono = tono;
+        chip.innerHTML = window.icono(icono, 14);
+        chip.append(document.createTextNode(" " + texto));
+        estado.appendChild(chip);
+    });
 }
 
 function renderizarSeleccionRuta() {
@@ -922,8 +943,19 @@ function renderizarSeleccionRuta() {
     if (!contenedor) return;
 
     contenedor.innerHTML = "";
+    const busqueda = normalizarTexto(document.getElementById("buscarSeleccionRuta")?.value || "");
+    const comercios = obtenerComerciosSeleccionRuta().filter(comercio => {
+        return !busqueda || normalizarTexto(comercio.nombre + " " + (comercio.direccion || "")).includes(busqueda);
+    });
 
-    obtenerComerciosSeleccionRuta().forEach(comercio => {
+    if (comercios.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.className = "vacioSeleccionRuta";
+        vacio.textContent = busqueda ? "Ning\u00fan comercio coincide con la b\u00fasqueda." : "Todav\u00eda no cargaste comercios.";
+        contenedor.appendChild(vacio);
+    }
+
+    comercios.forEach(comercio => {
         const etiqueta = document.createElement("label");
         etiqueta.className = "opcionSeleccionRuta";
 
@@ -943,21 +975,44 @@ function renderizarSeleccionRuta() {
             actualizarEstadoSeleccionRuta();
         });
 
+        const avatar = document.createElement("span");
+        avatar.className = "inicialesSeleccionRuta";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.textContent = String(comercio.nombre || "?").trim().split(/\s+/).slice(0, 2).map(palabra => palabra.charAt(0)).join("").toUpperCase();
+
         const texto = document.createElement("span");
-        texto.textContent = comercio.nombre;
+        texto.className = "textoSeleccionRuta";
+        const nombre = document.createElement("strong");
+        nombre.textContent = comercio.nombre;
+        const detalle = document.createElement("small");
+        const visitado = comercioEstaVisitadoEstaSemana(comercio);
+        detalle.textContent = (comercio.direccion ? comercio.direccion + " \u00b7 " : "") + (visitado ? "Visitado" : "Pendiente");
+        texto.append(nombre, detalle);
 
         const estado = document.createElement("small");
-        estado.textContent = obtenerEtiquetaOrigenGps(comercio);
+        estado.innerHTML = window.icono(comercioTieneGps(comercio) ? "ubicacion" : "alerta", 12);
+        const origen = String(comercio.origenGps || "").toLowerCase();
+        const etiquetaCorta = !comercioTieneGps(comercio) ? "Sin ubicaci\u00f3n"
+            : origen === "manual" ? "Pin a mano"
+            : origen === "maps" ? "Aproximado"
+            : "Con GPS";
+        estado.append(document.createTextNode(" " + etiquetaCorta));
+        estado.title = obtenerEtiquetaOrigenGps(comercio);
         estado.className = comercioTieneGps(comercio)
             ? "seleccionRutaGps"
             : "seleccionRutaSinGps";
+        texto.appendChild(estado);
 
-        etiqueta.append(checkbox, texto, estado);
+        etiqueta.append(checkbox, avatar, texto);
         contenedor.appendChild(etiqueta);
     });
 
     actualizarEstadoSeleccionRuta();
 }
+
+document.addEventListener("input", evento => {
+    if (evento.target.id === "buscarSeleccionRuta") renderizarSeleccionRuta();
+});
 
 function inicializarSeleccionRuta() {
     const comercios = obtenerComerciosSeleccionRuta();
@@ -1235,12 +1290,8 @@ function iniciarMapa() {
         13
     );
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution: "\u00a9 OpenStreetMap"
-        }
-    ).addTo(mapaLeaflet);
+    window.mapaVendeFrio.capaDeCalles().addTo(mapaLeaflet);
+    mapaLeaflet.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 
     capaMarcadores = L.layerGroup().addTo(mapaLeaflet);
     mapaLeaflet.on("click", manejarClickMapaManual);
