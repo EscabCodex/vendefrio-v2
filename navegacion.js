@@ -320,6 +320,16 @@
             </div>`;
         document.body.appendChild(pantalla);
 
+        // Comando por voz también navegando ("llegué", "nuevo pedido para…").
+        if (window.vozVendeFrio?.disponible) {
+            const microfono = document.createElement("button");
+            microfono.type = "button";
+            microfono.className = "botonFlotanteNav microfonoNavegacion";
+            microfono.setAttribute("aria-label", "Comando por voz");
+            microfono.innerHTML = window.icono("microfono", 22);
+            microfono.addEventListener("click", () => window.vozVendeFrio.comando());
+            pantalla.querySelector(".botonesNavegacion").appendChild(microfono);
+        }
         pantalla.querySelector(".cerrarNavegacion").addEventListener("click", cerrar);
         pantalla.querySelector(".vozNavegacion").addEventListener("click", alternarVoz);
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {

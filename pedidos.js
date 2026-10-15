@@ -1667,3 +1667,28 @@ function guardarEdicionPedido() {
 
 window.abrirEdicionPedido = abrirEdicionPedido;
 window.cerrarEdicionPedido = cerrarEdicionPedido;
+
+// Etapa 5 (T44): suma productos al pedido que se está cargando (lo usa el
+// pedido dictado o pegado de voz.js). Cada item: { marca, producto,
+// cantidad }. Devuelve cuántas unidades se sumaron.
+function agregarProductosAlPedido(items, comercio) {
+    if (comercio && inputCliente && !inputCliente.value.trim()) inputCliente.value = comercio;
+    let sumadas = 0;
+    (items || []).forEach(item => {
+        const select = Array.from(document.querySelectorAll(".marca select")).find(elemento =>
+            normalizarTexto(elemento.dataset.marca) === normalizarTexto(item.marca) &&
+            normalizarTexto(elemento.dataset.producto) === normalizarTexto(item.producto));
+        if (!select) return;
+        const antes = Number(select.value) || 0;
+        const despues = Math.min(40, antes + Math.max(0, Math.round(Number(item.cantidad) || 0)));
+        select.value = String(despues);
+        actualizarEstadoCantidad(select);
+        sumadas += despues - antes;
+    });
+    if (buscadorProductosPedido) buscadorProductosPedido.value = "";
+    aplicarFiltroProductosPedido();
+    actualizarResumenPedido();
+    guardarBorradorPedido();
+    return sumadas;
+}
+window.agregarProductosAlPedido = agregarProductosAlPedido;
