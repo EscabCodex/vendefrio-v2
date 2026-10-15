@@ -186,38 +186,27 @@
   <header>
     <div class="logo" data-ico="mapa" data-ico-tam="22"></div>
     <div>
-      <h1>Rutas y Mapa</h1>
-      <p>Reparto optimizado</p>
+      <h1>Rutas</h1>
+      <p>Armá el recorrido del día</p>
     </div>
   </header>
 
   <main class="container">
-    <div class="card">
-      <div class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
-        <div>
-          <h2>Ubicación del comercio</h2>
-          <p>Elegí un comercio para guardar o borrar su GPS.</p>
-        </div>
+    <div class="card tarjetaMapaRuta">
+      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
+
+      <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
+          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
+        </button>
+
+        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
+          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
+        </button>
       </div>
 
-      <label>Comercio:</label>
-
-      <select id="selectComercioGps" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px;"></select>
-
-      <p id="resumenRuta" class="resumenRuta" aria-live="polite">
-        Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
-      </p>
-
-      <button id="btnGuardarGps" class="btnAccion agregar" style="width: 100%; justify-content: center; margin-bottom: 8px;">
-        <i data-ico="ubicacion" data-ico-tam="14"></i> Guardar mi GPS actual en este comercio
-      </button>
-
-      <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
-        <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
-      </button>
+      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
     </div>
-
     <div class="card tarjetaSeleccionRuta">
       <div class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
@@ -246,21 +235,32 @@
       <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
     </div>
 
-    <div class="card">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
+    <details class="card tarjetaUbicacionesRuta">
+      <summary class="encabezadoTarjetaRuta">
+        <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
+        <div>
+          <h2>Ubicaciones de los comercios</h2>
+          <p>Poner un pin a mano o borrar una ubicación.</p>
+        </div>
+      </summary>
+      <p class="notaGpsFicha">Para guardar el GPS parado en la puerta, abrí el comercio en Comercios y tocá «Actualizar con mi GPS».</p>
 
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
-        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
-        </button>
+      <label>Comercio:</label>
 
-        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
-        </button>
-      </div>
+      <select id="selectComercioGps" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px;"></select>
 
-      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
-    </div>
+      <p id="resumenRuta" class="resumenRuta" aria-live="polite">
+        Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
+      </p>
+
+      <button id="btnGuardarGps" class="btnAccion agregar oculto" style="width: 100%; justify-content: center; margin-bottom: 8px;">
+        <i data-ico="ubicacion" data-ico-tam="14"></i> Guardar mi GPS actual en este comercio
+      </button>
+
+      <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
+        <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
+      </button>
+    </details>
   </main>
 </section>
 

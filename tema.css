@@ -980,3 +980,61 @@ html .modalFichaComercio .fichaComercioNueva .fichaAcciones{
 html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton{border-radius:999px;border:0;background:var(--superficie-2);color:var(--texto);font-size:13px;}
 html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.ver{background:var(--visitado-bg);color:var(--visitado);}
 html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.eliminar{background:var(--peligro-bg);color:var(--peligro);}
+
+/* ---------- Rutas, Estadísticas, Cierre, Empleados y Avisos (T38) ---------- */
+
+/* "Volver" de las secciones que se abren desde "Más". */
+html .extraVolver{
+  display:inline-flex;align-items:center;gap:6px;
+  min-height:40px;padding:0 16px 0 12px;margin:0 0 10px;
+  border:var(--borde-tarjeta) !important;border-radius:999px !important;
+  background:var(--superficie) !important;color:var(--texto) !important;
+  font-size:14px;font-weight:700;box-shadow:var(--sombra);
+}
+
+/* Rutas: mapa arriba, paradas y, plegadas abajo, las ubicaciones. */
+html .tarjetaMapaRuta #mapaRuta{height:300px !important;border-radius:18px !important;background:var(--superficie-2) !important;}
+html .tarjetaMapaRuta .btnAccion{border-radius:999px;}
+html .encabezadoTarjetaRuta{gap:12px;}
+html .iconoTarjetaRuta{border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .iconoTarjetaRuta{color:var(--acento);}
+html .encabezadoTarjetaRuta h2{font-size:16px;font-weight:700;color:var(--texto);}
+html .encabezadoTarjetaRuta p{color:var(--texto-sec);}
+html .accionesSeleccionRuta{display:flex;gap:8px;flex-wrap:wrap;}
+html .accionesSeleccionRuta .btnAccion{
+  flex:0 0 auto;min-height:38px;padding:0 16px;
+  border:1px solid var(--borde) !important;border-radius:999px;
+  background:var(--superficie) !important;color:var(--texto) !important;font-size:13.5px;
+}
+html .opcionSeleccionRuta{
+  border:0 !important;border-bottom:1px solid var(--borde) !important;border-radius:0 !important;
+  background:transparent !important;box-shadow:none !important;margin:0 !important;padding:12px 2px !important;
+}
+html .opcionSeleccionRuta:last-child{border-bottom:0 !important;}
+html .opcionSeleccionRuta span{color:var(--texto);font-weight:600;}
+html .opcionSeleccionRuta input{accent-color:var(--acento);width:20px;height:20px;}
+html .opcionSeleccionRuta .seleccionRutaGps,
+html .opcionSeleccionRuta .seleccionRutaSinGps{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+html .opcionSeleccionRuta .seleccionRutaGps{background:var(--visitado-bg);color:var(--visitado);}
+html .opcionSeleccionRuta .seleccionRutaSinGps{background:var(--pendiente-bg);color:var(--pendiente);}
+html .tarjetaUbicacionesRuta > summary{list-style:none;cursor:pointer;}
+html .tarjetaUbicacionesRuta > summary::-webkit-details-marker{display:none;}
+html .tarjetaUbicacionesRuta > summary::after{content:"";margin-left:auto;width:10px;height:10px;border-right:2px solid var(--texto-ter);border-bottom:2px solid var(--texto-ter);transform:rotate(45deg);flex-shrink:0;}
+html .tarjetaUbicacionesRuta[open] > summary{margin-bottom:12px;}
+html .tarjetaUbicacionesRuta[open] > summary::after{transform:rotate(-135deg);}
+html .tarjetaUbicacionesRuta select{border-radius:14px !important;background:var(--superficie);color:var(--texto);border:1px solid var(--borde-fuerte);}
+html .tarjetaUbicacionesRuta .btnAccion{border-radius:999px !important;}
+html .notaGpsFicha{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:var(--info-bg);color:var(--info);font-size:13px;}
+html .resumenRuta{border-radius:12px;background:var(--superficie-2) !important;color:var(--texto-sec) !important;}
+
+/* Secciones de "Más": botones píldora. */
+html .configDetalle button.configCuentaIngresar,
+html .configDetalle .btnAccion,
+html .modalAvisos button,
+html .contenidoAvisos button{border-radius:999px !important;}
+html .tarjetaMapaRuta > div:has(#btnOptimizarRuta){display:grid !important;grid-template-columns:1fr 1fr;gap:8px !important;}
+html .tarjetaMapaRuta #btnOptimizarRuta{grid-column:1/-1;}
+html .tarjetaMapaRuta .btnAccion{min-height:46px;font-size:14px;}
+html .botonNavegacion3D{background:var(--superficie-2) !important;color:var(--texto) !important;}
+html .extraVolver{width:auto !important;align-self:flex-start;}
+html .modalBotones button{border-radius:999px !important;}

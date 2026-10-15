@@ -73,4 +73,32 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
 
     await abrirMas(page);
     await capturar(page, "diseno-07-mas");
+
+    // Rutas, Estadísticas, Cierre del día y Empleados, desde "Más" (T38).
+    await page.locator(".masAccesos").getByRole("button", { name: "Rutas" }).click();
+    await expect(page.locator("#pantallaRutas")).toBeVisible();
+    // Sin internet en la prueba, el mapa no carga.
+    const aviso = page.locator("#modalAviso");
+    await expect(aviso).toContainText("Mapa no disponible");
+    await aviso.getByRole("button", { name: "Entendido" }).click();
+    await capturar(page, "diseno-08-rutas");
+
+    await abrirMas(page);
+    await page.locator(".masAccesos").getByRole("button", { name: "Estadísticas" }).click();
+    await expect(page.locator("#pantallaEstadisticas")).toBeVisible();
+    await capturar(page, "diseno-09-estadisticas");
+
+    await abrirMas(page);
+    await page.locator(".masAccesos").getByRole("button", { name: "Cierre del día" }).click();
+    await expect(page.locator("#pantallaCierre")).toBeVisible();
+    await capturar(page, "diseno-10-cierre-del-dia");
+
+    await abrirMas(page);
+    await page.locator("#configFilaEmpleados").click();
+    await capturar(page, "diseno-11-empleados");
+
+    // Avisos (la campanita).
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await page.locator("#pantallaMenu").getByRole("button", { name: /^Avisos/ }).click();
+    await capturar(page, "diseno-12-avisos");
 });

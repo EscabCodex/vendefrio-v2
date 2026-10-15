@@ -32,6 +32,14 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Comandos por voz ("próxima parada", "marcar entregado"), con el reconocimiento de voz de Chrome en Android y con internet.
 - Cargar pedidos con un audio, como un audio de WhatsApp: se pasa a texto y se arma el pedido con los productos del catálogo para revisarlo antes de guardar. Pasar a texto con buena calidad probablemente necesite un servicio pago; hay que decidirlo.
 
+Plan detallado en el Bloque I de `PROJECT_STATE.md` (T40 a T44).
+
+**Etapa 6 — Lista para la 1.0** (agregada por Claude con permiso del dueño, 2026-10-15: "agregá todas las ideas útiles para una app 1.0"). Cosas chicas que hacen que la app se sienta terminada, todas gratis y sin claves. Plan en el Bloque J de `PROJECT_STATE.md` (T45 a T49).
+- Primeros pasos para una cuenta nueva (cargar productos, comercios y el primer pedido) y "Qué hay de nuevo" después de cada actualización.
+- "Para visitar hoy": los comercios que suelen pedir ese día de la semana, según su historial.
+- Exportar pedidos y cobros a una planilla (CSV) para el contador.
+- Repaso de accesibilidad y velocidad: botones grandes, textos para lectores de pantalla y carga más liviana.
+
 Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
 
 ## Después de la 1.0
