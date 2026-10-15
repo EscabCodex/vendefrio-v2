@@ -791,6 +791,7 @@ Cada tarea cambia cómo se ve, no lo que hace: los datos, las reglas de la nube 
 - [ ] **T36 — Catálogo unido con Productos y marcas.** Una sola pantalla para ver, buscar, agregar al pedido y (quien puede) editar productos y marcas. Esfuerzo: Alto.
 - [ ] **T37 — Comercios y ficha del comercio.** Lista y ficha con el estilo nuevo; "Actualizar con mi GPS" en la ficha. Esfuerzo: Medio.
 - [ ] **T38 — Rutas, Estadísticas, Equipo, Avisos y Cierre del día con el estilo nuevo.** Esfuerzo: Medio.
+- [ ] **T39 — Íconos redibujados.** Todos los íconos SVG de `iconos.js` y de la barra de abajo, dibujados de nuevo con el mismo grosor, puntas redondeadas y sin líneas que se salgan (por ejemplo, el de Rutas). Pedido del dueño, 2026-10-15. Esfuerzo: Medio.
 - [ ] **M10 — Prueba en celulares reales (dueño).** Android e iPhone, modo claro y oscuro, app instalada (PWA). Anotar lo que se vea mal.
 - [ ] **M11 — Cierre de la 1.0 (dueño).** Prueba en el trabajo diario con la app nueva; lo que falte pasa a "Después de la 1.0".
 

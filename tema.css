@@ -1,0 +1,277 @@
+/* =====================================================
+   VendeFrío - Estilo nuevo (Etapa 4, T30)
+   "D · Mezcla", aprobado por el dueño el 2026-10-15:
+   - De día: azul hielo, tarjetas redondeadas, botones píldora.
+   - De noche: fondo casi negro y acento lima.
+   Va después de styles.css: cambia los colores (variables) y la forma de
+   las piezas que comparten todas las pantallas.
+   ===================================================== */
+
+:root{
+  --fondo:#EEF3FA;
+  --superficie:#FFFFFF;
+  --superficie-2:#E3EAF5;
+  --borde:#E1E8F2;
+  --borde-fuerte:#C9D4E3;
+  --texto:#0F1B2D;
+  --texto-sec:#56657A;
+  --texto-ter:#8392A6;
+  --acento:#1F5FE0;
+  --acento-oscuro:#1A50C2;
+  --acento-bg:#DCE7FD;
+  --acento-txt:#FFFFFF;
+  --pendiente:#B35A00;
+  --pendiente-bg:#FFEBD3;
+  --visitado:#14804A;
+  --visitado-bg:#DDF3E6;
+  --info:#5B3FD4;
+  --info-bg:#ECE7FD;
+  --peligro:#D33A3A;
+  --peligro-bg:#FCE8E6;
+  --gris-claro:#E3EAF5;
+  --gris-texto:var(--texto-sec);
+
+  --hero-bg:linear-gradient(135deg,#1F5FE0 0%,#2C8BEA 55%,#3FB5E8 100%);
+  --hero-txt:#FFFFFF;
+  --hero-kpi:rgba(255,255,255,.16);
+  --sombra:0 1px 2px rgba(15,27,45,.04),0 4px 14px -6px rgba(15,27,45,.08);
+  --sombra-flotante:0 10px 30px -10px rgba(15,27,45,.25);
+  --sombra-acento:0 6px 16px -4px rgba(31,95,224,.6);
+  --borde-tarjeta:0 solid transparent;
+
+  --radius-lg:24px;
+  --radius-md:16px;
+  --radius-sm:12px;
+  --radio-pildora:999px;
+
+  --fuente:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+
+html[data-tema="oscuro"]{
+  --fondo:#0C0F13;
+  --superficie:#151A20;
+  --superficie-2:#1E242C;
+  --borde:#232A33;
+  --borde-fuerte:#323B46;
+  --texto:#F2F4F6;
+  --texto-sec:#99A2AD;
+  --texto-ter:#6C7581;
+  --acento:#C8F04A;
+  --acento-oscuro:#C8F04A;
+  --acento-bg:#252F14;
+  --acento-txt:#0C0F13;
+  --pendiente:#FFB547;
+  --pendiente-bg:#2E2412;
+  --visitado:#5BD68C;
+  --visitado-bg:#15291D;
+  --info:#6CB6FF;
+  --info-bg:#132536;
+  --peligro:#FF6B5E;
+  --peligro-bg:#3A1A18;
+  --gris-claro:#1E242C;
+
+  --hero-bg:#151A20;
+  --hero-txt:#F2F4F6;
+  --hero-kpi:#1E242C;
+  --sombra:none;
+  --sombra-flotante:0 10px 30px -10px rgba(0,0,0,.6);
+  --sombra-acento:0 6px 18px -4px rgba(200,240,74,.45);
+  --borde-tarjeta:1px solid #232A33;
+  color-scheme:dark;
+}
+
+/* ---------- Base ---------- */
+
+*{font-family:var(--fuente);}
+html body{
+  background:var(--fondo);
+  color:var(--texto);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(104px + env(safe-area-inset-bottom));
+}
+h1,h2,h3{letter-spacing:-.015em;}
+
+/* ---------- Encabezados de pantalla ---------- */
+
+body > section > header{
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  border-radius:0;
+  padding:calc(18px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+}
+body > section > header h1{font-size:26px;font-weight:800;color:var(--texto);}
+body > section > header p{color:var(--texto-sec);font-size:13px;}
+body > section > header .logo{
+  width:44px;height:44px;border-radius:14px;
+  background:var(--acento-bg);color:var(--acento-oscuro);
+}
+
+main.container,
+html main.container{
+  padding:8px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)) !important;
+}
+
+/* ---------- Tarjetas ---------- */
+
+html .card,
+html .configGrupo,
+html .tarjetaSeguimiento,
+html .tarjetaComercio,
+html .tarjetaProducto,
+html .tarjetaHistorial,
+html .filaRutaGuardada,
+html .tarjetaSeleccionRuta{
+  background:var(--superficie);
+  color:var(--texto);
+  border:var(--borde-tarjeta);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--sombra);
+}
+html .card{padding:16px;margin-bottom:12px;}
+html .card h2{font-size:17px;font-weight:700;}
+
+.seccionTitulo{
+  display:flex;align-items:center;gap:6px;
+  margin:20px 2px 10px !important;
+  font-size:18px !important;font-weight:800 !important;
+  text-transform:none !important;letter-spacing:-.01em !important;
+  color:var(--texto) !important;
+}
+.seccionTitulo svg{display:none;}
+
+/* ---------- Botones ---------- */
+
+html .btnAccion,
+html .menuBtn{
+  min-height:46px;
+  border-radius:var(--radio-pildora);
+  border:0;
+  font-weight:700;
+  box-shadow:none;
+}
+html .btnAccion.agregar,
+html .btnAccion.principal{background:var(--acento);color:var(--acento-txt);}
+html .btnAccion.ver,
+html .btnAccion.secundario,
+html .btnAccion.editar{background:var(--acento-bg);color:var(--acento-oscuro);}
+html .btnAccion.eliminar{background:var(--peligro-bg);color:var(--peligro);}
+
+html .menuBtn{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);border:var(--borde-tarjeta);}
+
+/* ---------- Campos ---------- */
+
+html input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html select,
+html textarea{
+  background:var(--superficie);
+  color:var(--texto);
+  border:1px solid var(--borde);
+  border-radius:var(--radius-md);
+  padding-left:14px;
+  padding-right:14px;
+}
+html input:focus,
+html select:focus,
+html textarea:focus{
+  outline:none;
+  border-color:var(--acento);
+  box-shadow:0 0 0 3px var(--acento-bg);
+}
+html input::placeholder,html textarea::placeholder{color:var(--texto-ter);}
+
+/* ---------- Ventanas que suben desde abajo ---------- */
+
+html .modalContenido{
+  background:var(--superficie);
+  color:var(--texto);
+  border:var(--borde-tarjeta);
+  border-radius:28px;
+}
+html .modalContenido::before{background:var(--borde-fuerte);}
+html .modalContenido h2{font-size:20px;font-weight:800;}
+
+/* ---------- Barra de abajo flotante ---------- */
+
+html body > nav.bottom-nav{
+  left:max(12px, env(safe-area-inset-left));
+  right:max(12px, env(safe-area-inset-right));
+  bottom:calc(12px + env(safe-area-inset-bottom));
+  width:auto;
+  height:68px;
+  padding:6px;
+  border:var(--borde-tarjeta);
+  border-radius:24px;
+  background:var(--superficie);
+  box-shadow:var(--sombra-flotante);
+  overflow:visible;
+}
+html .nav-item{
+  color:var(--texto-ter);
+  font-size:11px;
+  font-weight:600;
+  gap:2px;
+}
+html .nav-item .nav-icon{
+  width:auto;height:30px;padding:3px 14px;
+  border-radius:999px;
+  background:transparent;
+  color:inherit;
+}
+html .nav-item.activo{color:var(--acento-oscuro);}
+html .nav-item.activo .nav-icon{background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .nav-item.activo{color:var(--acento);}
+
+/* ---------- Etiquetas de estado (chips) ---------- */
+
+html .filtroEtapa{
+  border-radius:999px;
+  border:var(--borde-tarjeta);
+  background:var(--superficie);
+  color:var(--texto-sec);
+  box-shadow:var(--sombra);
+}
+html .filtroEtapa.activo{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
+
+/* ---------- Botón flotante (nuevo pedido) ---------- */
+
+html .botonNuevoPedido{
+  background:var(--acento);
+  color:var(--acento-txt);
+  box-shadow:var(--sombra-acento);
+  bottom:calc(92px + env(safe-area-inset-bottom));
+}
+
+/* ---------- Avisos cortos ---------- */
+
+html .toast{border-radius:999px;}
+
+/* ---------- Lo que se apoya arriba de la barra flotante ---------- */
+/* La barra ahora termina 80px arriba del borde (antes 64px). */
+
+html #pantallaPedido footer{bottom:calc(88px + env(safe-area-inset-bottom)) !important;background:transparent;border:0;box-shadow:none;}
+html.conCartelPersonal #pantallaPedido footer{bottom:calc(96px + var(--alto-cartel-personal) + env(safe-area-inset-bottom)) !important;}
+html .indicadorNube{bottom:calc(88px + env(safe-area-inset-bottom));}
+html .cartelModoPersonal{left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(88px + env(safe-area-inset-bottom));border-radius:16px;}
+html.conCartelPersonal .botonNuevoPedido{bottom:calc(108px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
+html .editarPedido .modalBotones,
+html .entregaPedido .modalBotones,
+html .cobroPedido .modalBotones,
+html .comprobantePedido .modalBotones,
+html .impresionPedido .modalBotones,
+html .copiasTicket .modalBotones{margin-bottom:calc(84px + env(safe-area-inset-bottom));}
+html .modal{padding-bottom:calc(92px + env(safe-area-inset-bottom));}
+
+/* ---------- Resumen de arriba del Inicio (se rehace en T32) ---------- */
+
+html .dashboardHeader{
+  margin:calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  border-radius:var(--radius-lg);
+  background:var(--hero-bg);
+  color:var(--hero-txt);
+  border:var(--borde-tarjeta);
+  box-shadow:0 12px 28px -12px rgba(31,95,224,.55);
+}
+html[data-tema="oscuro"] .dashboardHeader{box-shadow:none;}
+html .dashboardHeader h1,html .dashboardHeader p{color:var(--hero-txt);}

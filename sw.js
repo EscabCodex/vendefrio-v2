@@ -1,11 +1,12 @@
 // =====================================================
-// VendeFrío - Service Worker (v163 - Cierre del día)
+// VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v163";
+const CACHE_NAME = "vendefrio-v164";
 const ARCHIVOS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./tema.css",
   "./iconos.js",
   "./productos.js",
   "./comercios.js",

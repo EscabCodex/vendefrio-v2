@@ -26,17 +26,15 @@ No es una lista rígida de pantallas: es el orden para llegar a calidad de produ
 - Pruebas en celulares reales, modo claro y oscuro, y PWA.
 - Cierre de la 1.0 y prueba en el trabajo diario.
 
-Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
-
-## Después de la 1.0
-
-**Etapa 5 — Navegación propia y voz** (idea del dueño, 2026-10-15; se detalla con él antes de programar)
+**Etapa 5 — Navegación propia y voz** (idea del dueño, 2026-10-15). Va apenas termina la Etapa 4, sin esperar decisiones del dueño ("hacé la navegación como mejor te parezca"). Solo opciones gratis y sin claves: Leaflet con OpenStreetMap, el OSRM público y la voz del navegador (Web Speech API). Lo que necesite una cuenta, una clave o un servicio pago queda armado detrás de un ajuste y pasa a la lista de tareas del dueño.
 - Navegación estilo Uber o DiDi, pero del lado del cliente: mapa 2D con la posición en todo momento y una línea azul con el camino; abajo, una hoja que se desliza hacia arriba con los datos del comercio y todas sus opciones (cargar pedido, llamar, entregar).
 - Indicaciones paso a paso con voz ("en 150 m doblá a la izquierda"), para dejar de usar Google Maps. Necesita un servicio de calles (por ejemplo OpenRouteService u OSRM, con plan gratis) y la voz del celular. Una app web no sigue el GPS con la pantalla apagada.
 - Comandos por voz ("próxima parada", "marcar entregado"), con el reconocimiento de voz de Chrome en Android y con internet.
 - Cargar pedidos con un audio, como un audio de WhatsApp: se pasa a texto y se arma el pedido con los productos del catálogo para revisarlo antes de guardar. Pasar a texto con buena calidad probablemente necesite un servicio pago; hay que decidirlo.
 
-Otras ideas:
+Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y usable antes que todo a medias.
+
+## Después de la 1.0
 
 1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.
 2. **Operación comercial:** cuentas corrientes y comprobantes simples (el ticket impreso del pedido ya entra en la 1.0, T28b).

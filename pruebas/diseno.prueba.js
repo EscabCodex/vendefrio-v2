@@ -9,12 +9,13 @@ test.use({ nube: true });
 test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, testInfo) => {
     await registrarDistribuidora(page, testInfo);
     await page.evaluate(() =>
-        agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", telefono: "11 4444-0000" }) &&
-        agregarMarca("Polar") &&
-        agregarProducto("Polar", { nombre: "Cucurucho", precio: 1200 })
+        agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", telefono: "11 4444-0000" })
     );
     await cargarPedido(page, false);
     await cargarPedido(page, false, "Kiosco La Esquina");
+    // Otra marca, después de cargar (si llega mientras se carga, la lista
+    // de productos se vuelve a dibujar y se cierra la marca abierta).
+    await page.evaluate(() => agregarMarca("Polar") && agregarProducto("Polar", { nombre: "Cucurucho", precio: 1200 }));
 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -31,8 +32,12 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
 
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator("#cliente").fill("Almacén Don Pepe");
-    await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
-    await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
+    const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    await expect(async () => {
+        if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
+        await expect(helado).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "diseno-04-nuevo-pedido");
 
