@@ -28,9 +28,10 @@ const manejador = crearManejador({
     obtenerApp: () => appAdmin,
     // La IA falsa: entiende el pedido de la prueba y, de yapa, inventa un
     // producto y un comercio que no existen (la función los tiene que sacar).
-    preguntar: async ({ mensaje }) => {
+    preguntar: async ({ mensaje, esquema }) => {
         preguntas.push(mensaje);
         if (errorDeLaIA) throw errorDeLaIA;
+        if (esquema.properties.accion) return { accion: "pantalla", comercio: "", pantalla: "pedido" };
         return {
             comercio: "Kiosco La Esquina",
             productos: [
@@ -120,6 +121,15 @@ test("ia: la del celular y la de la nube entienden lo que la voz gratis no", asy
     expect(await page.evaluate(texto => vozVendeFrio.interpretar(texto), frase)).toBeNull();
     expect(await page.evaluate(texto => vozVendeFrio.interpretarConIA(texto), frase)).toBeNull();
     expect(await page.evaluate(() => window.__preguntasCelular.length)).toBe(0);
+
+    // El botón de prueba dice qué pasa con la IA en la nube.
+    errorDeLaIA = Object.assign(new Error("invalid x-api-key"), { status: 401 });
+    await detalle.getByRole("button", { name: "Probar la IA en la nube" }).click();
+    await expect(detalle.locator("#resultadoProbarIA")).toHaveText("La IA en la nube falló (error 502: 401 invalid x-api-key).");
+    errorDeLaIA = null;
+    await detalle.getByRole("button", { name: "Probar la IA en la nube" }).click();
+    await expect(detalle.locator("#resultadoProbarIA")).toHaveText("Anda bien: la IA en la nube respondió.");
+    preguntas.length = 0;
 
     await celular.check();
     await nube.check();
