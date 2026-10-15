@@ -4,6 +4,9 @@
 //    dirección y CUIT en Configuración > Cuenta; el ticket los muestra, cada
 //    uno solo si está cargado. Un empleado no los ve para cambiar y la nube
 //    no lo deja cambiarlos saltándose la app.
+// 2. "Ticket impreso por" en el seguimiento (T28d): cada impresión queda en el
+//    pedido (quién, cuándo y cuántas copias) y se ve en los dos celulares. La
+//    nube solo deja agregar impresiones a nombre propio.
 const { test, expect, capturar } = require("./ayudas");
 const {
     registrarDistribuidora,
@@ -112,6 +115,69 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
         return resultados;
     });
     expect(delDueno).toEqual(["permission-denied", "permission-denied", "permission-denied"]);
+
+    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+    await contexto.close();
+    expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
+});
+
+test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser }, testInfo) => {
+    await usarImpresoraFalsa(page);
+    await registrarDistribuidora(page, testInfo);
+    const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo, "Maxi", { impresora: true });
+
+    // El dueño imprime las dos copias: queda en el seguimiento, a su nombre.
+    await irAPedidos(page);
+    await cargarPedido(page, false);
+    await imprimirTicket(page, "Almacén Don Pepe");
+    const ficha = page.locator(".fichaPedido");
+    const impresionDueno = ficha.locator(".pasoSeguimiento.impresion", { hasText: "Jere" });
+    await expect(impresionDueno).toContainText("Ticket impreso");
+    await expect(impresionDueno).toContainText("Dos copias (comercio y distribuidora)");
+
+    // El empleado lo ve en su celular e imprime una copia.
+    await irAPedidos(empleado);
+    await empleado.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).click();
+    const fichaEmpleado = empleado.locator(".fichaPedido");
+    await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion", { hasText: "Jere" })).toBeVisible();
+    await imprimirTicket(empleado, "Almacén Don Pepe", "Una copia");
+    await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion").first()).toContainText("Maxi");
+
+    // Y el dueño ve la impresión del empleado arriba de todo, en vivo.
+    const ultima = ficha.locator(".pasoSeguimiento").first();
+    await expect(ultima).toContainText("Ticket impreso");
+    await expect(ultima).toContainText("Maxi");
+    await expect(ultima).toContainText("Una copia (comercio)");
+    await ultima.scrollIntoViewIfNeeded();
+    await capturar(page, "impresion-03-ticket-impreso-por");
+
+    // Saltándose la app: ni a nombre de otro, ni cambiar una que ya está.
+    const resultados = await empleado.evaluate(async () => {
+        const guardado = JSON.parse(localStorage.getItem("vendefrio_empleado"));
+        const pedido = obtenerHistorial().find(item => item.comercio === "Almacén Don Pepe");
+        const ref = window.firebase.firestore().collection("distribuidoras").doc(guardado.distribuidora)
+            .collection("pedidos").doc(pedido.id);
+        const yo = { idPersona: guardado.idEmpleado, nombre: "Maxi", uid: guardado.uid };
+        const otro = { idPersona: "dueno", nombre: "Jere", uid: guardado.uid };
+        const existente = Object.keys(pedido.impresiones)[0];
+        const intentos = [
+            () => ref.update({ ["impresiones.imp_trucha" + Date.now()]: { copias: 2, persona: otro, horaCelular: Date.now() } }),
+            () => ref.update({ ["impresiones." + existente + ".copias"]: 1 }),
+            () => ref.update({ ["impresiones.imp_mal" + Date.now()]: { copias: 5, persona: yo, horaCelular: Date.now() } }),
+            () => ref.update({ ["impresiones.imp_bien" + Date.now()]: { copias: 1, persona: yo, horaCelular: Date.now() } })
+        ];
+        const salida = [];
+        for (const intento of intentos) {
+            try {
+                await intento();
+                salida.push("ok");
+            } catch (error) {
+                salida.push(error.code || String(error));
+            }
+        }
+        return salida;
+    });
+    expect(resultados).toEqual(["permission-denied", "permission-denied", "permission-denied", "ok"]);
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
     await contexto.close();

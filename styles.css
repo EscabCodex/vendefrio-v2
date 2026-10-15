@@ -3351,6 +3351,7 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .pasoSeguimiento.incidencia::before{background:var(--peligro);}
 .pasoSeguimiento.incidencia strong{color:var(--peligro);}
 .pasoSeguimiento.resuelta::before{background:var(--visitado);}
+.pasoSeguimiento.impresion::before{background:var(--texto-sec);}
 .explicacionTextoPedido{color:var(--texto-sec);font-size:14px;line-height:1.45;text-align:center;}
 .textoPedido textarea{min-height:90px;margin-top:2px;border:1px solid var(--borde);background:var(--fondo);color:var(--texto);}
 .errorTextoPedido{margin-top:6px;color:var(--peligro);font-size:13px;font-weight:700;}

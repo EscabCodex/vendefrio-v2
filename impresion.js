@@ -717,6 +717,12 @@
 
             await escribir(destino, bytes);
             mostrarToast("Ticket impreso");
+            // Queda anotado en el pedido (T28d): se ve en el seguimiento.
+            try {
+                window.nubeVendeFrio?.anotarImpresion?.(id, copias);
+            } catch (error) {
+                console.error("No se pudo anotar la impresión en el pedido.", error);
+            }
         } catch (error) {
             mostrarError(error, id, copias);
         } finally {

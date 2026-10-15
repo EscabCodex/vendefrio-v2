@@ -1184,6 +1184,35 @@
 
     const LARGO_MAXIMO_MOTIVO_CANCELACION = 300;
 
+    // -------------------------------------------------
+    // "Ticket impreso por" (T28d)
+    // -------------------------------------------------
+    // Cada impresión queda en el mapa "impresiones" del pedido: { copias,
+    // persona, horaCelular }. Solo se agrega, a nombre propio, de a una.
+
+    function anotarImpresion(idPedido, copias) {
+        const { ref, persona } = pedidoConEstadosYPersona(idPedido, "Un pedido Histórico no se imprime.");
+        const idImpresion = generarId("imp");
+
+        enviarCambiosDelPedido(ref, [{
+            ruta: ["impresiones", idImpresion],
+            valor: { copias: copias === 1 ? 1 : 2, persona, horaCelular: Date.now() }
+        }]);
+
+        return idImpresion;
+    }
+
+    // Las impresiones del pedido, la más nueva primero: [{ id, copias,
+    // persona, horaCelular }].
+    function impresionesDelPedido(pedido) {
+        const impresiones = esMapa(pedido && pedido.impresiones) ? pedido.impresiones : {};
+
+        return Object.keys(impresiones)
+            .filter(id => esMapa(impresiones[id]))
+            .map(id => ({ id, ...impresiones[id] }))
+            .sort((a, b) => (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0) || (a.id < b.id ? 1 : -1));
+    }
+
     function esPedidoEliminado(pedido) {
         return Boolean(pedido) && pedido.eliminado === true;
     }
@@ -2914,6 +2943,9 @@
         edicionesSinVer,
         quienesVieronLasEdiciones,
         marcarEdicionesVistas,
+        // "Ticket impreso por" (T28d).
+        anotarImpresion,
+        impresionesDelPedido,
         // Eliminar y cancelar (T26).
         puedeEliminarElPedido,
         puedeCancelarElPedido,

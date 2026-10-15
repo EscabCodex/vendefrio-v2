@@ -1,7 +1,7 @@
 // =====================================================
-// VendeFrío - Service Worker (v160 - Datos de la distribuidora en el ticket)
+// VendeFrío - Service Worker (v161 - Ticket impreso por, en el seguimiento)
 // =====================================================
-const CACHE_NAME = "vendefrio-v160";
+const CACHE_NAME = "vendefrio-v161";
 const ARCHIVOS = [
   "./",
   "./index.html",

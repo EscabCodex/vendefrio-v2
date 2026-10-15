@@ -69,8 +69,8 @@ async function irAPedidos(page) {
 }
 
 // Segundo celular: un empleado entra con un código nuevo del dueño, sin
-// roles. Devuelve la página, su contexto (para cerrarlo) y sus errores.
-async function entrarComoEmpleado(page, browser, testInfo, nombre = "Maxi") {
+// roles (con { impresora: true }, con la impresora falsa). Devuelve la página, su contexto (para cerrarlo) y sus errores.
+async function entrarComoEmpleado(page, browser, testInfo, nombre = "Maxi", opciones = {}) {
     await abrirConfiguracionEn(page, "empleados");
     await page.getByRole("button", { name: "Generar código para un empleado nuevo" }).click();
     const codigo = (await page.locator("#empleadoCodigoGenerado strong").textContent()).trim();
@@ -82,6 +82,7 @@ async function entrarComoEmpleado(page, browser, testInfo, nombre = "Maxi") {
     });
     const empleado = await contexto.newPage();
     const errores = await prepararPagina(empleado, true);
+    if (opciones.impresora) await usarImpresoraFalsa(empleado);
     await empleado.goto("/");
     await empleado.getByRole("button", { name: /Empleado/ }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
