@@ -183,10 +183,12 @@
         return lectura && lectura.comercio || null;
     }
 
-    // Lo que se entendió del mensaje: { comercio, productos, sinEntender, completo }.
+    // Lo que se entendió del mensaje: { comercio, productos, sinEntender, cambios, completo }.
     function leerMensaje(mensaje) {
         const lector = window.vozVendeFrio?.leerPedido;
-        const texto = normalizar(mensaje && mensaje.texto).replace(CORTESIA, " ");
+        // Cada oración va en su renglón, así «… bombón. Tengo 1 cambio» no
+        // queda pegado al producto de antes (el punto de «1.5» no corta).
+        const texto = normalizar(mensaje && mensaje.texto).replace(/([^\d\s])[.!?]+(?=\s|$)/g, "$1\n").replace(CORTESIA, " ");
         const deIA = mensaje && lecturasIA.get(mensaje.id);
         const lectura = deIA && deIA.texto === mensaje.texto
             ? deIA.lectura
@@ -199,14 +201,17 @@
             comercio,
             productos: lectura.productos || [],
             sinEntender: dudosos,
+            // Los cambios («2 cambio de ñoquis») no se suman: van en la observación.
+            cambios: lectura.cambios || [],
             completo: Boolean(comercio && lectura.productos.length && !dudosos.length)
         };
     }
 
-    function observacionDe(mensaje) {
+    function observacionDe(mensaje, lectura) {
+        const cambios = lectura && lectura.cambios && lectura.cambios.length ? "Cambios: " + lectura.cambios.join(", ") + ". " : "";
         const texto = String(mensaje.texto || "").replace(/\s+/g, " ").trim();
         const corto = texto.length > LARGO_MAXIMO_OBS ? texto.slice(0, LARGO_MAXIMO_OBS - 1) + "…" : texto;
-        return (mensaje.tipo === "audio" ? "Audio de WhatsApp" : "WhatsApp") + (corto ? ": «" + corto + "»" : "");
+        return cambios + (mensaje.tipo === "audio" ? "Audio de WhatsApp" : "WhatsApp") + (corto ? ": «" + corto + "»" : "");
     }
 
     function borradorConAlgo() {
@@ -222,7 +227,7 @@
         }
         const observaciones = document.getElementById("obs");
         if (observaciones) {
-            observaciones.value = observacionDe(mensaje);
+            observaciones.value = observacionDe(mensaje, lectura);
             observaciones.dispatchEvent(new Event("input", { bubbles: true }));
         }
         return true;
@@ -635,6 +640,9 @@
             const faltan = lectura.sinEntender.length
                 ? `<p class="waNoEntendido">No entendí: ${lectura.sinEntender.map(tramo => "«" + escapar(tramo) + "»").join(", ")}</p>`
                 : "";
+            const cambios = lectura.cambios.length
+                ? `<p class="waAyuda">Cambios (no se suman): ${lectura.cambios.map(tramo => "«" + escapar(tramo) + "»").join(", ")}</p>`
+                : "";
             const sinComercio = lectura.comercio ? "" : `<p class="waNoEntendido">No sé de qué comercio es: elegilo al cargar el pedido.</p>`;
             const etiqueta = lectura.completo
                 ? `<span class="waEtiqueta entendido">Se entendió todo</span>`
@@ -645,7 +653,7 @@
             return `
                 <article class="waMensaje" data-id="${escapar(mensaje.id)}">
                     <header><strong>${escapar(quien)}</strong><small>${lectura.comercio && mensaje.nombrePerfil && !mensaje.idComercio ? escapar(mensaje.nombrePerfil) + " · " : ""}${escapar(horaCorta(mensaje.hora))}</small>${etiqueta}</header>
-                    ${cuerpo}${productos}${faltan}${sinComercio}${conIA}
+                    ${cuerpo}${productos}${faltan}${cambios}${sinComercio}${conIA}
                     <div class="waBotonesMensaje">
                         <button type="button" class="waBotonSecundario" data-wa="descartar" data-id="${escapar(mensaje.id)}">Descartar</button>
                         <button type="button" class="waBotonPrincipal" data-wa="cargar" data-id="${escapar(mensaje.id)}">${ico("notaLapiz", 16)} Cargar pedido</button>

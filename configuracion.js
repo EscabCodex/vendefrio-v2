@@ -87,7 +87,7 @@
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
         movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
-        vibrar: true, precios: true,
+        vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true
     };
@@ -1677,7 +1677,21 @@
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
                     ]) +
                     filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
-                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios"));
+                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios")) +
+                // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
+                grupo("Voz con IA",
+                    filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
+                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube")) +
+                nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
+            window.vozVendeFrio?.estadoIACelular?.().then(estado => {
+                const texto = document.getElementById("estadoIACelular");
+                if (!texto) return;
+                texto.textContent = {
+                    available: "Este celular tiene IA y está lista.",
+                    downloadable: "Este celular tiene IA: se descarga la primera vez que la uses, con wifi.",
+                    downloading: "Este celular está descargando su IA."
+                }[estado] || "Este celular todavía no tiene IA propia para páginas.";
+            });
         }
 
         if (seccion === "navegacion") {

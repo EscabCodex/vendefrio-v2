@@ -14,6 +14,9 @@
     },
     "api/whatsapp-audio.js": {
       "maxDuration": 60
+    },
+    "api/entender.js": {
+      "maxDuration": 30
     }
   }
 }

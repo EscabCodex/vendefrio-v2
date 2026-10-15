@@ -1149,6 +1149,7 @@ html[data-tema="oscuro"] .botonVozInicio{color:var(--acento);}
   background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);cursor:pointer;
 }
 .ventanaVoz.escuchando .botonMicrofonoGrande,
+.ventanaVoz.pensando .botonMicrofonoGrande,
 .ventanaDictado.escuchando .botonDictar{animation:latidoVoz 1.2s ease-in-out infinite;}
 @keyframes latidoVoz{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--acento) 55%, transparent);}50%{box-shadow:0 0 0 16px color-mix(in srgb, var(--acento) 0%, transparent);}}
 .contenidoVoz h2{margin:0;font-size:20px;}
@@ -1178,6 +1179,10 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 .ventanaDictado .productoDictado span{font-weight:600;}
 .ventanaDictado .productoDictado small{grid-column:3;color:var(--texto-sec);font-size:12px;}
 .sinEntenderDictado{margin:0;font-size:13px;color:var(--pendiente);}
+/* T54: IA para la voz */
+.botonEntenderIA{align-self:flex-start;margin-top:8px;}
+.cambiosDictado{margin:0;font-size:13px;color:var(--texto-sec);}
+.ventanaVoz.pensando .textoVoz{opacity:.75;}
 
 /* ---------- Primeros pasos y "Suelen pedir hoy" (Etapa 6, T45 y T46) ---------- */
 

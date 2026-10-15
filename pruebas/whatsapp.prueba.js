@@ -230,7 +230,7 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
     // Llegan las respuestas: un pedido claro, un audio y un mensaje que no se entiende.
     const ahora = Math.floor(Date.now() / 1000);
     const llegada = await avisarMensaje(webhook, [
-        { id: "wamid.pepe", from: "5491155551234", timestamp: String(ahora - 120), type: "text", text: { body: "Hola! Sí, mandame 3 helados de 1 kg y 2 palitos bombón. Gracias!" }, perfil: "Pepe" },
+        { id: "wamid.pepe", from: "5491155551234", timestamp: String(ahora - 120), type: "text", text: { body: "Hola! Sí, mandame 3 helados de 1 kg y 2 palitos bombón. Tengo 1 cambio de palito bombón. Gracias!" }, perfil: "Pepe" },
         { id: "wamid.kiosco", from: "5491144440000", timestamp: String(ahora - 60), type: "audio", audio: { id: "medio-1", mime_type: "audio/ogg" } },
         { id: "wamid.nuevo", from: "5493415550000", timestamp: String(ahora), type: "text", text: { body: "Hola, quiero 2 cajas de alfajores" }, perfil: "Carla" }
     ]);
@@ -249,6 +249,7 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
     const pepe = tarjetas.filter({ hasText: "Almacén Don Pepe" });
     await expect(pepe.locator(".waEtiqueta")).toHaveText("Se entendió todo");
     await expect(pepe.locator(".waProductos")).toContainText("3 × Helado 1 kg");
+    await expect(pepe).toContainText("Cambios (no se suman)");
     const kiosco = tarjetas.filter({ hasText: "Kiosco La Esquina" });
     await expect(kiosco).toContainText("mandame 4 palitos bombón");
     await expect(kiosco.locator(".waEtiqueta")).toHaveText("Se entendió todo");
@@ -266,7 +267,7 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
         const pedidos = (await nube.collection(`distribuidoras/${idDistribuidora}/pedidos`).get()).docs.map(doc => doc.data());
         return pedidos.map(pedido => [pedido.comercio, pedido.estado, pedido.cantidad, pedido.observaciones.slice(0, 9)]).sort();
     }).toEqual([
-        ["Almacén Don Pepe", "cargado", 5, "WhatsApp:"],
+        ["Almacén Don Pepe", "cargado", 5, "Cambios: "],
         ["Kiosco La Esquina", "cargado", 4, "Audio de "]
     ]);
     const marcado = (await nube.doc(`distribuidoras/${idDistribuidora}/whatsapp/wamid_pepe`).get()).data();
