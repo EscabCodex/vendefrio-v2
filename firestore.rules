@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -53,6 +53,8 @@ rules_version = '2';
 //                                   persona con la app cerrada (T29)
 //     whatsapp/{idMensaje}          mensajes que llegaron por WhatsApp (T58):
 //                                   los guarda solo la función de Vercel
+//     problemas/{idProblema}        "Informar un problema" (T62): lo manda
+//                                   cualquier miembro, lo lee el dueño
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
 // Todo lo que no figura acá queda bloqueado.
@@ -996,6 +998,34 @@ service cloud.firestore {
 
       // Avisos (T23): el buzón de cada persona ("dueno" o el id de la ficha
       // del empleado, que no cambia con un reingreso).
+      // Problemas informados desde la app (T62): los manda cualquier
+      // miembro a su nombre; los lee el dueño, que solo marca "visto".
+      match /problemas/{idProblema} {
+        allow read: if esDueno(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["texto", "captura", "version", "pantalla", "errores", "dispositivo", "persona", "horaCelular", "visto"])
+          && request.resource.data.keys().hasOnly(["texto", "captura", "version", "pantalla", "errores", "dispositivo", "persona", "horaCelular", "visto"])
+          && request.resource.data.texto is string
+          && request.resource.data.texto.size() > 0
+          && request.resource.data.texto.size() <= 2000
+          && (request.resource.data.captura == null
+            || (request.resource.data.captura is string
+              && request.resource.data.captura.size() <= 700000
+              && request.resource.data.captura.matches('^data:image/jpeg;base64,.*')))
+          && request.resource.data.version is string && request.resource.data.version.size() <= 40
+          && request.resource.data.pantalla is string && request.resource.data.pantalla.size() <= 60
+          && request.resource.data.errores is list && request.resource.data.errores.size() <= 10
+          && request.resource.data.dispositivo is string && request.resource.data.dispositivo.size() <= 30
+          && request.resource.data.horaCelular is number
+          && request.resource.data.visto == false
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow update: if esDueno(idDistribuidora)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visto"])
+          && request.resource.data.visto == true;
+      }
+
       match /avisos/{idPersona}/recibidos/{idAviso} {
         allow read: if esMiembro(idDistribuidora)
           && idPersona == miIdPersona(idDistribuidora);

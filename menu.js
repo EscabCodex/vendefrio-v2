@@ -440,7 +440,7 @@ function actualizarDashboard() {
     actualizarEncabezadoInicio();
 
     const nube = usaNubeReal();
-    const comercios = obtenerComercios();
+    const comercios = comerciosActivos();
     const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
     const pedidosHoy = pedidosDeHoyInicio(pedidos);
     const cargadosHoy = pedidos.filter(esDeHoyInicio);

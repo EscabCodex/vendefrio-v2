@@ -79,7 +79,7 @@
         if (!buscado || typeof obtenerComercios !== "function") return null;
         let mejor = null;
         let puntaje = 0;
-        obtenerComercios().forEach(comercio => {
+        comerciosActivos().forEach(comercio => {
             const nombre = normalizar(comercio.nombre);
             const valor = nombre === buscado ? 1 : parecido(nombre, buscado);
             if (valor > puntaje) {
@@ -117,7 +117,7 @@
         if (!palabras.length || typeof obtenerComercios !== "function") return null;
         let mejor = null;
         let puntaje = 0;
-        obtenerComercios().forEach(comercio => {
+        comerciosActivos().forEach(comercio => {
             const nombre = palabrasConPeso(comercio.nombre);
             if (!nombre.length) return;
             const claves = [nombre.join(" ")];
@@ -633,7 +633,7 @@
 
     function productosDelCatalogo() {
         const lista = [];
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaVender === "function" ? productosParaVender() : (typeof obtenerProductos === "function" ? obtenerProductos() : {});
         Object.entries(productos).forEach(([marca, items]) => (items || []).forEach(item => {
             const nombre = typeof item === "string" ? item : item && item.nombre;
             if (nombre) lista.push({ marca, producto: nombre, clave: normalizarProducto(nombre), claveMarca: normalizarProducto(marca + " " + nombre) });

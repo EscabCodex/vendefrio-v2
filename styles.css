@@ -2534,27 +2534,14 @@ html[data-tema="oscuro"] th{
   border-color:var(--borde);
 }
 
-html[data-tema="oscuro"] h1,
-html[data-tema="oscuro"] h2,
-html[data-tema="oscuro"] h3,
-html[data-tema="oscuro"] h4,
-html[data-tema="oscuro"] h5,
-html[data-tema="oscuro"] h6,
-html[data-tema="oscuro"] p,
-html[data-tema="oscuro"] span,
-html[data-tema="oscuro"] label,
-html[data-tema="oscuro"] small,
-html[data-tema="oscuro"] strong,
-html[data-tema="oscuro"] li,
-html[data-tema="oscuro"] td,
-html[data-tema="oscuro"] th{
+/* Las piezas de la Etapa 7 (clases "pz...") y las etiquetas ("badge...")
+   tienen sus propios colores: esta regla general no las toca (T64). */
+html[data-tema="oscuro"] :is(h1, h2, h3, h4, h5, h6, p, span, label, small, strong, li, td, th):not(:where([class^="pz"], [class^="pz"] *, [class*="badge"], [class*="badge"] *)){
   color:var(--texto) !important;
 }
 
-html[data-tema="oscuro"] .subtitulo,
-html[data-tema="oscuro"] .datoComercio,
-html[data-tema="oscuro"] small,
-html[data-tema="oscuro"] .estadoRespaldo{
+html[data-tema="oscuro"] :is(.subtitulo, .datoComercio, .estadoRespaldo):not(:where([class^="pz"], [class^="pz"] *, [class*="badge"], [class*="badge"] *)),
+html[data-tema="oscuro"] small:not(:where([class^="pz"], [class^="pz"] *, [class*="badge"], [class*="badge"] *)){
   color:var(--texto-sec) !important;
 }
 

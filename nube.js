@@ -56,12 +56,20 @@
     let borradosSinSubir = 0;
     const oyentesSincronizacion = [];
     let textoSincronizacion = "";
+    // Detalle de lo que falta subir (T60): qué es cada cambio y lo último
+    // que ya subió, para la pantalla "Sin subir".
+    let sinSenalDesde = 0;
+    const pendientesConocidos = new Map();
+    const subidosRecien = [];
     let textoPedidosSinSubir = "";
 
     // Estados: apagado, conectando, conectada, sinConexion, sinPermiso, error.
     function cambiarEstado(nuevoEstado) {
         if (estado === nuevoEstado) return;
         estado = nuevoEstado;
+        // "Sin señal desde las 10:42" (T60).
+        if (nuevoEstado === "sinConexion" && !sinSenalDesde) sinSenalDesde = Date.now();
+        if (nuevoEstado === "conectada") sinSenalDesde = 0;
 
         oyentes.forEach(oyente => {
             try {
@@ -1812,9 +1820,125 @@
         return { estado, sinSubir: cantidadSinSubir() };
     }
 
+    // Qué es un cambio pendiente, en palabras del vendedor.
+    function describirCambio(parte, id) {
+        const crudo = documentos[parte] && documentos[parte].get(id);
+        const datos = crudo ? deDocumento(id, crudo) : {};
+        const descripcion = { parte, id, titulo: "Cambio", detalle: "", nombre: "", hora: Date.now() };
+
+        if (parte === "pedidos") {
+            const estadoActual = estadoActualDelPedido(datos);
+            const entradas = esMapa(datos.estados) ? Object.values(datos.estados) : [];
+            const ultima = entradas.reduce((mayor, entrada) => Math.max(mayor, Number(entrada && entrada.horaCelular) || 0), 0);
+            const unidades = (Array.isArray(datos.productos) ? datos.productos : [])
+                .reduce((total, item) => total + (Number(item && item.cantidad) || 0), 0);
+            const total = totalDelPedido(datos).total;
+            const cobro = cobroDelPedido(datos);
+            descripcion.nombre = String(datos.comercio || datos.cliente || "");
+            if (datos.sinPedido) {
+                descripcion.titulo = "Visita sin pedido";
+            } else if (estadoActual === "entregado") {
+                descripcion.titulo = "Entregado";
+            } else if (estadoActual === "cancelado") {
+                descripcion.titulo = "Cancelado";
+            } else if (entradas.length <= 1) {
+                descripcion.titulo = "Pedido nuevo";
+            } else {
+                descripcion.titulo = "Pedido · " + (nombreDeEstadoPedido(estadoActual) || "cambio");
+            }
+            if (ultima) descripcion.hora = ultima;
+            if (datos.sinPedido) {
+                descripcion.detalle = datos.motivoSinPedido ? "“" + datos.motivoSinPedido + "”" : "";
+            } else if (cobro && estadoActual === "entregado") {
+                descripcion.detalle = "cobrado en " + nombreDeFormaDeCobro(cobro.forma).toLowerCase();
+            } else {
+                descripcion.detalle = unidades + " u" + (total ? " · $ " + Math.round(total).toLocaleString("es-AR") : "");
+            }
+        } else if (parte === "comercios") {
+            descripcion.titulo = "Comercio";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = "datos del comercio";
+        } else if (parte === "productos") {
+            descripcion.titulo = "Producto";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = String((crudo && crudo._marca) || "catálogo");
+        } else if (parte === "rutas") {
+            descripcion.titulo = "Ruta";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = "recorrido guardado";
+        } else if (parte === "config") {
+            descripcion.titulo = "Marcas";
+            descripcion.detalle = "lista y orden de las marcas";
+        }
+        return descripcion;
+    }
+
+    // Anota lo pendiente con su descripción; lo que dejó de estar pendiente
+    // pasa a "Subido" (se guardan los últimos 5).
+    function anotarPendientes() {
+        const actuales = new Set();
+        Object.keys(idsSinSubir).forEach(parte => {
+            idsSinSubir[parte].forEach(id => {
+                const clave = parte + "/" + id;
+                actuales.add(clave);
+                const anterior = pendientesConocidos.get(clave);
+                const nueva = describirCambio(parte, id);
+                if (anterior && nueva.parte !== "pedidos") nueva.hora = anterior.hora;
+                nueva.desde = anterior ? anterior.desde : Date.now();
+                nueva.esperoSenal = Boolean(anterior && anterior.esperoSenal) || estado !== "conectada";
+                pendientesConocidos.set(clave, nueva);
+                // Si vuelve a esperar, deja de figurar como subido.
+                for (let i = subidosRecien.length - 1; i >= 0; i--) {
+                    if (subidosRecien[i].parte === parte && subidosRecien[i].id === id) subidosRecien.splice(i, 1);
+                }
+            });
+        });
+        pendientesConocidos.forEach((descripcion, clave) => {
+            if (actuales.has(clave)) return;
+            pendientesConocidos.delete(clave);
+            // Solo se muestra como "Subido" lo que tuvo que esperar.
+            if (descripcion.esperoSenal || Date.now() - descripcion.desde > 3000) {
+                subidosRecien.unshift({ ...descripcion, subido: Date.now() });
+            }
+        });
+        if (subidosRecien.length > 5) subidosRecien.length = 5;
+    }
+
+    function detalleSinSubir() {
+        return {
+            estado,
+            sinSenalDesde,
+            pendientes: Array.from(pendientesConocidos.values()).sort((a, b) => b.hora - a.hora),
+            subidos: subidosRecien.slice(),
+            borrados: borradosSinSubir,
+            fotos: comprobantesSinSubir.size,
+            total: cantidadSinSubir()
+        };
+    }
+
+    // "Reintentar ahora": corta y vuelve a abrir la conexión con la nube, así
+    // Firestore prueba enseguida en vez de esperar su próximo intento.
+    async function reintentarSubida() {
+        if (!db) {
+            window.location.reload();
+            return false;
+        }
+        if (!navigator.onLine) return false;
+        try {
+            await db.disableNetwork();
+            await db.enableNetwork();
+        } catch (error) {
+            console.warn("No se pudo reabrir la conexión con la nube.", error);
+        }
+        escucharNube();
+        return true;
+    }
+
     function avisarSincronizacion() {
+        anotarPendientes();
         const actual = sincronizacion();
-        const texto = actual.estado + "|" + actual.sinSubir;
+        const texto = actual.estado + "|" + actual.sinSubir + "|" +
+            Array.from(pendientesConocidos.keys()).join(",") + "|" + (subidosRecien[0] ? subidosRecien[0].subido : 0);
 
         if (texto !== textoSincronizacion) {
             textoSincronizacion = texto;
@@ -2995,6 +3119,8 @@
         escucharAccionesDePedidos,
         // Sincronización visible (T12).
         sincronizacion,
+        detalleSinSubir,
+        reintentarSubida,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
         escucharSincronizacion(oyente) {
             if (typeof oyente !== "function") return () => {};

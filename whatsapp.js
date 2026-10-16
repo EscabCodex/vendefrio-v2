@@ -117,7 +117,7 @@
     }
 
     function comercios() {
-        return (typeof obtenerComercios === "function" ? obtenerComercios() : [])
+        return (typeof comerciosActivos === "function" ? comerciosActivos() : [])
             .filter(comercio => comercio && comercio.nombre)
             .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
     }

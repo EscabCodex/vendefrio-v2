@@ -32,7 +32,7 @@ function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
     if (!resumen) return;
 
-    const comercios = obtenerComercios();
+    const comercios = comerciosActivos();
     const conGps = comercios.filter(comercioTieneGps).length;
     const sinGps = comercios.length - conGps;
 
@@ -881,7 +881,7 @@ function cargarSelectComerciosRuta() {
     opcionInicial.textContent = "Eleg\u00ed un comercio...";
     select.appendChild(opcionInicial);
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const opcion = document.createElement("option");
@@ -904,7 +904,7 @@ function cargarSelectComerciosRuta() {
 }
 
 function obtenerComerciosSeleccionRuta() {
-    return obtenerComercios()
+    return comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 
@@ -1303,7 +1303,7 @@ function renderizarPines() {
     capaMarcadores.clearLayers();
     marcadoresPorNombre.clear();
 
-    const comerciosConGps = obtenerComercios().filter(
+    const comerciosConGps = comerciosActivos().filter(
         comercioTieneGps
     );
 

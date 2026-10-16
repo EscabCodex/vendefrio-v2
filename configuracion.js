@@ -85,7 +85,7 @@
     // Valor de cada ajuste, o el de fábrica si nunca se tocó.
     const DEFECTOS = {
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
-        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
+        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
@@ -684,7 +684,11 @@
                 filaDato("historial", "gris", "Último respaldo descargado en este celular", textoUltimoRespaldoNube(), "configUltimoRespaldoNube") +
                 `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
                 filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
-                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"')) +
+                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"') +
+                // T61: cada cuánto avisa en Inicio.
+                filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
             nota("Descargá un respaldo una vez por semana y guardalo en un lugar seguro, como Google Drive. Al combinar, lo que ya está en la nube tiene prioridad.");
     }
 
@@ -1659,7 +1663,10 @@
                     filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
                 grupo("Archivo de respaldo",
                     filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
-                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"')) +
+                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"') +
+                    filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
                 nota("Guardá el archivo en un lugar seguro, como Google Drive.");
         }
 
@@ -1732,6 +1739,10 @@
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
                     filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades")) +
+                // T62: informar un problema (y, el dueño, ver los informados).
+                grupo("Problemas",
+                    filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
+                    (esDuenoEnLaNube() ? filaAccion("lista", "naranja", "Problemas informados", "Lo que mandaron vos y tus empleados", 'data-accion="verProblemas"') : "")) +
                 grupo("Ayuda",
                     `<div class="ajFila ajTextoLargo ayudaVendeFrio">
                         <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
@@ -1918,6 +1929,20 @@
             const sinSubir = nube?.sincronizacion?.().sinSubir || 0;
 
             if (sinSubir > 0) {
+                // T60: muestra qué falta subir en vez de un aviso suelto.
+                if (window.piezas && window.confianzaVendeFrio) {
+                    window.piezas.modal({
+                        icono: "nube",
+                        color: "aviso",
+                        titulo: "Todavía no",
+                        texto: "Hay " + (sinSubir === 1 ? "1 cambio" : sinSubir + " cambios") + " sin subir a la nube. Si salís ahora se perderían: esperá a tener señal.",
+                        botones: [
+                            { texto: "Cerrar", clase: "pzBtnGris" },
+                            { texto: "Ver qué falta", clase: "pzBtnPri", alTocar: () => window.confianzaVendeFrio.abrirSinSubir() }
+                        ]
+                    });
+                    return;
+                }
                 return mostrarAviso(
                     "Todavía no",
                     "Hay " + sinSubir + " cambio(s) sin subir a la nube. Esperá a tener señal y que diga \"todo subido\" antes de salir."
@@ -2302,6 +2327,9 @@
         if (accion === "reintentarNube") {
             window.nubeVendeFrio?.reintentar();
         }
+
+        if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
+        if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
             const d = leer();

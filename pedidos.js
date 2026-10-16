@@ -37,7 +37,7 @@ function actualizarDatalistPedido() {
 
     listaComercios.innerHTML = "";
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const option = document.createElement("option");
@@ -538,7 +538,8 @@ function renderizarPedido() {
     prepararBuscadorProductosPedido();
     actualizarEstadoBotonRepetir();
     contenedorProductos.innerHTML = "";
-    const productos = obtenerProductos();
+    // Los archivados (T63) no se venden.
+    const productos = productosParaVender();
 
     obtenerMarcasOrdenadas(productos)
         .forEach((marca, indiceMarca) => {
@@ -690,7 +691,12 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 function repetirUltimoPedido() {
     // Eliminados y cancelados no se repiten (T26).
     const historial = obtenerPedidosQueCuentan();
-    const ultimo = historial[0];
+    // T64: en la nube, el último pedido que cargó esta persona (no el de
+    // otro del equipo).
+    const yo = usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+    const ultimo = yo
+        ? historial.find(pedido => !pedido.autor || pedido.autor.idPersona === yo.idPersona)
+        : historial[0];
 
     if (!ultimo || (!ultimo.pedido && !Array.isArray(ultimo.productos))) {
         mostrarAviso(
@@ -992,8 +998,14 @@ function registrarPedido(nombreComercio) {
     // El pedido ya queda guardado en el historial aunque el nombre sea nuevo.
     if (!comercio) return false;
 
+    // T64: el contador sale de los pedidos guardados (más este, que se guarda
+    // enseguida), así dos celulares que cargan a la vez no se pisan la cuenta.
+    const anteriores = typeof contarPedidosDelComercio === "function" && typeof obtenerPedidosQueCuentan === "function"
+        ? contarPedidosDelComercio(comercio.nombre, obtenerPedidosQueCuentan())
+        : Number(comercio.pedidosRealizados) || 0;
+
     return actualizarComercioPorId(comercio.id, {
-        pedidosRealizados: (Number(comercio.pedidosRealizados) || 0) + 1,
+        pedidosRealizados: anteriores + 1,
         ultimaVisita: new Date().toLocaleDateString("es-AR"),
         pendienteSemana: false
     });

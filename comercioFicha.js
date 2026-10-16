@@ -226,7 +226,10 @@
         const botonEstado = datos.visitadoEstaSemana
             ? crearBoton(window.icono("puntoRojo",14) + " Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
             : crearBoton(window.icono("check",14) + " Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); if (navigator.vibrate) navigator.vibrate(30); });
-        const botonEliminar = crearBoton(window.icono("tacho",14) + " Eliminar comercio", "eliminar", () => { if (typeof abrirConfirmacion === "function") abrirConfirmacion("Eliminar comercio", "¿Eliminar " + comercio.nombre + "?", () => { cerrarFicha(); eliminarComercioPorId(comercio.id); actualizarDatalist(); renderizarComercios(); if (typeof actualizarDashboard === "function") actualizarDashboard(); if (navigator.vibrate) navigator.vibrate([25,40,25]); }); });
+        // T63: archivar en vez de eliminar (se elimina desde "Archivados").
+        const botonEliminar = comercioArchivado(comercio)
+            ? crearBoton(window.icono("deshacer",14) + " Recuperar comercio", "ver", () => { cerrarFicha(); archivarComercioPorId(comercio.id, false); redibujarComerciosEnTodasPartes(); mostrarToast("Comercio recuperado"); })
+            : crearBoton(window.icono("archivo",14) + " Archivar comercio", "eliminar", () => { cerrarFicha(); archivarComercioConDeshacer(comercio.nombre); });
         modalFicha.querySelector(".fichaAcciones").append(
             botonEstado,
             crearBoton(window.icono("historial",14) + " Ver sus pedidos", "secundario", () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); }),

@@ -688,6 +688,37 @@ function obtenerComercios() {
     return comercios;
 }
 
+// Archivar en vez de borrar (T63): lo archivado no se ofrece para vender
+// ni para visitar, pero sigue guardado (los pedidos viejos lo nombran).
+function comercioArchivado(comercio) {
+    return Boolean(comercio && comercio.archivado === true);
+}
+
+function productoArchivado(producto) {
+    return Boolean(producto && producto.archivado === true);
+}
+
+function comerciosActivos() {
+    return obtenerComercios().filter(comercio => !comercioArchivado(comercio));
+}
+
+// Productos para vender: los mismos, sin los archivados (las marcas quedan).
+function productosParaVender(productos = obtenerProductos()) {
+    const activos = {};
+    Object.keys(productos).forEach(marca => {
+        activos[marca] = (productos[marca] || []).filter(producto => !productoArchivado(producto));
+    });
+    return activos;
+}
+
+function archivarComercioPorId(id, archivado = true) {
+    return actualizarComercioPorId(id, { archivado: archivado === true, archivadoEl: archivado ? Date.now() : null });
+}
+
+function archivarProductoPorId(id, archivado = true) {
+    return actualizarProductoPorId(id, { archivado: archivado === true, archivadoEl: archivado ? Date.now() : null });
+}
+
 function guardarComercios(comercios) {
     const lista = Array.isArray(comercios) ? comercios : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_COMERCIO);
@@ -770,6 +801,16 @@ function eliminarComercio(nombre) {
 // PRODUCTOS Y MARCAS
 // -----------------------------------------------------
 
+// Datos del producto que no son id, nombre, precio ni imagen (Etapa 7).
+const CAMPOS_BASE_PRODUCTO = ["id", "nombre", "precio", "imagen", "foto", "producto"];
+function camposExtraDeProducto(producto) {
+    const extra = {};
+    Object.keys(producto || {}).forEach(campo => {
+        if (!CAMPOS_BASE_PRODUCTO.includes(campo) && producto[campo] !== undefined) extra[campo] = producto[campo];
+    });
+    return extra;
+}
+
 function obtenerProductos() {
     let productos = leerColeccion("productos", PRODUCTOS);
 
@@ -787,6 +828,9 @@ function obtenerProductos() {
             ? productos[marca]
                 .filter(producto => producto && typeof producto === "object")
                 .map(producto => ({
+                    // Etapa 7: se conservan los datos extra del producto
+                    // (archivado, oferta, stock, código, listas de precios).
+                    ...camposExtraDeProducto(producto),
                     ...(tieneId(producto) ? { id: producto.id } : {}),
                     nombre: String(producto.nombre || "").trim(),
                     precio: Number(producto.precio) || 0,
@@ -1352,6 +1396,11 @@ function mostrarRecordatorioRespaldoNube(ultimo) {
 
 function revisarRecordatorioRespaldoNube() {
     if (!esDuenoEnLaNube() || !estaEnModoNube() || !document.body) return;
+    // T61: el recordatorio es un aviso en Inicio (confianza.js), sin tapar la app.
+    if (window.confianzaVendeFrio) {
+        window.confianzaVendeFrio.dibujarAvisos();
+        return;
+    }
     if (!window.nubeVendeFrio || window.nubeVendeFrio.estado() !== "conectada") return;
     if (document.documentElement.classList.contains("inicioAbierto")) return;
 
@@ -2209,6 +2258,7 @@ function agregarProductoConId(marca, producto) {
     );
 
     productos[marcaReal].push({
+        ...camposExtraDeProducto(producto),
         id,
         nombre,
         precio: Number(producto.precio) || 0,
@@ -2233,6 +2283,8 @@ function actualizarProductoPorId(id, datos) {
     if (!nombre || existeProductoEnMarca(marca, nombre, indice)) return false;
 
     productos[marca][indice] = {
+        ...camposExtraDeProducto(anterior),
+        ...camposExtraDeProducto(datos),
         id,
         nombre,
         precio: datos.precio !== undefined
