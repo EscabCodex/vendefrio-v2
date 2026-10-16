@@ -921,6 +921,9 @@ html .modalFichaComercio .fichaComercioNueva{
   padding:22px 18px 18px !important;
   border-radius:28px 28px 0 0;
   background:var(--superficie) !important;color:var(--texto);
+  /* Que entre entera arriba de la barra de abajo (con más botones, T88 y T92,
+     pasaba la altura de la pantalla y se cortaba la parte de arriba). */
+  max-height:calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 html .fichaComercioNueva .fichaCerrar{
   display:grid;place-items:center;top:16px;right:16px;
