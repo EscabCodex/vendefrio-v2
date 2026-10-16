@@ -3797,3 +3797,27 @@ html[data-tema="oscuro"] .listaRepartoTanda span{color:var(--texto-sec) !importa
 .pedidoCierre small{color:var(--texto-sec);font-size:12px;}
 .vacioCierre{margin:0;color:var(--texto-sec);font-size:13.5px;text-align:center;}
 .imprimirCierre{justify-content:center;width:100%;min-height:48px;font-size:15px;}
+
+/* Bienvenida nueva (T85, T86, T87): como la maqueta "idea-bienvenida". */
+.inicioSesion[data-paso-actual="elegir"] .inicioMarca{display:none;}
+.inicioSesion[data-paso-actual="elegir"] .inicioContenido{min-height:100%;align-content:stretch;}
+.inicioContenido [data-paso="elegir"]{min-height:calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));grid-template-rows:1fr;grid-auto-rows:auto;gap:14px;}
+.inicioHero{display:flex;flex-direction:column;justify-content:center;gap:14px;padding:24px 6px 12px;}
+.inicioHero img{width:64px;height:64px;border-radius:20px;}
+.inicioContenido .inicioHero h2{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.08;color:var(--texto);}
+.inicioHero p{font-size:16px;line-height:1.45;color:var(--texto-sec);}
+.inicioBoton{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;border-radius:var(--radius-lg,16px);font-size:16px;font-weight:750;cursor:pointer;}
+.inicioBoton.inicioPrincipal{border:0;}
+.inicioGoogle{border:1px solid var(--borde);background:var(--superficie);color:var(--texto);}
+.logoGoogle{position:relative;width:20px;height:20px;border-radius:50%;background:conic-gradient(#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0);}
+.logoGoogle::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--superficie);}
+.inicioEjemplo{border:0;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .inicioEjemplo{background:var(--superficie-2);color:var(--texto);}
+.inicioSepara{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--texto-ter);}
+.inicioSepara::before,.inicioSepara::after{content:"";flex:1;height:1px;background:var(--borde);}
+.inicioEmpleado{margin:0;text-align:center;font-size:14px;color:var(--texto-sec);}
+.inicioLink{display:inline;min-height:44px;padding:0 4px;border:0;background:transparent;color:var(--acento);font:inherit;font-weight:750;cursor:pointer;}
+html[data-tema="oscuro"] .inicioLink{color:var(--acento);}
+.inicioContenido [data-paso="elegir"] .inicioSinSesion{border:0;min-height:44px;color:var(--texto-sec);font-weight:700;text-decoration:underline;text-underline-offset:3px;}
+.inicioLegales{margin:0;text-align:center;font-size:12.5px;color:var(--texto-ter);}
+.inicioLegales a{color:var(--texto-sec);}

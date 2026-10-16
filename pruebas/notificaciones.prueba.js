@@ -118,7 +118,7 @@ async function prepararNotificaciones(pagina) {
 
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
-    await page.getByRole("button", { name: /Distribuidora/ }).click();
+    await page.getByRole("button", { name: "Entrar con email" }).click();
     await page.getByRole("button", { name: /Registrarse/ }).click();
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`notif-${testInfo.project.name}-${Date.now()}@prueba.com`);
@@ -211,7 +211,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
     const erroresEmpleado = await prepararPagina(empleado, true);
     await prepararNotificaciones(empleado);
     await empleado.goto("/");
-    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.getByRole("button", { name: "Entrar con código" }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
     await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
     await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });

@@ -221,4 +221,7 @@ const handler = crearManejador({ obtenerApp: appDeVercel, preguntar: preguntarAC
 // Las pruebas automáticas usan crearManejador con los emuladores y una IA
 // falsa, sin gastar nada.
 handler.crearManejador = crearManejador;
+// "Preguntale a VendeFrío" (api/preguntar.js, T91) usa la misma cuenta y clave.
+handler.appDeVercel = appDeVercel;
+handler.preguntarAClaude = preguntarAClaude;
 module.exports = handler;

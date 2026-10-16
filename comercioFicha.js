@@ -250,6 +250,10 @@
             botonEstado,
             crearBoton(window.icono("historial",14) + " Ver sus pedidos", "secundario", () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); }),
             crearBoton(window.icono("lapiz",14) + " Editar datos", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
+            // Botones de otras partes (T88: link para que pida solo).
+            ...(window.accionesFichaComercioExtras || []).map(crear => {
+                try { return crear(comercio, crearBoton, cerrarFicha); } catch (error) { console.error(error); return null; }
+            }).filter(Boolean),
             botonEliminar
         );
 

@@ -1765,7 +1765,10 @@
                         window.nubeVendeFrio?.modoNube?.()
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
-                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades")) +
+                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
+                    // T87: presentación y términos (borrador hasta que lo revise un abogado, M19).
+                    filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
+                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"')) +
                 // T62: informar un problema (y, el dueño, ver los informados).
                 grupo("Problemas",
                     filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
@@ -2362,6 +2365,8 @@
         }
 
         if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
+        if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
+        if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
         if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
