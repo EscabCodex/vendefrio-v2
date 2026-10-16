@@ -728,6 +728,15 @@
         dibujarBarraHistorial(enHistorial);
         dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
+        // Lo que suman otras partes arriba de la lista (T74: "A cobrar" por comercio).
+        (window.listaPedidosExtras || []).forEach(extra => {
+            try {
+                const elemento = extra(etapa.id, deLaEtapa);
+                if (elemento) lista.appendChild(elemento);
+            } catch (error) {
+                console.error("No se pudo dibujar un agregado de la lista.", error);
+            }
+        });
 
         const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
         resumen.textContent = deLaEtapa.length === 1
@@ -1488,6 +1497,15 @@
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
         cuerpo.append(datos);
+        // Secciones que suman otros módulos (prueba de entrega, devoluciones).
+        (window.fichaPedidoExtras || []).forEach(crearSeccion => {
+            try {
+                const seccion = crearSeccion(pedido, estado);
+                if (seccion) cuerpo.appendChild(seccion);
+            } catch (error) {
+                console.error("Falló una sección de la ficha del pedido.", error);
+            }
+        });
         if (!enChecklist) cuerpo.appendChild(dibujarProductos(pedido, estado));
 
         const observaciones = String(pedido.observaciones || "").trim();
@@ -1737,7 +1755,12 @@
         if (entregar) {
             const id = String(pedido.id || "");
             acciones.append(
-                crearDeslizador("Deslizá para marcar Entregado", () => entregarSinCambios(id, estado)),
+                crearDeslizador("Deslizá para marcar Entregado", () => {
+                    // Prueba de entrega (T70): si está pedida, antes la foto y la firma.
+                    const prueba = window.pruebaEntregaVendeFrio;
+                    if (prueba && prueba.antesDeEntregar(id, () => entregarSinCambios(id, estado))) return;
+                    entregarSinCambios(id, estado);
+                }),
                 crearBoton("btnAccion secundario botonEntregarConCambios", "Entregar con cambios", "entregarConCambios")
             );
         }
@@ -1761,6 +1784,25 @@
         if (estado === "entregado") acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
 
         if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
+
+        // Opciones que suman otros módulos (devolución, prueba de entrega).
+        (window.accionesPedidoExtras || []).forEach(crearAcciones => {
+            try {
+                (crearAcciones(pedido, estado) || []).forEach(extra => {
+                    const boton = crearBoton("btnAccion secundario botonExtraPedido", extra.texto, "");
+                    if (extra.icono && window.icono) boton.insertAdjacentHTML("afterbegin", window.icono(extra.icono, 18));
+                    boton.removeAttribute("data-accion");
+                    boton.addEventListener("click", evento => {
+                        evento.stopPropagation();
+                        document.getElementById("menuFichaPedido")?.classList.add("oculto");
+                        extra.alTocar(pedido);
+                    });
+                    acciones.appendChild(boton);
+                });
+            } catch (error) {
+                console.error("Falló una opción de la ficha del pedido.", error);
+            }
+        });
         if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
@@ -1777,7 +1819,7 @@
         // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
         // entrega). Lo demás va en "Más opciones" (⋯).
         const opciones = Array.from(acciones.querySelectorAll(
-            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .accionesSecundariasPedido .btnAccion"
+            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .botonExtraPedido, .accionesSecundariasPedido .btnAccion"
         ));
         if (opciones.length) {
             const menu = crear("div", "menuFichaPedido oculto");
@@ -3721,6 +3763,8 @@
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
     window.seguimientoVendeFrio = {
+        redibujarFicha: () => dibujarFicha(),
+        pedidoAbierto: () => idFichaAbierta,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
             if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;

@@ -167,6 +167,34 @@
         return lista(nombre).find(item => item.id === id) || null;
     }
 
+    // Lee un documento de la nube sin escucharlo (fotos pesadas, por ejemplo).
+    // Primero lo que ya está en el celular; si no está, lo pide a la nube.
+    async function leer(nombre, id) {
+        const coleccion = registradas[nombre] || registrar(nombre, {});
+        if (usaLocal(coleccion)) {
+            const locales = leerLocal(nombre);
+            return locales[id] ? { ...locales[id], id } : null;
+        }
+        const ref = window.piezas.refNube().collection(nombre).doc(id);
+        try {
+            const doc = await ref.get({ source: "cache" });
+            if (doc.exists) return { ...doc.data(), id };
+        } catch (error) {
+            // No estaba en el celular: se pide a la nube.
+        }
+        try {
+            const doc = await ref.get();
+            return doc.exists ? { ...doc.data(), id } : null;
+        } catch (error) {
+            if (error && error.code === "permission-denied") {
+                const locales = leerLocal(nombre);
+                return locales[id] ? { ...locales[id], id } : null;
+            }
+            console.warn("No se pudo leer " + nombre + ".", error);
+            return null;
+        }
+    }
+
     function escuchar(nombre, oyente) {
         const coleccion = registradas[nombre];
         if (!coleccion || typeof oyente !== "function") return () => {};
@@ -275,5 +303,5 @@
     enganchar();
     window.addEventListener("nubeVendeFrioLista", enganchar);
 
-    window.extrasVendeFrio = { registrar, lista, obtener, escuchar, guardar, actualizar, borrar, conectar };
+    window.extrasVendeFrio = { registrar, lista, obtener, leer, escuchar, guardar, actualizar, borrar, conectar };
 }());

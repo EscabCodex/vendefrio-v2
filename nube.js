@@ -1385,8 +1385,16 @@
             };
         });
 
+        // Devoluciones (T71): bajan el total del pedido entregado.
+        let devuelto = 0;
+        if (entregado && window.devolucionesVendeFrio) {
+            devuelto = Number(window.devolucionesVendeFrio.montoDe(pedido.id)) || 0;
+            total.total = Math.max(0, total.total - devuelto);
+        }
+
         return {
             lineas,
+            devuelto,
             unidadesPedidas: lineas.reduce((suma, linea) => suma + linea.pedida, 0),
             unidadesPreparadas: lineas.reduce((suma, linea) => suma + linea.preparada, 0),
             unidadesEntregadas: lineas.reduce((suma, linea) => suma + linea.entregada, 0),
@@ -1645,10 +1653,12 @@
             Boolean(personaDeEsteCelular());
     }
 
-    // El total a cobrar de lo entregado (el monto que viene escrito).
+    // El total a cobrar de lo entregado (el monto que viene escrito), menos
+    // los pagos parciales (T74).
     function montoACobrar(pedido) {
         const entrega = entregaDelPedido(pedido);
-        return Math.round(entrega.total.total * 100) / 100;
+        const pagado = Number(window.saldosVendeFrio?.pagadoDe?.(pedido && pedido.id)) || 0;
+        return Math.round(Math.max(0, entrega.total.total - pagado) * 100) / 100;
     }
 
     // "Efectivo · $ 12.500".

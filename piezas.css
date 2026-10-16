@@ -321,3 +321,84 @@ html[data-tema="oscuro"] .fichaDatoAgregar .fichaDatoIco{color:var(--acento);}
 html[data-tema="oscuro"] .fichaDatoAgregar .pzFilaTxt strong{color:var(--acento);}
 .fichaDebe:empty{display:none;}
 html .fichaAcceso small{white-space:nowrap;}
+
+/* ---------- Tanda 3: entrega, devoluciones, reparto ---------- */
+.pzFotoVista img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+button.pzFotoVista{padding:0;border:0;min-height:0;cursor:zoom-in;}
+.pzEtiquetaCampo{margin:12px 8px 4px;font-size:13px;font-weight:650;color:var(--texto-sec);}
+.pzFirma{position:relative;margin:4px 8px 0;border:2px dashed var(--borde-fuerte);border-radius:18px;color:var(--texto);background:var(--superficie);}
+.pzFirma canvas{display:block;width:100%;height:120px;touch-action:none;cursor:crosshair;color:var(--texto);}
+.pzFirmaPista{position:absolute;left:0;right:0;top:46px;text-align:center;font-size:14px;color:var(--texto-ter);pointer-events:none;}
+.pzFirma.firmada .pzFirmaPista{display:none;}
+.pzFirmaBorrar{position:absolute;top:6px;right:6px;display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto-sec);}
+.pzFirma input{display:block;width:100%;margin:0;padding:6px 14px 10px;border:0;background:transparent;color:var(--texto-sec);font:inherit;font-size:13.5px;box-shadow:none;outline:none;}
+.pzUbicacionEntrega{display:flex;align-items:center;gap:8px;margin:12px 8px 2px;font-size:14px;color:var(--texto-sec);}
+.pzUbicacionEntrega.conDato{color:var(--visitado);font-weight:650;}
+.pzFirmaVista{margin:8px 0 0;}
+.pzFirmaVista img{display:block;width:100%;max-width:340px;border-radius:14px;border:1px solid var(--borde);background:#fff;}
+.pzFirmaVista small{display:block;margin-top:4px;font-size:13px;color:var(--texto-sec);}
+.seccionPruebaEntrega .pzFotos{padding:4px 0;}
+.hojaDevolucion .pzFila{min-height:66px;}
+.hojaDevolucion .pzFilaTxt strong{white-space:normal;}
+.hojaDevolucion .controlesCantidad{display:flex;align-items:center;flex-shrink:0;height:46px;padding:0 2px;border-radius:999px;background:var(--acento);color:var(--acento-txt);}
+.hojaDevolucion .botonCantidad{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;background:transparent;color:inherit;box-shadow:none;}
+.hojaDevolucion .cantidadEspejo{width:30px;text-align:center;font-size:17px;font-weight:800;}
+.hojaDevolucion .controlesCantidad[data-cantidad="0"]{background:transparent;padding:0;}
+.hojaDevolucion .controlesCantidad[data-cantidad="0"] .botonMenos,.hojaDevolucion .controlesCantidad[data-cantidad="0"] .cantidadEspejo{display:none;}
+.hojaDevolucion .controlesCantidad[data-cantidad="0"] .botonMas{border:1px solid var(--borde-fuerte);color:var(--pz-pri-fuerte);background:var(--superficie);}
+html[data-tema="oscuro"] .hojaDevolucion .controlesCantidad[data-cantidad="0"] .botonMas{color:var(--acento);}
+.hojaDevolucion .pzFiltros{flex-wrap:wrap;}
+.pzMontoNegativo{color:var(--peligro);}
+.seccionDevoluciones .pzTarjeta{box-shadow:none;border:1px solid var(--borde);}
+.paradaAcciones.conYaLlego{grid-template-columns:1fr auto auto;}
+.paradaAcciones .paradaYaLlego{min-height:50px;padding:0 18px;font-size:15px;text-decoration:none;}
+.paradaAcciones .botonIr.soloIcono{width:50px;padding:0;border-radius:50%;}
+html .accesoYaLlego .accesoNavegacionIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
+.pzMapa{height:340px;margin:0 0 14px;border-radius:var(--radius-lg);overflow:hidden;background:var(--superficie-2);}
+.pinRepartidor{background:none;border:0;}
+.pinRepartidorCabeza{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:3px solid #fff;background:var(--acento);color:var(--acento-txt);font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(0,0,0,.25);}
+.pinRepartidorCabeza.entregando{background:var(--visitado);color:#fff;}
+.pinRepartidorDestino{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:3px solid var(--acento);background:#fff;color:#0C0F13;}
+.lineaRepartidor{stroke:var(--acento);}
+.pzNotaAviso{margin-top:14px;}
+/* ---------- Saldos por comercio y recibo (T74, T75) ---------- */
+.pzOpciones{display:flex;flex-direction:column;padding:2px 0 4px;}
+.pzOpcion{
+  display:flex;align-items:center;gap:14px;min-height:54px;padding:0 14px;border:0;
+  border-radius:var(--radius-md);background:transparent;color:var(--texto);
+  font:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer;
+}
+.pzOpcion .pzIco{color:var(--texto-sec);flex-shrink:0;}
+.pzOpcion.pzOpcionWa .pzIco{color:var(--pz-wa);}
+.pzOpcion:active{background:var(--superficie-2);}
+.pzTotalGrande small{display:block;font-size:13.5px;color:var(--texto-sec);}
+.pzTotalGrande strong{display:block;margin:2px 0 10px;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.15;}
+.pzTotalGrande span{display:block;font-size:13.5px;color:var(--texto-sec);}
+#pantallaACobrar .pzLista .pzFila{width:100%;border-left:0;border-right:0;border-bottom:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;}
+#pantallaACobrar .pzLista .pzFila:first-child{border-top:0;}
+#pantallaACobrar .pzFilaDer b{font-size:16px;}
+.pzRecibo{display:flex;flex-direction:column;gap:10px;padding:22px 18px;font-size:14px;}
+.pzRecibo,.pzRecibo *{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace !important;}
+.pzRecibo h2,.pzRecibo h3{margin:0;text-align:center;font-size:16px;font-weight:700;letter-spacing:.02em;}
+.pzRecibo h3{margin-top:6px;font-size:14.5px;}
+.pzRecibo p{margin:0;text-align:center;color:var(--texto-sec);}
+.pzReciboFila{display:flex;justify-content:space-between;gap:12px;padding:10px 0 2px;border-top:1px solid var(--borde);}
+.pzReciboFila b{font-weight:700;text-align:right;}
+.pzReciboFila .pzReciboPago{color:var(--visitado);}
+#pantallaRecibo > main{padding-bottom:calc(150px + env(safe-area-inset-bottom));}
+.pzBotonesFijos{
+  position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:20;
+  padding:12px 16px;background:var(--fondo);border-top:1px solid var(--borde);
+}
+.pzBotonesFijos .pzBtn{min-height:52px;}
+.pzDebe{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:12px 0 0;padding:16px;border:1.5px solid var(--pendiente);box-shadow:none;}
+.pzDebeCab{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;width:100%;}
+.pzDebe small{display:block;font-size:13px;color:var(--texto-sec);}
+.pzDebe strong{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--pendiente);}
+.pzDebe.pasoTope{border-color:var(--peligro);}
+.pzDebe.pasoTope strong{color:var(--peligro);}
+.pzDebe .pzEnlace{padding:0;}
+#avisoDeudaPedido{margin:0 0 10px;}
+#verACobrarPorComercio{width:100%;margin:0 0 12px;border:0;font:inherit;text-align:left;cursor:pointer;color:inherit;}
+#verACobrarPorComercio > .pzIco:last-child{margin-left:auto;color:var(--texto-sec);}
+body > section.pzPantalla > header .logo:empty{display:none;}

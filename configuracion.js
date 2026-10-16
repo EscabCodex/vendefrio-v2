@@ -89,7 +89,7 @@
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
-        zoom: "17", seguimiento: true, pantallaEncendida: true
+        zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false
     };
     const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
 
@@ -1685,6 +1685,9 @@
                     ]) +
                     filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
                     filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios")) +
+                // T70: prueba de entrega al deslizar "Entregado".
+                grupo("Al entregar",
+                    filaLlave("camara", "verde", "Pedir foto y firma al entregar", "Todo opcional; también se agrega después desde el pedido", "pruebaEntrega")) +
                 // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
                 grupo("Voz con IA",
                     filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +

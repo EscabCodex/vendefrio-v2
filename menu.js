@@ -417,6 +417,23 @@ function dibujarProximaParadaInicio(comercios) {
 
     acciones.append(pedido, ir);
 
+    // "Ya llego" por WhatsApp (T72): con teléfono, entre "Cargar pedido" e
+    // "Ir" (que queda solo con el ícono).
+    const yaLlego = window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(sugerido) : "";
+    if (yaLlego) {
+        const aviso = document.createElement("a");
+        aviso.className = "pzBtn pzBtnWa paradaYaLlego";
+        aviso.href = yaLlego;
+        aviso.target = "_blank";
+        aviso.rel = "noopener";
+        aviso.innerHTML = window.icono("whatsapp", 18) + " Ya llego";
+        pedido.after(aviso);
+        ir.innerHTML = window.icono("navegar", 20);
+        ir.setAttribute("aria-label", "Ir");
+        ir.classList.add("soloIcono");
+        acciones.classList.add("conYaLlego");
+    }
+
     // "Visité, sin pedido" (T65): pide el motivo y lo marca visitado.
     if (window.visitasVendeFrio) {
         const sinPedido = document.createElement("button");

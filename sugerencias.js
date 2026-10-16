@@ -166,7 +166,8 @@
         const analisis = analizar(comercio);
         dibujarTarjetaComercio(comercio, analisis);
 
-        let html = "";
+        // "Debe" (T74): avisa si tiene pedidos sin cobrar o pasó el tope.
+        let html = window.saldosVendeFrio ? window.saldosVendeFrio.avisoParaPedido(comercio) : "";
         // "Lo de siempre": se oculta si el pedido ya lo tiene.
         const yaEsta = analisis.siempre.length && analisis.siempre.every(item => {
             const select = selectDe(item.marca, item.nombre);

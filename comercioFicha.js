@@ -193,6 +193,10 @@
             accesos.appendChild(sinPedido);
         }
 
+        // "Debe" (T74): lo que falta cobrar de este comercio.
+        const debe = modalFicha.querySelector(".fichaDebe");
+        debe.innerHTML = window.saldosVendeFrio ? window.saldosVendeFrio.htmlDebe(comercio.nombre) : "";
+        debe.classList.toggle("oculto", !debe.innerHTML);
         dibujarMasDatos(modalFicha.querySelector(".fichaMasDatos"), comercio);
 
         const numeros = modalFicha.querySelector(".fichaNumeros");
@@ -278,6 +282,8 @@
             ["notaLapiz", "Nota", comercio.nota],
             ["paquete", "Envases", textoEnvases(comercio)]
         ];
+        // Tope de deuda (T74), solo si tiene.
+        if (Number(comercio.topeDeuda) > 0 && window.piezas) lineas.push(["moneda", "Tope de deuda", window.piezas.plata(Number(comercio.topeDeuda))]);
         // Lista de precios (T78), cuando hay listas cargadas.
         const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
         if (listas.length) lineas.push(["etiqueta", "Lista de precios", comercio.listaPrecios || "General"]);
@@ -325,7 +331,8 @@
                 <div class="pzDosCampos">
                     <label class="pzCampo"><span>Cajones que tiene</span><input id="datoTiene" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.tiene) || ""}"></label>
                     <label class="pzCampo"><span>Ya devolvió</span><input id="datoDevolvio" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.devolvio) || ""}"></label>
-                </div>${campoLista}`,
+                </div>${campoLista}
+                <label class="pzCampo"><span>Tope de deuda (opcional)</span><input id="datoTope" type="number" inputmode="numeric" min="0" step="1000" placeholder="Sin tope" value="${Number(comercio.topeDeuda) > 0 ? Number(comercio.topeDeuda) : ""}"></label>`,
             botones: [{
                 texto: "Guardar",
                 icono: "check",
@@ -339,6 +346,8 @@
                         envases: { tiene: numeroEnvases(valor("#datoTiene")), devolvio: numeroEnvases(valor("#datoDevolvio")) }
                     };
                     if (caja.querySelector("#datoLista")) datos.listaPrecios = valor("#datoLista");
+                    const tope = Math.round(Number(valor("#datoTope")) || 0);
+                    datos.topeDeuda = tope > 0 ? Math.min(tope, 999999999) : 0;
                     actualizarComercioPorId(comercio.id, datos);
                     if (typeof renderizarComercios === "function") renderizarComercios();
                     if (typeof actualizarDashboard === "function") actualizarDashboard();

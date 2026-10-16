@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62, T65)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62, T65, T70, T71, T73, T74)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -1044,6 +1044,99 @@ service cloud.firestore {
           && personaPropia(idDistribuidora, request.resource.data.persona);
 
         allow delete: if esDueno(idDistribuidora);
+      }
+
+      // Prueba de entrega (T70): foto, firma y ubicación, todo opcional.
+      // Un documento por pedido (su id); cualquier miembro, a su nombre.
+      match /entregas/{idPedido} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create, update: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["idPedido", "comercio", "fotos", "firma", "recibio", "lat", "lng", "distancia", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idPedido", "comercio", "fotos", "firma", "recibio", "lat", "lng", "distancia", "persona", "horaCelular"])
+          && request.resource.data.idPedido == idPedido
+          && request.resource.data.comercio is string && request.resource.data.comercio.size() <= 120
+          && request.resource.data.fotos is list && request.resource.data.fotos.size() <= 2
+          && (request.resource.data.fotos.size() < 1
+            || (request.resource.data.fotos[0] is string
+              && request.resource.data.fotos[0].size() <= 360000
+              && request.resource.data.fotos[0].matches('^data:image/jpeg;base64,.*')))
+          && (request.resource.data.fotos.size() < 2
+            || (request.resource.data.fotos[1] is string
+              && request.resource.data.fotos[1].size() <= 360000
+              && request.resource.data.fotos[1].matches('^data:image/jpeg;base64,.*')))
+          && (request.resource.data.firma == null
+            || (request.resource.data.firma is string
+              && request.resource.data.firma.size() <= 120000
+              && request.resource.data.firma.matches('^data:image/jpeg;base64,.*')))
+          && request.resource.data.recibio is string && request.resource.data.recibio.size() <= 60
+          && (request.resource.data.lat == null || request.resource.data.lat is number)
+          && (request.resource.data.lng == null || request.resource.data.lng is number)
+          && (request.resource.data.distancia == null || request.resource.data.distancia is number)
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+      }
+
+      // Devoluciones (T71): productos, cantidad y motivo de un pedido
+      // entregado; bajan su total. Cualquier miembro, a su nombre. Solo el
+      // dueño las borra.
+      match /devoluciones/{idDevolucion} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["idPedido", "comercio", "lineas", "motivo", "monto", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idPedido", "comercio", "lineas", "motivo", "monto", "persona", "horaCelular"])
+          && request.resource.data.idPedido is string && request.resource.data.idPedido.size() <= 80
+          && request.resource.data.comercio is string && request.resource.data.comercio.size() <= 120
+          && request.resource.data.lineas is list
+          && request.resource.data.lineas.size() > 0
+          && request.resource.data.lineas.size() <= 40
+          && request.resource.data.motivo in ["vencido", "roto", "malEnviado", "otro"]
+          && request.resource.data.monto is number && request.resource.data.monto >= 0
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow delete: if esDueno(idDistribuidora);
+      }
+
+      // Pagos parciales (T74): lo que pagó un comercio a cuenta de un
+      // pedido, sin llegar al total. Solo quien cobra.
+      match /pagos/{idPago} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if tienePermiso(idDistribuidora, "cobra")
+          && request.resource.data.keys().hasAll(["idPedido", "comercio", "monto", "forma", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idPedido", "comercio", "monto", "forma", "persona", "horaCelular"])
+          && request.resource.data.idPedido is string && request.resource.data.idPedido.size() <= 80
+          && request.resource.data.comercio is string && request.resource.data.comercio.size() <= 120
+          && request.resource.data.monto is number && request.resource.data.monto > 0
+          && request.resource.data.monto <= 100000000
+          && request.resource.data.forma in ["efectivo", "transferencia"]
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow delete: if esDueno(idDistribuidora);
+      }
+
+      // Repartidores en el mapa (T73): cada uno escribe solo la suya, solo
+      // si la activa, y la borra al terminar. Solo el dueño las ve.
+      match /ubicaciones/{idPersona} {
+        allow read: if esDueno(idDistribuidora);
+
+        allow create, update: if esMiembro(idDistribuidora)
+          && idPersona == miIdPersona(idDistribuidora)
+          && request.resource.data.keys().hasAll(["nombre", "lat", "lng", "precision", "destino", "paso", "hechas", "total", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["nombre", "lat", "lng", "precision", "destino", "paso", "hechas", "total", "horaCelular"])
+          && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 60
+          && request.resource.data.lat is number && request.resource.data.lng is number
+          && request.resource.data.precision is number
+          && request.resource.data.destino is string && request.resource.data.destino.size() <= 120
+          && request.resource.data.paso in ["enCamino", "entregando"]
+          && request.resource.data.hechas is int && request.resource.data.total is int
+          && request.resource.data.horaCelular is number;
+
+        allow delete: if esDueno(idDistribuidora)
+          || (esMiembro(idDistribuidora) && idPersona == miIdPersona(idDistribuidora));
       }
 
       match /avisos/{idPersona}/recibidos/{idAviso} {
