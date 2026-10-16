@@ -846,6 +846,64 @@ El dueño pidió conectar el WhatsApp de la distribuidora: mandar a muchos comer
 - [x] **T59 — Audios a texto.** Llave "Pasar audios a texto"; los audios que llegan por el webhook y los compartidos (`api/whatsapp-audio.js`) se pasan a texto. Esfuerzo: Medio. **Hecha (2026-10-15):** apagada hasta M14.
 - [ ] **M16 — Conectar WhatsApp automático (dueño, cuando lo decidan con tu jefe).** Necesita una cuenta de Meta Business verificada, el número en WhatsApp Business y una tarjeta. Claude te pasa los pasos uno por uno cuando quieras arrancar. Resumen: 1) publicar las reglas nuevas de `firestore.rules` en la consola de Firebase; 2) crear la app en developers.facebook.com con WhatsApp y sumar el número; 3) crear y hacer aprobar la plantilla `pedido_semana` (español de Argentina) con {{1}} para el nombre; 4) cargar en Vercel `WHATSAPP_TOKEN`, `WHATSAPP_ID_NUMERO`, `WHATSAPP_SECRETO_APP`, `WHATSAPP_TOKEN_VERIFICACION` (una palabra que elegís) y `WHATSAPP_DISTRIBUIDORA` (el código que muestra Más > WhatsApp); 5) en Meta, poner como webhook `https://vendefrio-v2.vercel.app/api/whatsapp` con esa palabra y suscribirse a "messages"; 6) prender "Usar WhatsApp automático" y tocar "Revisar la conexión". Costo aproximado: unos US$ 0,06 por mensaje de la ronda; contestar es gratis.
 
+### Bloque L — Ideas para la 1.0 (Etapa 7, pedido del dueño, 2026-10-16)
+
+El dueño vio la presentación de 42 ideas (https://claude.ai/artifact/UmEprL8AspdWsN7cFBYUwd) y las maquetas de cómo quedarían (https://claude.ai/artifact/CDtazVcHvAUK66ryWqF78b; capturas y HTML en la carpeta del Proyecto `ideas-1.0/`) y pidió hacerlas todas menos la hoja de carga (idea 13: ya está la hoja de reparto de T28e). Pidió que queden **iguales a las maquetas** y "muy, muy bien hechas". Se hacen por tandas, cada tarea en su commit, y cada tanda en su pull request hacia `desarrollo`. Lo pago o con cuenta queda armado y apagado, y va a la lista M. El número entre paréntesis es la idea de la presentación.
+
+**Tanda 1 — Confianza**
+- [ ] **T60 — Versión nueva y cambios sin subir (6, 1).** Cartel "Hay una versión nueva · Actualizar" en Inicio cuando el service worker trae otra versión. Aviso "N cambios sin subir" en Inicio y pantalla "Sin subir" con la lista (Esperando / Subido) y "Reintentar ahora"; al cerrar sesión con cambios pendientes, pregunta antes. Esfuerzo: Alto.
+- [ ] **T61 — Respaldo que se recuerda (2).** Si pasan 7 días sin descargar un respaldo, aviso en Inicio con "Guardar". El selector "Respaldo automático" pasa a decidir cada cuántos días avisa. Esfuerzo: Bajo.
+- [ ] **T62 — Informar un problema (3).** En Más > Seguridad y ayuda: texto, captura opcional y, adjuntos solos, la versión, la pantalla, el celular y los últimos errores. Se guarda en la nube (`problemas/`). Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T63 — Archivar en vez de borrar (4).** Productos y comercios se archivan (filtro "Archivados", "Deshacer" unos segundos); los pedidos viejos los siguen mostrando. Esfuerzo: Medio.
+- [ ] **T64 — Los detalles anotados (5).** Arreglar lo visto y no tocado de "Pendientes técnicos": contador de pedidos del comercio, "Repetir último pedido" de otra persona, buscador de Configuración, barra que tapa el final de las ventanas, etiquetas en oscuro. Esfuerzo: Medio.
+
+**Tanda 2 — Vender**
+- [ ] **T65 — Visita sin pedido (7).** "Visité, sin pedido" en la próxima parada y "Sin pedido" en la ficha del comercio, con motivo; cuenta como visitado y suma a Estadísticas. Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T66 — "Lo de siempre", lo más comprado y favoritos (8, 9).** En Nuevo pedido, tarjeta "Lo de siempre · Usar" y bloque "Lo que más compra" arriba, con estrella para favoritos por comercio. Esfuerzo: Medio.
+- [ ] **T67 — "¿Seguro?" ante cantidades raras (10).** Ventana con "Suele llevar / Cargaste" al cargar mucho más de lo habitual. Esfuerzo: Bajo.
+- [ ] **T68 — Ofertas con fecha (11).** Precio de oferta hasta una fecha, cartel "Promo" en catálogo y pedido. Esfuerzo: Medio.
+- [ ] **T69 — Ficha del comercio completa (12, 18).** Horario, día de visita, nota, envases (tiene y devolvió) y WhatsApp/Ir/Sin pedido arriba. Esfuerzo: Medio.
+
+**Tanda 3 — Reparto**
+- [ ] **T70 — Prueba de entrega (14).** Foto, firma con el dedo y ubicación al entregar, todo opcional; se ve en el seguimiento. Esfuerzo: Alto. Toca `firestore.rules`.
+- [ ] **T71 — Devoluciones (15).** Productos, cantidad y motivo; baja el total y queda en el historial. Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T72 — "Ya llego" por WhatsApp (16).** Botón en la próxima parada y en la navegación. Esfuerzo: Bajo.
+- [ ] **T73 — Repartidores en el mapa (17).** Cada repartidor comparte su ubicación solo si lo activa y se apaga al terminar; el dueño ve "Repartiendo ahora". Esfuerzo: Alto. Toca `firestore.rules`.
+
+**Tanda 4 — Plata**
+- [ ] **T74 — Saldo por comercio y recordatorio (19, 20).** "A cobrar" agrupado por comercio, tope de deuda, pagos parciales, "Debe" en la ficha y al cargar, recordatorio por WhatsApp. Esfuerzo: Alto. Toca `firestore.rules`.
+- [ ] **T75 — Recibo de pago (21).** Impreso o por WhatsApp al registrar un cobro. Esfuerzo: Bajo.
+- [ ] **T76 — Gastos del día (22).** "+ Agregar" gasto (con foto opcional) y "Queda en caja" en el Cierre. Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T77 — Alias y QR para cobrar (23).** El dueño carga alias y QR; se muestran al cobrar con "Ya me transfirió". Lo automático con Mercado Pago va a M18. Esfuerzo: Bajo.
+- [ ] **T78 — Listas de precios (24).** Precio por lista en cada producto y lista en cada comercio; el pedido usa la del comercio. Esfuerzo: Alto. Toca `firestore.rules`.
+
+**Tanda 5 — El dueño**
+- [ ] **T79 — Resumen de la noche (25).** Notificación al cerrar el día con lo vendido, entregado, cobrado y pendiente. Esfuerzo: Medio.
+- [ ] **T80 — Estadísticas: contra la semana pasada y clientes que se enfrían (27, 26).** Esfuerzo: Medio.
+- [ ] **T81 — Metas por vendedor (28).** Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T82 — Registro de cambios (29).** Solo el dueño lo ve y no se puede borrar. Esfuerzo: Medio. Toca `firestore.rules`.
+- [ ] **T83 — Mapa de ventas (30).** Esfuerzo: Medio.
+
+**Tanda 6 — Para venderla**
+- [ ] **T84 — Importar desde Excel (31).** Productos, precios y comercios, con vista previa antes de guardar. Esfuerzo: Alto.
+- [ ] **T85 — Probar con datos de ejemplo (32).** Esfuerzo: Medio.
+- [ ] **T86 — Entrar con Google (35).** Armado y apagado hasta M17. Esfuerzo: Medio.
+- [ ] **T87 — Página de presentación y términos (33, 34).** Esfuerzo: Medio. Los términos los revisa un abogado (M19).
+
+**Tanda 7 — Ideas grandes**
+- [ ] **T88 — El comercio pide solo (37).** Link por WhatsApp a una página con el catálogo; el pedido entra como "Cargado". Esfuerzo: Alto. Toca `firestore.rules`.
+- [ ] **T89 — Escanear código de barras (38).** Esfuerzo: Medio.
+- [ ] **T90 — Stock simple (39).** Esfuerzo: Alto. Toca `firestore.rules`.
+- [ ] **T91 — Preguntale a la app (41).** Usa la IA en la nube de T54. Esfuerzo: Medio.
+- [ ] **T92 — Foto de la heladera (42).** Esfuerzo: Medio.
+
+**Tareas del dueño de esta etapa**
+- [ ] **M17 — Activar "Google" en la consola de Firebase** (para T86).
+- [ ] **M18 — Cuenta de Mercado Pago** (opcional, para que el cobro con QR se marque solo).
+- [ ] **M19 — Revisar los términos con un abogado** (T87).
+- [ ] **M20 — Planes y cobro de suscripciones (idea 36) y factura electrónica de ARCA (idea 40).** Necesitan cuentas a tu nombre; se hacen cuando quieras venderla.
+- [ ] **M21 — Publicar las reglas nuevas** de `firestore.rules` al unir cada tanda a `main`.
+
 ## Decisiones abiertas de la migración
 
 - Cerrada antes de T16e (2026-10-11): qué hacer con los datos viejos del celular que no están en la nube (se muestra qué falta y se deja borrar solo con el archivo descargado) y con las claves de modo. Ver "Solo nube" en Decisiones tomadas.
