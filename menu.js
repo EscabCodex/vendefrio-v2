@@ -740,6 +740,9 @@ document.addEventListener("click", event => {
     if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas();
     else if (destino === "cierre" && window.cierreVendeFrio) window.cierreVendeFrio.abrir();
     else if (destino === "configuracion") abrirMenuMas();
+    else if ((window.accesosMasExtras || []).some(acceso => acceso.destino === destino)) {
+        window.accesosMasExtras.find(acceso => acceso.destino === destino).abrir();
+    }
     else mostrarPantalla(destino);
 });
 

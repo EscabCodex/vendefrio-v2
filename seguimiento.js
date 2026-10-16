@@ -3515,6 +3515,28 @@
             }
             foto.appendChild(acciones);
             cuerpo.appendChild(foto);
+
+            // Alias y QR de la distribuidora (T77): se le muestran al comercio.
+            const cobrarQr = window.cobrarQrVendeFrio;
+            if (cobrarQr && cobrarQr.hay()) {
+                const mostrar = crear("button", "btnAccion secundario mostrarAliasCobro", "Mostrar alias y QR");
+                mostrar.type = "button";
+                mostrar.id = "mostrarAliasCobro";
+                mostrar.addEventListener("click", () => {
+                    if (!cobroAbierto) return;
+                    const abierto = cobroAbierto;
+                    cobrarQr.mostrar({
+                        comercio: String(pedido.comercio || ""),
+                        monto: leerMonto(abierto.monto),
+                        alConfirmar: () => {
+                            if (cobroAbierto !== abierto) return;
+                            abierto.forma = "transferencia";
+                            guardarCobro();
+                        }
+                    });
+                });
+                cuerpo.appendChild(mostrar);
+            }
         }
 
         if (forma === "pendiente") {

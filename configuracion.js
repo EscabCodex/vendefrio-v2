@@ -89,7 +89,8 @@
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
-        zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false
+        zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
+        resumenNoche: true
     };
     const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
 
@@ -350,7 +351,11 @@
                 tarjeta("estadisticas", "grafico", "Estadísticas") +
                 tarjeta("whatsapp", "whatsapp", "WhatsApp") +
                 (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
-                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
+                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "") +
+                // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
+                (window.accesosMasExtras || []).filter(acceso => {
+                    try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
+                }).map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("");
         }
 
         const valores = {
@@ -446,6 +451,21 @@
         return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
             filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
             "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
+    }
+
+    // --- Alias y QR para cobrar (T77) ---
+    // Solo el dueño (cobrarQr.js guarda y muestra los datos).
+    function htmlCobroTransferencia() {
+        const cobrar = window.cobrarQrVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!cobrar || !usuario || usuario.isAnonymous || !distribuidora || distribuidora.idActual() !== usuario.uid) return "";
+        const datos = cobrar.datos();
+        const valor = datos.alias
+            ? escaparTexto(datos.alias) + (datos.qr ? " · con QR" : " · sin QR")
+            : "Todavía sin cargar: se muestran al cobrar.";
+        return `<div id="cuentaCobroTransferencia">${filaEditable("qr", "verde", "Alias y QR para cobrar", valor, "",
+            "editarCobroTransferencia", datos.alias ? "Cambiar alias y QR" : "Cargar alias y QR")}</div>`;
     }
 
     // --- Nombre del dueño (T18) ---
@@ -1505,6 +1525,7 @@
                     <div class="ajTarjeta">
                         ${htmlNombreDistribuidora()}
                         ${htmlDatosTicket()}
+                        ${htmlCobroTransferencia()}
                         ${htmlDistribuidora()}
                     </div>
                 </section>
@@ -1688,6 +1709,9 @@
                 // T70: prueba de entrega al deslizar "Entregado".
                 grupo("Al entregar",
                     filaLlave("camara", "verde", "Pedir foto y firma al entregar", "Todo opcional; también se agrega después desde el pedido", "pruebaEntrega")) +
+                // T79: el resumen del día a la noche (dueño y quien cobra).
+                grupo("A la noche",
+                    filaLlave("luna", "violeta", "Resumen de la noche", "A las 20:30: vendido, entregado, cobrado y lo que falta", "resumenNoche")) +
                 // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
                 grupo("Voz con IA",
                     filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
@@ -2301,6 +2325,12 @@
             editandoDatosTicket = true;
             detalle("cuenta");
             document.getElementById("datosTicketTelefono")?.focus();
+        }
+
+        if (accion === "editarCobroTransferencia") {
+            window.cobrarQrVendeFrio?.editar(() => {
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+            });
         }
 
         if (accion === "cancelarDatosTicket") {

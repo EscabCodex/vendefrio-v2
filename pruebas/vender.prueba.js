@@ -55,7 +55,8 @@ test("vender: visita sin pedido con motivo", async ({ page }, testInfo) => {
     await expect(tarjeta).toContainText("2 en total");
     await expect(tarjeta).toContainText("Tenía mercadería");
     await expect(tarjeta).toContainText("Pidió que vuelva el jueves");
-    await tarjeta.scrollIntoViewIfNeeded();
+    // Las estadísticas se vuelven a dibujar cuando llega algo de la nube.
+    await expect(async () => { await tarjeta.scrollIntoViewIfNeeded({ timeout: 1000 }); }).toPass();
     await capturar(page, "vender-02-estadisticas-sin-pedido");
 
     // Queda en la nube.
