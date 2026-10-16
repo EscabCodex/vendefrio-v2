@@ -279,7 +279,7 @@
         historial.forEach(p => { const f = fechaPedido(p); if (inicio && f && f >= inicio) conPedido.add(String(p.comercio || "")); });
         const nombresAtrasados = new Set(atrasados.map(p => p.nombre));
         const lista = [
-            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · suele pedir cada ${p.promedioDias}`, tono: "atrasado" })),
+            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · pide cada ${p.promedioDias} días`, tono: "atrasado" })),
             ...perfiles.filter(p => p.nombre !== "Sin comercio" && !conPedido.has(p.nombre) && !nombresAtrasados.has(p.nombre))
                 .map(p => ({ perfil: p, texto: `Sin pedido esta semana · ${p.cantidadPedidos} ${p.cantidadPedidos === 1 ? "pedido" : "pedidos"} en total`, tono: "semana" }))
         ].slice(0, 8);

@@ -342,23 +342,6 @@ function abrirOpcionesRutaGuardada(nombre) {
     modal.classList.remove("oculto");
 }
 
-function cargarModuloNavegacion3D() {
-    if (!document.querySelector('link[data-navegacion-3d="true"]')) {
-        const estilo = document.createElement("link");
-        estilo.rel = "stylesheet";
-        estilo.href = "navegacion3d.css";
-        estilo.dataset.navegacion3d = "true";
-        document.head.appendChild(estilo);
-    }
-
-    if (document.querySelector('script[data-navegacion-3d="true"]')) return;
-    const script = document.createElement("script");
-    script.src = "navegacion3d.js";
-    script.dataset.navegacion3d = "true";
-    script.defer = true;
-    document.body.appendChild(script);
-}
-
 // "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
 // en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
 // dependía de una librería de internet).
@@ -382,50 +365,6 @@ function crearBotonNavegarRuta() {
         }
     });
     botonMaps.insertAdjacentElement("afterend", boton);
-}
-
-function crearControlesNavegacion() {
-    const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("panelNavegacionApp")) return;
-
-    const panel = document.createElement("div");
-    panel.id = "panelNavegacionApp";
-    panel.className = "panelNavegacionApp";
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = "Navegaci\u00f3n en VendeFr\u00edo";
-
-    const estado = document.createElement("p");
-    estado.id = "estadoNavegacionApp";
-    estado.textContent = "Calcul\u00e1 una ruta para iniciar la navegaci\u00f3n dentro de la app.";
-
-    const acciones = document.createElement("div");
-    acciones.className = "accionesNavegacionApp";
-
-    const iniciar = document.createElement("button");
-    iniciar.id = "iniciarNavegacionApp";
-    iniciar.type = "button";
-    iniciar.className = "btnAccion agregar";
-    iniciar.textContent = "Iniciar navegaci\u00f3n";
-    iniciar.addEventListener("click", iniciarNavegacionApp);
-
-    const siguiente = document.createElement("button");
-    siguiente.id = "siguienteParadaNavegacion";
-    siguiente.type = "button";
-    siguiente.className = "btnAccion ver oculto";
-    siguiente.textContent = "Llegu\u00e9 / siguiente parada";
-    siguiente.addEventListener("click", avanzarParadaNavegacion);
-
-    const detener = document.createElement("button");
-    detener.id = "detenerNavegacionApp";
-    detener.type = "button";
-    detener.className = "btnAccion secundario oculto";
-    detener.textContent = "Detener navegaci\u00f3n";
-    detener.addEventListener("click", detenerNavegacionApp);
-
-    acciones.append(iniciar, siguiente, detener);
-    panel.append(titulo, estado, acciones);
-    botonMaps.insertAdjacentElement("afterend", panel);
 }
 
 function actualizarEstadoNavegacionApp(texto) {

@@ -426,19 +426,6 @@ function guardarColeccion(coleccion, datos) {
     return true;
 }
 
-function borrarColeccion(coleccion) {
-    try {
-        adaptadorDatos.borrar(coleccion);
-        memoriaDatos[coleccion] = { existe: false, texto: null };
-    } catch (error) {
-        console.error(`No se pudieron borrar los datos de ${coleccion}.`, error);
-        return false;
-    }
-
-    avisarCambioDatos([coleccion], false);
-    return true;
-}
-
 // Para cuando algo escribi\u00f3 en el adaptador sin pasar por guardarColeccion
 // (las migraciones de ids): la pr\u00f3xima lectura vuelve a cargar.
 function olvidarColeccionesEnMemoria(colecciones) {
@@ -761,32 +748,6 @@ function agregarComercio(comercio) {
     return guardarComercios(comercios);
 }
 
-function actualizarComercio(nombreAnterior, datos) {
-    const comercios = obtenerComercios();
-    const indice = comercios.findIndex(comercio =>
-        normalizarTexto(comercio.nombre) === normalizarTexto(nombreAnterior)
-    );
-
-    if (indice === -1) return false;
-
-    const nombreNuevo = String(datos.nombre || comercios[indice].nombre).trim();
-
-    if (!nombreNuevo || existeComercioConNombre(nombreNuevo, nombreAnterior)) {
-        return false;
-    }
-
-    comercios[indice] = {
-        ...comercios[indice],
-        ...datos,
-        nombre: nombreNuevo,
-        direccion: String(datos.direccion !== undefined ? datos.direccion : (comercios[indice].direccion || "")).trim(),
-        enlaceMaps: String(datos.enlaceMaps !== undefined ? datos.enlaceMaps : (comercios[indice].enlaceMaps || "")).trim(),
-        telefono: String(datos.telefono !== undefined ? datos.telefono : (comercios[indice].telefono || "")).trim()
-    };
-
-    return guardarComercios(comercios);
-}
-
 function eliminarComercio(nombre) {
     const comercios = obtenerComercios();
     const nuevos = comercios.filter(comercio =>
@@ -1089,16 +1050,6 @@ function agregarHistorial(registro) {
 
     const historial = obtenerHistorial();
     historial.unshift(registro);
-    return guardarHistorial(historial);
-}
-
-function eliminarHistorial(indice) {
-    const historial = obtenerHistorial();
-    const posicion = Number(indice);
-
-    if (!Number.isInteger(posicion) || !historial[posicion]) return false;
-
-    historial.splice(posicion, 1);
     return guardarHistorial(historial);
 }
 
@@ -2082,46 +2033,6 @@ function guardarRutasGuardadas(rutas) {
     return guardarColeccion("rutasGuardadas", lista);
 }
 
-function agregarRutaGuardada(nombre, comercios, dia = "") {
-    const nombreLimpio = String(nombre || "").trim();
-    const listaComercios = Array.isArray(comercios)
-        ? comercios.map(comercio => String(comercio || "").trim()).filter(Boolean)
-        : [];
-
-    if (!nombreLimpio || listaComercios.length === 0) return false;
-
-    const rutas = obtenerRutasGuardadas();
-    const existente = rutas.find(ruta => {
-        return normalizarTexto(ruta.nombre) === normalizarTexto(nombreLimpio);
-    });
-
-    const datos = {
-        nombre: nombreLimpio,
-        comercios: listaComercios,
-        idsComercios: armarComerciosDeRuta(listaComercios).ids,
-        dia: String(dia || "").trim(),
-        actualizado: Date.now()
-    };
-
-    if (existente) {
-        Object.assign(existente, datos);
-    } else {
-        rutas.push(datos);
-    }
-
-    return guardarRutasGuardadas(rutas);
-}
-
-function eliminarRutaGuardada(nombre) {
-    const rutas = obtenerRutasGuardadas();
-    const nuevas = rutas.filter(ruta => {
-        return normalizarTexto(ruta.nombre) !== normalizarTexto(nombre);
-    });
-
-    if (nuevas.length === rutas.length) return false;
-    return guardarRutasGuardadas(nuevas);
-}
-
 // -----------------------------------------------------
 // FUNCIONES POR ID (T4)
 // -----------------------------------------------------
@@ -2143,11 +2054,6 @@ function buscarIndicePorId(registros, id) {
 }
 
 // --- Comercios ---
-
-function obtenerComercioPorId(id) {
-    const comercio = obtenerComercios().find(item => tieneId(item) && item.id === id);
-    return comercio ? clonarDatos(comercio) : null;
-}
 
 function existeOtroComercioConNombre(nombre, idExcluir) {
     const buscado = normalizarTexto(nombre);
@@ -2309,11 +2215,6 @@ function eliminarProductoPorId(id) {
 
 // --- Pedidos (historial) ---
 
-function obtenerPedidoPorId(id) {
-    const pedido = obtenerHistorial().find(item => tieneId(item) && item.id === id);
-    return pedido ? clonarDatos(pedido) : null;
-}
-
 // Agrega el pedido al principio del historial, igual que agregarHistorial.
 // Devuelve el id del pedido nuevo, o "" si no se pudo agregar.
 function agregarPedidoConId(registro) {
@@ -2327,15 +2228,6 @@ function agregarPedidoConId(registro) {
 }
 
 // Cambia solo los campos que vienen en "datos". El id nunca cambia.
-function actualizarPedidoPorId(id, datos) {
-    const historial = obtenerHistorial();
-    const indice = buscarIndicePorId(historial, id);
-    if (indice === -1 || !datos || typeof datos !== "object") return false;
-
-    historial[indice] = { ...historial[indice], ...clonarDatos(datos), id };
-    return guardarHistorial(historial);
-}
-
 function eliminarPedidoPorId(id) {
     const historial = obtenerHistorial();
     const indice = buscarIndicePorId(historial, id);
@@ -2680,28 +2572,7 @@ function renombrarComercioEnRutas(idComercio, nombreNuevo) {
     return cambio ? guardarRutasGuardadas(rutas) : true;
 }
 
-function obtenerRutaPorId(id) {
-    const ruta = obtenerRutasGuardadas().find(item => tieneId(item) && item.id === id);
-    return ruta ? clonarDatos(ruta) : null;
-}
-
 // Devuelve los comercios de una ruta: primero por id y, si no, por nombre.
-function obtenerComerciosDeRuta(ruta) {
-    if (!ruta || !Array.isArray(ruta.comercios)) return [];
-
-    const comercios = obtenerComercios();
-    const ids = Array.isArray(ruta.idsComercios) ? ruta.idsComercios : [];
-
-    return ruta.comercios
-        .map((nombre, posicion) => {
-            const id = ids[posicion];
-            return (id && comercios.find(comercio => comercio.id === id)) ||
-                buscarComercioPorNombre(nombre, comercios);
-        })
-        .filter(Boolean)
-        .map(clonarDatos);
-}
-
 function existeOtraRutaConNombre(nombre, idExcluir, rutas) {
     const buscado = normalizarTexto(nombre);
     return rutas.some(ruta =>

@@ -879,42 +879,6 @@ function crearAlertasComerciales(perfiles) {
     return bloque;
 }
 
-function crearPanelInteligenciaComercial() {
-    const estadisticas = obtenerEstadisticasComerciales();
-    const historialCompleto = obtenerPedidosDelHistorial();
-    const hayDatos = estadisticas.comercios.length > 0 ||
-        estadisticas.productos.length > 0 ||
-        estadisticas.marcas.length > 0;
-
-    if (!hayDatos) return null;
-
-    const panel = document.createElement("section");
-    panel.className = "card panelInteligenciaComercial";
-
-    const titulo = document.createElement("h2");
-    titulo.textContent = "Resumen comercial";
-
-    const ayuda = document.createElement("p");
-    ayuda.textContent = "Datos calculados a partir de tus pedidos guardados.";
-
-    const columnas = document.createElement("div");
-    columnas.className = "columnasEstadisticaComercial";
-    columnas.append(
-        crearListaEstadistica("Comercios con m\u00e1s pedidos", estadisticas.comercios, "pedido(s)"),
-        crearListaEstadistica("Productos m\u00e1s pedidos", estadisticas.productos, "unidad(es)"),
-        crearListaEstadistica("Marcas m\u00e1s pedidas", estadisticas.marcas, "unidad(es)")
-    );
-
-    const perfiles = crearPanelPerfilesComerciales(estadisticas.perfiles);
-    const alertas = crearAlertasComerciales(estadisticas.atrasados);
-    const seguimiento = crearSeguimientoSemanal(estadisticas.perfiles, historialCompleto);
-
-    const comparativaSemanal = crearComparativaSemanal(historialCompleto);
-    const actividadMensual = crearResumenMensual(historialCompleto);
-    panel.append(titulo, ayuda, comparativaSemanal, actividadMensual, columnas, perfiles, seguimiento, alertas);
-    return panel;
-}
-
 function renderizarHistorial() {
     if (!pantallaHistorial) return;
 

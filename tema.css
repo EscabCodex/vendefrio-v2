@@ -1774,7 +1774,7 @@ html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[da
 .statsFilaTexto strong{font-size:15px;font-weight:600;color:var(--texto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .statsFilaTexto b{flex-shrink:0;font-size:14.5px;font-weight:800;color:var(--texto);}
 .statsFilaTexto b small,.statsFilaValor small{font-size:11.5px;font-weight:600;color:var(--texto-sec);}
-.statsFilaTexto > small{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--texto-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.statsFilaTexto > small{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--texto-sec);flex-wrap:wrap;line-height:1.3;}
 .statsPista{display:block;height:6px;margin-top:3px;border-radius:999px;background:var(--superficie-2);overflow:hidden;}
 .statsPista i{display:block;height:100%;border-radius:999px;background:var(--acento);}
 .statsFilaValor{flex-shrink:0;font-size:18px;font-weight:800;color:var(--texto);}

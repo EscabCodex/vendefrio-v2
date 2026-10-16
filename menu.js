@@ -65,19 +65,6 @@ function mostrarPantalla(nombre) {
 // DASHBOARD
 // -----------------------------------------------------
 
-function obtenerResumenProductos() {
-    const productos = obtenerProductos();
-    const marcas = Object.keys(productos);
-    const totalProductos = marcas.reduce((total, marca) => {
-        return total + (Array.isArray(productos[marca]) ? productos[marca].length : 0);
-    }, 0);
-
-    return {
-        totalMarcas: marcas.length,
-        totalProductos
-    };
-}
-
 function fechaDeHaceDias(dias) {
     const fecha = new Date();
     fecha.setHours(0, 0, 0, 0);
@@ -110,16 +97,6 @@ function obtenerFechaPedidoDashboard(pedido) {
     return null;
 }
 
-function pedidoEstaEnPeriodoDashboard(pedido, dias) {
-    const fecha = obtenerFechaPedidoDashboard(pedido);
-    if (!fecha) return false;
-
-    const inicio = fechaDeHaceDias(dias - 1);
-    const ahora = new Date();
-
-    return fecha >= inicio && fecha <= ahora;
-}
-
 function tieneGpsValidoDashboard(comercio) {
     if (!comercio) return false;
 
@@ -143,13 +120,6 @@ function tieneGpsValidoDashboard(comercio) {
 
 function comercioVisitadoRecientemente(comercio) {
     return comercioEstaVisitadoEstaSemana(comercio);
-}
-
-function crearElementoDashboard(etiqueta, valor, color) {
-    const elemento = document.createElement("strong");
-    elemento.textContent = String(valor);
-    elemento.style.color = color;
-    return elemento;
 }
 
 let ubicacionDashboard = null;
