@@ -377,6 +377,12 @@ function dibujarProximaParadaInicio(comercios) {
     info.setAttribute("aria-label", "Ver ficha de " + sugerido.nombre);
     info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small><span class="chipEstado" data-tono="aviso">Sin visitar esta semana</span></span>`;
     info.querySelector("strong").textContent = sugerido.nombre;
+    // Con horario cargado (T69), el chip dice cuándo atiende.
+    if (String(sugerido.horario || "").trim()) {
+        const chip = info.querySelector(".chipEstado");
+        chip.textContent = String(sugerido.horario).trim();
+        chip.classList.add("chipHorario");
+    }
     const partes = [sugerido.direccion || "Dirección pendiente"];
     if (ubicacionDashboard && tieneGpsValidoDashboard(sugerido)) {
         const km = distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(sugerido.lat), Number(sugerido.lng));
@@ -410,6 +416,16 @@ function dibujarProximaParadaInicio(comercios) {
     ir.dataset.navegarA = sugerido.nombre;
 
     acciones.append(pedido, ir);
+
+    // "Visité, sin pedido" (T65): pide el motivo y lo marca visitado.
+    if (window.visitasVendeFrio) {
+        const sinPedido = document.createElement("button");
+        sinPedido.type = "button";
+        sinPedido.className = "pzBtn pzBtnSec paradaSinPedido";
+        sinPedido.innerHTML = window.icono("cerrarX", 16) + " Visité, sin pedido";
+        sinPedido.addEventListener("click", () => window.visitasVendeFrio.abrir(sugerido.nombre));
+        acciones.appendChild(sinPedido);
+    }
     contenedor.append(info, acciones);
 
     if (!ubicacionDashboard && navigator.geolocation) {

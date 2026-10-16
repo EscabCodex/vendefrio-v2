@@ -2459,30 +2459,68 @@ function nuevaEntradaDeEstado(estado, nota, persona, horaCelular) {
 
 // Precio del producto en el catálogo en este momento, o null si no tiene
 // (el catálogo muestra "Precio no cargado").
-function precioDelCatalogo(marca, nombre, productos) {
+function precioDelCatalogo(marca, nombre, productos, comercio) {
     const marcaReal = Object.keys(productos).find(item => normalizarTexto(item) === normalizarTexto(marca));
     const lista = marcaReal && Array.isArray(productos[marcaReal]) ? productos[marcaReal] : [];
     const producto = lista.find(item => item && normalizarTexto(item.nombre) === normalizarTexto(nombre));
-    const precio = Number(producto && producto.precio);
 
-    return Number.isFinite(precio) && precio > 0 ? precio : null;
+    return precioVigente(producto, comercio);
+}
+
+// Fecha de hoy como "AAAA-MM-DD" (hora del celular).
+function fechaHoyISO(fecha) {
+    const dia = fecha instanceof Date ? fecha : new Date();
+    return dia.getFullYear() + "-" + String(dia.getMonth() + 1).padStart(2, "0") + "-" + String(dia.getDate()).padStart(2, "0");
+}
+
+// Oferta con fecha (T68): { precio, hasta: "AAAA-MM-DD" }. Vale hasta ese día
+// inclusive; después el producto vuelve solo a su precio.
+function ofertaVigente(producto, fecha) {
+    const oferta = producto && producto.oferta;
+    if (!oferta || typeof oferta !== "object") return null;
+    const precio = Number(oferta.precio);
+    const hasta = String(oferta.hasta || "");
+    if (!Number.isFinite(precio) || precio <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) return null;
+    if (hasta < fechaHoyISO(fecha)) return null;
+    return { precio, hasta };
+}
+
+// Precio sin oferta: el de la lista del comercio (T78) o el de siempre.
+function precioDeLista(producto, comercio) {
+    if (!producto) return null;
+    const lista = comercio && typeof comercio === "object" ? String(comercio.listaPrecios || "") : "";
+    const precios = producto.precios && typeof producto.precios === "object" ? producto.precios : null;
+    const deLista = lista && precios ? Number(precios[lista]) : NaN;
+    if (Number.isFinite(deLista) && deLista > 0) return deLista;
+    const base = Number(producto.precio);
+    return Number.isFinite(base) && base > 0 ? base : null;
+}
+
+// El precio que corre hoy para este comercio: la oferta, si es más barata,
+// o el de su lista. Lo usan Nuevo pedido, el total y el pedido en la nube.
+function precioVigente(producto, comercio) {
+    const normal = precioDeLista(producto, comercio);
+    const oferta = ofertaVigente(producto);
+    if (oferta && (normal === null || oferta.precio < normal)) return oferta.precio;
+    return normal;
 }
 
 // Lo que suma un pedido nuevo en la nube: los productos con su id de línea y
 // su precio, y los campos de estado y autor. Devuelve { productos, campos }
 // o null si todavía no se sabe quién usa el celular.
-function prepararPedidoParaLaNube(productos, horaCelular) {
+function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio) {
     const persona = personaDeEsteCelular();
     if (!persona) return null;
 
     const catalogo = obtenerProductos();
+    const comercio = nombreComercio ? buscarComercioPorNombre(nombreComercio) : null;
     const [idEntrada, entrada] = nuevaEntradaDeEstado(ESTADO_PEDIDO_INICIAL, "", persona, horaCelular);
 
     return {
         productos: productos.map(item => ({
             id: generarId(PREFIJO_ID_LINEA),
             ...item,
-            precio: precioDelCatalogo(item.marca, item.producto, catalogo)
+            precio: precioDelCatalogo(item.marca, item.producto, catalogo, comercio)
         })),
         campos: {
             estado: ESTADO_PEDIDO_INICIAL,

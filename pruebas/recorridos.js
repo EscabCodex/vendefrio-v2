@@ -35,7 +35,7 @@ async function registrarDistribuidora(page, testInfo) {
 async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await irAPedidos(page);
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill(comercio);
+    await elegirComercio(page, comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
@@ -53,6 +53,14 @@ async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await expect(generado).toBeVisible();
     await generado.click({ position: { x: 10, y: 10 } });
     await expect(generado).toBeHidden();
+}
+
+// Escribe el comercio en Nuevo pedido. Si ya quedó uno elegido (la tarjeta
+// con "Cambiar", T66), primero toca "Cambiar".
+async function elegirComercio(page, comercio) {
+    const cambiar = page.locator("#cambiarComercioPedido");
+    if (await cambiar.isVisible()) await cambiar.click();
+    await page.locator("#cliente").fill(comercio);
 }
 
 // Abre "Más" desde el avatar de Inicio (estilo nuevo, T31).
@@ -155,6 +163,7 @@ function textoDeBytes(bytes) {
 }
 
 module.exports = {
+    elegirComercio,
     registrarDistribuidora,
     cargarPedido,
     abrirMas,

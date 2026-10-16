@@ -137,6 +137,8 @@
                     <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2><p class="fichaDireccion"></p><span class="chipEstado fichaEstado"></span></div>
                 </div>
                 <div class="fichaAccesos"></div>
+                <div class="fichaDebe"></div>
+                <div class="fichaMasDatos"></div>
                 <div class="fichaNumeros"></div>
                 <div class="fichaUbicacion"></div>
                 <div class="fichaProductos"><strong>Productos habituales</strong><div class="fichaListaProductos"></div></div>
@@ -149,7 +151,7 @@
         avatar.textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
         if (typeof colorAvatar === "function") avatar.style.background = colorAvatar(comercio.nombre);
         modalFicha.querySelector("#tituloFichaComercio").textContent = comercio.nombre;
-        modalFicha.querySelector(".fichaDireccion").textContent = comercio.direccion || "Sin dirección cargada";
+        modalFicha.querySelector(".fichaDireccion").textContent = [comercio.direccion || "Sin dirección cargada", comercio.contacto].filter(Boolean).join(" · ");
         const estado = modalFicha.querySelector(".fichaEstado");
         estado.textContent = datos.visitadoEstaSemana ? "Visitado esta semana" : "Pendiente esta semana";
         estado.dataset.tono = datos.visitadoEstaSemana ? "ok" : "aviso";
@@ -167,6 +169,7 @@
             const whatsapp = enlaceWhatsapp(comercio.telefono);
             if (whatsapp) {
                 const enlace = acceso("whatsapp", "WhatsApp", "a");
+                enlace.classList.add("fichaAccesoWa");
                 enlace.href = whatsapp;
                 enlace.target = "_blank";
                 enlace.rel = "noopener";
@@ -182,6 +185,15 @@
             enlace.rel = "noopener";
             accesos.appendChild(enlace);
         }
+        // "Sin pedido" (T65): el motivo de la visita.
+        if (window.visitasVendeFrio && !comercioArchivado(comercio)) {
+            const sinPedido = acceso("cerrarX", "Sin pedido");
+            sinPedido.classList.add("fichaAccesoSinPedido");
+            sinPedido.addEventListener("click", () => window.visitasVendeFrio.abrir(comercio.nombre));
+            accesos.appendChild(sinPedido);
+        }
+
+        dibujarMasDatos(modalFicha.querySelector(".fichaMasDatos"), comercio);
 
         const numeros = modalFicha.querySelector(".fichaNumeros");
         [[String(datos.pedidos), datos.pedidos === 1 ? "pedido" : "pedidos"], [String(datos.totalUnidades), "unidades"], [String(datos.ultimaVisita).replace(/^(\d{1,2}\/\d{1,2})\/\d{4}$/, "$1"), "última visita"]].forEach(([valor, texto]) => {
@@ -239,6 +251,102 @@
 
         modalFicha.querySelector(".fichaCerrar").onclick = event => { event.preventDefault(); event.stopPropagation(); cerrarFicha(); };
         modalFicha.addEventListener("click", event => { if (event.target === modalFicha || event.target.closest(".fichaCerrar")) cerrarFicha(); });
+    }
+
+    // ---------- Más datos del comercio (T69) ----------
+    const DIAS_VISITA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+    function numeroEnvases(valor) {
+        const numero = Math.round(Number(valor));
+        return Number.isFinite(numero) && numero > 0 ? numero : 0;
+    }
+
+    function textoEnvases(comercio) {
+        const envases = comercio && comercio.envases;
+        if (!envases || typeof envases !== "object") return "";
+        const tiene = numeroEnvases(envases.tiene);
+        const devolvio = numeroEnvases(envases.devolvio);
+        if (!tiene && !devolvio) return "";
+        return "Tiene " + tiene + (tiene === 1 ? " cajón" : " cajones") + (devolvio ? " · devolvió " + devolvio : "");
+    }
+
+    function lineasDeDatos(comercio) {
+        const lineas = [
+            ["alarma", "Horario", comercio.horario],
+            ["calendario", "Día de visita", comercio.diaVisita],
+            ["persona", "Contacto", comercio.contacto],
+            ["notaLapiz", "Nota", comercio.nota],
+            ["paquete", "Envases", textoEnvases(comercio)]
+        ];
+        // Lista de precios (T78), cuando hay listas cargadas.
+        const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
+        if (listas.length) lineas.push(["etiqueta", "Lista de precios", comercio.listaPrecios || "General"]);
+        return lineas;
+    }
+
+    function dibujarMasDatos(contenedor, comercio) {
+        if (!contenedor || !window.piezas) return;
+        const p = window.piezas;
+        const lineas = lineasDeDatos(comercio);
+        const conDato = lineas.filter(linea => String(linea[2] || "").trim());
+        const filas = (conDato.length ? conDato : []).map(([icono, titulo, valor]) => `<button type="button" class="pzFila fichaDato" data-editar-dato aria-label="Editar ${p.esc(titulo.toLocaleLowerCase("es"))}">
+                <span class="fichaDatoIco">${p.ico(icono, 22)}</span>
+                <span class="pzFilaTxt"><small>${p.esc(titulo)}</small><strong>${p.esc(valor)}</strong></span>
+            </button>`).join("");
+        const faltan = lineas.length - conDato.length;
+        contenedor.innerHTML = `<div class="pzTarjeta pzLista fichaDatos">${filas}
+            <button type="button" class="pzFila fichaDatoAgregar" data-editar-dato>
+                <span class="fichaDatoIco">${p.ico(conDato.length ? "lapiz" : "mas", 20)}</span>
+                <span class="pzFilaTxt"><strong>${conDato.length ? "Editar horario, nota y envases" : "Agregar horario, día de visita y nota"}</strong>${faltan && conDato.length ? `<small>${faltan} ${faltan === 1 ? "dato" : "datos"} sin cargar</small>` : ""}</span>
+                ${p.ico("chevDerecha", 18)}
+            </button></div>`;
+        contenedor.addEventListener("click", evento => {
+            if (evento.target.closest("[data-editar-dato]")) editarMasDatos(comercio);
+        });
+    }
+
+    function editarMasDatos(comercio) {
+        const p = window.piezas;
+        const envases = comercio.envases && typeof comercio.envases === "object" ? comercio.envases : {};
+        const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
+        const campoLista = listas.length ? `<label class="pzCampo"><span>Lista de precios</span><select id="datoLista">
+                <option value="">General</option>${listas.map(lista => `<option ${comercio.listaPrecios === lista ? "selected" : ""}>${p.esc(lista)}</option>`).join("")}
+            </select></label>` : "";
+        cerrarFicha();
+        p.hoja({
+            titulo: "Datos de " + comercio.nombre,
+            etiqueta: "Datos del comercio",
+            html: `<label class="pzCampo"><span>Horario</span><input id="datoHorario" maxlength="80" placeholder="Ej.: Lun a sáb · 8 a 13 y 17 a 21" value="${p.esc(comercio.horario || "")}"></label>
+                <div class="pzDosCampos">
+                    <label class="pzCampo"><span>Día de visita</span><select id="datoDia"><option value="">Sin día fijo</option>${DIAS_VISITA.map(dia => `<option ${comercio.diaVisita === dia ? "selected" : ""}>${dia}</option>`).join("")}</select></label>
+                    <label class="pzCampo"><span>Contacto</span><input id="datoContacto" maxlength="60" placeholder="Ej.: Pepe Gómez" value="${p.esc(comercio.contacto || "")}"></label>
+                </div>
+                <label class="pzCampo"><span>Nota</span><textarea id="datoNota" rows="2" maxlength="300" placeholder="Ej.: Tocar timbre. Descargar por el costado.">${p.esc(comercio.nota || "")}</textarea></label>
+                <div class="pzDosCampos">
+                    <label class="pzCampo"><span>Cajones que tiene</span><input id="datoTiene" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.tiene) || ""}"></label>
+                    <label class="pzCampo"><span>Ya devolvió</span><input id="datoDevolvio" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.devolvio) || ""}"></label>
+                </div>${campoLista}`,
+            botones: [{
+                texto: "Guardar",
+                icono: "check",
+                alTocar: caja => {
+                    const valor = selector => String(caja.querySelector(selector)?.value || "").trim();
+                    const datos = {
+                        horario: valor("#datoHorario").slice(0, 80),
+                        diaVisita: valor("#datoDia"),
+                        contacto: valor("#datoContacto").slice(0, 60),
+                        nota: valor("#datoNota").slice(0, 300),
+                        envases: { tiene: numeroEnvases(valor("#datoTiene")), devolvio: numeroEnvases(valor("#datoDevolvio")) }
+                    };
+                    if (caja.querySelector("#datoLista")) datos.listaPrecios = valor("#datoLista");
+                    actualizarComercioPorId(comercio.id, datos);
+                    if (typeof renderizarComercios === "function") renderizarComercios();
+                    if (typeof actualizarDashboard === "function") actualizarDashboard();
+                    mostrarToast("Datos guardados");
+                    setTimeout(() => abrirFicha(comercio.nombre), 250);
+                }
+            }]
+        });
     }
 
     window.cerrarFichaComercio = cerrarFicha;

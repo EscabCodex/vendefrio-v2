@@ -263,3 +263,61 @@ html[data-tema="oscuro"] .pzFiltro[aria-pressed="true"]{background:var(--acento)
 .itemCatalogo.archivado .pieItemCatalogo b{color:var(--texto-ter);}
 .configFila.oculto{display:none !important;}
 .pzFilaLarga .pzFilaTxt strong{white-space:normal;}
+
+/* ---------- Tanda 2: visitas, pedido sugerido, ofertas, ficha ---------- */
+.paradaAcciones .paradaSinPedido{grid-column:1/-1;min-height:46px;font-size:15px;}
+html .fichaAccesoWa .fichaAccesoIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
+html .fichaAccesoSinPedido .fichaAccesoIcono{background:var(--pendiente-bg);color:var(--pendiente);}
+html[data-tema="oscuro"] .fichaAccesoWa .fichaAccesoIcono{color:var(--pz-wa);}
+html[data-tema="oscuro"] .fichaAccesoSinPedido .fichaAccesoIcono{color:var(--pendiente);}
+.statsSubtitulo{margin:12px 2px 2px;font-size:12.5px;font-weight:700;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em;}
+.pzEnlace{border:0;background:none;padding:6px 2px;color:var(--pz-pri-fuerte);font:inherit;font-size:15px;font-weight:700;cursor:pointer;flex-shrink:0;}
+html[data-tema="oscuro"] .pzEnlace{color:var(--acento);}
+.pzComercioElegido{margin-bottom:14px;}
+.pzComercioElegido .pzFila{padding:14px 16px;}
+.pzComercioElegido .pzFilaTxt small{white-space:normal;}
+.sugerenciasPedido:empty{display:none;}
+.sugerenciasPedido{margin-bottom:6px;}
+.sugerenciasPedido .pzBanner{margin-bottom:4px;}
+.pzBloqueCab small{font-size:13.5px;font-weight:650;color:var(--pz-pri-fuerte);}
+html[data-tema="oscuro"] .pzBloqueCab small{color:var(--acento);}
+.pzBloqueCab .pzEtiqueta{margin:0;}
+.sugerenciasPedido .pzBloqueCab{margin-top:16px;}
+.pzEstrella{
+  display:grid;place-items:center;width:34px;height:34px;margin:0 -4px 0 -6px;padding:0;flex-shrink:0;
+  border:0;border-radius:50%;background:none;color:var(--texto-ter);cursor:pointer;min-height:0;box-shadow:none;
+}
+.pzEstrella.activa{color:#E0A100;}
+.pzEstrella.activa svg{fill:#F5C542;}
+.pzProdSugerido{min-height:68px;}
+.pzProdSugerido .pzFilaTxt strong{white-space:normal;}
+.pzProdSugerido .pzChip,.precioPedido .pzChip{align-self:flex-start;margin-top:4px;}
+#pantallaPedido .controlesEspejo .cantidadEspejo{width:34px;text-align:center;font-size:17px;font-weight:800;}
+#pantallaPedido .controlesEspejo[data-cantidad="0"] .cantidadEspejo{display:none;}
+.pzTachado{color:var(--texto-ter);font-weight:500;}
+.pzPrecioPromo{color:var(--pz-promo);font-weight:750;}
+.precioPedido{display:flex;flex-direction:column;align-items:flex-start;}
+.precioPedido small{font-size:13.5px;font-weight:500;color:var(--texto-sec);}
+.pzComparar{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin:4px 0 14px;}
+.pzComparar > div{display:flex;flex-direction:column;align-items:center;padding:10px;border-radius:16px;background:var(--superficie-2);}
+.pzComparar small{font-size:12.5px;color:var(--texto-sec);}
+.pzComparar strong{font-size:22px;font-weight:780;color:var(--texto);}
+.pzComparar .pzOjo{background:var(--pendiente-bg);}
+.pzComparar .pzOjo strong{color:var(--pendiente);}
+.itemCatalogo.enOferta .pzChip{align-self:flex-start;margin-top:4px;height:22px;font-size:11.5px;}
+html[data-tema] .itemCatalogo.enOferta b{display:flex;flex-direction:column;line-height:1.15;}
+html[data-tema] .itemCatalogo.enOferta b .pzTachado{font-size:12px;font-weight:500;color:var(--texto-ter);}
+html[data-tema] .itemCatalogo.enOferta b .pzPrecioPromo{color:var(--pz-promo);}
+.fichaMasDatos{margin-bottom:12px;}
+.fichaDatos{box-shadow:none;border:1px solid var(--borde);}
+.fichaDato,.fichaDatoAgregar{align-items:flex-start;padding:12px 14px;min-height:0;border-radius:0;}
+.fichaDatoAgregar{align-items:center;}
+.fichaDatoIco{display:grid;place-items:center;width:28px;color:var(--texto-sec);flex-shrink:0;padding-top:2px;}
+.fichaDatoAgregar .fichaDatoIco{color:var(--pz-pri-fuerte);padding-top:0;}
+html[data-tema="oscuro"] .fichaDatoAgregar .fichaDatoIco{color:var(--acento);}
+.fichaDato .pzFilaTxt small{font-size:13px;}
+.fichaDato .pzFilaTxt strong{white-space:normal;font-size:15.5px;font-weight:700;}
+.fichaDatoAgregar .pzFilaTxt strong{white-space:normal;font-size:14.5px;color:var(--pz-pri-fuerte);}
+html[data-tema="oscuro"] .fichaDatoAgregar .pzFilaTxt strong{color:var(--acento);}
+.fichaDebe:empty{display:none;}
+html .fichaAcceso small{white-space:nowrap;}

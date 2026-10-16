@@ -322,6 +322,29 @@
         return card;
     }
 
+    // Tarjetas que suman otros módulos (visitas sin pedido, metas, etc.).
+    // Es una lista compartida: los módulos que cargan antes ya la llenan.
+    const tarjetasExtra = window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || [];
+    function extras(historial, completo) {
+        return tarjetasExtra.map(crear => {
+            try {
+                return crear(historial, completo);
+            } catch (error) {
+                console.error("Falló una tarjeta de Estadísticas.", error);
+                return null;
+            }
+        });
+    }
+
+    function inicioPeriodo() {
+        const periodo = periodoElegido();
+        if (periodo === "todo") return null;
+        const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+        if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
+        if (periodo === "mes") inicio.setDate(1);
+        return inicio;
+    }
+
     function renderizar() {
         const destino = document.getElementById("contenidoEstadisticas"); if (!destino) return;
         destino.innerHTML = "";
@@ -336,6 +359,7 @@
             crearRanking(estadisticas),
             crearComparativa(completo),
             crearParaVisitar(perfilesTodos, perfilesTodos.filter(p => p.atrasado), completo),
+            ...extras(historial, completo),
             crearHabituales(perfilesTodos),
             crearMeses(completo)
         ].filter(Boolean).forEach(card => destino.appendChild(card));
@@ -350,4 +374,13 @@
         }
     }
     window.abrirEstadisticas=abrir;
+    window.estadisticasVendeFrio = {
+        tarjeta, vacio, periodoElegido, inicioPeriodo, NOMBRE_PERIODO,
+        sumarTarjeta(crear) { if (typeof crear === "function") tarjetasExtra.push(crear); },
+        // Vuelve a dibujar si la pantalla está abierta.
+        redibujar() {
+            const s = document.getElementById("pantallaEstadisticas");
+            if (s && !s.classList.contains("oculto")) renderizar();
+        }
+    };
 }());

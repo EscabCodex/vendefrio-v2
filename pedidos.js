@@ -53,6 +53,12 @@ const cargarListaClientes = actualizarDatalistPedido;
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
 
+// El comercio elegido en Nuevo pedido, o null.
+function comercioDelPedidoActual() {
+    const nombre = inputCliente ? inputCliente.value.trim() : "";
+    return nombre ? buscarComercioPorNombre(nombre) : null;
+}
+
 function actualizarResumenPedido() {
     let unidades = 0;
     let tipos = 0;
@@ -78,6 +84,7 @@ function actualizarResumenPedido() {
 
     // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
     const productosCatalogo = obtenerProductos();
+    const comercioActual = comercioDelPedidoActual();
     let plata = 0;
     document.querySelectorAll("#productos .marca").forEach(marca => {
         let enElPedido = 0;
@@ -87,7 +94,8 @@ function actualizarResumenPedido() {
             enElPedido += 1;
             const producto = (productosCatalogo[select.dataset.marca] || [])
                 .find(item => item && item.nombre === select.dataset.producto);
-            const precio = Number(producto && producto.precio);
+            // El precio que corre hoy: oferta o lista del comercio (T68, T78).
+            const precio = Number(precioVigente(producto, comercioActual));
             if (Number.isFinite(precio)) plata += precio * cantidad;
         });
         const contador = marca.querySelector(".contadorMarca");
@@ -898,7 +906,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
 
         if (!datosNube) {
             mostrarAviso(
@@ -1670,7 +1678,7 @@ function guardarEdicionPedido() {
             marca: fila.marca,
             producto: fila.producto,
             cantidad: fila.cantidad,
-            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo)
+            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo, buscarComercioPorNombre(pedido.comercio || pedido.cliente || ""))
         };
     });
 

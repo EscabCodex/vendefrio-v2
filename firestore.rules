@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62, T65)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -1024,6 +1024,26 @@ service cloud.firestore {
         allow update: if esDueno(idDistribuidora)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["visto"])
           && request.resource.data.visto == true;
+      }
+
+      // Visitas sin pedido (T65): cualquier miembro deja la suya, a su
+      // nombre; todos las ven (Estadísticas). Solo el dueño las borra.
+      match /visitas/{idVisita} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["idComercio", "comercio", "motivo", "texto", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idComercio", "comercio", "motivo", "texto", "persona", "horaCelular"])
+          && request.resource.data.idComercio is string && request.resource.data.idComercio.size() <= 80
+          && request.resource.data.comercio is string
+          && request.resource.data.comercio.size() > 0
+          && request.resource.data.comercio.size() <= 120
+          && request.resource.data.motivo in ["cerrado", "mercaderia", "encargado", "otroProveedor", "otro"]
+          && request.resource.data.texto is string && request.resource.data.texto.size() <= 300
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow delete: if esDueno(idDistribuidora);
       }
 
       match /avisos/{idPersona}/recibidos/{idAviso} {

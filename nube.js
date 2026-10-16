@@ -1813,7 +1813,22 @@
         const enDocumentos = Object.values(idsSinSubir)
             .reduce((total, ids) => total + ids.size, 0);
         // Las fotos de los comprobantes (T28) no se escuchan: se cuentan aparte.
-        return enDocumentos + borradosSinSubir + comprobantesSinSubir.size;
+        return enDocumentos + borradosSinSubir + comprobantesSinSubir.size + pendientesExtra().length;
+    }
+
+    // Colecciones que maneja extras.js (visitas, gastos, etc.): avisan sus
+    // pendientes para sumarlos a "Sin subir".
+    const partesExtra = [];
+    function pendientesExtra() {
+        const lista = [];
+        partesExtra.forEach(parte => {
+            try {
+                parte().forEach(item => lista.push(item));
+            } catch (error) {
+                console.warn("No se pudo leer lo pendiente de una parte extra.", error);
+            }
+        });
+        return lista;
     }
 
     function sincronizacion() {
@@ -1835,9 +1850,7 @@
             const total = totalDelPedido(datos).total;
             const cobro = cobroDelPedido(datos);
             descripcion.nombre = String(datos.comercio || datos.cliente || "");
-            if (datos.sinPedido) {
-                descripcion.titulo = "Visita sin pedido";
-            } else if (estadoActual === "entregado") {
+            if (estadoActual === "entregado") {
                 descripcion.titulo = "Entregado";
             } else if (estadoActual === "cancelado") {
                 descripcion.titulo = "Cancelado";
@@ -1847,9 +1860,7 @@
                 descripcion.titulo = "Pedido · " + (nombreDeEstadoPedido(estadoActual) || "cambio");
             }
             if (ultima) descripcion.hora = ultima;
-            if (datos.sinPedido) {
-                descripcion.detalle = datos.motivoSinPedido ? "“" + datos.motivoSinPedido + "”" : "";
-            } else if (cobro && estadoActual === "entregado") {
+            if (cobro && estadoActual === "entregado") {
                 descripcion.detalle = "cobrado en " + nombreDeFormaDeCobro(cobro.forma).toLowerCase();
             } else {
                 descripcion.detalle = unidades + " u" + (total ? " · $ " + Math.round(total).toLocaleString("es-AR") : "");
@@ -1892,6 +1903,18 @@
                     if (subidosRecien[i].parte === parte && subidosRecien[i].id === id) subidosRecien.splice(i, 1);
                 }
             });
+        });
+        pendientesExtra().forEach(item => {
+            const clave = item.parte + "/" + item.id;
+            actuales.add(clave);
+            const anterior = pendientesConocidos.get(clave);
+            const nueva = { titulo: "Cambio", detalle: "", nombre: "", hora: Date.now(), ...item };
+            nueva.desde = anterior ? anterior.desde : Date.now();
+            nueva.esperoSenal = Boolean(anterior && anterior.esperoSenal) || estado !== "conectada";
+            pendientesConocidos.set(clave, nueva);
+            for (let i = subidosRecien.length - 1; i >= 0; i--) {
+                if (subidosRecien[i].parte === item.parte && subidosRecien[i].id === item.id) subidosRecien.splice(i, 1);
+            }
         });
         pendientesConocidos.forEach((descripcion, clave) => {
             if (actuales.has(clave)) return;
@@ -3120,6 +3143,11 @@
         // Sincronización visible (T12).
         sincronizacion,
         detalleSinSubir,
+        // extras.js suma sus pendientes y avisa cuando cambian.
+        sumarParteExtra(pendientes) {
+            if (typeof pendientes === "function") partesExtra.push(pendientes);
+        },
+        avisarSincronizacion,
         reintentarSubida,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
         escucharSincronizacion(oyente) {
