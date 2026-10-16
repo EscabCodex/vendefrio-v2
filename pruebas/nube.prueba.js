@@ -277,7 +277,7 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     const empleado = await contexto.newPage();
     const erroresEmpleado = await prepararPagina(empleado, true);
     await empleado.goto("/");
-    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.getByRole("button", { name: "Entrar con código" }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
     await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
     await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });

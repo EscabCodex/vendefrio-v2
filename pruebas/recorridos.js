@@ -7,7 +7,7 @@ const { expect, capturar, prepararPagina } = require("./ayudas");
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
 
-    await page.getByRole("button", { name: /Distribuidora/ }).click();
+    await page.getByRole("button", { name: "Entrar con email" }).click();
     await page.getByRole("button", { name: /Registrarse/ }).click();
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`dueno-${testInfo.project.name}-${Date.now()}@prueba.com`);
@@ -97,7 +97,7 @@ async function entrarComoEmpleado(page, browser, testInfo, nombre = "Maxi", opci
     const errores = await prepararPagina(empleado, true);
     if (opciones.impresora) await usarImpresoraFalsa(empleado);
     await empleado.goto("/");
-    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.getByRole("button", { name: "Entrar con código" }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
     await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
     await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });

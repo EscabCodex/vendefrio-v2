@@ -886,16 +886,16 @@ El dueño vio la presentación de 42 ideas (https://claude.ai/artifact/UmEprL8As
 
 **Tanda 6 — Para venderla**
 - [x] **T84 — Importar desde Excel (31).** Productos, precios y comercios, con vista previa antes de guardar. Esfuerzo: Alto.
-- [ ] **T85 — Probar con datos de ejemplo (32).** Esfuerzo: Medio.
-- [ ] **T86 — Entrar con Google (35).** Armado y apagado hasta M17. Esfuerzo: Medio.
-- [ ] **T87 — Página de presentación y términos (33, 34).** Esfuerzo: Medio. Los términos los revisa un abogado (M19).
+- [x] **T85 — Probar con datos de ejemplo (32).** Esfuerzo: Medio.
+- [x] **T86 — Entrar con Google (35).** Armado y apagado hasta M17. Esfuerzo: Medio.
+- [x] **T87 — Página de presentación y términos (33, 34).** Esfuerzo: Medio. Los términos los revisa un abogado (M19).
 
 **Tanda 7 — Ideas grandes**
-- [ ] **T88 — El comercio pide solo (37).** Link por WhatsApp a una página con el catálogo; el pedido entra como "Cargado". Esfuerzo: Alto. Toca `firestore.rules`.
-- [ ] **T89 — Escanear código de barras (38).** Esfuerzo: Medio.
-- [ ] **T90 — Stock simple (39).** Esfuerzo: Alto. Toca `firestore.rules`.
-- [ ] **T91 — Preguntale a la app (41).** Usa la IA en la nube de T54. Esfuerzo: Medio.
-- [ ] **T92 — Foto de la heladera (42).** Esfuerzo: Medio.
+- [x] **T88 — El comercio pide solo (37).** Link por WhatsApp a una página con el catálogo; el pedido entra como "Cargado". Esfuerzo: Alto. Toca `firestore.rules`.
+- [x] **T89 — Escanear código de barras (38).** Esfuerzo: Medio.
+- [x] **T90 — Stock simple (39).** Esfuerzo: Alto. Toca `firestore.rules`.
+- [x] **T91 — Preguntale a la app (41).** Usa la IA en la nube de T54. Esfuerzo: Medio.
+- [x] **T92 — Foto de la heladera (42).** Esfuerzo: Medio.
 
 **Tareas del dueño de esta etapa**
 - [ ] **M17 — Activar "Google" en la consola de Firebase** (para T86).
@@ -960,6 +960,7 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-16 — Claude Code: Etapa 7, tanda 2 «Vender mejor» (T65 a T69), unida a `desarrollo`. `extras.js` (colecciones nuevas de la nube con copia en el celular; si la nube todavía no tiene las reglas nuevas, siguen en el celular) y `visitas.js`: «Visité, sin pedido» en la próxima parada y «Sin pedido» en la ficha, con motivo, y la tarjeta «Visitas sin pedido» en Estadísticas (`visitas/`). `sugerencias.js`: en Nuevo pedido, la tarjeta del comercio con «Cambiar» y «Suele pedir cada N días», «Lo de siempre · Usar», «Lo que más compra» con estrella de favoritos, y «¿Seguro que son N?» al guardar una cantidad rara. `ofertas.js`: precio de oferta con fecha desde Catálogo (tres puntos), tachado y «Promo hasta el …» en Catálogo y Nuevo pedido; el precio lo decide `precioVigente` (también en el pedido de la nube). Ficha del comercio: WhatsApp verde, «Sin pedido», y horario, día de visita, contacto, nota y envases; el horario se ve en la próxima parada. Pruebas nuevas en `pruebas/vender.prueba.js`. Toca `firestore.rules` (`visitas/`).
 - 2026-10-16 — Claude Code: Etapa 7, tanda 3 «Reparto» (T70 a T73) y T74 y T75 de la tanda 4, unidas a `desarrollo`. Prueba de entrega (foto, firma, quién recibe y ubicación; se pide al deslizar "Entregado" solo si se prende "Pedir foto y firma al entregar" en Más > Trabajo, y siempre se puede agregar desde ⋯), devoluciones con motivo que bajan el total y lo que queda por cobrar, "Ya llego" por WhatsApp en la próxima parada y la navegación, repartidores en el mapa (cada uno decide si comparte; se apaga sola al terminar; solo el dueño lo ve). "A cobrar" por comercio con tope de deuda, recordatorio por WhatsApp, pagos parciales (`pagos/`), "Debe" en la ficha y en Nuevo pedido, y recibo de pago por WhatsApp o impreso. Reglas nuevas: `entregas/`, `devoluciones/`, `ubicaciones/`, `pagos/` (hay que publicarlas, M21). Pruebas nuevas: `reparto.prueba.js` y `plata.prueba.js`.
 - 2026-10-16 — Claude Code: Etapa 7, tanda 4 «Plata» (T76 a T78), tanda 5 «Para el dueño» (T79 a T83) y T84, unidas a `desarrollo`. Gastos del día con foto del ticket y "Queda en caja" en el Cierre (`gastos/`), alias y QR para cobrar por transferencia (Más > Cuenta; `ajustes/cobro`), precios por lista en cada producto (catálogo > ⋯ > "Precios por lista") y lista en la ficha del comercio. Resumen de la noche a las 20:30 (se apaga en Más > Trabajo), estadísticas contra el período anterior, "Se están enfriando", metas del mes por persona (`metas/`), registro de cambios que solo ve el dueño y no se borra (`cambios/`), mapa de ventas del mes e importar productos o comercios desde Excel o CSV con vista previa. Reglas nuevas: `gastos/`, `ajustes/`, `cambios/`, `metas/` (M21). Pruebas nuevas: `dueno.prueba.js` e `importar.prueba.js`; `plata.prueba.js` suma alias, gastos y listas.
+- 2026-10-16 — Claude Code: Etapa 7, tandas 6 y 7 (T85 a T92), unidas a `desarrollo`. Bienvenida nueva como la maqueta ("Entrar con email", "Probar con datos de ejemplo", "¿Sos empleado? Entrar con código"); datos de ejemplo con "Empezar de cero" que borra solo lo de ejemplo; "Entrar con Google" armado y apagado (`opcionesVendeFrio.entrarConGoogle` en `cuenta.js`, M17); `presentacion.html` y `terminos.html` (borrador para el abogado, M19), también en Más › Seguridad. El comercio pide solo: link por WhatsApp desde la ficha, `pedir.html` sin cuenta y el pedido llega a Inicio para cargarlo (reglas `enlacesPedido/`, `catalogosPublicos/`, `pedidosWeb/`). Código de barras (Catálogo › ⋯ y "Escanear" en Nuevo pedido), stock simple con "Cargar lo que llegó de fábrica", "Preguntale a VendeFrío" (`api/preguntar.js`, misma clave de IA, solo el dueño con "IA en la nube" prendida) y "Exhibición" con fotos de la heladera (`heladeras/`). Arreglado: en modo personal el cartel de abajo tapaba lo último de cada pantalla. Reglas nuevas: hay que publicarlas (M21).
 - 2026-09-09 — Etapa estratégica: se pausó el desarrollo y se definieron visión, flujo del pedido, equipo y roadmap.
 - 2026-10-07 — Consolidación de la documentación en 6 archivos. Próximo paso: elegir el servicio de datos compartidos.
 - 2026-10-07 — Claude: se eligió Firebase (Firestore + Auth, plan Spark gratuito) y se definió la arquitectura de datos compartidos. Se creó la cuenta de Google de la distribuidora. Sin cambios de código. Próximo paso: revisar el proyecto completo y crear el proyecto en Firebase.

@@ -501,3 +501,97 @@ html.conCartelPersonal :is(#pantallaImportar, #pantallaPreciosLista, #pantallaRe
 .pzProductoFoto{width:84px;aspect-ratio:1;border-radius:var(--radius-md);overflow:hidden;}
 .pzProductoFoto .pzIco{color:#fff;}
 .pzProductoCab > div:last-child{padding:0 8px;}
+/* ---------- El comercio pide solo (T88) ---------- */
+.pzLinkPedido{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:12px 14px;border-radius:var(--radius-md);background:var(--superficie-2);color:var(--texto-sec);}
+.pzLinkPedido code{flex:1;min-width:0;font-size:13px;overflow-wrap:anywhere;color:var(--texto);}
+#mandarLinkWa,#copiarLinkPedido{width:100%;margin-top:8px;text-decoration:none;}
+.filaPedidoWeb .pzIni{font-weight:800;}
+.pzNotaPedidoWeb{display:flex;gap:8px;align-items:flex-start;margin:10px 2px 0;color:var(--texto-sec);font-size:14px;}
+/* ---------- Escanear código de barras (T89) ---------- */
+html.conEscaner,html.conEscaner body{overflow:hidden;}
+.pzEscanear{position:fixed;inset:0;z-index:10040;background:#111;color:#fff;}
+.pzEscanear.oculto{display:none;}
+.videoEscanear{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.fondoEscanear{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#5a6470,#22272e 70%);}
+.marcoEscanear{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%);width:min(270px,76vw);height:170px;border-radius:20px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);}
+.marcoEscanear::before{content:"";position:absolute;inset:-3px;border-radius:22px;border:3px solid #C8F04A;}
+.laserEscanear{position:absolute;left:14px;right:14px;top:50%;height:2px;background:#FF5A4E;box-shadow:0 0 12px #FF5A4E;animation:laserEscanear 1.6s ease-in-out infinite alternate;}
+@keyframes laserEscanear{from{transform:translateY(-55px);}to{transform:translateY(55px);}}
+.arribaEscanear{position:absolute;top:calc(16px + env(safe-area-inset-top));left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;}
+.cerrarEscanear{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;}
+.espacioEscanear{width:44px;}
+.hojaEscanear{position:absolute;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:24px;background:var(--superficie);color:var(--texto);}
+.estadoEscanear{margin:0;font-size:14px;font-weight:600;color:var(--texto-sec);}
+.resultadoEscanear:empty{display:none;}
+.resultadoEscanear{display:flex;flex-direction:column;gap:12px;}
+.resultadoEscanear .pzBanner{margin:0;}
+.productoEscaneado{display:flex;align-items:center;gap:12px;}
+.fotoEscaneado{display:grid;place-items:center;width:56px;height:56px;flex:none;overflow:hidden;border-radius:14px;background:linear-gradient(135deg,#7FB6F5,#3E7BE0);color:#fff;}
+.fotoEscaneado img{width:100%;height:100%;object-fit:cover;}
+.productoEscaneado strong{font-size:16px;}
+.productoEscaneado small{font-size:13px;color:var(--texto-sec);}
+.accionesEscaneado{display:grid;grid-template-columns:auto 1fr;gap:8px;}
+.pzStepper{display:flex;align-items:center;height:48px;border-radius:999px;background:var(--acento);color:var(--acento-txt);overflow:hidden;}
+.pzStepper button{display:grid;place-items:center;width:44px;height:48px;border:0;background:transparent;color:inherit;font-size:22px;font-weight:600;cursor:pointer;}
+.pzStepper b{min-width:22px;text-align:center;font-size:16px;font-weight:750;}
+.accionesEscaneado .pzBtn{min-height:48px;}
+.manualEscanear{display:flex;gap:8px;}
+.manualEscanear input{flex:1;min-width:0;min-height:46px;padding:0 12px;border:1px solid var(--borde);border-radius:12px;background:var(--pz-campo);color:var(--texto);font:inherit;font-size:16px;}
+.manualEscanear .pzBtn{min-height:46px;padding:0 16px;}
+.pzEscanear.sinCamara .marcoEscanear{opacity:.35;}
+.pzEscanear.sinCamara .laserEscanear{animation:none;}
+.botonEscanearPedido{flex:0 0 auto;}
+/* ---------- Stock simple (T90) ---------- */
+.stockCatalogo{display:flex;align-items:baseline;gap:6px;margin-top:2px;}
+.stockNumero{font-size:14px;font-weight:750;}
+.stockDetalle{font-size:12px;font-weight:600;color:var(--texto-sec);}
+.stock-ok.stockNumero{color:var(--visitado);}
+.stock-bajo{color:var(--pendiente) !important;}
+.stock-no{color:var(--peligro) !important;}
+#avisoStockBajo{width:100%;margin:0 0 12px;cursor:pointer;}
+#cargarFabrica{width:100%;margin:14px 0 4px;}
+.stockDerecha{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.filaFabrica input{width:84px;min-height:44px;padding:0 10px;border:1px solid var(--borde);border-radius:12px;background:var(--pz-campo);color:var(--texto);font:inherit;font-size:16px;font-weight:700;text-align:right;}
+.hojaFabrica .pzHojaCuerpo{max-height:55vh;overflow-y:auto;}
+/* ---------- Preguntale a VendeFrío (T91) ---------- */
+#pantallaPreguntale > main{padding-bottom:calc(150px + env(safe-area-inset-bottom)) !important;}
+.charla{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;}
+.burbuja{max-width:84%;padding:12px 14px;border-radius:20px;font-size:15px;line-height:1.4;overflow-wrap:anywhere;}
+.burbujaYo{align-self:flex-end;background:var(--acento);color:var(--acento-txt);border-bottom-right-radius:6px;}
+.burbujaApp{align-self:flex-start;background:var(--superficie);color:var(--texto);border-bottom-left-radius:6px;box-shadow:var(--sombra);border:var(--borde-tarjeta);}
+.burbujaApp strong{display:block;margin:2px 0;font-size:22px;font-weight:780;letter-spacing:-.01em;}
+.burbujaError{background:var(--peligro-bg);color:var(--texto);box-shadow:none;}
+.miniBarras{display:flex;align-items:flex-end;gap:4px;height:64px;margin-top:10px;padding-bottom:16px;}
+.miniBarras span{position:relative;flex:1;background:var(--acento-bg);border-radius:3px 3px 0 0;}
+.miniBarras span.barraFinal{background:var(--acento);}
+.miniBarras small{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);font-size:10px;color:var(--texto-sec);white-space:nowrap;}
+.burbujaPensando{display:flex;gap:5px;padding:16px;}
+.burbujaPensando span{width:7px;height:7px;border-radius:50%;background:var(--texto-ter);animation:pensando 1s infinite ease-in-out;}
+.burbujaPensando span:nth-child(2){animation-delay:.15s;} .burbujaPensando span:nth-child(3){animation-delay:.3s;}
+@keyframes pensando{0%,80%,100%{opacity:.3;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
+.sugerencias{display:flex;gap:8px;flex-wrap:wrap;}
+.entradaPregunta{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:20;display:flex;gap:8px;align-items:center;}
+.entradaPregunta input{flex:1;min-width:0;min-height:48px;padding:0 16px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font:inherit;font-size:16px;box-shadow:var(--sombra);}
+.botonRedondo{display:grid;place-items:center;width:48px;height:48px;flex:none;border:0;border-radius:50%;background:var(--acento);color:var(--acento-txt);cursor:pointer;box-shadow:var(--sombra);}
+.botonVozPregunta{background:var(--superficie);color:var(--texto);}
+.botonVozPregunta.escuchando{background:var(--peligro);color:#fff;}
+#avisoIaApagada{margin-bottom:14px;}
+/* ---------- Foto de la heladera (T92) ---------- */
+.comercioHeladera{display:flex;align-items:center;gap:12px;padding:14px;}
+.fotoHeladera{padding:0;overflow:hidden;}
+.fotoHeladeraGrande{display:block;width:100%;padding:0;border:0;background:var(--superficie-2);cursor:zoom-in;}
+.fotoHeladeraGrande img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;}
+.pieFotoHeladera{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;}
+.sinFotoHeladera{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 18px;text-align:center;color:var(--texto-sec);}
+.sinFotoHeladera strong{color:var(--texto);font-size:16px;}
+#nuevaFotoHeladera{width:100%;margin:12px 0 4px;}
+.bloqueHeladera{margin-top:14px;}
+.fotosAnteriores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.fotoAnterior{position:relative;padding:0;border:0;border-radius:14px;overflow:hidden;background:var(--superficie-2);aspect-ratio:1;cursor:pointer;}
+.fotoAnterior img{width:100%;height:100%;object-fit:cover;}
+.fotoAnterior span{position:absolute;left:6px;bottom:6px;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:700;}
+.puntoHeladera{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;background:var(--visitado);}
+.puntoHeladera.mejorar{background:var(--pendiente);} .puntoHeladera.mal{background:var(--peligro);}
+.botonFotoHeladera{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;margin-bottom:12px;border:2px dashed var(--borde-fuerte);border-radius:18px;background:var(--superficie-2) center/cover no-repeat;color:var(--texto-sec);font-weight:700;cursor:pointer;}
+.botonFotoHeladera.conFoto{border-style:solid;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.notasHeladera{margin-bottom:12px;}

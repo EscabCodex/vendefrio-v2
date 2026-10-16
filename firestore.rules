@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // VendeFrío - Reglas de seguridad de Firestore (T8, T9, T14, T15, T18, T19, T20,
-// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62, T65, T70, T71, T73, T74, T76, T77, T81, T82)
+// T22, T23, T24, T25, T26, T27, T28, T29b, T29d, T29, T58, T62, T65, T70, T71, T73, T74, T76, T77, T81, T82, T88, T92)
 // Se publican a mano en la consola de Firebase (tareas M3, M5 y M6, y al final
 // de cada tarea que lo cambia; volver a publicar cada vez que cambia este
 // archivo).
@@ -754,6 +754,79 @@ service cloud.firestore {
         && resource.data.usado == false;
     }
 
+    // El comercio pide solo (T88). El link personal es un token largo al
+    // azar: saberlo es el permiso, como los códigos de acceso. Se lee de a
+    // uno; la lista la ve solo el equipo de la distribuidora.
+    match /enlacesPedido/{token} {
+      allow get: if ingreso();
+      allow list: if esMiembro(resource.data.idDistribuidora);
+
+      allow create, update: if esMiembro(request.resource.data.idDistribuidora)
+        && token.matches('^[A-Za-z0-9]{20,40}$')
+        && (resource == null || resource.data.idDistribuidora == request.resource.data.idDistribuidora)
+        && request.resource.data.keys().hasAll(["idDistribuidora", "comercio", "distribuidora", "lista", "visita", "activo", "creado"])
+        && request.resource.data.keys().hasOnly(["idDistribuidora", "comercio", "distribuidora", "lista", "visita", "activo", "creado"])
+        && request.resource.data.visita is string && request.resource.data.visita.size() <= 20
+        && request.resource.data.comercio is string && request.resource.data.comercio.size() > 0 && request.resource.data.comercio.size() <= 80
+        && request.resource.data.distribuidora is string && request.resource.data.distribuidora.size() <= 80
+        && request.resource.data.lista is string && request.resource.data.lista.size() <= 40
+        && request.resource.data.activo is bool
+        && request.resource.data.creado is number;
+
+      allow delete: if esMiembro(resource.data.idDistribuidora);
+    }
+
+    // Lo que ve el comercio en el link: productos y precios, sin fotos.
+    match /catalogosPublicos/{idDistribuidora} {
+      allow get: if ingreso();
+
+      allow create, update: if esMiembro(idDistribuidora)
+        && request.resource.data.keys().hasAll(["nombre", "productos", "horaCelular"])
+        && request.resource.data.keys().hasOnly(["nombre", "productos", "horaCelular"])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 80
+        && request.resource.data.productos is list && request.resource.data.productos.size() <= 600
+        && request.resource.data.horaCelular is number;
+
+      allow delete: if esDueno(idDistribuidora);
+    }
+
+    // Pedidos que manda el comercio desde el link. Los crea cualquiera que
+    // tenga un link activo, solo para ese comercio; el equipo los lee y uno
+    // solo los pasa de "nuevo" a "cargado" o "descartado". No se borran.
+    match /pedidosWeb/{idPedidoWeb} {
+      allow read: if (ingreso() && resource.data.uid == request.auth.uid)
+        || esMiembro(resource.data.idDistribuidora);
+
+      allow create: if ingreso()
+        && request.resource.data.keys().hasAll(["token", "idDistribuidora", "comercio", "productos", "nota", "hora", "estado", "uid"])
+        && request.resource.data.keys().hasOnly(["token", "idDistribuidora", "comercio", "productos", "nota", "hora", "estado", "uid"])
+        && request.resource.data.token is string
+        && request.resource.data.token.matches('^[A-Za-z0-9]{20,40}$')
+        && get(/databases/$(database)/documents/enlacesPedido/$(request.resource.data.token)).data.activo == true
+        && get(/databases/$(database)/documents/enlacesPedido/$(request.resource.data.token)).data.idDistribuidora == request.resource.data.idDistribuidora
+        && get(/databases/$(database)/documents/enlacesPedido/$(request.resource.data.token)).data.comercio == request.resource.data.comercio
+        && request.resource.data.productos is list
+        && request.resource.data.productos.size() > 0
+        && request.resource.data.productos.size() <= 80
+        && request.resource.data.nota is string && request.resource.data.nota.size() <= 300
+        && request.resource.data.hora is number
+        && request.resource.data.estado == "nuevo"
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if esMiembro(resource.data.idDistribuidora)
+        && resource.data.estado == "nuevo"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["estado", "atendido"])
+        && request.resource.data.estado in ["cargado", "descartado"]
+        && request.resource.data.atendido is map
+        && request.resource.data.atendido.keys().hasOnly(["nombre", "hora", "idPedido"])
+        && request.resource.data.atendido.get("nombre", "") is string
+        && request.resource.data.atendido.get("nombre", "").size() <= 60
+        && request.resource.data.atendido.get("idPedido", "") is string
+        && request.resource.data.atendido.get("idPedido", "").size() <= 100;
+
+      allow delete: if false;
+    }
+
     match /distribuidoras/{idDistribuidora} {
       allow read: if esMiembro(idDistribuidora);
 
@@ -1134,6 +1207,27 @@ service cloud.firestore {
             || (request.resource.data.foto is string
               && request.resource.data.foto.size() <= 360000
               && request.resource.data.foto.matches('^data:image/jpeg;base64,.*')))
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow delete: if esDueno(idDistribuidora)
+          || (esMiembro(idDistribuidora) && resource.data.persona.uid == request.auth.uid);
+      }
+
+      // Foto de la heladera (T92): una por visita, con cómo está puesta.
+      match /heladeras/{idFoto} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["comercio", "foto", "estado", "nota", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["comercio", "foto", "estado", "nota", "persona", "horaCelular"])
+          && request.resource.data.comercio is string && request.resource.data.comercio.size() > 0
+          && request.resource.data.comercio.size() <= 80
+          && request.resource.data.foto is string
+          && request.resource.data.foto.size() <= 360000
+          && request.resource.data.foto.matches('^data:image/jpeg;base64,.*')
+          && request.resource.data.estado in ["bien", "mejorar", "mal"]
+          && request.resource.data.nota is string && request.resource.data.nota.size() <= 120
           && request.resource.data.horaCelular is number
           && personaPropia(idDistribuidora, request.resource.data.persona);
 

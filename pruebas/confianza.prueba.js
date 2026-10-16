@@ -27,6 +27,9 @@ test("confianza: versión nueva y cambios sin subir", async ({ page, context }, 
 
     // Sin señal: el pedido (y la visita al comercio) quedan en el celular.
     await expect(page.locator("#indicadorNube")).toHaveAttribute("data-estado", "ok", { timeout: 20000 });
+    // Con la máquina cargada, lo del registro puede tardar en subir: se
+    // espera a que no quede nada pendiente antes de cortar la señal.
+    await expect.poll(() => page.evaluate(() => window.nubeVendeFrio?.sincronizacion?.().sinSubir ?? 0), { timeout: 20000 }).toBe(0);
     await context.setOffline(true);
     await page.evaluate(() => window.firebase.firestore().disableNetwork());
     await cargarPedido(page, false);

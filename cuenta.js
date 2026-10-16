@@ -1,6 +1,10 @@
 // VendeFrío - Cuenta (inicio de sesión con Firebase Auth)
 // Con cuenta, los datos salen de la nube de la distribuidora (Solo nube, T16c):
 // eso lo deciden inicio.js y nube.js.
+// Opciones que se prenden cuando el dueño termina su parte:
+// entrarConGoogle, cuando Google está activado en Firebase (M17).
+window.opcionesVendeFrio = Object.assign({ entrarConGoogle: false }, window.opcionesVendeFrio);
+
 (function () {
     const oyentes = [];
     let usuario = null;
@@ -95,6 +99,35 @@
         }
     }
 
+    // Entrar con Google (T86). Si es la primera vez, la distribuidora se crea
+    // con el nombre de la persona (se cambia después en Más > Cuenta).
+    async function entrarConGoogle() {
+        const auth = obtenerAuth();
+
+        if (!auth || !window.firebase.auth.GoogleAuthProvider) {
+            throw new Error("La cuenta no está disponible en este momento.");
+        }
+
+        try {
+            const proveedor = new window.firebase.auth.GoogleAuthProvider();
+            proveedor.setCustomParameters({ prompt: "select_account" });
+            const resultado = await auth.signInWithPopup(proveedor);
+            if (resultado.additionalUserInfo && resultado.additionalUserInfo.isNewUser) {
+                window.distribuidoraVendeFrio?.prepararNombre?.(resultado.user.displayName || "Mi distribuidora");
+            }
+            return resultado.user;
+        } catch (error) {
+            if (error && (error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request")) {
+                const aviso = new Error("Se cerró la ventana de Google antes de terminar.");
+                aviso.code = error.code;
+                throw aviso;
+            }
+            const aviso = new Error(mensajeDeError(error));
+            aviso.code = error && error.code;
+            throw aviso;
+        }
+    }
+
     async function salir() {
         const auth = obtenerAuth();
         if (!auth) return;
@@ -138,6 +171,7 @@
         usuarioActual: () => usuario,
         ingresar,
         registrarse,
+        entrarConGoogle,
         salir,
         escuchar
     };
