@@ -117,6 +117,7 @@
             html: `<div class="pzOpciones">
                 ${telefono ? `<button type="button" class="pzOpcion pzOpcionWa" data-opcion="recordar">${p.ico("whatsapp", 22)}Mandar recordatorio por WhatsApp</button>` : ""}
                 ${puedeCobrar ? `<button type="button" class="pzOpcion" data-opcion="pago">${p.ico("moneda", 22)}Registrar un pago</button>` : ""}
+                ${puedeCobrar && window.cobrarQrVendeFrio?.hay() ? `<button type="button" class="pzOpcion" data-opcion="qr">${p.ico("qr", 22)}Cobrar con alias o QR</button>` : ""}
                 <button type="button" class="pzOpcion" data-opcion="cuenta">${p.ico("recibo", 22)}Ver la cuenta completa</button>
             </div>`
         });
@@ -127,6 +128,16 @@
             if (opcion === "recordar") recordar(grupo);
             if (opcion === "pago") registrarPago(grupo.nombre);
             if (opcion === "cuenta") verCuenta(grupo.nombre);
+            if (opcion === "qr") {
+                window.cobrarQrVendeFrio.mostrar({
+                    comercio: grupo.nombre,
+                    monto: grupo.total,
+                    alConfirmar: () => {
+                        const recibo = aplicarPago(grupo, grupo.total, "transferencia");
+                        if (recibo) setTimeout(() => mostrarRecibo(recibo), 200);
+                    }
+                });
+            }
         });
     }
 
@@ -398,6 +409,12 @@
         return banner;
     });
     extras.escuchar("pagos", refrescar);
+    // Acceso en Más, para quien cobra.
+    (window.accesosMasExtras = window.accesosMasExtras || []).push({
+        destino: "aCobrar", icono: "moneda", texto: "A cobrar",
+        mostrar: () => typeof usaNubeReal === "function" && usaNubeReal() && Boolean(nube()?.puedeCobrar?.()),
+        abrir: abrirPantalla
+    });
 
     window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
 }());

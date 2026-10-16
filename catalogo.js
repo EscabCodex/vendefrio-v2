@@ -120,7 +120,7 @@
                 <button type="button" class="pzMotivo" data-opcion="editar">${pz.ico("lapiz", 20)}Editar precio o foto</button>
                 ${archivado
                     ? `<button type="button" class="pzMotivo" data-opcion="recuperar">${pz.ico("deshacer", 20)}Recuperar para vender</button>`
-                    : `${window.ofertasVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="oferta">${pz.ico("etiqueta", 20)}${typeof ofertaVigente === "function" && ofertaVigente(p) ? "Cambiar la oferta" : "Poner en oferta"}</button>` : ""}<button type="button" class="pzMotivo" data-opcion="archivar">${pz.ico("archivo", 20)}Archivar</button>`}
+                    : `${window.ofertasVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="oferta">${pz.ico("etiqueta", 20)}${typeof ofertaVigente === "function" && ofertaVigente(p) ? "Cambiar la oferta" : "Poner en oferta"}</button>` : ""}${window.listasPreciosVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="listas">${pz.ico("etiqueta", 20)}Precios por lista</button>` : ""}<button type="button" class="pzMotivo" data-opcion="archivar">${pz.ico("archivo", 20)}Archivar</button>`}
             </div>
             <p class="pzHojaSub">${archivado ? "Vuelve a aparecer en Nuevo pedido." : "Deja de aparecer para vender. Los pedidos viejos lo siguen mostrando igual."}</p>`
         }).addEventListener("click", evento => {
@@ -129,6 +129,7 @@
             pz.cerrar();
             if (opcion === "editar") editarProductoCatalogo(p);
             if (opcion === "oferta") window.ofertasVendeFrio.abrir(p);
+            if (opcion === "listas") window.listasPreciosVendeFrio.abrir(p);
             if (opcion === "archivar") window.archivarProductoConDeshacer?.(p.id);
             if (opcion === "recuperar") {
                 archivarProductoPorId(p.id, false);
