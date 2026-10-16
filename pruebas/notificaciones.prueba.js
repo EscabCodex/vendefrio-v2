@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
-const { abrirMas } = require("./recorridos");
+const { abrirMas, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -143,7 +143,7 @@ async function cargarPedido(page, comercio) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill(comercio);
+    await elegirComercio(page, comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
     await page.locator("#generar").click();
