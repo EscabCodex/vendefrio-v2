@@ -7,9 +7,11 @@
 // 2. Pasos más cortos (T29b): un pedido viejo en "Cargado en el vehículo" se
 //    ve como "En reparto", vuelve un paso atrás a "Cargado" y se entrega
 //    directo desde "Cargado".
-// 3. "Salir a repartir" en tanda (T29c): elegir varios pedidos cargados,
-//    "Marcar todos", confirmar con el resumen y, si otro celular canceló uno
-//    mientras tanto, avisarlo y sacar los demás.
+// 3. "Salir a repartir" en tanda (T29c): mantener apretada una tarjeta
+//    para elegir varios pedidos cargados, "Marcar todos", confirmar con el
+//    resumen y, si otro celular canceló uno mientras tanto, avisarlo y sacar
+//    los demás. También eliminar, pasar a "En preparación", "Preparado" y
+//    "Entregado" en tanda.
 // 4. "Todos pueden hacer todo" y "Cobra" para aprobar (T29d), con el dueño y
 //    un empleado en dos celulares: con la llave prendida el empleado sin
 //    roles hace todos los pasos pero no cobra; elige "Cobranza", queda
@@ -165,12 +167,17 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await expect(tarjetas).toHaveCount(3);
     await expect(pie).toBeHidden();
 
-    // "Elegir varios": las tarjetas se marcan en vez de abrir la ficha y
-    // abajo aparece "Salir a repartir (N)" en lugar del botón flotante.
-    await page.getByRole("button", { name: "Elegir varios" }).click();
-    await expect(pie.getByRole("button", { name: "Salir a repartir (0)" })).toBeDisabled();
+    // Ya no hay botón "Elegir varios": se mantiene apretada la tarjeta.
+    await expect(page.getByRole("button", { name: "Elegir varios" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Marcar todos" })).toBeHidden();
+
+    // Manteniendo apretada una tarjeta, queda elegida, las tarjetas se marcan
+    // en vez de abrir la ficha y abajo aparecen las acciones en lugar del
+    // botón flotante.
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
+    await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(1);
+    await expect(pie.getByRole("button", { name: "Salir a repartir (1)" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeHidden();
-    await page.getByRole("checkbox", { name: /Almacén Don Pepe/ }).click();
     await page.getByRole("checkbox", { name: /Kiosco Luna/ }).click();
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(2);
     await expect(page.locator(".fichaPedido")).toBeHidden();
@@ -184,7 +191,7 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeVisible();
 
     // "Marcar todos" y confirmar con el resumen.
-    await page.getByRole("button", { name: "Elegir varios" }).click();
+    await mantenerApretada(page, tarjetas.first());
     await page.getByRole("button", { name: "Marcar todos" }).click();
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(3);
     await expect(page.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
@@ -203,28 +210,99 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await confirmar.getByRole("button", { name: "Salir a repartir (3)" }).click();
 
     const aviso = page.locator("#modalAviso");
-    await expect(aviso).toContainText("Algunos pedidos no salieron");
-    await expect(aviso).toContainText("Salieron 2 de 3 a reparto");
+    await expect(aviso).toContainText("Algunos pedidos no se movieron");
+    await expect(aviso).toContainText("Se hicieron 2 de 3");
     await expect(aviso).toContainText("Super Norte (ahora está «Cancelado»)");
     await capturar(page, "nube-15-tanda-con-aviso");
     await aviso.getByRole("button", { name: "Entendido" }).click();
 
     // Cargados queda vacío y los dos salen en "En reparto".
     await expect(tarjetas).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Elegir varios" })).toBeHidden();
     await expect(pie).toBeHidden();
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /En reparto/ }).click();
     await expect(tarjetas).toHaveCount(2);
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
     await expect(tarjetas.filter({ hasText: "Kiosco Luna" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Elegir varios" })).toBeHidden();
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
     await capturar(page, "nube-16-en-reparto-tanda");
+
+    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+});
+
+test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+    await page.evaluate(() =>
+        agregarComercio({ nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "" }) &&
+        agregarComercio({ nombre: "Super Norte", direccion: "Mitre 900", telefono: "" })
+    );
+    for (const comercio of ["Almacén Don Pepe", "Kiosco Luna", "Super Norte"]) {
+        await cargarPedido(page, false, comercio);
+    }
+
+    const tarjetas = page.locator(".tarjetaSeguimiento");
+    const pie = page.locator(".pieTandaPedidos");
+    const confirmar = page.locator("#modalRepartoTanda");
+    await expect(tarjetas).toHaveCount(3);
+
+    // En "Cargados", el dueño ve las cinco acciones.
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Super Norte" }));
+    for (const nombre of ["Salir a repartir (1)", "En preparación (1)", "Preparado (1)", "Entregado (1)", "Eliminar (1)"]) {
+        await expect(pie.getByRole("button", { name: nombre })).toBeVisible();
+    }
+    await capturar(page, "nube-17-acciones-tanda");
+
+    // Eliminar pide confirmar.
+    await pie.getByRole("button", { name: "Eliminar (1)" }).click();
+    await expect(confirmar).toContainText("1 pedido (3 unidades) desaparece de la app para todos");
+    await capturar(page, "nube-18-eliminar-tanda");
+    await confirmar.getByRole("button", { name: "Eliminar (1)" }).click();
+    await expect(tarjetas).toHaveCount(2);
+    await expect(tarjetas.filter({ hasText: "Super Norte" })).toHaveCount(0);
+
+    // "En preparación" con uno y "Preparado" con el otro.
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Kiosco Luna" }));
+    await pie.getByRole("button", { name: "En preparación (1)" }).click();
+    await confirmar.getByRole("button", { name: "En preparación (1)" }).click();
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
+    await pie.getByRole("button", { name: "Preparado (1)" }).click();
+    await confirmar.getByRole("button", { name: "Preparado (1)" }).click();
+    await expect(tarjetas).toHaveCount(0);
+
+    const etapas = page.locator("#filtrosEtapaPedidos");
+    await etapas.getByRole("tab", { name: /En preparación/ }).click();
+    await expect(tarjetas.filter({ hasText: "Kiosco Luna" })).toBeVisible();
+    await etapas.getByRole("tab", { name: /Preparados/ }).click();
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
+
+    // "Entregado" en tanda: pasa a Historial, completo.
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
+    await expect(pie.getByRole("button", { name: /Eliminar/ })).toBeHidden();
+    await pie.getByRole("button", { name: "Entregado (1)" }).click();
+    await confirmar.getByRole("button", { name: "Entregado (1)" }).click();
+    await expect(tarjetas).toHaveCount(0);
+    await etapas.getByRole("tab", { name: /Historial/ }).click();
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
 });
 
 // Escribe directo en la nube del emulador, sin pasar por la app (como lo
 // haría alguien que se salta la app). Devuelve "ok" o el código del error.
+// Mantiene apretada una tarjeta (como el dedo en el celular).
+async function mantenerApretada(page, tarjeta) {
+    // La lista se redibuja cuando llega algo de la nube: si la tarjeta se
+    // cambió en el medio, se vuelve a probar.
+    await expect(async () => {
+        await tarjeta.scrollIntoViewIfNeeded({ timeout: 2000 });
+        const caja = await tarjeta.boundingBox();
+        await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+        await page.mouse.down();
+        await page.waitForTimeout(700);
+        await page.mouse.up();
+        await expect(page.locator(".pieTandaPedidos")).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15000 });
+}
+
 async function escribirDirecto(page, accion, comercio = "Almacén Don Pepe") {
     return page.evaluate(async ({ accion, comercio }) => {
         const db = window.firebase.firestore();
