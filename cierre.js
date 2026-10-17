@@ -182,6 +182,28 @@
             }
         });
 
+        // Pagos parciales (T74) de ese día: entran en la caja.
+        resultado.pagosParciales = window.gastosVendeFrio ? window.gastosVendeFrio.pagosDelDia(inicio) : [];
+        resultado.pagosParciales.forEach(pago => {
+            const monto = Number(pago.monto) || 0;
+            resultado.porForma[pago.forma] = (resultado.porForma[pago.forma] || 0) + monto;
+            resultado.totalRecaudado += monto;
+            const idPersona = pago.persona && pago.persona.idPersona || "";
+            let persona = resultado.porPersona.find(item => item.idPersona === idPersona);
+            if (!persona) {
+                persona = { idPersona, nombre: nombrePersona(pago.persona), total: 0, cantidad: 0 };
+                resultado.porPersona.push(persona);
+            }
+            persona.total += monto;
+            persona.cantidad += 1;
+        });
+        resultado.totalRecaudado = Math.round(resultado.totalRecaudado * 100) / 100;
+
+        // Gastos del día (T76) y lo que queda en caja.
+        resultado.gastos = window.gastosVendeFrio ? window.gastosVendeFrio.delDia(inicio) : [];
+        resultado.totalGastos = window.gastosVendeFrio ? window.gastosVendeFrio.totalDe(resultado.gastos) : 0;
+        resultado.quedaEnCaja = Math.round((resultado.totalRecaudado - resultado.totalGastos) * 100) / 100;
+
         const porNumero = (a, b) => a.comercio.localeCompare(b.comercio, "es") || a.numero.localeCompare(b.numero);
         resultado.entregados.sort(porNumero);
         resultado.cobros.sort(porNumero);
@@ -249,6 +271,10 @@
                 });
                 const dia = new Date(diaElegido);
                 window.exportarVendeFrio?.descargar(pedidos, "VendeFrío cierre " + dia.getFullYear() + "-" + String(dia.getMonth() + 1).padStart(2, "0") + "-" + String(dia.getDate()).padStart(2, "0"));
+            } else if (boton.id === "agregarGasto") {
+                window.gastosVendeFrio?.agregar(dibujar);
+            } else if (boton.dataset.gasto) {
+                window.gastosVendeFrio?.verGasto(boton.dataset.gasto, dibujar);
             } else if (boton.id === "imprimirCierre") {
                 window.impresionVendeFrio?.imprimirLineas?.(lineasParaImprimir(calcular(diaElegido)), {
                     clave: "cierre",
@@ -318,6 +344,7 @@
             ${filaDoble("Efectivo", precio(datos.porForma.efectivo))}
             ${filaDoble("Transferencia", precio(datos.porForma.transferencia))}
             ${filaDoble("A cobrar (entregados sin cobrar)", precio(datos.aCobrar), "aCobrarCierre")}
+            ${datos.pagosParciales.length ? filaDoble("Incluye pagos parciales", precio(window.gastosVendeFrio.totalDe(datos.pagosParciales))) : ""}
         `;
 
         const personas = datos.porPersona.length
@@ -378,6 +405,7 @@
         const planilla = `<button type="button" class="btnAccion secundario descargarPlanilla" id="descargarPlanillaCierre">${window.icono("descargar", 16)} Descargar planilla del día</button>`;
 
         caja.innerHTML =
+            (window.gastosVendeFrio ? window.gastosVendeFrio.htmlCierre(datos, diaElegido === hoy) : "") +
             resumen +
             tarjeta("Caja", caja1, "cajaCierre") +
             tarjeta("Por persona que cobró", personas) +
@@ -448,12 +476,22 @@
         dos("Efectivo", precio(datos.porForma.efectivo));
         dos("Transferencia", precio(datos.porForma.transferencia));
         dos("A cobrar", precio(datos.aCobrar));
+        if (datos.gastos && datos.gastos.length) {
+            lineas.push({ tipo: "separador" });
+            titulo("GASTOS");
+            datos.gastos.forEach(gasto => {
+                const categoria = (window.gastosVendeFrio.CATEGORIAS.find(item => item.clave === gasto.categoria) || { texto: "Otro" }).texto;
+                dos(textoHora(gasto.horaCelular) + " " + categoria + (gasto.detalle ? " " + gasto.detalle : ""), "-" + precio(gasto.monto));
+            });
+            dos("Total gastos", "-" + precio(datos.totalGastos));
+        }
         lineas.push({ tipo: "separador" });
         titulo("POR PERSONA QUE COBRÓ");
         if (!datos.porPersona.length) lineas.push({ tipo: "texto", texto: "Nadie registró cobros" });
         datos.porPersona.forEach(persona => dos(persona.nombre + " (" + persona.cantidad + ")", precio(persona.total)));
         lineas.push({ tipo: "separador" });
         lineas.push({ tipo: "total", izquierda: "RECAUDADO", derecha: precio(datos.totalRecaudado) });
+        if (datos.totalGastos) lineas.push({ tipo: "total", izquierda: "QUEDA EN CAJA", derecha: precio(datos.quedaEnCaja) });
         lineas.push({ tipo: "centro", texto: "Impreso: " + textoFecha(Date.now()) + " " + textoHora(Date.now()) });
 
         return lineas;

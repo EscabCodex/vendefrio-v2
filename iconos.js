@@ -91,7 +91,18 @@
     copiar: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     compartir: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
     mira: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
-    reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'
+    reloj: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    // Etapa 7 (ideas para la 1.0).
+    camara: '<path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/>',
+    estrella: '<path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
+    archivo: '<path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M10 12.5h4"/>',
+    firma: '<path d="M3 17c3-1 4-6 6-6s-1 6 2 6 3-4 5-4 1 3 5 3"/><path d="M3 21h18"/>',
+    codigo: '<path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/>',
+    deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    subir: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    bajar: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    planilla: '<path d="M4 4h16v16H4z"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16"/>',
+    qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2v2M18 18h2v2h-2z"/>'
   };
 
   window.icono = function (nombre, tam, color) {

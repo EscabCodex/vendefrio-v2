@@ -52,6 +52,34 @@
         return historial.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio && fecha <= ahora; });
     }
 
+    // El período anterior del mismo largo (T80): ayer, los 7 días de antes o
+    // el mes pasado hasta el mismo día. null en "Todo".
+    function historialAnterior() {
+        const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
+        if (periodo === "todo") return null;
+        const historial = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        let inicio, fin;
+        if (periodo === "hoy") {
+            inicio = new Date(hoy); inicio.setDate(inicio.getDate() - 1);
+            fin = new Date(hoy);
+        } else if (periodo === "semana") {
+            inicio = new Date(hoy); inicio.setDate(inicio.getDate() - 13);
+            fin = new Date(hoy); fin.setDate(fin.getDate() - 6);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+            const ultimo = new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate();
+            fin = new Date(hoy.getFullYear(), hoy.getMonth() - 1, Math.min(hoy.getDate(), ultimo) + 1);
+        }
+        return historial.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio && fecha < fin; });
+    }
+
+    function diferencia(actual, anterior) {
+        const resta = actual - anterior;
+        if (!resta) return "";
+        return `<span class="statsDelta" data-tono="${resta > 0 ? "sube" : "baja"}">${resta > 0 ? "+" : "−"}${numero(Math.abs(resta))}</span>`;
+    }
+
     function estadisticasPeriodo(historial) {
         const comercios = {}, productos = {}, marcas = {};
         historial.forEach(pedido => {
@@ -120,6 +148,12 @@
         const comercios = new Set(historial.map(p => p.comercio).filter(Boolean)).size;
         const vendido = historial.reduce((t, p) => t + totalPlata(p), 0);
         const promedio = total ? (unidades / total).toFixed(1).replace(".", ",") : "0";
+        const anterior = historialAnterior();
+        const antes = anterior ? {
+            total: anterior.length,
+            comercios: new Set(anterior.map(p => p.comercio).filter(Boolean)).size,
+            vendido: anterior.reduce((t, p) => t + totalPlata(p), 0)
+        } : null;
         const card = document.createElement("section");
         card.className = "statsResumen";
         card.innerHTML = `
@@ -127,12 +161,12 @@
                 <div>
                     <small>${ico("calendario", 14)} ${NOMBRE_PERIODO[periodoElegido()] || "Todo"}</small>
                     <strong>${numero(total)}</strong>
-                    <span>${total === 1 ? "pedido" : "pedidos"}</span>
+                    <span>${total === 1 ? "pedido" : "pedidos"}${antes ? diferencia(total, antes.total) : ""}</span>
                 </div>
-                ${vendido > 0 ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong></div>` : ""}
+                ${vendido > 0 ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong>${antes && (antes.vendido || vendido) ? variacion(Math.round(vendido), Math.round(antes.vendido)) : ""}</div>` : ""}
             </div>
             <div class="statsNumeros">
-                <div><span class="statsNumIcono">${ico("tienda", 17)}</span><strong>${numero(comercios)}</strong><small>comercios</small></div>
+                <div><span class="statsNumIcono">${ico("tienda", 17)}</span><strong>${numero(comercios)}${antes ? diferencia(comercios, antes.comercios) : ""}</strong><small>comercios</small></div>
                 <div><span class="statsNumIcono">${ico("paquete", 17)}</span><strong>${numero(unidades)}</strong><small>unidades</small></div>
                 <div><span class="statsNumIcono">${ico("ordenar", 17)}</span><strong>${promedio}</strong><small>por pedido</small></div>
             </div>`;
@@ -245,7 +279,7 @@
         historial.forEach(p => { const f = fechaPedido(p); if (inicio && f && f >= inicio) conPedido.add(String(p.comercio || "")); });
         const nombresAtrasados = new Set(atrasados.map(p => p.nombre));
         const lista = [
-            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · suele pedir cada ${p.promedioDias}`, tono: "atrasado" })),
+            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · pide cada ${p.promedioDias} días`, tono: "atrasado" })),
             ...perfiles.filter(p => p.nombre !== "Sin comercio" && !conPedido.has(p.nombre) && !nombresAtrasados.has(p.nombre))
                 .map(p => ({ perfil: p, texto: `Sin pedido esta semana · ${p.cantidadPedidos} ${p.cantidadPedidos === 1 ? "pedido" : "pedidos"} en total`, tono: "semana" }))
         ].slice(0, 8);
@@ -322,6 +356,29 @@
         return card;
     }
 
+    // Tarjetas que suman otros módulos (visitas sin pedido, metas, etc.).
+    // Es una lista compartida: los módulos que cargan antes ya la llenan.
+    const tarjetasExtra = window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || [];
+    function extras(historial, completo) {
+        return tarjetasExtra.map(crear => {
+            try {
+                return crear(historial, completo);
+            } catch (error) {
+                console.error("Falló una tarjeta de Estadísticas.", error);
+                return null;
+            }
+        });
+    }
+
+    function inicioPeriodo() {
+        const periodo = periodoElegido();
+        if (periodo === "todo") return null;
+        const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+        if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
+        if (periodo === "mes") inicio.setDate(1);
+        return inicio;
+    }
+
     function renderizar() {
         const destino = document.getElementById("contenidoEstadisticas"); if (!destino) return;
         destino.innerHTML = "";
@@ -336,6 +393,7 @@
             crearRanking(estadisticas),
             crearComparativa(completo),
             crearParaVisitar(perfilesTodos, perfilesTodos.filter(p => p.atrasado), completo),
+            ...extras(historial, completo),
             crearHabituales(perfilesTodos),
             crearMeses(completo)
         ].filter(Boolean).forEach(card => destino.appendChild(card));
@@ -350,4 +408,13 @@
         }
     }
     window.abrirEstadisticas=abrir;
+    window.estadisticasVendeFrio = {
+        tarjeta, vacio, periodoElegido, inicioPeriodo, NOMBRE_PERIODO,
+        sumarTarjeta(crear) { if (typeof crear === "function") tarjetasExtra.push(crear); },
+        // Vuelve a dibujar si la pantalla está abierta.
+        redibujar() {
+            const s = document.getElementById("pantallaEstadisticas");
+            if (s && !s.classList.contains("oculto")) renderizar();
+        }
+    };
 }());

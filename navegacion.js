@@ -99,6 +99,9 @@
         return "https://www.google.com/maps/dir/?api=1&travelmode=" + modo + "&destination=" + encodeURIComponent(destino);
     }
 
+    // Para "Ya llego" (T72): los minutos que faltan según la navegación.
+    let minutosQueFaltan = 0;
+
     function enlaceWhatsapp(telefono) {
         let digitos = String(telefono || "").replace(/\D/g, "");
         if (digitos.length < 8) return "";
@@ -453,6 +456,18 @@
                 enlace.rel = "noopener";
             }
         }
+        // "Ya llego" (T72): WhatsApp con el mensaje y los minutos que faltan.
+        const yaLlego = window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(comercio, minutosQueFaltan) : "";
+        if (yaLlego) {
+            const enlace = acceso("whatsapp", "Ya llego", "a");
+            enlace.classList.add("accesoYaLlego");
+            enlace.href = yaLlego;
+            enlace.target = "_blank";
+            enlace.rel = "noopener";
+            enlace.addEventListener("click", () => {
+                enlace.href = window.yaLlegoVendeFrio.enlace(comercio, minutosQueFaltan);
+            });
+        }
         acceso("documento", "Cargar pedido").addEventListener("click", () => {
             const nombre = comercio.nombre;
             cerrar();
@@ -527,6 +542,7 @@
         const falta = Math.max(0, camino.distancia - recorrido);
         const restante = camino.distancia ? falta / camino.distancia : 0;
         const segundos = camino.duracion * restante;
+        minutosQueFaltan = segundos / 60;
 
         pantalla.querySelector(".tiempoNavegacion").textContent = llego ? "Llegaste" : textoMinutos(segundos);
         pantalla.querySelector(".detalleTiempo").textContent = llego
@@ -739,5 +755,5 @@
         }
     }, true);
 
-    window.navegacionVendeFrio = { abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada };
+    window.navegacionVendeFrio = { abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, paradaActual };
 }());

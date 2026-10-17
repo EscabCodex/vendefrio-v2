@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F5FE0">
+<meta name="robots" content="noindex">
+<title>Hacer pedido</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="paginas.css">
+<link rel="stylesheet" href="pedir.css">
+</head>
+<body>
+<main id="tienda" aria-live="polite">
+  <div class="cargando"><span class="ruedita"></span>Abriendo el catálogo…</div>
+</main>
+<div class="barraPedir oculto" id="barraPedir">
+  <div class="resumenPedir"><small id="cantidadPedir">0 productos</small><strong id="totalPedir">$ 0</strong></div>
+  <button type="button" class="boton" id="enviarPedir">Enviar pedido</button>
+</div>
+<script src="firebase/firebase-app-compat.js"></script>
+<script src="firebase/firebase-auth-compat.js"></script>
+<script src="firebase/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="pedir.js"></script>
+</body>
+</html>

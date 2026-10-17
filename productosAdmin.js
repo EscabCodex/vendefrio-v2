@@ -60,7 +60,9 @@ function renderizarProductosAdmin(filtro = "") {
 
     obtenerMarcasOrdenadas(productos)
         .forEach((nombreMarca, indiceMarca) => {
-            const lista = Array.isArray(productos[nombreMarca]) ? productos[nombreMarca] : [];
+            // Los archivados (T63) van aparte, al final.
+            const lista = (Array.isArray(productos[nombreMarca]) ? productos[nombreMarca] : [])
+                .filter(producto => !productoArchivado(producto));
             const marcaCoincide = normalizarTexto(nombreMarca).includes(filtroNormalizado);
             const visibles = lista.filter(producto => {
                 return marcaCoincide || normalizarTexto(producto.nombre).includes(filtroNormalizado);
@@ -116,7 +118,7 @@ function renderizarProductosAdmin(filtro = "") {
                     crearBoton("tinteAmbar editarProducto", window.icono("lapiz",14), "Editar producto", {
                         id: producto.id
                     }),
-                    crearBoton("tinteRojo eliminarProducto", window.icono("tacho",14), "Eliminar producto", {
+                    crearBoton("tinteRojo archivarProducto", window.icono("archivo",14), "Archivar producto", {
                         id: producto.id
                     })
                 );
@@ -128,7 +130,70 @@ function renderizarProductosAdmin(filtro = "") {
             card.append(cabecera, cuerpo);
             listaProductosAdmin.appendChild(card);
         });
+
+    dibujarProductosArchivados(productos, filtroNormalizado);
 }
+
+// Archivados (T63): se recuperan o, recién ahí, se eliminan para siempre.
+function dibujarProductosArchivados(productos, filtroNormalizado) {
+    const archivados = [];
+    obtenerMarcasOrdenadas(productos).forEach(marca => {
+        (productos[marca] || []).forEach(producto => {
+            if (!productoArchivado(producto)) return;
+            if (filtroNormalizado && !normalizarTexto(producto.nombre + " " + marca).includes(filtroNormalizado)) return;
+            archivados.push({ ...producto, marca });
+        });
+    });
+    if (!archivados.length) return;
+
+    const card = document.createElement("div");
+    card.className = "tarjetaMarca tarjetaArchivados";
+    const cabecera = document.createElement("div");
+    cabecera.className = "cabeceraMarca";
+    const titulo = document.createElement("h2");
+    titulo.textContent = "Archivados (" + archivados.length + ")";
+    cabecera.appendChild(titulo);
+    const cuerpo = document.createElement("div");
+    cuerpo.className = "cuerpoMarca";
+    archivados.forEach(producto => {
+        const fila = document.createElement("div");
+        fila.className = "filaProducto";
+        const informacion = document.createElement("div");
+        const nombre = document.createElement("strong");
+        nombre.textContent = producto.nombre;
+        const detalle = document.createElement("small");
+        detalle.textContent = producto.marca + " · no se ofrece para vender";
+        informacion.append(nombre, document.createElement("br"), detalle);
+        const botones = document.createElement("div");
+        botones.className = "filaBotones";
+        botones.append(
+            crearBoton("tinteAmbar recuperarProducto", window.icono("deshacer", 14), "Recuperar producto", { id: producto.id }),
+            crearBoton("tinteRojo eliminarProducto", window.icono("tacho", 14), "Eliminar para siempre", { id: producto.id })
+        );
+        fila.append(informacion, botones);
+        cuerpo.appendChild(fila);
+    });
+    card.append(cabecera, cuerpo);
+    listaProductosAdmin.appendChild(card);
+}
+
+// Archiva con "Deshacer" unos segundos (T63). Los pedidos viejos no cambian.
+function archivarProductoConDeshacer(id) {
+    const encontrado = obtenerProductoPorId(id);
+    if (!encontrado || !archivarProductoPorId(id, true)) return;
+    redibujarProductosEnTodasPartes();
+    window.piezas?.deshacer("“" + encontrado.producto.nombre + "” archivado", () => {
+        archivarProductoPorId(id, false);
+        redibujarProductosEnTodasPartes();
+    });
+}
+
+function redibujarProductosEnTodasPartes() {
+    renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
+    if (typeof renderizarPedido === "function") renderizarPedido();
+    if (!document.getElementById("pantallaCatalogo")?.classList.contains("oculto") && typeof window.abrirCatalogo === "function") window.abrirCatalogo();
+}
+window.archivarProductoConDeshacer = archivarProductoConDeshacer;
 
 // Alias opcional para otros m\u00f3dulos.
 window.renderizarProductosAdmin = renderizarProductosAdmin;
@@ -355,9 +420,21 @@ if (listaProductosAdmin) {
             return;
         }
 
+        if (elemento.classList.contains("archivarProducto")) {
+            archivarProductoConDeshacer(elemento.dataset.id);
+            return;
+        }
+
+        if (elemento.classList.contains("recuperarProducto")) {
+            archivarProductoPorId(elemento.dataset.id, false);
+            redibujarProductosEnTodasPartes();
+            mostrarToast("Producto recuperado: vuelve a estar para vender");
+            return;
+        }
+
         if (elemento.classList.contains("eliminarProducto")) {
             const id = elemento.dataset.id;
-            abrirConfirmacion("Eliminar producto", "\u00bfSeguro que quer\u00e9s eliminar este producto?", () => {
+            abrirConfirmacion("Eliminar para siempre", "Se borra del catálogo. Los pedidos viejos lo siguen mostrando. ¿Seguro?", () => {
                 eliminarProductoPorId(id);
                 renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
                 if (typeof renderizarPedido === "function") renderizarPedido();

@@ -38,7 +38,7 @@ function actualizarDatalist() {
 
     lista.innerHTML = "";
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const option = document.createElement("option");
@@ -213,13 +213,49 @@ function contarPedidosDelComercio(nombre, historial) {
     return historial.filter(pedido => nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)).length;
 }
 
+let verComerciosArchivados = false;
+
+function agregarFilaArchivados(cantidad) {
+    if (!cantidad || verComerciosArchivados || !window.piezas) return;
+    const fila = document.createElement("button");
+    fila.type = "button";
+    fila.className = "pzTarjeta pzFila filaComerciosArchivados";
+    fila.innerHTML = '<div class="pzIni pzIniAcento">' + window.piezas.ico("archivo", 20) + '</div><div class="pzFilaTxt"><strong>Archivados (' + cantidad + ')</strong><small>Comercios que ya no visitás</small></div>' + window.piezas.ico("chevDerecha", 20);
+    fila.addEventListener("click", () => { verComerciosArchivados = true; renderizarComercios(); window.scrollTo(0, 0); });
+    listaComerciosAdmin.appendChild(fila);
+}
+
+function redibujarComerciosEnTodasPartes() {
+    actualizarDatalist();
+    renderizarComercios();
+    if (typeof actualizarDatalistPedido === "function") actualizarDatalistPedido();
+    if (typeof actualizarDashboard === "function") actualizarDashboard();
+}
+
+// Archivar en vez de borrar (T63): con "Deshacer" unos segundos.
+function archivarComercioConDeshacer(nombre) {
+    const comercio = buscarComercioPorNombre(nombre);
+    if (!comercio || !archivarComercioPorId(comercio.id, true)) return;
+    redibujarComerciosEnTodasPartes();
+    if (navigator.vibrate) navigator.vibrate(20);
+    window.piezas?.deshacer("“" + comercio.nombre + "” archivado", () => {
+        archivarComercioPorId(comercio.id, false);
+        redibujarComerciosEnTodasPartes();
+    });
+}
+window.archivarComercioConDeshacer = archivarComercioConDeshacer;
+
 function renderizarComercios() {
     if (!listaComerciosAdmin) return;
 
-    const todosLosComercios = obtenerComercios();
+    // Archivados (T63): aparte, con "Archivados (N)" al final de la lista.
+    const guardados = obtenerComercios();
+    const archivados = guardados.filter(comercioArchivado);
+    if (!archivados.length) verComerciosArchivados = false;
+    const todosLosComercios = verComerciosArchivados ? archivados : guardados.filter(comercio => !comercioArchivado(comercio));
     // Eliminados y cancelados no cuentan (T26).
     const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
-    actualizarResumenComercios(todosLosComercios);
+    actualizarResumenComercios(verComerciosArchivados ? guardados.filter(comercio => !comercioArchivado(comercio)) : todosLosComercios);
     if (segmentoEstadoComercios && filtroEstadoComercios) sincronizarSegmento(segmentoEstadoComercios, filtroEstadoComercios.value);
 
     const texto = buscarComercio ? buscarComercio.value : "";
@@ -273,11 +309,21 @@ function renderizarComercios() {
         listaComerciosAdmin.appendChild(volver);
     }
 
+    if (verComerciosArchivados) {
+        const volver = document.createElement("button");
+        volver.type = "button";
+        volver.className = "pzBanner pzBanAviso";
+        volver.innerHTML = window.piezas.ico("archivo", 22) + "<div><strong>Comercios archivados</strong><small>No aparecen para visitar ni para vender. Tocá para volver a la lista.</small></div>" + window.piezas.ico("cerrarX", 18);
+        volver.addEventListener("click", () => { verComerciosArchivados = false; renderizarComercios(); });
+        listaComerciosAdmin.appendChild(volver);
+    }
+
     if (comercios.length === 0) {
         const vacio = document.createElement("div");
         vacio.className = "card historialVacio";
         vacio.innerHTML = "<h2>Sin coincidencias</h2><p>No hay comercios con este filtro.</p>";
         listaComerciosAdmin.appendChild(vacio);
+        agregarFilaArchivados(archivados.length);
         return;
     }
 
@@ -343,6 +389,11 @@ function renderizarComercios() {
         estado.dataset.tono = visitado ? "ok" : "aviso";
         estado.textContent = visitado ? "Visitado" : "Pendiente";
         estado.title = visitado ? "Visitado esta semana" : "Pendiente esta semana";
+        if (comercioArchivado(comercio)) {
+            estado.dataset.tono = "";
+            estado.textContent = "Archivado";
+            estado.title = "Archivado: no aparece para visitar";
+        }
 
         const filaTitulo = document.createElement("div");
         filaTitulo.className = "filaTituloComercio";
@@ -370,12 +421,17 @@ function renderizarComercios() {
                 window.icono("lapiz",13) + " Editar",
                 comercio.nombre
             ),
-            crearBotonComercio(
-                "eliminar eliminarBtn",
-                window.icono("tacho",13) + " Eliminar",
-                comercio.nombre
-            )
+            comercioArchivado(comercio)
+                ? crearBotonComercio("ver recuperarComercioBtn", window.icono("deshacer",13) + " Recuperar", comercio.nombre)
+                : crearBotonComercio("secundario archivarComercioBtn", window.icono("archivo",13) + " Archivar", comercio.nombre)
         );
+        if (comercioArchivado(comercio)) {
+            acciones.appendChild(crearBotonComercio(
+                "eliminar eliminarBtn",
+                window.icono("tacho",13) + " Eliminar para siempre",
+                comercio.nombre
+            ));
+        }
 
         if (comercio.enlaceMaps || comercio.direccion) {
             acciones.insertBefore(
@@ -411,6 +467,8 @@ function renderizarComercios() {
         card.appendChild(acciones);
         listaComerciosAdmin.appendChild(card);
     });
+
+    agregarFilaArchivados(archivados.length);
 }
 
 // Alias que utiliza menu.js al abrir la pantalla.
@@ -634,10 +692,23 @@ if (listaComerciosAdmin) {
             return;
         }
 
+        if (elemento.classList.contains("archivarComercioBtn")) {
+            archivarComercioConDeshacer(nombre);
+            return;
+        }
+
+        if (elemento.classList.contains("recuperarComercioBtn")) {
+            const comercio = buscarComercioPorNombre(nombre);
+            if (comercio) archivarComercioPorId(comercio.id, false);
+            redibujarComerciosEnTodasPartes();
+            mostrarToast("Comercio recuperado");
+            return;
+        }
+
         if (elemento.classList.contains("eliminarBtn")) {
             abrirConfirmacion(
-                "Eliminar comercio",
-                "\u00bfEliminar \"" + nombre + "\"?",
+                "Eliminar para siempre",
+                "Se borra \"" + nombre + "\". Sus pedidos viejos quedan en el historial. ¿Seguro?",
                 () => {
                     const comercio = buscarComercioPorNombre(nombre);
                     if (comercio) eliminarComercioPorId(comercio.id);

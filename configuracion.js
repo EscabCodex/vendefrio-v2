@@ -85,11 +85,12 @@
     // Valor de cada ajuste, o el de fábrica si nunca se tocó.
     const DEFECTOS = {
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
-        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
+        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
-        vibrar: true, precios: true,
+        vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
-        zoom: "17", seguimiento: true, pantallaEncendida: true
+        zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
+        resumenNoche: true
     };
     const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
 
@@ -348,8 +349,13 @@
             accesos.innerHTML =
                 tarjeta("rutas", "mapa", "Rutas") +
                 tarjeta("estadisticas", "grafico", "Estadísticas") +
+                tarjeta("whatsapp", "whatsapp", "WhatsApp") +
                 (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
-                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
+                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "") +
+                // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
+                (window.accesosMasExtras || []).filter(acceso => {
+                    try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
+                }).map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("");
         }
 
         const valores = {
@@ -445,6 +451,21 @@
         return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
             filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
             "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
+    }
+
+    // --- Alias y QR para cobrar (T77) ---
+    // Solo el dueño (cobrarQr.js guarda y muestra los datos).
+    function htmlCobroTransferencia() {
+        const cobrar = window.cobrarQrVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!cobrar || !usuario || usuario.isAnonymous || !distribuidora || distribuidora.idActual() !== usuario.uid) return "";
+        const datos = cobrar.datos();
+        const valor = datos.alias
+            ? escaparTexto(datos.alias) + (datos.qr ? " · con QR" : " · sin QR")
+            : "Todavía sin cargar: se muestran al cobrar.";
+        return `<div id="cuentaCobroTransferencia">${filaEditable("qr", "verde", "Alias y QR para cobrar", valor, "",
+            "editarCobroTransferencia", datos.alias ? "Cambiar alias y QR" : "Cargar alias y QR")}</div>`;
     }
 
     // --- Nombre del dueño (T18) ---
@@ -683,7 +704,11 @@
                 filaDato("historial", "gris", "Último respaldo descargado en este celular", textoUltimoRespaldoNube(), "configUltimoRespaldoNube") +
                 `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
                 filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
-                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"')) +
+                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"') +
+                // T61: cada cuánto avisa en Inicio.
+                filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
             nota("Descargá un respaldo una vez por semana y guardalo en un lugar seguro, como Google Drive. Al combinar, lo que ya está en la nube tiene prioridad.");
     }
 
@@ -1500,6 +1525,7 @@
                     <div class="ajTarjeta">
                         ${htmlNombreDistribuidora()}
                         ${htmlDatosTicket()}
+                        ${htmlCobroTransferencia()}
                         ${htmlDistribuidora()}
                     </div>
                 </section>
@@ -1658,7 +1684,10 @@
                     filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
                 grupo("Archivo de respaldo",
                     filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
-                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"')) +
+                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"') +
+                    filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
                 nota("Guardá el archivo en un lugar seguro, como Google Drive.");
         }
 
@@ -1676,7 +1705,29 @@
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
                     ]) +
                     filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
-                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios"));
+                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios")) +
+                // T70: prueba de entrega al deslizar "Entregado".
+                grupo("Al entregar",
+                    filaLlave("camara", "verde", "Pedir foto y firma al entregar", "Todo opcional; también se agrega después desde el pedido", "pruebaEntrega")) +
+                // T79: el resumen del día a la noche (dueño y quien cobra).
+                grupo("A la noche",
+                    filaLlave("luna", "violeta", "Resumen de la noche", "A las 20:30: vendido, entregado, cobrado y lo que falta", "resumenNoche")) +
+                // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
+                grupo("Voz con IA",
+                    filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
+                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube") +
+                    filaAccion("chispa", "violeta", "Probar la IA en la nube", "Dice si anda o qué le falta", 'data-accion="probarIA"')) +
+                `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
+                nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
+            window.vozVendeFrio?.estadoIACelular?.().then(estado => {
+                const texto = document.getElementById("estadoIACelular");
+                if (!texto) return;
+                texto.textContent = {
+                    available: "Este celular tiene IA y está lista.",
+                    downloadable: "Este celular tiene IA: se descarga la primera vez que la uses, con wifi.",
+                    downloading: "Este celular está descargando su IA."
+                }[estado] || "Este celular todavía no tiene IA propia para páginas.";
+            });
         }
 
         if (seccion === "navegacion") {
@@ -1714,7 +1765,14 @@
                         window.nubeVendeFrio?.modoNube?.()
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
-                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades")) +
+                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
+                    // T87: presentación y términos (borrador hasta que lo revise un abogado, M19).
+                    filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
+                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"')) +
+                // T62: informar un problema (y, el dueño, ver los informados).
+                grupo("Problemas",
+                    filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
+                    (esDuenoEnLaNube() ? filaAccion("lista", "naranja", "Problemas informados", "Lo que mandaron vos y tus empleados", 'data-accion="verProblemas"') : "")) +
                 grupo("Ayuda",
                     `<div class="ajFila ajTextoLargo ayudaVendeFrio">
                         <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
@@ -1859,6 +1917,16 @@
             document.getElementById("importarRespaldo")?.click();
         }
 
+        if (accion === "probarIA") {
+            const resultado = document.getElementById("resultadoProbarIA");
+            const texto = resultado?.querySelector("span");
+            if (resultado) resultado.hidden = false;
+            if (texto) texto.textContent = "Probando…";
+            window.vozVendeFrio?.probarIANube?.().then(respuesta => {
+                if (texto) texto.textContent = respuesta;
+            });
+        }
+
         if (accion === "rutas") {
             pantalla()?.classList.add("oculto");
             mostrarPantalla("rutas");
@@ -1891,6 +1959,20 @@
             const sinSubir = nube?.sincronizacion?.().sinSubir || 0;
 
             if (sinSubir > 0) {
+                // T60: muestra qué falta subir en vez de un aviso suelto.
+                if (window.piezas && window.confianzaVendeFrio) {
+                    window.piezas.modal({
+                        icono: "nube",
+                        color: "aviso",
+                        titulo: "Todavía no",
+                        texto: "Hay " + (sinSubir === 1 ? "1 cambio" : sinSubir + " cambios") + " sin subir a la nube. Si salís ahora se perderían: esperá a tener señal.",
+                        botones: [
+                            { texto: "Cerrar", clase: "pzBtnGris" },
+                            { texto: "Ver qué falta", clase: "pzBtnPri", alTocar: () => window.confianzaVendeFrio.abrirSinSubir() }
+                        ]
+                    });
+                    return;
+                }
                 return mostrarAviso(
                     "Todavía no",
                     "Hay " + sinSubir + " cambio(s) sin subir a la nube. Esperá a tener señal y que diga \"todo subido\" antes de salir."
@@ -2248,6 +2330,12 @@
             document.getElementById("datosTicketTelefono")?.focus();
         }
 
+        if (accion === "editarCobroTransferencia") {
+            window.cobrarQrVendeFrio?.editar(() => {
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+            });
+        }
+
         if (accion === "cancelarDatosTicket") {
             editandoDatosTicket = false;
             detalle("cuenta");
@@ -2275,6 +2363,11 @@
         if (accion === "reintentarNube") {
             window.nubeVendeFrio?.reintentar();
         }
+
+        if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
+        if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
+        if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
+        if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
             const d = leer();

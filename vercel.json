@@ -5,6 +5,21 @@
     },
     "api/notificar.js": {
       "maxDuration": 15
+    },
+    "api/whatsapp.js": {
+      "maxDuration": 60
+    },
+    "api/whatsapp-enviar.js": {
+      "maxDuration": 60
+    },
+    "api/whatsapp-audio.js": {
+      "maxDuration": 60
+    },
+    "api/entender.js": {
+      "maxDuration": 30
+    },
+    "api/preguntar.js": {
+      "maxDuration": 30
     }
   }
 }

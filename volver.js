@@ -11,7 +11,7 @@
     const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
     // Los que llevan a Inicio no necesitan la casita al lado.
     const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
-    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre"];
+    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
 
     function preferencia(campo) {
@@ -55,8 +55,9 @@
             barra = document.createElement("div");
             barra.className = "barraVolver";
             pantalla.insertBefore(barra, pantalla.firstChild);
-            const destino = DESDE_MAS.includes(pantalla.id) ? "mas" : "menu";
-            const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", "Volver a " + DESTINOS[destino]);
+            // Las pantallas nuevas (piezas.js) dicen a dónde vuelven.
+            const destino = pantalla.dataset.volverA || (DESDE_MAS.includes(pantalla.id) ? "mas" : "menu");
+            const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", DESTINOS[destino] ? "Volver a " + DESTINOS[destino] : "Volver");
             generico.dataset.volver = destino;
             barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"));
         }
@@ -81,6 +82,12 @@
         if (!barra) return;
 
         const generico = barra.querySelector(".volverGenerico");
+        if (pantalla.dataset.volverA && generico.dataset.volver !== pantalla.dataset.volverA) {
+            generico.dataset.volver = pantalla.dataset.volverA;
+            const nombre = DESTINOS[pantalla.dataset.volverA] ? "Volver a " + DESTINOS[pantalla.dataset.volverA] : "Volver";
+            generico.setAttribute("aria-label", nombre);
+            generico.title = nombre;
+        }
         const casita = barra.querySelector(".botonInicioPantalla");
         const propio = [...barra.children].find(boton => {
             return boton !== generico && boton !== casita && !boton.hidden && !boton.classList.contains("oculto");
@@ -135,7 +142,11 @@
             irA("menu");
         } else {
             const boton = event.target.closest?.(".botonVolverPantalla");
-            if (boton) irA(DESTINOS[boton.dataset.volver] ? boton.dataset.volver : "menu");
+            if (boton && boton.dataset.volver === "propio" && window.piezas?.volverDesde(boton.closest("section"))) {
+                // La pantalla sabe a dónde volver (por ejemplo, a la ficha).
+            } else if (boton) {
+                irA(DESTINOS[boton.dataset.volver] ? boton.dataset.volver : "menu");
+            }
         }
         setTimeout(pedirActualizar, 60);
     }, true);

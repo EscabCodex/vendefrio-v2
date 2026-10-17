@@ -37,7 +37,7 @@ function actualizarDatalistPedido() {
 
     listaComercios.innerHTML = "";
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const option = document.createElement("option");
@@ -52,6 +52,12 @@ const cargarListaClientes = actualizarDatalistPedido;
 // -----------------------------------------------------
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
+
+// El comercio elegido en Nuevo pedido, o null.
+function comercioDelPedidoActual() {
+    const nombre = inputCliente ? inputCliente.value.trim() : "";
+    return nombre ? buscarComercioPorNombre(nombre) : null;
+}
 
 function actualizarResumenPedido() {
     let unidades = 0;
@@ -78,6 +84,7 @@ function actualizarResumenPedido() {
 
     // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
     const productosCatalogo = obtenerProductos();
+    const comercioActual = comercioDelPedidoActual();
     let plata = 0;
     document.querySelectorAll("#productos .marca").forEach(marca => {
         let enElPedido = 0;
@@ -87,7 +94,8 @@ function actualizarResumenPedido() {
             enElPedido += 1;
             const producto = (productosCatalogo[select.dataset.marca] || [])
                 .find(item => item && item.nombre === select.dataset.producto);
-            const precio = Number(producto && producto.precio);
+            // El precio que corre hoy: oferta o lista del comercio (T68, T78).
+            const precio = Number(precioVigente(producto, comercioActual));
             if (Number.isFinite(precio)) plata += precio * cantidad;
         });
         const contador = marca.querySelector(".contadorMarca");
@@ -538,7 +546,8 @@ function renderizarPedido() {
     prepararBuscadorProductosPedido();
     actualizarEstadoBotonRepetir();
     contenedorProductos.innerHTML = "";
-    const productos = obtenerProductos();
+    // Los archivados (T63) no se venden.
+    const productos = productosParaVender();
 
     obtenerMarcasOrdenadas(productos)
         .forEach((marca, indiceMarca) => {
@@ -690,7 +699,12 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 function repetirUltimoPedido() {
     // Eliminados y cancelados no se repiten (T26).
     const historial = obtenerPedidosQueCuentan();
-    const ultimo = historial[0];
+    // T64: en la nube, el último pedido que cargó esta persona (no el de
+    // otro del equipo).
+    const yo = usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+    const ultimo = yo
+        ? historial.find(pedido => !pedido.autor || pedido.autor.idPersona === yo.idPersona)
+        : historial[0];
 
     if (!ultimo || (!ultimo.pedido && !Array.isArray(ultimo.productos))) {
         mostrarAviso(
@@ -892,7 +906,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
 
         if (!datosNube) {
             mostrarAviso(
@@ -992,8 +1006,14 @@ function registrarPedido(nombreComercio) {
     // El pedido ya queda guardado en el historial aunque el nombre sea nuevo.
     if (!comercio) return false;
 
+    // T64: el contador sale de los pedidos guardados (más este, que se guarda
+    // enseguida), así dos celulares que cargan a la vez no se pisan la cuenta.
+    const anteriores = typeof contarPedidosDelComercio === "function" && typeof obtenerPedidosQueCuentan === "function"
+        ? contarPedidosDelComercio(comercio.nombre, obtenerPedidosQueCuentan())
+        : Number(comercio.pedidosRealizados) || 0;
+
     return actualizarComercioPorId(comercio.id, {
-        pedidosRealizados: (Number(comercio.pedidosRealizados) || 0) + 1,
+        pedidosRealizados: anteriores + 1,
         ultimaVisita: new Date().toLocaleDateString("es-AR"),
         pendienteSemana: false
     });
@@ -1658,7 +1678,7 @@ function guardarEdicionPedido() {
             marca: fila.marca,
             producto: fila.producto,
             cantidad: fila.cantidad,
-            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo)
+            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo, buscarComercioPorNombre(pedido.comercio || pedido.cliente || ""))
         };
     });
 

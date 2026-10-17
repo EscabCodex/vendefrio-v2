@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
-const { abrirMas } = require("./recorridos");
+const { abrirMas, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -118,7 +118,7 @@ async function prepararNotificaciones(pagina) {
 
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
-    await page.getByRole("button", { name: /Distribuidora/ }).click();
+    await page.getByRole("button", { name: "Entrar con email" }).click();
     await page.getByRole("button", { name: /Registrarse/ }).click();
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`notif-${testInfo.project.name}-${Date.now()}@prueba.com`);
@@ -143,7 +143,7 @@ async function cargarPedido(page, comercio) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill(comercio);
+    await elegirComercio(page, comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
     await page.locator("#generar").click();
@@ -211,7 +211,7 @@ test("notificaciones: activar, sonar con la app cerrada y abrir el pedido", asyn
     const erroresEmpleado = await prepararPagina(empleado, true);
     await prepararNotificaciones(empleado);
     await empleado.goto("/");
-    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.getByRole("button", { name: "Entrar con código" }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
     await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
     await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });

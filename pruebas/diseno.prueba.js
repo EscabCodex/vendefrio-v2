@@ -2,7 +2,7 @@
 // principal en la nube, con datos de prueba, y saca una captura de cada una
 // en claro y oscuro. Sirve para revisar el estilo nuevo pantalla por pantalla.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, abrirMas, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -31,7 +31,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await expect(page.locator(".fichaPedido")).toBeHidden();
 
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill("Almacén Don Pepe");
+    await elegirComercio(page, "Almacén Don Pepe");
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     await expect(async () => {
         if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();

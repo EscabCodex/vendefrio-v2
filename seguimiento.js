@@ -102,9 +102,10 @@
     let comercioHistorial = "";
     let idPedidoHistorial = "";
 
-    // "Salir a repartir" en tanda (T29c): las etapas donde se eligen varios
-    // pedidos y los ids elegidos. Cada pedido sale en su propia escritura.
-    const ETAPAS_EN_TANDA = ["cargados", "preparados"];
+    // Acciones en tanda (T29c): las etapas donde se eligen varios pedidos
+    // (manteniendo apretada la tarjeta) y los ids elegidos. Cada pedido se
+    // mueve en su propia escritura.
+    const ETAPAS_EN_TANDA = ["cargados", "enPreparacion", "preparados", "enReparto"];
     let eligiendo = false;
     const elegidos = new Set();
 
@@ -688,7 +689,7 @@
         tarjeta.append(avatar, info);
         if (cambioDesdeLaUltimaVez(registro)) tarjeta.classList.add("filaCambio");
 
-        // Elegir varios (T29c): la tarjeta se marca en vez de abrir la ficha.
+        // Eligiendo varios (T29c): la tarjeta se marca en vez de abrir la ficha.
         if (eligiendo) {
             const casilla = crear("span", "casillaTanda");
             casilla.innerHTML = SVG_TILDE;
@@ -728,6 +729,15 @@
         dibujarBarraHistorial(enHistorial);
         dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
+        // Lo que suman otras partes arriba de la lista (T74: "A cobrar" por comercio).
+        (window.listaPedidosExtras || []).forEach(extra => {
+            try {
+                const elemento = extra(etapa.id, deLaEtapa);
+                if (elemento) lista.appendChild(elemento);
+            } catch (error) {
+                console.error("No se pudo dibujar un agregado de la lista.", error);
+            }
+        });
 
         const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
         resumen.textContent = deLaEtapa.length === 1
@@ -791,6 +801,11 @@
 
         const tarjeta = evento.target.closest(".tarjetaSeguimiento");
         if (!tarjeta) return;
+        // El toque que termina de mantener apretado no abre la ficha.
+        if (ignorarClick) {
+            ignorarClick = false;
+            return;
+        }
         if (eligiendo) alternarElegido(tarjeta);
         else abrirFicha(tarjeta.dataset.id);
     });
@@ -807,66 +822,120 @@
     });
 
     // -------------------------------------------------
-    // "Salir a repartir" en tanda (T29c)
+    // Acciones en tanda (T29c, cambiado el 2026-10-17)
     // -------------------------------------------------
-    // En "Cargados" y "Preparados", quien puede "Salir a repartir" toca
-    // "Elegir varios", marca pedidos (o "Marcar todos") y abajo toca "Salir a
-    // repartir (N)". Pide confirmar con un resumen y pasa cada pedido a "En
-    // reparto" en su propia escritura (las mismas reglas que desde la
-    // ficha). Sin señal quedan pendientes y suben solos. Si alguno ya no se
-    // puede mover (otro lo canceló o lo movió), lo dice y mueve los demás.
+    // Manteniendo apretada una tarjeta (medio segundo) se entra a elegir
+    // varios y queda elegida; después cada toque la marca o desmarca.
+    // Arriba quedan "Marcar todos" y "Cancelar"; abajo, las acciones que
+    // sirven para algún pedido de la etapa: "Salir a repartir", "En
+    // preparación", "Preparado", "Entregado" y "Eliminar", cada una con
+    // cuántos de los elegidos puede mover. Pide confirmar con un resumen y
+    // mueve cada pedido en su propia escritura (las mismas reglas que desde
+    // la ficha). Sin señal quedan pendientes y suben solos. Si alguno ya no
+    // se puede mover (otro lo canceló o lo movió), lo dice y mueve los demás.
+
+    const ACCIONES_TANDA = [
+        {
+            id: "enReparto", boton: "Salir a repartir", destino: "«En reparto», a tu nombre", hecho: ["Pedido en reparto", " pedidos en reparto"],
+            aplica: (pedido, estado) => pasosSiguientes(estado).some(paso => paso.hacia === "enReparto"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "")
+        },
+        {
+            id: "enPreparacion", boton: "En preparación", destino: "«En preparación»", hecho: ["Pedido en preparación", " pedidos en preparación"],
+            aplica: (pedido, estado) => estado === "cargado" && puede("prepara"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enPreparacion", "")
+        },
+        {
+            id: "preparado", boton: "Preparado", destino: "«Preparado», sin pasar por la checklist", hecho: ["Pedido preparado", " pedidos preparados"],
+            aplica: (pedido, estado) => (estado === "cargado" || estado === "enPreparacion") && puede("prepara"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "preparado", "Marcado preparado en tanda")
+        },
+        {
+            id: "entregado", boton: "Entregado", destino: "«Entregado», completos (sin cambios)", hecho: ["Pedido entregado", " pedidos entregados"],
+            aplica: pedido => puedeEntregar(pedido),
+            hacer: id => window.nubeVendeFrio.entregarPedido(id, {})
+        },
+        {
+            id: "eliminar", boton: "Eliminar", destino: "", peligro: true, hecho: ["Pedido eliminado", " pedidos eliminados"],
+            aplica: pedido => puedeEliminar(pedido),
+            hacer: id => window.nubeVendeFrio.eliminarPedido(id)
+        }
+    ];
 
     const barraTanda = crear("div", "barraTandaPedidos oculto");
-    const botonElegir = crear("button", "btnAccion secundario botonElegirVarios", "Elegir varios");
-    botonElegir.type = "button";
     const botonMarcarTodos = crear("button", "btnAccion secundario botonMarcarTodos", "Marcar todos");
     botonMarcarTodos.type = "button";
     const botonDejarDeElegir = crear("button", "btnAccion secundario botonDejarDeElegir", "Cancelar");
     botonDejarDeElegir.type = "button";
-    barraTanda.append(botonElegir, botonMarcarTodos, botonDejarDeElegir);
+    barraTanda.append(botonMarcarTodos, botonDejarDeElegir);
     resumen.after(barraTanda);
 
     const pieTanda = crear("div", "pieTandaPedidos oculto");
-    const botonSalirEnTanda = crear("button", "btnAccion botonSalirEnTanda", "Salir a repartir");
-    botonSalirEnTanda.type = "button";
-    pieTanda.appendChild(botonSalirEnTanda);
+    pieTanda.setAttribute("role", "group");
+    pieTanda.setAttribute("aria-label", "Acciones con los pedidos elegidos");
+    const botonesTanda = {};
+    ACCIONES_TANDA.forEach(accion => {
+        const boton = crear("button", "btnAccion botonTanda" + (accion.peligro ? " botonTandaPeligro" : ""), accion.boton);
+        boton.type = "button";
+        boton.dataset.accion = accion.id;
+        botonesTanda[accion.id] = boton;
+        pieTanda.appendChild(boton);
+    });
     document.body.appendChild(pieTanda);
 
-    // Los ids de la etapa que se ve ahora (todos, no solo los dibujados).
-    let idsDeLaEtapaTanda = [];
+    // Los pedidos de la etapa que se ve ahora (todos, no solo los dibujados).
+    let registrosDeLaEtapaTanda = [];
 
-    function puedeSalirEnTanda(etapa) {
-        return Boolean(etapa) && ETAPAS_EN_TANDA.includes(etapa.id) && pasosSiguientes(etapa.estados[0]).some(paso => paso.hacia === "enReparto");
+    function idsDeLaEtapaTanda() {
+        return registrosDeLaEtapaTanda.map(registro => String(registro.pedido.id || ""));
+    }
+
+    function aplicaAccion(accion, pedido) {
+        if (!pedido || pedido.eliminado === true) return false;
+        return accion.aplica(pedido, estadoActualDelPedido(pedido));
+    }
+
+    // Las acciones que sirven para algún pedido de la etapa.
+    function accionesDeLaEtapa() {
+        return ACCIONES_TANDA.filter(accion => registrosDeLaEtapaTanda.some(registro => aplicaAccion(accion, registro.pedido)));
     }
 
     function dibujarBarraTanda(etapa, deLaEtapa) {
-        const tanda = puedeSalirEnTanda(etapa) && deLaEtapa.length > 0;
-        idsDeLaEtapaTanda = tanda ? deLaEtapa.map(registro => String(registro.pedido.id || "")) : [];
+        registrosDeLaEtapaTanda = etapa && ETAPAS_EN_TANDA.includes(etapa.id) ? deLaEtapa : [];
+        const tanda = accionesDeLaEtapa().length > 0;
 
         if (!tanda) {
             dejarDeElegir();
         } else {
             // Un pedido que salió de la etapa (otro celular lo movió o lo
             // canceló) deja de estar elegido.
+            const ids = idsDeLaEtapaTanda();
             [...elegidos].forEach(id => {
-                if (!idsDeLaEtapaTanda.includes(id)) elegidos.delete(id);
+                if (!ids.includes(id)) elegidos.delete(id);
             });
         }
 
-        barraTanda.classList.toggle("oculto", !tanda);
+        barraTanda.classList.toggle("oculto", !eligiendo);
         actualizarTanda();
     }
 
-    function actualizarTanda() {
-        botonElegir.classList.toggle("oculto", eligiendo);
-        botonMarcarTodos.classList.toggle("oculto", !eligiendo);
-        botonDejarDeElegir.classList.toggle("oculto", !eligiendo);
+    function puedeElegirEnLaEtapa() {
+        return accionesDeLaEtapa().length > 0;
+    }
 
-        const todos = idsDeLaEtapaTanda.length > 0 && idsDeLaEtapaTanda.every(id => elegidos.has(id));
+    function actualizarTanda() {
+        const ids = idsDeLaEtapaTanda();
+        const todos = ids.length > 0 && ids.every(id => elegidos.has(id));
         botonMarcarTodos.textContent = todos ? "Desmarcar todos" : "Marcar todos";
 
-        botonSalirEnTanda.textContent = "Salir a repartir (" + elegidos.size + ")";
-        botonSalirEnTanda.disabled = elegidos.size === 0;
+        const disponibles = accionesDeLaEtapa();
+        ACCIONES_TANDA.forEach(accion => {
+            const boton = botonesTanda[accion.id];
+            const cantidad = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id))).length;
+            boton.textContent = accion.boton + " (" + cantidad + ")";
+            boton.disabled = cantidad === 0;
+            boton.classList.toggle("oculto", !disponibles.includes(accion));
+        });
         actualizarBotonNuevo();
     }
 
@@ -885,14 +954,56 @@
         const id = tarjeta.dataset.id;
         if (elegidos.has(id)) elegidos.delete(id);
         else elegidos.add(id);
+        if (!elegidos.size) {
+            // Sin ninguno elegido, vuelve a la lista de siempre.
+            dejarDeElegir();
+            dibujarLista();
+            return;
+        }
         marcarTarjeta(tarjeta, elegidos.has(id));
         actualizarTanda();
     }
 
-    botonElegir.addEventListener("click", () => {
-        eligiendo = true;
-        elegidos.clear();
-        dibujarLista();
+    // Mantener apretada la tarjeta: entra a elegir varios con esa elegida.
+    const ESPERA_MANTENER = 500;
+    let temporizadorMantener = null;
+    let inicioMantener = null;
+    let ignorarClick = false;
+
+    function cortarMantener() {
+        clearTimeout(temporizadorMantener);
+        temporizadorMantener = null;
+        inicioMantener = null;
+    }
+
+    lista.addEventListener("pointerdown", evento => {
+        ignorarClick = false;
+        if (evento.button !== undefined && evento.button !== 0) return;
+        const tarjeta = evento.target.closest(".tarjetaSeguimiento");
+        if (!tarjeta || eligiendo || !puedeElegirEnLaEtapa()) return;
+
+        cortarMantener();
+        inicioMantener = { x: evento.clientX, y: evento.clientY };
+        temporizadorMantener = setTimeout(() => {
+            cortarMantener();
+            ignorarClick = true;
+            navigator.vibrate?.(30);
+            eligiendo = true;
+            elegidos.clear();
+            elegidos.add(tarjeta.dataset.id);
+            dibujarLista();
+        }, ESPERA_MANTENER);
+    });
+
+    lista.addEventListener("pointermove", evento => {
+        if (!inicioMantener) return;
+        if (Math.abs(evento.clientX - inicioMantener.x) > 10 || Math.abs(evento.clientY - inicioMantener.y) > 10) cortarMantener();
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(tipo => lista.addEventListener(tipo, cortarMantener));
+
+    // Que el celular no abra su menú de "copiar" al mantener apretado.
+    lista.addEventListener("contextmenu", evento => {
+        if (evento.target.closest(".tarjetaSeguimiento") && (eligiendo || puedeElegirEnLaEtapa())) evento.preventDefault();
     });
 
     botonDejarDeElegir.addEventListener("click", () => {
@@ -901,17 +1012,21 @@
     });
 
     botonMarcarTodos.addEventListener("click", () => {
-        const todos = idsDeLaEtapaTanda.every(id => elegidos.has(id));
+        const ids = idsDeLaEtapaTanda();
+        const todos = ids.every(id => elegidos.has(id));
         elegidos.clear();
-        if (!todos) idsDeLaEtapaTanda.forEach(id => elegidos.add(id));
+        if (!todos) ids.forEach(id => elegidos.add(id));
+        else eligiendo = false;
         // Con "Marcar todos" se ven todos los elegidos, también los que
         // estaban después de "Ver más".
-        if (!todos) mostrando = Math.max(mostrando, idsDeLaEtapaTanda.length);
+        if (!todos) mostrando = Math.max(mostrando, ids.length);
         dibujarLista();
     });
 
-    botonSalirEnTanda.addEventListener("click", () => {
-        if (elegidos.size) abrirConfirmarTanda();
+    pieTanda.addEventListener("click", evento => {
+        const boton = evento.target.closest("button[data-accion]");
+        const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accion);
+        if (accion && !boton.disabled) abrirConfirmarTanda(accion);
     });
 
     function textoPedidos(cantidad) {
@@ -930,7 +1045,7 @@
         contenido.setAttribute("aria-modal", "true");
         contenido.setAttribute("aria-labelledby", "tituloRepartoTanda");
 
-        const titulo = crear("h2", "", "Salir a repartir");
+        const titulo = crear("h2", "");
         titulo.id = "tituloRepartoTanda";
 
         const explicacion = crear("p", "explicacionTextoPedido");
@@ -942,7 +1057,7 @@
         const botones = crear("div", "modalBotones");
         const volver = crear("button", "btnModalCancelar", "Volver");
         volver.type = "button";
-        const confirmar = crear("button", "btnModalConfirmar", "Salir a repartir");
+        const confirmar = crear("button", "btnModalConfirmar");
         confirmar.type = "button";
         confirmar.id = "confirmarRepartoTanda";
         botones.append(volver, confirmar);
@@ -958,24 +1073,33 @@
         });
         confirmar.addEventListener("click", () => {
             cerrar();
-            salirEnTanda();
+            hacerEnTanda();
         });
 
         return modal;
     }
 
-    // Los pedidos que se confirman: los elegidos al abrir la ventana. Si
-    // mientras tanto otro celular mueve alguno, al confirmar se avisa.
+    // Los pedidos que se confirman: los elegidos (a los que les sirve la
+    // acción) al abrir la ventana. Si mientras tanto otro celular mueve
+    // alguno, al confirmar se avisa.
     let idsAConfirmar = [];
+    let accionAConfirmar = null;
 
-    function abrirConfirmarTanda() {
+    function abrirConfirmarTanda(accion) {
         const modal = crearModalTanda();
-        idsAConfirmar = [...elegidos];
+        accionAConfirmar = accion;
+        idsAConfirmar = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id)));
         const pedidos = idsAConfirmar.map(buscarPedido).filter(Boolean);
         const unidades = pedidos.reduce((total, pedido) => total + unidadesDelPedido(pedido), 0);
+        const otros = elegidos.size - idsAConfirmar.length;
+        const cuantos = textoPedidos(idsAConfirmar.length) + " (" + textoUnidades(unidades) + ")";
 
+        document.getElementById("tituloRepartoTanda").textContent = accion.peligro ? accion.boton + " pedidos" : accion.boton;
         document.getElementById("explicacionRepartoTanda").textContent =
-            textoPedidos(idsAConfirmar.length) + " (" + textoUnidades(unidades) + ") pasan a \u00abEn reparto\u00bb, a tu nombre.";
+            (accion.peligro
+                ? cuantos + (idsAConfirmar.length === 1 ? " desaparece" : " desaparecen") + " de la app para todos. Es para errores, por ejemplo un pedido cargado dos veces."
+                : cuantos + (idsAConfirmar.length === 1 ? " pasa a " : " pasan a ") + accion.destino + ".") +
+            (otros > 0 ? " " + (otros === 1 ? "1 elegido no se puede mover así y queda como está." : otros + " elegidos no se pueden mover así y quedan como están.") : "");
 
         const listaTanda = document.getElementById("listaRepartoTanda");
         listaTanda.innerHTML = "";
@@ -988,47 +1112,51 @@
             listaTanda.appendChild(item);
         });
 
-        document.getElementById("confirmarRepartoTanda").textContent = "Salir a repartir (" + idsAConfirmar.length + ")";
+        const confirmar = document.getElementById("confirmarRepartoTanda");
+        confirmar.textContent = accion.boton + " (" + idsAConfirmar.length + ")";
+        confirmar.className = accion.peligro ? "btnModalPeligro" : "btnModalConfirmar";
         modal.classList.remove("oculto");
     }
 
-    function salirEnTanda() {
+    function hacerEnTanda() {
+        const accion = accionAConfirmar;
         const ids = idsAConfirmar;
         idsAConfirmar = [];
-        const noSalieron = [];
-        let salieron = 0;
+        accionAConfirmar = null;
+        if (!accion) return;
+        const noSeMovieron = [];
+        let hechos = 0;
 
         ids.forEach(id => {
             const pedido = buscarPedido(id);
             const comercio = String(pedido && pedido.comercio || "Un pedido").trim();
             const estado = pedido && pedido.eliminado !== true ? estadoActualDelPedido(pedido) : "";
-            const paso = pasosSiguientes(estado).find(item => item.hacia === "enReparto");
 
-            if (!paso) {
-                noSalieron.push(comercio + (estado ? " (ahora está \u00ab" + (nombreDeEstadoPedido(estado) || estado) + "\u00bb)" : " (ya no está)"));
+            if (!aplicaAccion(accion, pedido)) {
+                noSeMovieron.push(comercio + (estado ? " (ahora está «" + (nombreDeEstadoPedido(estado) || estado) + "»)" : " (ya no está)"));
                 return;
             }
 
             try {
-                window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "");
-                salieron += 1;
+                accion.hacer(id);
+                hechos += 1;
             } catch (error) {
-                console.error("No se pudo sacar a reparto el pedido.", error);
-                noSalieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
+                console.error("No se pudo mover el pedido en tanda.", error);
+                noSeMovieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
             }
         });
 
         dejarDeElegir();
         dibujarLista();
 
-        if (!noSalieron.length) {
-            mostrarToast(salieron === 1 ? "Pedido en reparto" : salieron + " pedidos en reparto");
+        if (!noSeMovieron.length) {
+            mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
             return;
         }
 
         mostrarAviso(
-            salieron ? "Algunos pedidos no salieron" : "No salió ningún pedido",
-            "Salieron " + salieron + " de " + ids.length + " a reparto. No se movieron: " + noSalieron.join("; ") + "."
+            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
+            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
         );
     }
 
@@ -1488,6 +1616,15 @@
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
         cuerpo.append(datos);
+        // Secciones que suman otros módulos (prueba de entrega, devoluciones).
+        (window.fichaPedidoExtras || []).forEach(crearSeccion => {
+            try {
+                const seccion = crearSeccion(pedido, estado);
+                if (seccion) cuerpo.appendChild(seccion);
+            } catch (error) {
+                console.error("Falló una sección de la ficha del pedido.", error);
+            }
+        });
         if (!enChecklist) cuerpo.appendChild(dibujarProductos(pedido, estado));
 
         const observaciones = String(pedido.observaciones || "").trim();
@@ -1737,7 +1874,12 @@
         if (entregar) {
             const id = String(pedido.id || "");
             acciones.append(
-                crearDeslizador("Deslizá para marcar Entregado", () => entregarSinCambios(id, estado)),
+                crearDeslizador("Deslizá para marcar Entregado", () => {
+                    // Prueba de entrega (T70): si está pedida, antes la foto y la firma.
+                    const prueba = window.pruebaEntregaVendeFrio;
+                    if (prueba && prueba.antesDeEntregar(id, () => entregarSinCambios(id, estado))) return;
+                    entregarSinCambios(id, estado);
+                }),
                 crearBoton("btnAccion secundario botonEntregarConCambios", "Entregar con cambios", "entregarConCambios")
             );
         }
@@ -1761,6 +1903,25 @@
         if (estado === "entregado") acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
 
         if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
+
+        // Opciones que suman otros módulos (devolución, prueba de entrega).
+        (window.accionesPedidoExtras || []).forEach(crearAcciones => {
+            try {
+                (crearAcciones(pedido, estado) || []).forEach(extra => {
+                    const boton = crearBoton("btnAccion secundario botonExtraPedido", extra.texto, "");
+                    if (extra.icono && window.icono) boton.insertAdjacentHTML("afterbegin", window.icono(extra.icono, 18));
+                    boton.removeAttribute("data-accion");
+                    boton.addEventListener("click", evento => {
+                        evento.stopPropagation();
+                        document.getElementById("menuFichaPedido")?.classList.add("oculto");
+                        extra.alTocar(pedido);
+                    });
+                    acciones.appendChild(boton);
+                });
+            } catch (error) {
+                console.error("Falló una opción de la ficha del pedido.", error);
+            }
+        });
         if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
@@ -1777,7 +1938,7 @@
         // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
         // entrega). Lo demás va en "Más opciones" (⋯).
         const opciones = Array.from(acciones.querySelectorAll(
-            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .accionesSecundariasPedido .btnAccion"
+            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .botonExtraPedido, .accionesSecundariasPedido .btnAccion"
         ));
         if (opciones.length) {
             const menu = crear("div", "menuFichaPedido oculto");
@@ -3473,6 +3634,28 @@
             }
             foto.appendChild(acciones);
             cuerpo.appendChild(foto);
+
+            // Alias y QR de la distribuidora (T77): se le muestran al comercio.
+            const cobrarQr = window.cobrarQrVendeFrio;
+            if (cobrarQr && cobrarQr.hay()) {
+                const mostrar = crear("button", "btnAccion secundario mostrarAliasCobro", "Mostrar alias y QR");
+                mostrar.type = "button";
+                mostrar.id = "mostrarAliasCobro";
+                mostrar.addEventListener("click", () => {
+                    if (!cobroAbierto) return;
+                    const abierto = cobroAbierto;
+                    cobrarQr.mostrar({
+                        comercio: String(pedido.comercio || ""),
+                        monto: leerMonto(abierto.monto),
+                        alConfirmar: () => {
+                            if (cobroAbierto !== abierto) return;
+                            abierto.forma = "transferencia";
+                            guardarCobro();
+                        }
+                    });
+                });
+                cuerpo.appendChild(mostrar);
+            }
         }
 
         if (forma === "pendiente") {
@@ -3721,6 +3904,8 @@
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
     window.seguimientoVendeFrio = {
+        redibujarFicha: () => dibujarFicha(),
+        pedidoAbierto: () => idFichaAbierta,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
             if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;

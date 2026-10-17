@@ -139,6 +139,12 @@
             .replace(/"/g, "&quot;");
     }
 
+    // "Entrar con Google" (T86): armado, pero apagado hasta que se active
+    // Google en la consola de Firebase (M17) y se ponga en true en cuenta.js.
+    function opcionGoogle() {
+        return Boolean(window.opcionesVendeFrio && window.opcionesVendeFrio.entrarConGoogle && window.cuentaVendeFrio?.entrarConGoogle);
+    }
+
     function icono(nombre, tamano) {
         return typeof window.icono === "function" ? window.icono(nombre, tamano) : "";
     }
@@ -258,29 +264,37 @@
                 </div>
 
                 <div data-paso="elegir">
+                    <div class="inicioHero">
+                        <img src="icon.svg" alt="" width="64" height="64">
+                        <h2>Tus pedidos, del comercio al camión.</h2>
+                        <p>Cargá el pedido una vez desde el celular y seguilo hasta la entrega.</p>
+                    </div>
                     <p class="inicioNota oculto" id="inicioAviso" role="alert"></p>
 
-                    <button type="button" class="inicioOpcion" data-inicio="distribuidora">
-                        <span class="inicioOpcionIcono">${icono("tienda", 22)}</span>
-                        <span><strong>Distribuidora</strong>
-                        <small>Dueño, encargado o persona a cargo</small></span>
-                        <b aria-hidden="true">›</b>
+                    <button type="button" class="inicioBoton inicioGoogle${opcionGoogle() ? "" : " oculto"}" data-inicio="google">
+                        <span class="logoGoogle" aria-hidden="true"></span>Entrar con Google
                     </button>
-
-                    <button type="button" class="inicioOpcion" data-inicio="empleado">
-                        <span class="inicioOpcionIcono">${icono("persona", 22)}</span>
-                        <span><strong>Empleado</strong>
-                        <small>Ingresá con el código que te dará tu encargado</small></span>
-                        <b aria-hidden="true">›</b>
+                    <button type="button" class="inicioBoton inicioPrincipal" data-inicio="distribuidora">
+                        Entrar con email
                     </button>
-
+                    <div class="inicioSepara">o</div>
+                    <button type="button" class="inicioBoton inicioEjemplo" data-inicio="ejemplo">
+                        ${icono("chispa", 18)} Probar con datos de ejemplo
+                    </button>
+                    <p class="inicioEmpleado">¿Sos empleado?
+                        <button type="button" class="inicioLink" data-inicio="empleado">Entrar con código</button>
+                    </p>
 
                     <button type="button" class="inicioSinSesion" data-inicio="sinSesion">
                         Continuar sin iniciar sesión
                     </button>
                     <p class="inicioAclaracion">
-                        Los datos quedan solo en este celular y no se comparten.
-                        Podés ingresar después desde Configuración &gt; Cuenta.
+                        Sin cuenta, los datos quedan solo en este celular y no se comparten.
+                        Podés ingresar después desde Más &gt; Cuenta.
+                    </p>
+                    <p class="inicioLegales">
+                        <a href="presentacion.html" target="_blank" rel="noopener">Qué es VendeFrío</a> ·
+                        <a href="terminos.html" target="_blank" rel="noopener">Términos y privacidad</a>
                     </p>
                 </div>
 
@@ -474,6 +488,9 @@
         pantalla.querySelectorAll("[data-paso]").forEach(paso => {
             paso.classList.toggle("oculto", paso.dataset.paso !== nombre);
         });
+        pantalla.dataset.pasoActual = nombre;
+        // "Probar con datos de ejemplo" solo con el celular vacío (T85).
+        pantalla.querySelector('[data-inicio="ejemplo"]')?.classList.toggle("oculto", !window.ejemploVendeFrio?.sePuede?.());
         pantalla.scrollTop = 0;
     }
 
@@ -935,6 +952,35 @@
 
         if (accion === "distribuidora") {
             mostrarPaso("ingresar");
+            return;
+        }
+
+        if (accion === "ejemplo") {
+            try {
+                guardarDatosPersonales("Vos", ROLES_PERSONALES.map(rol => rol.id));
+                window.ejemploVendeFrio.cargar();
+            } catch (error) {
+                console.error("No se pudieron cargar los datos de ejemplo.", error);
+                mostrarToast("No se pudieron cargar los datos de ejemplo.");
+                return;
+            }
+            recordarSinSesion();
+            cerrar();
+            mostrarCartelPersonal();
+            window.dispatchEvent(new CustomEvent("modoPersonalVendeFrio"));
+            mostrarToast("Estás probando con datos de ejemplo");
+            return;
+        }
+
+        if (accion === "google") {
+            const aviso = document.getElementById("inicioAviso");
+            window.cuentaVendeFrio.entrarConGoogle()
+                .then(usuario => entrarConCuenta(usuario))
+                .catch(error => {
+                    if (!aviso) return;
+                    aviso.textContent = error.message;
+                    aviso.classList.remove("oculto");
+                });
             return;
         }
 

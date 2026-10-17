@@ -1,12 +1,14 @@
 // =====================================================
 // VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v173";
+const CACHE_NAME = "vendefrio-v187";
 const ARCHIVOS = [
   "./",
   "./index.html",
   "./styles.css",
   "./tema.css",
+  "./piezas.css",
+  "./piezas.js",
   "./iconos.js",
   "./productos.js",
   "./comercios.js",
@@ -32,6 +34,36 @@ const ARCHIVOS = [
   "./novedades.js",
   "./volver.js",
   "./exportar.js",
+  "./whatsapp.js",
+  "./confianza.js",
+  "./extras.js",
+  "./visitas.js",
+  "./ofertas.js",
+  "./sugerencias.js",
+  "./pruebaEntrega.js",
+  "./devoluciones.js",
+  "./yaLlego.js",
+  "./repartidores.js",
+  "./saldos.js",
+  "./gastos.js",
+  "./cobrarQr.js",
+  "./listasPrecios.js",
+  "./cambios.js",
+  "./dueno.js",
+  "./resumenNoche.js",
+  "./importar.js",
+  "./ejemplo.js",
+  "./paginas.css",
+  "./presentacion.html",
+  "./terminos.html",
+  "./pedidoWeb.js",
+  "./pedir.html",
+  "./pedir.js",
+  "./pedir.css",
+  "./codigoBarras.js",
+  "./stock.js",
+  "./preguntale.js",
+  "./heladeras.js",
   "./vendor/leaflet/leaflet.js",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/images/marker-icon.png",
@@ -63,6 +95,9 @@ const ARCHIVOS = [
 // Mapas ya vistos (T40): cache aparte, que no se borra al actualizar la app.
 // Se guardan como mucho MAXIMO_MAPAS cuadraditos; los más viejos se van.
 const CACHE_MAPAS = "vendefrio-mapas-v1";
+// Lo compartido desde WhatsApp (T56): se guarda un momento hasta que la app
+// lo lee, y no se borra al actualizar la app.
+const CACHE_COMPARTIDO = "vendefrio-compartido";
 const MAXIMO_MAPAS = 600;
 
 function esCuadraditoDeMapa(request) {
@@ -128,7 +163,7 @@ self.addEventListener("activate", event => {
     caches.keys().then(nombres => {
       return Promise.all(
         nombres
-          .filter(nombre => nombre !== CACHE_NAME && nombre !== CACHE_MAPAS)
+          .filter(nombre => nombre !== CACHE_NAME && nombre !== CACHE_MAPAS && nombre !== CACHE_COMPARTIDO)
           .map(nombre => caches.delete(nombre))
       );
     })
@@ -136,7 +171,44 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
+// "Compartir a VendeFrío" (T56): Android manda acá el texto o el audio que
+// se compartió desde WhatsApp (ver "share_target" en manifest.json). Se guarda
+// en un cache aparte y se abre la app, que lo lee y arma el pedido.
+function esCompartido(request) {
+  if (request.method !== "POST") return false;
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && url.pathname.endsWith("/compartir");
+}
+
+async function recibirCompartido(request) {
+  const destino = new URL("./index.html?compartido=1", self.registration.scope).href;
+  try {
+    const formulario = await request.formData();
+    const datos = {
+      titulo: String(formulario.get("title") || ""),
+      texto: String(formulario.get("text") || ""),
+      enlace: String(formulario.get("url") || ""),
+      hora: Date.now()
+    };
+    const cache = await caches.open(CACHE_COMPARTIDO);
+    await cache.delete("./compartido/audio");
+    const audio = formulario.getAll("audio").find(archivo => archivo && typeof archivo === "object" && archivo.size > 0);
+    if (audio) {
+      datos.audio = { nombre: String(audio.name || "audio"), tipo: String(audio.type || "audio/ogg") };
+      await cache.put("./compartido/audio", new Response(audio, { headers: { "Content-Type": datos.audio.tipo } }));
+    }
+    await cache.put("./compartido/datos", new Response(JSON.stringify(datos), { headers: { "Content-Type": "application/json" } }));
+  } catch (error) {
+    console.error("No se pudo guardar lo compartido.", error);
+  }
+  return Response.redirect(destino, 303);
+}
+
 self.addEventListener("fetch", event => {
+  if (esCompartido(event.request)) {
+    event.respondWith(recibirCompartido(event.request));
+    return;
+  }
   if (esCuadraditoDeMapa(event.request)) {
     event.respondWith(cuadraditoDeMapa(event.request));
     return;
