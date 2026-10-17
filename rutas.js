@@ -511,25 +511,6 @@ function iniciarNavegacionApp() {
     );
 }
 
-function avanzarParadaNavegacion() {
-    if (!navegacionActiva) return;
-    indiceParadaNavegacion += 1;
-
-    if (indiceParadaNavegacion >= rutaOrdenada.length) {
-        actualizarEstadoNavegacionApp("Llegaste al final de la ruta.");
-        detenerNavegacionApp(false);
-        mostrarAviso("Ruta finalizada", "Completaste todas las paradas de la ruta.");
-        return;
-    }
-
-    const parada = rutaOrdenada[indiceParadaNavegacion];
-    pasoNavegacionActual = "";
-    if (rutaCalleNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(rutaCalleNavegacion);
-    rutaCalleNavegacion = null;
-    if (ultimaPosicionNavegacion) cargarRutaPorCallesNavegacion(ultimaPosicionNavegacion);
-    actualizarEstadoNavegacionApp("Pr\u00f3xima parada: " + parada.nombre + ".");
-}
-
 function detenerNavegacionApp(mostrarMensaje = true) {
     navegacionActiva = false;
     if (vigilanciaNavegacion !== null) navigator.geolocation.clearWatch(vigilanciaNavegacion);

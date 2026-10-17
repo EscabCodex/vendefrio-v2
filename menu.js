@@ -65,13 +65,6 @@ function mostrarPantalla(nombre) {
 // DASHBOARD
 // -----------------------------------------------------
 
-function fechaDeHaceDias(dias) {
-    const fecha = new Date();
-    fecha.setHours(0, 0, 0, 0);
-    fecha.setDate(fecha.getDate() - dias);
-    return fecha;
-}
-
 function obtenerFechaPedidoDashboard(pedido) {
     const timestamp = Number(pedido && pedido.timestamp);
 
