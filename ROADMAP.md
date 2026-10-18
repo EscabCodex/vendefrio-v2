@@ -44,6 +44,11 @@ Si algo se atrasa, se mueve a "Después de la 1.0". Prioridad: una 1.0 sólida y
 
 **Pedidos por WhatsApp** (pedido del dueño, 2026-10-15). Mandar a muchos comercios "¿tenías pedido?" con su nombre y que las respuestas, en texto o audio, queden como pedido. Lo gratis anda sin cuentas (un toque por comercio y "Compartir a VendeFrío"); lo automático usa la API oficial de WhatsApp de Meta, que cobra por mensaje, y queda apagado hasta que el dueño conecte la cuenta (M16). Plan en el Bloque K de `PROJECT_STATE.md` (T55 a T59).
 
+**Etapa 8 — Más simple para todos** (pedido del dueño, 2026-10-17, con capturas). Que la app la entienda sin ayuda una persona de 50 o 60 años, que la plata quede solo para quien corresponde y que Nuevo pedido sea más limpio. Plan en el Bloque M de `PROJECT_STATE.md` (T93 a T99).
+- La plata solo para el dueño o quien él autorice: los empleados sin permiso de cobrar no ven montos en Inicio, Estadísticas ni ningún resumen de venta.
+- Nuevo pedido más limpio: "Lo de siempre" desplegable y compacto, sin "Lo que más compra"; un solo botón flotante de tres puntitos en lugar de los botones de arriba; marcas desplegables; cambios y precio especial al alcance de un toque.
+- Pasada de simplificación de toda la app: textos más cortos y claros, funciones agrupadas, un solo botón flotante donde hay muchos botones y más gestos de mantener apretado.
+
 ## Después de la 1.0
 
 1. **Stock conectado:** stock físico, reservado y disponible; reserva al confirmar pedidos; alertas de reposición y planificación de carga desde fábrica.
