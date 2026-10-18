@@ -94,6 +94,7 @@ test("voz: comandos desde Inicio y pedido dictado o pegado", async ({ page }, te
     await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
 
     // Pedido pegado de un mensaje.
+    await page.getByRole("button", { name: "Más opciones del pedido" }).click();
     await page.getByRole("button", { name: "Dictar o pegar pedido" }).click();
     const dictado = page.locator(".ventanaDictado");
     await dictado.getByLabel("Texto del pedido").fill("Hola! mandame 3 helados de un kilo y dos palitos bombón, una banana");

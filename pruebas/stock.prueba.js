@@ -65,6 +65,7 @@ test("stock y código de barras: contar, llegó de fábrica, poco stock y escane
 
     // Escanear en Nuevo pedido (sin cámara: se escribe el número).
     await page.evaluate(() => mostrarPantalla("pedido"));
+    await page.getByRole("button", { name: "Más opciones del pedido" }).click();
     await page.getByRole("button", { name: "Escanear código de barras" }).click();
     const escaner = page.getByRole("dialog", { name: "Escanear producto" });
     await escaner.getByRole("textbox", { name: "Número del código de barras" }).fill("7790001234567");

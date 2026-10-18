@@ -1301,7 +1301,7 @@
                 izquierda.append(
                     crear("strong", "", String(item.producto || "Sin producto")),
                     crear("small", "", Number.isFinite(precio)
-                        ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u"
+                        ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u" + (item.precioCambiado ? "  ·  precio especial" : "")
                         : "x" + cantidad + "  ·  Sin precio")
                 );
 
@@ -1842,7 +1842,7 @@
         else if (preparacion && !preparar && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
         else if (estado === "cargado") {
             pista = puedeAnotarFaltantes()
-                ? "Al tildar el primer producto, el pedido pasa a \u00abEn preparaci\u00f3n\u00bb."
+                ? "Tild\u00e1 cada producto a medida que lo arm\u00e1s."
                 : "Tus tildes quedan anotados. El pedido pasa a \u00abEn preparaci\u00f3n\u00bb cuando tilda quien prepara pedidos.";
         }
 

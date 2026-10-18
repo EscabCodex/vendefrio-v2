@@ -45,7 +45,7 @@ test("nube: cargar, armar, entregar y cobrar un pedido", async ({ page }, testIn
     await expect(ficha.locator(".datoFichaPedido", { hasText: "Cargado por" })).toContainText("Jere");
     await expect(ficha.locator(".datoFichaPedido", { hasText: "Total" })).toContainText("9.800");
     await expect(ficha.locator(".lineaChecklist")).toHaveCount(2);
-    await expect(ficha).toContainText("Al tildar el primer producto, el pedido pasa a «En preparación».");
+    await expect(ficha).toContainText("Tildá cada producto a medida que lo armás.");
     await expect(ficha.getByRole("button", { name: "Salir a repartir" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Deslizá para marcar Entregado/ })).toBeVisible();
     await expect(ficha.getByRole("button", { name: "Empezar a preparar" })).toHaveCount(0);

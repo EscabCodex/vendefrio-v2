@@ -2,8 +2,8 @@
 // los emuladores de Firebase.
 // 1. Visita sin pedido: desde la próxima parada y desde la ficha, con motivo,
 //    y la tarjeta de Estadísticas.
-// 2. Nuevo pedido que sugiere: "Lo de siempre", "Lo que más compra",
-//    favoritos y "¿Seguro?" ante una cantidad rara.
+// 2. Nuevo pedido que sugiere: "Lo de siempre" desplegable, favoritos
+//    (manteniendo apretado el producto) y "¿Seguro?" ante una cantidad rara.
 // 3. Ofertas con fecha y la ficha del comercio completa.
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio } = require("./recorridos");
@@ -81,22 +81,33 @@ test("vender: lo de siempre, favoritos y ¿seguro?", async ({ page }, testInfo) 
     await expect(elegido).toContainText(/Suele pedir cada \d+ días? · \$ 9\.800/);
     const siempre = page.locator("#loDeSiempre");
     await expect(siempre).toContainText("2 productos · 3 u · $ 9.800");
+    // T94: ya no está "Lo que más compra"; "Lo de siempre" se despliega.
+    await expect(page.locator("#loQueMasCompra")).toHaveCount(0);
+    await expect(siempre.locator("#listaLoDeSiempre")).toBeHidden();
+    await siempre.getByRole("button", { name: "Ver lo de siempre" }).click();
+    const filas = siempre.locator(".pzSiempreFila");
+    await expect(filas).toHaveCount(2);
+    await expect(filas.filter({ hasText: "Helado 1 kg" })).toContainText("2");
+    await expect(filas.filter({ hasText: "Palito bombón" })).toContainText("1");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await capturar(page, "vender-03-nuevo-pedido-sugerido");
     await siempre.getByRole("button", { name: "Usar" }).click();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("3");
     await expect(siempre).toHaveCount(0);
 
-    const masCompra = page.locator("#loQueMasCompra");
-    const helado = masCompra.locator(".pzFila", { hasText: "Helado 1 kg" });
-    await expect(helado).toContainText("Suele llevar 2 · $ 4.500");
-    await masCompra.getByRole("button", { name: "Marcar como favorito: Palito bombón" }).click();
-    await expect(masCompra.getByRole("button", { name: "Quitar de favoritos: Palito bombón" })).toHaveAttribute("aria-pressed", "true");
-    await expect(masCompra.locator(".pzFila").first()).toContainText("Palito bombón");
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await capturar(page, "vender-03-nuevo-pedido-sugerido");
+    // Favorito: manteniendo apretado el producto (T94).
+    const palitoLista = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
+    await palitoLista.locator(".nombreTexto").dispatchEvent("pointerdown", { button: 0, clientX: 40, clientY: 40 });
+    const opciones = page.getByRole("dialog", { name: "Palito bombón" });
+    await expect(opciones).toBeVisible();
+    await opciones.getByRole("button", { name: "Marcar como favorito" }).click();
+    await expect(page.locator(".listaProdutos .fila").first()).toContainText("Palito bombón");
+    await expect(palitoLista.locator(".estrellaFavorito")).toBeVisible();
 
     // Una cantidad rara: pregunta antes de guardar.
-    for (let i = 0; i < 10; i++) await helado.getByRole("button", { name: "Uno más de Helado 1 kg" }).click();
-    await expect(helado.locator(".cantidadEspejo")).toHaveText("12");
+    const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    for (let i = 0; i < 10; i++) await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
+    await expect(helado.locator("select")).toHaveValue("12");
     await page.locator("#generar").click();
     const seguro = page.getByRole("alertdialog", { name: "¿Seguro que son 12?" });
     await expect(seguro).toContainText("Almacén Don Pepe suele llevar 2 de Helado 1 kg");

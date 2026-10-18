@@ -25,7 +25,6 @@ const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;
-let botonRepetirPedido = null;
 let mensajeSinResultadosPedido = null;
 
 // -----------------------------------------------------
@@ -94,8 +93,12 @@ function actualizarResumenPedido() {
             enElPedido += 1;
             const producto = (productosCatalogo[select.dataset.marca] || [])
                 .find(item => item && item.nombre === select.dataset.producto);
-            // El precio que corre hoy: oferta o lista del comercio (T68, T78).
-            const precio = Number(precioVigente(producto, comercioActual));
+            // El precio que corre hoy: oferta o lista del comercio (T68, T78),
+            // o el cambiado solo para este pedido (T98).
+            const cambiado = window.nuevoPedidoVendeFrio
+                ? window.nuevoPedidoVendeFrio.precioCambiado(select.dataset.marca, select.dataset.producto)
+                : null;
+            const precio = Number(cambiado !== null ? cambiado : precioVigente(producto, comercioActual));
             if (Number.isFinite(precio)) plata += precio * cantidad;
         });
         const contador = marca.querySelector(".contadorMarca");
@@ -307,16 +310,7 @@ function prepararBuscadorProductosPedido() {
     const accionesBusqueda = document.createElement("div");
     accionesBusqueda.className = "accionesBusquedaPedido";
 
-    botonRepetirPedido = document.createElement("button");
-    botonRepetirPedido.type = "button";
-    botonRepetirPedido.className = "botonRepetirPedido";
-    botonRepetirPedido.innerHTML =
-        window.icono("refrescar", 15) +
-        " Repetir " +
-        String.fromCodePoint(0xFA) +
-        "ltimo pedido";
-    botonRepetirPedido.addEventListener("click", repetirUltimoPedido);
-
+    // "Repetir último pedido" está en el botón ⋯ de Nuevo pedido (T95).
     buscadorProductosPedido = document.createElement("input");
     buscadorProductosPedido.type = "search";
     buscadorProductosPedido.className = "buscadorPedido";
@@ -330,10 +324,7 @@ function prepararBuscadorProductosPedido() {
         aplicarFiltroProductosPedido();
     });
 
-    accionesBusqueda.append(
-        botonRepetirPedido,
-        buscadorProductosPedido
-    );
+    accionesBusqueda.append(buscadorProductosPedido);
 
     contenedorProductos.parentNode.insertBefore(
         accionesBusqueda,
@@ -353,15 +344,6 @@ function prepararBuscadorProductosPedido() {
     );
 }
 
-function actualizarEstadoBotonRepetir() {
-    if (!botonRepetirPedido) return;
-
-    // Eliminados y cancelados no se repiten (T26).
-    botonRepetirPedido.style.display = obtenerPedidosQueCuentan().length > 0
-        ? "inline-flex"
-        : "none";
-}
-
 function aplicarFiltroProductosPedido() {
     if (!contenedorProductos) return;
 
@@ -379,6 +361,9 @@ function aplicarFiltroProductosPedido() {
         let cantidadFilasVisibles = 0;
 
         const marcaElegida = !marcaElegidaPedido || marca.dataset.marca === marcaElegidaPedido;
+        // T97: abierta si la abrió, si se busca algo o si se eligió su chip.
+        const abierta = marca.dataset.plegable !== "1" || termino !== "" ||
+            Boolean(marcaElegidaPedido) || marcaAbiertaPedido(marca.dataset.marca);
 
         marca.querySelectorAll(".fila").forEach(fila => {
             const textoProducto = fila.querySelector("span");
@@ -397,8 +382,11 @@ function aplicarFiltroProductosPedido() {
 
         const cuerpo = marca.querySelector(".listaProdutos");
         if (cuerpo) {
-            cuerpo.style.display = "block";
+            cuerpo.style.display = abierta ? "block" : "none";
         }
+        marca.classList.toggle("cerrada", !abierta);
+        const titulo = marca.querySelector(".tituloMarca");
+        if (titulo && marca.dataset.plegable === "1") titulo.setAttribute("aria-expanded", String(abierta));
 
         if (visible) cantidadMarcasVisibles += 1;
     });
@@ -431,7 +419,34 @@ function ordenarProductosDelPedido(productos) {
     return lista;
 }
 
-function crearMarca(nombreMarca, productos, indiceMarca) {
+// Marcas desplegables (T97): con dos marcas o más, cada una se abre y se
+// cierra tocando su nombre. Las abiertas se recuerdan en este celular.
+const DB_MARCAS_ABIERTAS_PEDIDO = "vendefrio_marcas_abiertas_pedido";
+
+function marcasAbiertasPedido() {
+    try {
+        const lista = JSON.parse(localStorage.getItem(DB_MARCAS_ABIERTAS_PEDIDO) || "[]");
+        return Array.isArray(lista) ? lista : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function marcaAbiertaPedido(nombreMarca) {
+    return marcasAbiertasPedido().includes(nombreMarca);
+}
+
+function abrirMarcaPedido(nombreMarca, abrir) {
+    const lista = marcasAbiertasPedido().filter(nombre => nombre !== nombreMarca);
+    if (abrir) lista.push(nombreMarca);
+    try {
+        localStorage.setItem(DB_MARCAS_ABIERTAS_PEDIDO, JSON.stringify(lista));
+    } catch (error) {
+        console.warn("No se pudo recordar la marca abierta.", error);
+    }
+}
+
+function crearMarca(nombreMarca, productos, indiceMarca, plegable) {
     const card = document.createElement("div");
     card.className = "marca";
     card.style.setProperty("--acento", colorMarca(indiceMarca));
@@ -448,6 +463,16 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
     contador.className = "contadorMarca";
     titulo.append(nombre, contador);
     card.dataset.marca = nombreMarca;
+    if (plegable) {
+        card.dataset.plegable = "1";
+        titulo.setAttribute("role", "button");
+        titulo.tabIndex = 0;
+        titulo.setAttribute("aria-expanded", "false");
+        const flecha = document.createElement("i");
+        flecha.className = "flechaMarca";
+        flecha.innerHTML = window.icono("chevAbajo", 18);
+        titulo.appendChild(flecha);
+    }
 
     const cuerpo = document.createElement("div");
     cuerpo.className = "listaProdutos";
@@ -485,9 +510,17 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
         });
     }
 
-    // Tocar el nombre de la marca la deja arriba de la pantalla.
-    titulo.addEventListener("click", () => {
-        cuerpo.style.display = "block";
+    // Tocar el nombre la abre o la cierra (T97). Con una sola marca, va abierta.
+    const alternar = () => {
+        if (!plegable) return;
+        abrirMarcaPedido(nombreMarca, card.classList.contains("cerrada"));
+        aplicarFiltroProductosPedido();
+    };
+    titulo.addEventListener("click", alternar);
+    titulo.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        evento.preventDefault();
+        alternar();
     });
 
     card.append(titulo, cuerpo);
@@ -544,15 +577,14 @@ function renderizarPedido() {
     if (!contenedorProductos) return;
 
     prepararBuscadorProductosPedido();
-    actualizarEstadoBotonRepetir();
     contenedorProductos.innerHTML = "";
     // Los archivados (T63) no se venden.
     const productos = productosParaVender();
 
-    obtenerMarcasOrdenadas(productos)
-        .forEach((marca, indiceMarca) => {
-            crearMarca(marca, productos[marca], indiceMarca);
-        });
+    const marcas = obtenerMarcasOrdenadas(productos);
+    marcas.forEach((marca, indiceMarca) => {
+        crearMarca(marca, productos[marca], indiceMarca, marcas.length > 1);
+    });
 
     dibujarChipsMarcasPedido(obtenerMarcasOrdenadas(productos), productos);
     restaurarBorradorPedido();
@@ -610,11 +642,10 @@ function aplicarProductoPendienteCatalogo() {
     cambiarCantidad(select, 1);
 
     const marca = select.closest(".marca");
-    const cuerpo = marca ? marca.querySelector(".listaProdutos") : null;
-
-    document.querySelectorAll(".listaProdutos").forEach(lista => {
-        lista.style.display = lista === cuerpo ? "block" : "none";
-    });
+    if (marca) {
+        abrirMarcaPedido(marca.dataset.marca, true);
+        aplicarFiltroProductosPedido();
+    }
 
     const fila = select.closest(".fila");
     if (fila) fila.scrollIntoView({ block: "center" });
@@ -890,6 +921,9 @@ function generarPedido() {
         }
     });
 
+    // Precios cambiados solo para este pedido (T98).
+    if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.ajustarProductos(productosEstructurados);
+
     if (!hayProductos) {
         mostrarAviso(
             "Pedido vac\u00edo",
@@ -933,7 +967,8 @@ function generarPedido() {
         .map((bloque, indice) => {
             const emojiMarca = emojisMarcas[indice % emojisMarcas.length];
             const productos = bloque.productos
-                .map(item => "- " + item.producto + " x" + item.cantidad)
+                .map(item => "- " + item.producto + " x" + item.cantidad +
+                    (item.precioCambiado ? " (precio especial $ " + Number(item.precio).toLocaleString("es-AR") + ")" : ""))
                 .join("\n");
 
             return emojiMarca + " *" + bloque.marca + "*\n" + productos;
@@ -956,6 +991,10 @@ function generarPedido() {
         cantidadTipos +
         "\n\n" +
         detalleProductos;
+
+    // Fecha de entrega, cambios y precio especial (T95, T96, T98).
+    const textoExtra = window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.textoParaMensaje() : "";
+    if (textoExtra) mensaje += "\n\n" + textoExtra;
 
     if (observaciones) {
         mensaje +=
@@ -983,8 +1022,8 @@ function generarPedido() {
         ...(datosNube ? datosNube.campos : {})
     });
 
-    actualizarEstadoBotonRepetir();
     borrarBorradorPedido();
+    if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.alGuardar(idPedidoNuevo, cliente);
 
     if (pedidoCliente) pedidoCliente.textContent = cliente;
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
@@ -1032,11 +1071,8 @@ function limpiarPedido() {
         select.classList.remove("activo");
     });
 
-    document.querySelectorAll(".listaProdutos").forEach(lista => {
-        lista.style.display = "none";
-    });
-
     borrarBorradorPedido();
+    aplicarFiltroProductosPedido();
     actualizarResumenPedido();
 }
 
@@ -1217,7 +1253,8 @@ function armarTextoDelPedido(cliente, fechaTexto, productos, observaciones) {
         .map((bloque, indice) => {
             const emojiMarca = emojisMarcas[indice % emojisMarcas.length];
             const lineas = bloque.productos
-                .map(item => "- " + item.producto + " x" + item.cantidad)
+                .map(item => "- " + item.producto + " x" + item.cantidad +
+                    (item.precioCambiado ? " (precio especial $ " + Number(item.precio).toLocaleString("es-AR") + ")" : ""))
                 .join("\n");
 
             return emojiMarca + " *" + bloque.marca + "*\n" + lineas;

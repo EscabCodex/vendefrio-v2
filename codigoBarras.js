@@ -166,21 +166,7 @@
         document.documentElement.classList.remove("conEscaner");
     }
 
-    // ---------- Botón en Nuevo pedido ----------
-    function agregarBoton() {
-        const fila = document.querySelector(".filaAccionesRapidasPedido") || document.querySelector(".botonRepetirPedido")?.parentElement;
-        if (!fila || document.querySelector(".botonEscanearPedido")) return;
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.className = "botonRepetirPedido botonEscanearPedido";
-        boton.innerHTML = window.icono("codigo", 15) + " Escanear";
-        boton.setAttribute("aria-label", "Escanear código de barras");
-        boton.addEventListener("click", abrir);
-        fila.appendChild(boton);
-    }
-    const pantallaPedido = document.getElementById("pantallaPedido");
-    if (pantallaPedido) new MutationObserver(() => agregarBoton()).observe(pantallaPedido, { childList: true, subtree: true });
-    setTimeout(agregarBoton, 0);
+    // "Escanear código de barras" está en el botón ⋯ de Nuevo pedido (T95).
 
     // ---------- Catálogo > ⋯ > Código de barras ----------
     function editar(producto) {
@@ -188,7 +174,7 @@
             titulo: "Código de barras",
             sub: producto.nombre + " · " + producto.marca,
             html: `<label class="pzCampo">Número del código<input type="text" inputmode="numeric" id="codigoProducto" maxlength="20" value="${p.esc(limpiar(producto.codigo))}" placeholder="Por ejemplo: 7790001234567"></label>
-                <p class="pzHojaSub">Está abajo de las barras, en el envase. Con el código cargado, en Nuevo pedido tocás «Escanear» y se suma solo.</p>`,
+                <p class="pzHojaSub">Está abajo de las barras, en el envase. Con el código cargado, en Nuevo pedido tocás ⋯ > «Escanear código de barras» y se suma solo.</p>`,
             botones: [
                 { texto: "Quitar", clase: "pzBtnGris", par: true, alTocar: () => guardar(producto, "") },
                 { texto: "Guardar", par: true, alTocar: caja => guardar(producto, caja.querySelector("#codigoProducto").value) }

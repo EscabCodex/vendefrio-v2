@@ -353,7 +353,8 @@
                 nombre: String(item.producto || "Sin producto"),
                 cantidad,
                 pedida: linea.pedida,
-                precio
+                precio,
+                especial: item.precioCambiado === true
             });
         });
 
@@ -428,7 +429,8 @@
 
             grupo.items.forEach(item => {
                 partir(item.nombre, ANCHO).forEach(linea);
-                const detalle = item.cantidad + " x " + (Number.isFinite(item.precio) ? textoPrecio(item.precio) : "Sin precio") +
+                // "*": precio cambiado solo para este pedido (T98).
+                const detalle = item.cantidad + " x " + (Number.isFinite(item.precio) ? textoPrecio(item.precio) + (item.especial ? "*" : "") : "Sin precio") +
                     (item.cantidad !== item.pedida ? " (pedido " + item.pedida + ")" : "");
                 const subtotal = Number.isFinite(item.precio) ? textoPrecio(item.precio * item.cantidad) : "-";
                 dosColumnas(detalle, subtotal, "  ").forEach(linea);
@@ -444,6 +446,15 @@
         agregar(SIN_NEGRITA);
         if (datos.total.conPrecio && datos.total.sinPrecio) {
             linea("(" + datos.total.sinPrecio + " sin precio)");
+        }
+        if (datos.marcas.some(grupo => grupo.items.some(item => item.especial))) linea("* Precio especial para este pedido");
+
+        // Fecha de entrega y cambios de mercadería (T95, T96).
+        const detalle = window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.detalleDe(pedido.id) : null;
+        if (detalle && detalle.fechaEntrega) linea("Entregar: " + window.nuevoPedidoVendeFrio.textoFecha(detalle.fechaEntrega));
+        if (detalle && (detalle.cambios || []).length) {
+            linea("Cambios:");
+            detalle.cambios.forEach(cambio => partir("  " + (Number(cambio.cantidad) || 1) + " x " + cambio.producto + " (" + String(cambio.motivo === "noSeVendio" ? "no se vendió" : cambio.motivo) + ")", ANCHO).forEach(linea));
         }
 
         if (datos.cobro) partir("Cobro: " + datos.cobro, ANCHO).forEach(linea);

@@ -2412,7 +2412,8 @@ function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio) {
         productos: productos.map(item => ({
             id: generarId(PREFIJO_ID_LINEA),
             ...item,
-            precio: precioDelCatalogo(item.marca, item.producto, catalogo, comercio)
+            // El precio cambiado solo para este pedido (T98) queda como está.
+            precio: item.precioCambiado ? item.precio : precioDelCatalogo(item.marca, item.producto, catalogo, comercio)
         })),
         campos: {
             estado: ESTADO_PEDIDO_INICIAL,

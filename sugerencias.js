@@ -1,8 +1,9 @@
 // VendeFrío - Nuevo pedido que sugiere (T66) y "¿Seguro?" (T67).
 // Con el comercio elegido: la tarjeta del comercio ("Suele pedir cada N
-// días"), "Lo de siempre · Usar" y "Lo que más compra", con estrella para
-// los favoritos de ese comercio. Al guardar, si una cantidad es mucho más de
-// lo que suele llevar, pregunta antes.
+// días") y "Lo de siempre · Usar", que se despliega al tocarla y muestra
+// cada producto con lo que suele llevar (T94). Los favoritos se marcan
+// manteniendo apretado el producto (nuevoPedido.js). Al guardar, si una
+// cantidad es mucho más de lo que suele llevar, pregunta antes.
 (function () {
     "use strict";
 
@@ -77,19 +78,7 @@
         let cadaDias = 0;
         if (fechas.length >= 2) cadaDias = Math.max(1, Math.round((fechas[0] - fechas[fechas.length - 1]) / 86400000 / (fechas.length - 1)));
 
-        // Favoritos primero, después lo que más veces llevó.
-        const favoritos = Array.isArray(comercio.favoritos) ? comercio.favoritos.map(normal) : [];
-        const masCompra = enCatalogo.slice().sort((a, b) => b.veces - a.veces || a.nombre.localeCompare(b.nombre, "es"));
-        favoritos.forEach(fav => {
-            if (masCompra.some(item => clave(item.marca, item.nombre) === fav)) return;
-            const [marca, nombre] = fav.split("|");
-            const real = productoDelCatalogo(catalogo, marca, nombre);
-            if (real) masCompra.push({ marca: real.marca, nombre: real.producto.nombre, producto: real.producto, veces: 0, suele: 0 });
-        });
-        masCompra.forEach(item => { item.favorito = favoritos.includes(clave(item.marca, item.nombre)); });
-        masCompra.sort((a, b) => Number(b.favorito) - Number(a.favorito));
-
-        return { pedidos, siempre, total, unidades, cadaDias, masCompra: masCompra.slice(0, Math.max(5, favoritos.length)) };
+        return { pedidos, siempre, total, unidades, cadaDias };
     }
 
     // ---------- Lo que se ve ----------
@@ -104,6 +93,8 @@
     tarjetaCliente.after(contenedor);
 
     let usado = "";
+    let abierto = false;
+    const verPlata = () => !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
 
     function selectDe(marca, nombre) {
         return Array.from(document.querySelectorAll("#productos .marca select"))
@@ -126,17 +117,6 @@
         return `<span class="pzChip pzChipPromo">${p.esc(window.ofertasVendeFrio ? window.ofertasVendeFrio.textoHasta(oferta.hasta) : "Promo")}</span>`;
     }
 
-    function stepper(item) {
-        const select = selectDe(item.marca, item.nombre);
-        const cantidad = select ? Number(select.value) || 0 : 0;
-        const nombre = p.esc(item.nombre);
-        return `<div class="controlesCantidad controlesEspejo" data-cantidad="${cantidad}" data-marca="${p.esc(item.marca)}" data-producto="${nombre}">
-            <button type="button" class="botonCantidad botonBorrar" data-paso="cero" aria-label="Sacar ${nombre}">${p.ico("tacho", 17)}</button>
-            <button type="button" class="botonCantidad botonMenos" data-paso="-1" aria-label="Uno menos de ${nombre}">${p.ico("menos", 18)}</button>
-            <b class="cantidadEspejo">${cantidad}</b>
-            <button type="button" class="botonCantidad botonMas" data-paso="1" aria-label="Uno más de ${nombre}">${p.ico("mas", 18)}</button>
-        </div>`;
-    }
 
     function dibujarTarjetaComercio(comercio, analisis) {
         const foco = document.activeElement === input;
@@ -175,26 +155,16 @@
         });
         if (analisis.siempre.length && !yaEsta && usado !== comercio.nombre) {
             const cantidad = analisis.siempre.length;
-            html += `<div class="pzBanner pzBanPri" id="loDeSiempre">
-                ${p.ico("chispa", 22)}
-                <div><strong>Lo de siempre</strong><small>${cantidad} ${cantidad === 1 ? "producto" : "productos"} · ${analisis.unidades} u${analisis.total ? " · " + p.plata(analisis.total) : ""}</small></div>
+            // T94: se despliega al tocarla, con filas chicas (nombre y cantidad).
+            const filas = analisis.siempre.map(item => `<div class="pzSiempreFila"><span>${p.esc(item.nombre)}</span><b>${item.suele}</b></div>`).join("");
+            html += `<div class="pzBanner pzBanPri pzSiempre${abierto ? " abierto" : ""}" id="loDeSiempre">
+                <button type="button" class="pzSiempreAbrir" aria-expanded="${abierto}" aria-controls="listaLoDeSiempre" aria-label="${abierto ? "Ocultar" : "Ver"} lo de siempre">
+                    ${p.ico("chispa", 22)}
+                    <div><strong>Lo de siempre ${p.ico("chevAbajo", 16)}</strong><small>${cantidad} ${cantidad === 1 ? "producto" : "productos"} · ${analisis.unidades} u${analisis.total && verPlata() ? " · " + p.plata(analisis.total) : ""}</small></div>
+                </button>
                 <button type="button" class="pzBtn pzBtnPri pzBtnChico" id="usarLoDeSiempre">Usar</button>
+                <div class="pzSiempreLista" id="listaLoDeSiempre"${abierto ? "" : " hidden"}>${filas}</div>
             </div>`;
-        }
-        if (analisis.masCompra.length) {
-            const filas = analisis.masCompra.map(item => {
-                const sub = item.suele ? "Suele llevar " + item.suele : "Favorito";
-                const precio = textoPrecio(item.producto, comercio);
-                return `<div class="pzFila pzProdSugerido">
-                    <button type="button" class="pzEstrella${item.favorito ? " activa" : ""}" data-favorito="${p.esc(item.marca)}|${p.esc(item.nombre)}" aria-pressed="${item.favorito}" aria-label="${item.favorito ? "Quitar de favoritos" : "Marcar como favorito"}: ${p.esc(item.nombre)}">${p.ico("estrella", 20)}</button>
-                    <div class="pzFilaTxt"><strong>${p.esc(item.nombre)}</strong><small>${p.esc(sub)}${precio ? " · " + precio : ""}</small>${chipPromo(item.producto, comercio)}</div>
-                    ${stepper(item)}
-                </div>`;
-            }).join("");
-            html += `<section class="pzBloque" id="loQueMasCompra">
-                <div class="pzBloqueCab"><span class="pzEtiqueta">Lo que más compra</span><small>Según sus pedidos</small></div>
-                <div class="pzTarjeta pzLista">${filas}</div>
-            </section>`;
         }
         if (contenedor.innerHTML !== html) contenedor.innerHTML = html;
     }
@@ -215,40 +185,15 @@
         mostrarToast("Listo: cargamos lo de siempre");
     }
 
-    function cambiarFavorito(texto) {
-        const comercio = comercioDelPedidoActual();
-        if (!comercio) return;
-        const [marca, nombre] = texto.split("|");
-        const k = clave(marca, nombre);
-        const actuales = Array.isArray(comercio.favoritos) ? comercio.favoritos.slice() : [];
-        const indice = actuales.findIndex(item => normal(item) === k);
-        if (indice >= 0) actuales.splice(indice, 1);
-        else actuales.push(marca + "|" + nombre);
-        actualizarComercioPorId(comercio.id, { favoritos: actuales });
-        dibujar();
-    }
 
     contenedor.addEventListener("click", evento => {
         if (evento.target.closest("#usarLoDeSiempre")) {
             usarLoDeSiempre();
             return;
         }
-        const estrella = evento.target.closest("[data-favorito]");
-        if (estrella) {
-            cambiarFavorito(estrella.dataset.favorito);
-            return;
-        }
-        const paso = evento.target.closest("[data-paso]");
-        if (paso) {
-            const controles = paso.closest(".controlesEspejo");
-            const select = selectDe(controles.dataset.marca, controles.dataset.producto);
-            if (!select) return;
-            if (paso.dataset.paso === "cero") {
-                select.value = "0";
-                actualizarEstadoCantidad(select);
-            } else {
-                cambiarCantidad(select, Number(paso.dataset.paso));
-            }
+        if (evento.target.closest(".pzSiempreAbrir")) {
+            abierto = !abierto;
+            dibujar();
         }
     });
 
@@ -294,8 +239,18 @@
             if (!select || !texto) return;
             const real = productoDelCatalogo(catalogo, select.dataset.marca, select.dataset.producto);
             if (!real) return;
-            const precio = textoPrecio(real.producto, comercio);
-            const html = (precio ? `<small>${precio} c/u</small>` : "") + chipPromo(real.producto, comercio);
+            // T98: el precio cambiado solo para este pedido, y el lapicito
+            // para cambiarlo (si esta persona ve la plata).
+            const extra = window.nuevoPedidoVendeFrio;
+            const cambiado = extra ? extra.precioCambiado(select.dataset.marca, select.dataset.producto) : null;
+            const precio = cambiado !== null
+                ? `<s class="pzTachado">${p.plata(precioVigente(real.producto, comercio))}</s> <b class="precioEspecial">${p.plata(cambiado)}</b>`
+                : textoPrecio(real.producto, comercio);
+            const editable = extra && extra.puedeCambiarPrecio();
+            const contenido = (precio ? precio + " c/u" : "Poner precio") + (editable ? " " + p.ico("lapiz", 13) : "");
+            const html = (editable
+                ? `<button type="button" class="precioPedidoBoton${cambiado !== null ? " cambiado" : ""}" data-editar-precio aria-label="Cambiar el precio de ${p.esc(real.producto.nombre)} para este pedido">${contenido}</button>`
+                : (precio ? `<small>${precio} c/u</small>` : "")) + chipPromo(real.producto, comercio);
             let lugar = texto.querySelector(".precioPedido");
             if (!lugar) {
                 texto.querySelectorAll("small").forEach(viejo => viejo.remove());

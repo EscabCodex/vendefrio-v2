@@ -939,30 +939,11 @@
         hojaDictado?.classList.remove("escuchando");
     }
 
-    function agregarBotonDictado() {
-        const repetir = document.querySelector(".botonRepetirPedido");
-        if (!repetir || document.querySelector(".botonDictarPedido")) return;
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.className = "botonRepetirPedido botonDictarPedido";
-        boton.innerHTML = window.icono(Reconocimiento ? "microfono" : "copiar", 15) + (Reconocimiento ? " Dictar o pegar pedido" : " Pegar pedido de un mensaje");
-        boton.addEventListener("click", abrirDictado);
-        const fila = document.createElement("div");
-        fila.className = "filaAccionesRapidasPedido";
-        repetir.before(fila);
-        fila.append(repetir, boton);
-    }
-
     function iniciar() {
         agregarBotonMicrofono();
-        agregarBotonDictado();
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
     else iniciar();
-    // El botón "Repetir último pedido" se arma al dibujar la pantalla.
-    const pantallaPedido = document.getElementById("pantallaPedido");
-    if (pantallaPedido) new MutationObserver(() => agregarBotonDictado()).observe(pantallaPedido, { childList: true, subtree: true });
-
     window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, escuchar, abrirDictado, comando: empezarComando };
 }());

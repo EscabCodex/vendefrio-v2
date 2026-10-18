@@ -55,6 +55,8 @@ rules_version = '2';
 //                                   los guarda solo la función de Vercel
 //     problemas/{idProblema}        "Informar un problema" (T62): lo manda
 //                                   cualquier miembro, lo lee el dueño
+//     detallesPedido/{idPedido}     fecha de entrega y cambios de
+//                                   mercadería de un pedido (T95, T96)
 //
 // Solo los miembros de una distribuidora leen y escriben sus datos.
 // Todo lo que no figura acá queda bloqueado.
@@ -1172,6 +1174,26 @@ service cloud.firestore {
           && request.resource.data.lineas.size() <= 40
           && request.resource.data.motivo in ["vencido", "roto", "malEnviado", "otro"]
           && request.resource.data.monto is number && request.resource.data.monto >= 0
+          && request.resource.data.horaCelular is number
+          && personaPropia(idDistribuidora, request.resource.data.persona);
+
+        allow delete: if esDueno(idDistribuidora);
+      }
+
+      // Fecha de entrega y cambios de mercadería de un pedido (T95, T96):
+      // uno por pedido, con el mismo id, lo escribe quien lo carga al
+      // guardarlo. El pedido no cambia de forma, así la app de antes sigue
+      // igual. Solo el dueño los borra.
+      match /detallesPedido/{idDetalle} {
+        allow read: if esMiembro(idDistribuidora);
+
+        allow create: if esMiembro(idDistribuidora)
+          && request.resource.data.keys().hasAll(["idPedido", "comercio", "cambios", "fechaEntrega", "persona", "horaCelular"])
+          && request.resource.data.keys().hasOnly(["idPedido", "comercio", "cambios", "fechaEntrega", "persona", "horaCelular"])
+          && request.resource.data.idPedido == idDetalle
+          && request.resource.data.comercio is string && request.resource.data.comercio.size() <= 120
+          && request.resource.data.cambios is list && request.resource.data.cambios.size() <= 40
+          && request.resource.data.fechaEntrega is string && request.resource.data.fechaEntrega.size() <= 10
           && request.resource.data.horaCelular is number
           && personaPropia(idDistribuidora, request.resource.data.persona);
 

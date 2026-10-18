@@ -595,3 +595,70 @@ html.conEscaner,html.conEscaner body{overflow:hidden;}
 .botonFotoHeladera{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;margin-bottom:12px;border:2px dashed var(--borde-fuerte);border-radius:18px;background:var(--superficie-2) center/cover no-repeat;color:var(--texto-sec);font-weight:700;cursor:pointer;}
 .botonFotoHeladera.conFoto{border-style:solid;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);}
 .notasHeladera{margin-bottom:12px;}
+
+/* ---------- Etapa 8: Nuevo pedido más simple (T94 a T98) ---------- */
+/* "Lo de siempre" desplegable (T94). */
+.pzSiempre{flex-wrap:wrap;row-gap:0;}
+.pzSiempreAbrir{
+  display:flex;align-items:center;gap:12px;flex:1;min-width:0;min-height:44px;padding:0;border:0;
+  background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;
+}
+.pzSiempreAbrir > .pzIco{color:var(--pz-pri-fuerte);flex-shrink:0;}
+html[data-tema="oscuro"] .pzSiempreAbrir > .pzIco{color:var(--acento);}
+.pzSiempreAbrir > div{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.pzSiempreAbrir strong{display:inline-flex;align-items:center;gap:4px;}
+.pzSiempreAbrir strong .pzIco{transition:transform .2s;color:var(--texto-sec);}
+.pzSiempre.abierto .pzSiempreAbrir strong .pzIco{transform:rotate(180deg);}
+.pzSiempreLista{flex-basis:100%;margin:10px 0 0;padding:4px 0 0;border-top:1px solid color-mix(in srgb, var(--pz-pri-fuerte) 18%, transparent);}
+.pzSiempreLista[hidden]{display:none;}
+.pzSiempreFila{display:flex;justify-content:space-between;gap:12px;padding:6px 2px;font-size:14px;}
+.pzSiempreFila span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pzSiempreFila b{font-weight:750;flex-shrink:0;}
+
+/* Favoritos en la lista (T94): estrellita al lado del nombre. */
+.estrellaFavorito{display:inline-flex;vertical-align:-1px;margin-right:4px;color:#E0A100;}
+.estrellaFavorito svg{fill:#F5C542;}
+#productos .fila{-webkit-touch-callout:none;user-select:none;}
+
+/* Botón flotante ⋯ (T95): arriba de "Guardar pedido", a mano del pulgar. */
+.fabPedido{
+  position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(92px + env(safe-area-inset-bottom));z-index:1201;
+  display:grid;place-items:center;width:58px;height:58px;padding:0;border:0;border-radius:50%;
+  background:var(--texto);color:var(--superficie);box-shadow:0 8px 22px -6px rgba(15,27,45,.45);cursor:pointer;
+}
+html[data-tema="oscuro"] .fabPedido{background:var(--acento);color:var(--acento-txt);}
+.fabPedido:active{transform:scale(.95);}
+#pantallaPedido[data-vista="pedidos"] .fabPedido,#pantallaPedido.oculto .fabPedido{display:none;}
+html.conEscaner .fabPedido{display:none;}
+#pantallaPedido .clientePedidoCabecera .vaciarPedido{display:none;}
+
+/* Fecha de entrega y cambios (T95, T96). */
+.extrasPedido:empty{display:none;}
+.extrasPedido{margin:0 0 14px;}
+.extrasPedido .pzBloqueCab{margin-top:4px;}
+.quitarCambio{
+  display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;flex-shrink:0;
+  background:var(--superficie-2);color:var(--texto-sec);cursor:pointer;
+}
+.pzStepperCambio{width:max-content;margin:4px 8px 12px;}
+.hojaCambio select{width:100%;}
+.seccionDetallesPedido .pzBanner{margin-top:4px;}
+
+/* Precio solo para este pedido (T98): el nombre sube y el precio baja
+   apenas, para que el dedo lo toque fácil. */
+#productos .nombreProductoPedido{gap:3px;}
+.precioPedidoBoton{
+  display:inline-flex;align-items:center;gap:5px;margin:2px 0 0 -6px;padding:4px 6px;min-height:30px;
+  border:0;border-radius:8px;background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;
+}
+.precioPedidoBoton .pzIco{color:var(--texto-ter);}
+.precioPedidoBoton:active{background:var(--superficie-2);}
+.precioPedidoBoton.cambiado .precioEspecial{color:var(--pz-pri-fuerte);font-weight:750;}
+html[data-tema="oscuro"] .precioPedidoBoton.cambiado .precioEspecial{color:var(--acento);}
+
+/* Marcas desplegables (T97): flechita al lado del nombre. */
+html #pantallaPedido .marca[data-plegable="1"] .tituloMarca{cursor:pointer;align-items:center;min-height:44px;margin:4px 6px 4px;}
+.flechaMarca{display:inline-flex;margin-left:auto;color:var(--texto-sec);transition:transform .2s;}
+.marca[data-plegable="1"]:not(.cerrada) .flechaMarca{transform:rotate(180deg);}
+.marca.cerrada{margin-bottom:2px !important;}
+html[data-precios="no"] #pantallaPedido .precioPedidoBoton{display:none;}

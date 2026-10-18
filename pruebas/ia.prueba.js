@@ -151,6 +151,7 @@ test("ia: la del celular y la de la nube entienden lo que la voz gratis no", asy
         const preferencias = JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}");
         localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias, iaCelular: false }));
     });
+    await page.getByRole("button", { name: "Más opciones del pedido" }).click();
     await page.getByRole("button", { name: "Dictar o pegar pedido" }).click();
     const dictado = page.locator(".ventanaDictado");
     await dictado.getByLabel("Texto del pedido").fill("Buenas! Para el de la esquina: media docena de los de kilo, una docena de bombones, 2 tortas heladas y un sorbete de mango");
