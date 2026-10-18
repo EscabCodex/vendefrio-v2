@@ -989,9 +989,15 @@ service cloud.firestore {
       // ({ todosPuedenTodo }), solo el dueño. No se borra.
       // config/whatsapp (T58): WhatsApp automático y audios a texto, solo el
       // dueño.
+      // config/plata (T93): "Quién ve la plata" ({ quienVe }), solo el dueño.
       match /config/{id} {
         allow read: if esMiembro(idDistribuidora);
-        allow write: if esMiembro(idDistribuidora) && !(id in ["roles", "equipo", "whatsapp"]);
+        allow write: if esMiembro(idDistribuidora) && !(id in ["roles", "equipo", "whatsapp", "plata"]);
+
+        allow create, update: if id == "plata"
+          && esDueno(idDistribuidora)
+          && request.resource.data.keys().hasOnly(["quienVe"])
+          && request.resource.data.quienVe in ["dueno", "cobra", "todos"];
 
         allow create, update: if id == "whatsapp"
           && esDueno(idDistribuidora)

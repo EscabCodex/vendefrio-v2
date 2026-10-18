@@ -451,9 +451,12 @@ function actualizarDashboard() {
     const vendido = cargadosHoy.reduce((total, pedido) => total + totalInicio(pedido), 0);
     const hayPrecios = cargadosHoy.some(pedido => totalInicio(pedido) > 0);
     const comerciosHoy = new Set(cargadosHoy.map(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es"))).size;
+    // T93: sin permiso para ver la plata, unidades en vez de pesos.
+    const vePlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
+    const conPlata = vePlata && (hayPrecios || nube);
     const textos = {
-        dashTituloHoy: hayPrecios || nube ? "Vendido hoy" : "Unidades hoy",
-        dashVendidoHoy: hayPrecios || nube
+        dashTituloHoy: conPlata ? "Vendido hoy" : "Unidades hoy",
+        dashVendidoHoy: conPlata
             ? textoPlataInicio(vendido)
             : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)),
         dashResumenHoy: cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
@@ -461,7 +464,10 @@ function actualizarDashboard() {
         dashVisitadosSemana: visitadosSemana,
         dashTotalComercios: comercios.length,
         dashPedidosSemana: pedidosSemana.length,
-        dashVendidoSemana: textoPlataCortoInicio(pedidosSemana.reduce((total, pedido) => total + totalInicio(pedido), 0)),
+        dashVendidoSemana: vePlata
+            ? textoPlataCortoInicio(pedidosSemana.reduce((total, pedido) => total + totalInicio(pedido), 0))
+            : pedidosSemana.reduce((total, pedido) => total + unidadesInicio(pedido), 0).toLocaleString("es-AR"),
+        dashEtiquetaVendidoSemana: vePlata ? "vendido" : "unidades",
         dashPendientesSemana: sinVisitar
     };
     Object.keys(textos).forEach(id => {

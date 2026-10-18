@@ -125,9 +125,11 @@
         const esDueno = p.esDueno();
         if (!ids.length && !esDueno) return null;
         const mes = MESES[new Date().getMonth()];
-        const card = estadisticas.tarjeta("bandera", "verde", "Metas de " + mes, "Lo vendido este mes por cada uno", "statsMetas");
+        const card = estadisticas.tarjeta("bandera", "verde", "Metas de " + mes, window.verPlataVendeFrio?.puedoVer?.() === false ? "Cuánto le falta a cada uno" : "Lo vendido este mes por cada uno", "statsMetas");
         if (esDueno) card.querySelector(".statsCabeza").insertAdjacentHTML("beforeend", `<button type="button" class="pzEnlace editarMetas">${ids.length ? "Editar" : "Poner metas"}</button>`);
         const vendido = vendidoPorPersona();
+        // T93: sin permiso para ver la plata, solo el porcentaje.
+        const vePlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
         const filas = ids.map(id => {
             const meta = Number(metas[id].monto);
             const total = vendido[id] ? vendido[id].total : 0;
@@ -135,7 +137,7 @@
             return `<div class="filaMeta">
                 <div class="filaMetaCab"><strong>${p.esc(metas[id].nombre || (vendido[id] && vendido[id].nombre) || "")}</strong><b>${porcentaje} %</b></div>
                 <span class="barraMeta${porcentaje >= 100 ? " cumplida" : ""}"><i style="width:${Math.min(100, porcentaje)}%"></i></span>
-                <small>${plataCorta(total)} de ${plataCorta(meta)}</small>
+                ${vePlata ? `<small>${plataCorta(total)} de ${plataCorta(meta)}</small>` : ""}
             </div>`;
         }).join("");
         card.insertAdjacentHTML("beforeend", ids.length

@@ -19,7 +19,8 @@
     }
 
     function puedeVer() {
-        return typeof usaNubeReal === "function" && usaNubeReal() && Boolean(window.cierreVendeFrio?.disponible?.());
+        return typeof usaNubeReal === "function" && usaNubeReal() && Boolean(window.cierreVendeFrio?.disponible?.()) &&
+            window.verPlataVendeFrio?.puedoVer?.() !== false;
     }
 
     function prendido() {

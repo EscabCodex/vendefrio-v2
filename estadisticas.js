@@ -163,7 +163,7 @@
                     <strong>${numero(total)}</strong>
                     <span>${total === 1 ? "pedido" : "pedidos"}${antes ? diferencia(total, antes.total) : ""}</span>
                 </div>
-                ${vendido > 0 ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong>${antes && (antes.vendido || vendido) ? variacion(Math.round(vendido), Math.round(antes.vendido)) : ""}</div>` : ""}
+                ${vendido > 0 && window.verPlataVendeFrio?.puedoVer?.() !== false ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong>${antes && (antes.vendido || vendido) ? variacion(Math.round(vendido), Math.round(antes.vendido)) : ""}</div>` : ""}
             </div>
             <div class="statsNumeros">
                 <div><span class="statsNumIcono">${ico("tienda", 17)}</span><strong>${numero(comercios)}${antes ? diferencia(comercios, antes.comercios) : ""}</strong><small>comercios</small></div>

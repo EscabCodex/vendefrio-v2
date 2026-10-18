@@ -1079,6 +1079,32 @@
         `;
     }
 
+    // "Quién ve la plata" (T93): solo lo cambia el dueño.
+    const TEXTOS_VER_PLATA = {
+        dueno: "Solo vos ves cuánto se vendió. Los demás ven cantidades.",
+        cobra: "Vos y quien tiene «Cobra» ven cuánto se vendió. Los demás ven cantidades.",
+        todos: "Todo el equipo ve cuánto se vendió."
+    };
+
+    function htmlVerPlata() {
+        const elegida = window.verPlataVendeFrio?.opcion?.() || "cobra";
+        const opciones = [["dueno", "Solo yo"], ["cobra", "Yo y quien cobra"], ["todos", "Todos"]];
+        return `
+            <label class="ajFila">
+                <span class="ajIcono" data-tono="verde">${ico("moneda")}</span>
+                <span class="ajTexto"><strong>Quién ve la plata</strong>
+                <small id="textoVerPlata">${TEXTOS_VER_PLATA[elegida]}</small></span>
+                <select id="elegirVerPlata" aria-label="Quién ve la plata">
+                    ${opciones.map(([valor, texto]) => `<option value="${valor}"${valor === elegida ? " selected" : ""}>${texto}</option>`).join("")}
+                </select>
+            </label>
+            <p class="ajFila ajEstadoFila">
+                ${ico("info", 16)}<span>Vale para Inicio, Estadísticas, las metas y el resumen de la noche.
+                Cobrar, el Cierre del día y «A cobrar» siguen siendo de quien tiene «Cobra».</span>
+            </p>
+        `;
+    }
+
     function htmlTextoLlave(prendida) {
         return prendida
             ? "Prendida: cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias. Los roles deciden solo a quién le llega cada aviso."
@@ -1098,6 +1124,7 @@
 
         return `
             ${grupo("Equipo", htmlLlaveEquipo())}
+            ${grupo("Plata", htmlVerPlata())}
             <section class="ajGrupo">
                 <h3 class="ajGrupoTitulo">Sumar un empleado</h3>
                 <div class="ajTarjeta ajTarjetaRelleno">
@@ -2612,6 +2639,20 @@
                 llave.checked = !llave.checked;
                 mostrarAviso("No se guardó el cambio", error.message);
             });
+    });
+
+    // "Quién ve la plata" (T93): se guarda al elegir.
+    document.addEventListener("change", event => {
+        if (event.target.id !== "elegirVerPlata") return;
+
+        const selector = event.target;
+        window.verPlataVendeFrio.cambiar(selector.value)
+            .then(valor => {
+                const texto = document.getElementById("textoVerPlata");
+                if (texto) texto.textContent = TEXTOS_VER_PLATA[valor];
+                mostrarToast("Listo: guardado");
+            })
+            .catch(error => mostrarAviso("No se guardó el cambio", error.message));
     });
 
     // Permisos de un rol (T19): se guardan al tocar la casilla.
