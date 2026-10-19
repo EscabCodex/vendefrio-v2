@@ -267,6 +267,23 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await proxima.getByRole("button", { name: /Ya pasé/ }).click();
     await expect(proxima).toContainText("Próxima parada · 2 de 3");
 
+    // T126: tocando la parada se carga su pedido y, al volver, queda tildada sola.
+    const conPedido = await paradas.nth(1).getAttribute("data-nombre");
+    await paradas.nth(1).locator(".pedidoParadaRuta").click();
+    await expect(page.locator("#cliente")).toHaveValue(conPedido);
+    const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
+    await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
+    await page.locator("#generar").click();
+    const generado = page.locator("#modalPedido");
+    await expect(generado).toBeVisible();
+    await generado.click({ position: { x: 10, y: 10 } });
+    await expect(generado).toBeHidden();
+    await abrirMas(page);
+    await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
+    await expect(paradas.filter({ hasText: conPedido })).toHaveClass(/hecha/);
+    await expect(proxima).toContainText("Próxima parada · 3 de 3");
+
     // Cambiar el orden con el teclado (con el dedo es arrastrar ≡).
     const segunda = await paradas.nth(1).getAttribute("data-nombre");
     await paradas.nth(1).locator(".agarreParada").focus();

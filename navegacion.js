@@ -17,8 +17,9 @@
     const PERFILES = { bicicleta: "routed-bike", moto: "routed-car", auto: "routed-car", pie: "routed-foot" };
     const VELOCIDAD_SIN_RUTA = { bicicleta: 4.2, moto: 8.3, auto: 8.3, pie: 1.3 }; // m/s, para estimar sin camino
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
-    const DISTANCIA_FUERA = 45;       // m: te saliste del camino
-    const ESPERA_RECALCULO = 12000;   // ms entre dos cálculos del camino
+    const DISTANCIA_FUERA = 35;       // m: te saliste del camino
+    const ESPERA_RECALCULO = 5000;    // ms entre dos cálculos del camino
+    const ADELANTO_GPS = 1.5;         // s: el GPS llega tarde; se adelanta según la velocidad
 
     let pantalla = null;
     let mapa = null;
@@ -29,6 +30,8 @@
     let paradas = [];
     let indiceParada = 0;
     let posicion = null;
+    let velocidad = 0;           // m/s, para adelantar el GPS y avisar antes
+    let ultimaLectura = 0;
     let camino = null;           // { puntos: [[lat,lng]], acumulado: [m], distancia, duracion, pasos: [] }
     let calculando = false;
     let ultimoCalculo = 0;
@@ -51,7 +54,8 @@
 
     function vehiculo() {
         const elegido = preferencias().vehiculo;
-        return PERFILES[elegido] ? elegido : "bicicleta";
+        // De fábrica, en auto: el camino de bici usa veredas, pasajes y contramano.
+        return PERFILES[elegido] ? elegido : "auto";
     }
 
     function conVoz() {
@@ -121,13 +125,24 @@
 
     // Dónde cae un punto sobre el camino: metros recorridos y qué tan lejos
     // queda de la línea. Proyección plana: alcanza para unas cuadras.
+    // Primero busca cerca de donde ibas (no salta para atrás en una esquina
+    // por donde el camino pasa dos veces); si no encuentra, busca en todo.
+    let ultimoRecorrido = 0;
     function proyectar(punto) {
         if (!camino || camino.puntos.length < 2) return null;
+        const cerca = proyectarEntre(punto, ultimoRecorrido - 40, ultimoRecorrido + 600);
+        const resultado = cerca && cerca.lejos <= DISTANCIA_FUERA ? cerca : proyectarEntre(punto, -Infinity, Infinity);
+        if (resultado && resultado.lejos <= DISTANCIA_FUERA) ultimoRecorrido = resultado.recorrido;
+        return resultado;
+    }
+
+    function proyectarEntre(punto, desde, hasta) {
         const cosLat = Math.cos(punto[0] * Math.PI / 180);
         const metros = p => [p[0] * 111320, p[1] * 111320 * cosLat];
         const P = metros(punto);
         let mejor = { lejos: Infinity, recorrido: 0 };
         for (let i = 0; i < camino.puntos.length - 1; i++) {
+            if (camino.acumulado[i + 1] < desde || camino.acumulado[i] > hasta) continue;
             const A = metros(camino.puntos[i]);
             const B = metros(camino.puntos[i + 1]);
             const dx = B[0] - A[0];
@@ -141,7 +156,7 @@
                 mejor = { lejos, recorrido: camino.acumulado[i] + t * Math.sqrt(largo2) };
             }
         }
-        return mejor;
+        return mejor.lejos === Infinity ? null : mejor;
     }
 
     function textoDistancia(metros) {
@@ -212,17 +227,40 @@
         return '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:rotate(' + grados + 'deg)"><path d="M12 20V5"/><path d="m6 11 6-6 6 6"/></svg>';
     }
 
+    // La frase queda guardada afuera: si no, el navegador a veces la tira a
+    // la basura a mitad de camino y la voz se corta. Se prefiere una voz del
+    // celular (no de internet), que con datos móviles se entrecorta.
+    let fraseActual = null;
+    function vozElegida() {
+        const voces = window.speechSynthesis.getVoices();
+        const castellanas = voces.filter(v => /^es/i.test(v.lang));
+        return castellanas.find(v => v.localService && /AR|419|US|MX/i.test(v.lang))
+            || castellanas.find(v => v.localService)
+            || castellanas.find(v => v.lang === "es-AR")
+            || castellanas[0] || null;
+    }
+
     function hablar(texto) {
         if (!conVoz() || !("speechSynthesis" in window) || !texto) return;
         try {
-            window.speechSynthesis.cancel();
+            const sintesis = window.speechSynthesis;
+            if (fraseActual && fraseActual.text === texto && sintesis.speaking) return;
             const frase = new SpeechSynthesisUtterance(texto);
-            frase.lang = "es-AR";
-            const voces = window.speechSynthesis.getVoices();
-            const voz = voces.find(v => v.lang === "es-AR") || voces.find(v => /^es/i.test(v.lang));
+            const voz = vozElegida();
+            frase.lang = voz ? voz.lang : "es-AR";
             if (voz) frase.voice = voz;
             frase.rate = velocidadVoz();
-            window.speechSynthesis.speak(frase);
+            frase.onend = frase.onerror = () => { if (fraseActual === frase) fraseActual = null; };
+            fraseActual = frase;
+            // Cortar y hablar enseguida hace que algunos celulares se traben:
+            // si estaba hablando, se corta y se espera un instante.
+            if (sintesis.speaking || sintesis.pending) {
+                sintesis.cancel();
+                setTimeout(() => { if (fraseActual === frase) sintesis.speak(frase); }, 120);
+            } else {
+                if (sintesis.paused) sintesis.resume();
+                sintesis.speak(frase);
+            }
         } catch (error) {
             // Sin voz en este celular: quedan las indicaciones en pantalla.
         }
@@ -291,6 +329,7 @@
         }
         calculando = false;
         fueraDelCamino = 0;
+        ultimoRecorrido = 0;
         pasosAnunciados.clear();
         dibujarCamino();
         actualizar(true);
@@ -538,7 +577,9 @@
         if (!pantalla || !camino || !posicion) return;
         const comercio = paradaActual();
         const proyeccion = proyectar(posicion);
-        const recorrido = proyeccion ? proyeccion.recorrido : 0;
+        // El GPS llega un poco tarde: se adelanta lo que avanzás en ese rato.
+        const adelanto = proyeccion && proyeccion.lejos <= DISTANCIA_FUERA ? velocidad * ADELANTO_GPS : 0;
+        const recorrido = proyeccion ? Math.min(camino.distancia, proyeccion.recorrido + adelanto) : 0;
         const falta = Math.max(0, camino.distancia - recorrido);
         const restante = camino.distancia ? falta / camino.distancia : 0;
         const segundos = camino.duracion * restante;
@@ -562,7 +603,7 @@
         }
         if (llego) return;
 
-        // ¿Se salió del camino? Recalcula (como mucho cada 12 segundos).
+        // ¿Se salió del camino? Recalcula (como mucho cada 5 segundos).
         if (proyeccion && proyeccion.lejos > DISTANCIA_FUERA && !camino.recto) {
             fueraDelCamino++;
             if (fueraDelCamino >= 2 && Date.now() - ultimoCalculo > ESPERA_RECALCULO) {
@@ -592,10 +633,10 @@
         if (recienCalculado && !dichos.has("inicio")) {
             dichos.add("inicio");
             hablar((hasta > 40 ? "En " + textoDistanciaHablada(hasta) + ", " : "") + texto.charAt(0).toLowerCase() + texto.slice(1));
-        } else if (hasta <= 220 && hasta > 60 && !dichos.has("lejos")) {
+        } else if (hasta <= Math.max(220, velocidad * 18) && hasta > Math.max(60, velocidad * 7) && !dichos.has("lejos")) {
             dichos.add("lejos");
             hablar("En " + textoDistanciaHablada(hasta) + ", " + texto.charAt(0).toLowerCase() + texto.slice(1));
-        } else if (hasta <= 40 && !dichos.has("cerca")) {
+        } else if (hasta <= Math.max(40, velocidad * 5) && !dichos.has("cerca")) {
             dichos.add("cerca");
             hablar(texto);
         }
@@ -614,7 +655,16 @@
     // -------------------------------------------------
 
     function alMoverse(lugar) {
-        posicion = [lugar.coords.latitude, lugar.coords.longitude];
+        const nueva = [lugar.coords.latitude, lugar.coords.longitude];
+        // Velocidad en m/s: la del GPS, o la calculada entre dos posiciones.
+        const ahora = lugar.timestamp || Date.now();
+        if (Number.isFinite(lugar.coords.speed) && lugar.coords.speed >= 0) {
+            velocidad = lugar.coords.speed;
+        } else if (posicion && ultimaLectura && ahora > ultimaLectura) {
+            velocidad = Math.min(40, distancia(posicion, nueva) / ((ahora - ultimaLectura) / 1000));
+        }
+        ultimaLectura = ahora;
+        posicion = nueva;
         if (!marcadorYo) {
             marcadorYo = L.circleMarker(posicion, { radius: 9, weight: 4, color: "#ffffff", fillColor: "#1F5FE0", fillOpacity: 1, className: "puntoYo" }).addTo(mapa);
         } else {
@@ -624,7 +674,7 @@
             calcularCamino();
             return;
         }
-        if (seguir && mapa && camino && !llego) mapa.panTo(posicion, { animate: true });
+        if (seguir && mapa && camino && !llego) mapa.panTo(posicion, { animate: velocidad < 8, duration: 0.4 });
         actualizar(false);
     }
 
@@ -643,7 +693,7 @@
             sinGps();
             return;
         }
-        vigilancia = navigator.geolocation.watchPosition(alMoverse, sinGps, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+        vigilancia = navigator.geolocation.watchPosition(alMoverse, sinGps, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
     }
 
     // -------------------------------------------------

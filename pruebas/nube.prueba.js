@@ -299,6 +299,22 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     await etapas.getByRole("tab", { name: /Terminados/ }).click();
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
 
+    // T125: en Terminados también se elige y se mueve, con los mismos pasos
+    // que en la primera pestaña (sin botón grande: van en "Mover a otro paso").
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
+    await expect(pie.getByRole("button", { name: /Salir a repartir/ })).toBeHidden();
+    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
+    const moverTerminado = page.getByRole("dialog", { name: "Mover a otro paso" });
+    for (const nombre of ["Salir a repartir (1)", "En preparación (1)", "Preparado (1)"]) {
+        await expect(moverTerminado.getByRole("button", { name: nombre })).toBeVisible();
+    }
+    await capturar(page, "nube-18b-mover-desde-terminados");
+    await moverTerminado.getByRole("button", { name: "Preparado (1)" }).click();
+    await confirmar.getByRole("button", { name: "Preparado (1)" }).click();
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toHaveCount(0);
+    await etapas.getByRole("tab", { name: /Para entregar/ }).click();
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
+
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
 });
 

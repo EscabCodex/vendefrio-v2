@@ -107,7 +107,11 @@
     // Acciones en tanda (T29c): las etapas donde se eligen varios pedidos
     // (manteniendo apretada la tarjeta) y los ids elegidos. Cada pedido se
     // mueve en su propia escritura.
-    const ETAPAS_EN_TANDA = ["paraArmar", "paraEntregar"];
+    // T125: en todas las pestañas, con las mismas acciones que en la primera.
+    const ETAPAS_EN_TANDA = ["paraArmar", "paraEntregar", "historial", "aCobrar", "incidencias", "cancelados"];
+    // En estas pestañas no hay un paso "natural" para el botón grande: los
+    // pasos van todos en "Mover a otro paso".
+    const ETAPAS_SIN_PRINCIPAL = ["historial", "aCobrar", "incidencias", "cancelados"];
     let eligiendo = false;
     const elegidos = new Set();
 
@@ -890,17 +894,18 @@
     const ACCIONES_TANDA = [
         {
             id: "enReparto", boton: "Salir a repartir", destino: "«En reparto», a tu nombre", hecho: ["Pedido en reparto", " pedidos en reparto"],
-            aplica: (pedido, estado) => pasosSiguientes(estado).some(paso => paso.hacia === "enReparto"),
-            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "")
+            aplica: (pedido, estado) => pasosSiguientes(estado).some(paso => paso.hacia === "enReparto") ||
+                (movibleEnTanda(estado) && estado !== "enReparto" && (puede("reparte") || puede("controla"))),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", notaTanda(id))
         },
         {
             id: "enPreparacion", boton: "En preparación", destino: "«En preparación»", hecho: ["Pedido en preparación", " pedidos en preparación"],
-            aplica: (pedido, estado) => estado === "cargado" && puede("prepara"),
-            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enPreparacion", "")
+            aplica: (pedido, estado) => movibleEnTanda(estado) && estado !== "enPreparacion" && puede("prepara"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enPreparacion", notaTanda(id))
         },
         {
             id: "preparado", boton: "Preparado", destino: "«Preparado», sin pasar por la checklist", hecho: ["Pedido preparado", " pedidos preparados"],
-            aplica: (pedido, estado) => (estado === "cargado" || estado === "enPreparacion") && puede("prepara"),
+            aplica: (pedido, estado) => movibleEnTanda(estado) && estado !== "preparado" && puede("prepara"),
             hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "preparado", "Marcado preparado en tanda")
         },
         {
@@ -914,6 +919,17 @@
             hacer: id => window.nubeVendeFrio.eliminarPedido(id)
         }
     ];
+
+    // Un pedido cancelado o "Histórico" (sin estados) no cambia de paso.
+    function movibleEnTanda(estado) {
+        return Boolean(estado) && estado !== "cancelado" && estado !== "historico";
+    }
+
+    // Volver un entregado para atrás lleva motivo (como desde la ficha).
+    function notaTanda(id) {
+        const pedido = buscarPedido(id);
+        return pedido && estadoActualDelPedido(pedido) === "entregado" ? "Vuelto atrás en tanda desde Pedidos" : "";
+    }
 
     const barraTanda = crear("div", "barraTandaPedidos oculto");
     const botonMarcarTodos = crear("button", "btnAccion secundario botonMarcarTodos", "Marcar todos");
@@ -967,6 +983,7 @@
 
     function dibujarBarraTanda(etapa, deLaEtapa) {
         registrosDeLaEtapaTanda = etapa && ETAPAS_EN_TANDA.includes(etapa.id) ? deLaEtapa : [];
+        etapaTanda = etapa ? etapa.id : "";
         const tanda = accionesDeLaEtapa().length > 0;
 
         if (!tanda) {
@@ -1012,7 +1029,9 @@
         return [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id))).length;
     }
 
+    let etapaTanda = "";
     function accionPrincipalTanda(disponibles) {
+        if (ETAPAS_SIN_PRINCIPAL.includes(etapaTanda)) return null;
         return disponibles.find(accion => !accion.peligro) || null;
     }
 

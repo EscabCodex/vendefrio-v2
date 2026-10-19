@@ -88,7 +88,7 @@
         movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
-        vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
+        vehiculo: "auto", navegador: "app", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
         resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
     };
@@ -380,7 +380,7 @@
         const valores = {
             apariencia: { sistema: "Automática", claro: "Clara", oscuro: "Oscura" }[leer().tema || "sistema"],
             impresora: window.impresionVendeFrio?.impresoraGuardada?.()?.nombre || "Sin elegir",
-            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "bicicleta"] || "Bicicleta"
+            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "auto"] || "Auto"
         };
         document.querySelectorAll(".configValor[data-valor]").forEach(valor => {
             valor.textContent = valores[valor.dataset.valor] || "";

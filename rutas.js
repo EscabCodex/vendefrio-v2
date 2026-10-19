@@ -1748,6 +1748,7 @@ function optimizarRuta() {
             rutaReordenadaAMano = false;
             paradasHechasRuta = new Set();
             paradasConPedidosRuta = new Set(rutaOrdenada.filter(comercio => cargaParaParada(comercio.nombre).pedidos.length).map(comercio => comercio.nombre));
+            pedidosAlArmarRuta = idsDePedidosRuta();
             comerciosSinGpsRuta = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
                 .map(comercio => comercio.nombre);
@@ -1863,6 +1864,20 @@ let paradasHechasRuta = new Set();
 // Paradas que tenían pedidos para entregar cuando se armó la ruta.
 let paradasConPedidosRuta = new Set();
 let rutaReordenadaAMano = false;
+// Pedidos que ya existían al armar la ruta: uno nuevo para una parada
+// (tocando "Pedido" o "Hacer pedido") la deja hecha sola.
+let pedidosAlArmarRuta = null;
+
+function idsDePedidosRuta() {
+    if (typeof obtenerHistorial !== "function") return new Set();
+    return new Set(obtenerHistorial().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
+}
+
+function tienePedidoNuevoRuta(nombre) {
+    if (!pedidosAlArmarRuta || typeof obtenerHistorial !== "function") return false;
+    return obtenerHistorial().some(pedido => pedido && pedido.eliminado !== true && pedido.id != null &&
+        !pedidosAlArmarRuta.has(String(pedido.id)) && mismoNombreRuta(pedido.comercio, nombre));
+}
 
 const ESTADOS_PARA_ENTREGAR_RUTA = ["cargado", "enPreparacion", "preparado", "enReparto", "enVehiculo"];
 
@@ -1903,6 +1918,7 @@ function recalcularDistanciasRuta() {
 
 function paradaHecha(comercio) {
     if (paradasHechasRuta.has(comercio.nombre)) return true;
+    if (tienePedidoNuevoRuta(comercio.nombre)) return true;
     // Tenía pedidos y ya no le queda ninguno para entregar: ya se pasó.
     return paradasConPedidosRuta.has(comercio.nombre) && cargaParaParada(comercio.nombre).pedidos.length === 0;
 }
@@ -2060,6 +2076,7 @@ function dibujarProximaParada() {
                 if (!evento.target.closest('[data-parada="reiniciar"]')) return;
                 paradasHechasRuta.clear();
                 paradasConPedidosRuta.clear();
+                pedidosAlArmarRuta = idsDePedidosRuta();
                 mostrarRutaEnLista();
             };
             pantalla.appendChild(tarjeta);
