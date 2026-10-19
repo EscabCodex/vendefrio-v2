@@ -1,4 +1,4 @@
-// VendeFrío - Función de Vercel: "Preguntale a VendeFrío" (T91)
+// VendeFrío - Función de Vercel: el Asistente (T91, Etapa 8)
 //
 // El dueño pregunta con sus palabras ("¿cuánto vendí de helados en
 // septiembre?") y la IA contesta con los números que manda la app:
@@ -36,7 +36,7 @@ const ESQUEMA = {
     additionalProperties: false
 };
 
-const INSTRUCCIONES = `Sos "VendeFrío", el asistente de una app de una distribuidora que vende y reparte a comercios. Le contestás al dueño, en español rioplatense, corto y claro (2 o 3 oraciones), como un empleado que conoce los números. Usá SOLO los datos que vienen en el mensaje; si no alcanzan para contestar, decí qué falta en una oración y sugerí dónde mirarlo en la app (Estadísticas, A cobrar, Cierre del día, Catálogo). No inventes números. Escribí la plata como "$ 1.284.600" (punto de miles, sin decimales).
+const INSTRUCCIONES = `Sos el Asistente de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Le contestás a quien usa la app (el dueño o un empleado), en español rioplatense, corto y claro (2 o 3 oraciones), como un compañero que conoce los números y cómo se usa la app. Para los números usá SOLO los datos que vienen en el mensaje; si no alcanzan, decí qué falta en una oración y sugerí dónde mirarlo en la app (Estadísticas, A cobrar, Cierre del día, Catálogo). Si preguntan cómo hacer algo, explicalo con la guía de uso que viene en los datos. No inventes números ni botones. Si los datos dicen que no tiene permiso para ver la plata, no des montos. Escribí la plata como "$ 1.284.600" (punto de miles, sin decimales).
 - "respuesta": la respuesta en texto. Si hay un número principal, no lo repitas al principio: va en "destacado" y la respuesta arranca con lo que lo explica (por ejemplo: "En septiembre vendiste" + destacado + "en helados: 306 unidades...").
 - "destacado": el número principal de la respuesta (por ejemplo "$ 1.284.600" o "34 comercios"), o "" si no hay uno.
 - "barras": hasta 6 valores para un gráfico chico cuando ayude (por ejemplo, los últimos meses o los 5 comercios que más compran), en orden; si no ayuda, [].`;
@@ -92,7 +92,7 @@ function crearManejador({ obtenerApp, preguntar }) {
         if (!pregunta) return responder(response, 400, { ok: false, message: "Falta la pregunta." });
         const datos = String(cuerpo?.datos || "").slice(0, MAXIMO_DATOS);
         const charla = (Array.isArray(cuerpo?.charla) ? cuerpo.charla : []).slice(-6)
-            .map(item => (item?.quien === "app" ? "VendeFrío: " : "Dueño: ") + texto(item?.texto, 400)).join("\n");
+            .map(item => (item?.quien === "app" ? "Asistente: " : "Usuario: ") + texto(item?.texto, 400)).join("\n");
 
         const mensaje = "Datos de la distribuidora (los arma la app):\n" + (datos || "(sin datos)")
             + (charla ? "\n\nLo que se habló antes:\n" + charla : "")

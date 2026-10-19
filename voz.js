@@ -612,21 +612,6 @@
         });
     }
 
-    function agregarBotonMicrofono() {
-        if (!Reconocimiento || document.getElementById("botonVozInicio")) return;
-        const avatar = document.getElementById("botonAvatar");
-        if (!avatar) return;
-        const boton = document.createElement("button");
-        boton.type = "button";
-        boton.id = "botonVozInicio";
-        boton.className = "botonVozInicio";
-        boton.setAttribute("aria-label", "Comando por voz");
-        boton.title = "Comando por voz";
-        boton.innerHTML = window.icono("microfono", 22);
-        boton.addEventListener("click", empezarComando);
-        avatar.before(boton);
-    }
-
     // -------------------------------------------------
     // Pedido dictado o pegado (T44)
     // -------------------------------------------------
@@ -939,11 +924,6 @@
         hojaDictado?.classList.remove("escuchando");
     }
 
-    function iniciar() {
-        agregarBotonMicrofono();
-    }
-
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
-    else iniciar();
-    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, escuchar, abrirDictado, comando: empezarComando };
+    // Etapa 8: el micrófono de Inicio ahora es el Asistente (asistente.js).
+    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, ejecutarOrden, detener, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, escuchar, abrirDictado, comando: empezarComando };
 }());

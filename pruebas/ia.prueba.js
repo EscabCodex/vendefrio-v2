@@ -139,8 +139,8 @@ test("ia: la del celular y la de la nube entienden lo que la voz gratis no", asy
     // 2. La IA del celular entiende la frase y abre el pedido.
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await page.evaluate(texto => { window.__fraseVoz = texto; }, frase);
-    await page.getByRole("button", { name: "Comando por voz" }).click();
-    await expect(page.locator(".ventanaVoz")).toBeHidden();
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Asistente" }).click();
+    await expect(page.getByRole("dialog", { name: "Asistente" })).toBeHidden();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
     expect(await page.evaluate(() => window.__preguntasCelular.length)).toBe(1);

@@ -1985,6 +1985,12 @@
         if (eliminar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
         if (peligro.children.length) acciones.appendChild(peligro);
 
+        // Etapa 8 (pedido del dueño): los cuatro pasos en orden, cada uno
+        // con su botón abajo. Los hechos llevan un tilde y los que todavía
+        // no se pueden hacer se ven más claritos.
+        const pasos = armarPasos(acciones, estado, Boolean(cobrado));
+        if (pasos) acciones.prepend(pasos);
+
         // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
         // entrega). Lo demás va en "Más opciones" (⋯).
         const opciones = Array.from(acciones.querySelectorAll(
@@ -2015,6 +2021,42 @@
         }
 
         return acciones;
+    }
+
+    const ORDEN_DE_PASOS = { cargado: 0, enPreparacion: 0, preparado: 1, enVehiculo: 2, enReparto: 2, entregado: 3 };
+
+    function armarPasos(acciones, estado, cobrado) {
+        const actual = ORDEN_DE_PASOS[estado];
+        if (actual === undefined) return null;
+        const hijos = Array.from(acciones.children);
+        const deslizador = hijos.find(elemento => elemento.classList.contains("deslizador"));
+        const pasos = [
+            { titulo: "Armá el pedido", hecho: actual > 0, elementos: hijos.filter(elemento =>
+                elemento.matches('[data-estado="enPreparacion"], [data-estado="preparado"]') || (actual === 0 && elemento.classList.contains("pistaChecklist"))) },
+            { titulo: "Salí a repartir", hecho: actual > 1, elementos: hijos.filter(elemento => elemento.matches('[data-estado="enReparto"]')) },
+            { titulo: "Entregalo", hecho: actual > 2, elementos: deslizador ? [deslizador] : [] },
+            { titulo: "Registrá el cobro", hecho: cobrado, elementos: hijos.filter(elemento => elemento.classList.contains("botonRegistrarCobro")) }
+        ];
+        const caja = crear("ol", "pasosFichaPedido");
+        caja.setAttribute("aria-label", "Pasos del pedido");
+        pasos.forEach((paso, indice) => {
+            const item = crear("li", "pasoFicha");
+            const disponible = paso.elementos.length > 0;
+            item.classList.add(paso.hecho ? "hecho" : disponible ? "ahora" : "despues");
+            const titulo = crear("p", "pasoFichaTitulo");
+            titulo.innerHTML = `<span class="pasoFichaNumero" aria-hidden="true">${paso.hecho && window.icono ? window.icono("check", 14) : indice + 1}</span>`;
+            titulo.append(crear("span", "", "Paso " + (indice + 1) + ": " + paso.titulo + (paso.hecho ? " (hecho)" : "")));
+            item.appendChild(titulo);
+            paso.elementos.forEach(elemento => item.appendChild(elemento));
+            if (!paso.hecho && !disponible) {
+                const nota = indice === 3 && !puedeCobrar() ? "Lo registra quien cobra."
+                    : indice === 3 ? "Se registra después de entregar."
+                        : indice < actual ? "" : "Lo hace quien tiene ese permiso.";
+                if (nota) item.appendChild(crear("small", "pasoFichaNota", nota));
+            }
+            caja.appendChild(item);
+        });
+        return caja;
     }
 
     function avisarError(error) {

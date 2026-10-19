@@ -2,8 +2,6 @@
 // Debajo del resumen de hoy (que sigue arriba de todo), tres botones grandes
 // con lo que más se hace en el día: cargar un pedido, ver los pedidos de hoy
 // y cobrar. "Cobrar" aparece solo para quien cobra, en la nube.
-// También "Preguntale a VendeFrío" sale de Más y queda arriba a la derecha de
-// Inicio, al lado del micrófono.
 (function () {
     "use strict";
 
@@ -64,7 +62,6 @@
                 ${opcion("pedidosHoy", "camion", "Ver los pedidos de hoy", subPedidos, false)}
                 ${cobrar}
             </div>`;
-        dibujarBotonPreguntale();
     }
 
     function alTocar(evento) {
@@ -81,41 +78,6 @@
             window.saldosVendeFrio?.abrirPantalla?.();
         }
     }
-
-    // ---------- "Preguntale a VendeFrío" arriba a la derecha ----------
-    function accesoPreguntale() {
-        return (window.accesosMasExtras || []).find(acceso => acceso.destino === "preguntale");
-    }
-
-    function dibujarBotonPreguntale() {
-        const acceso = accesoPreguntale();
-        let boton = document.getElementById("botonPreguntaleInicio");
-        let visible = false;
-        try { visible = Boolean(acceso && (!acceso.mostrar || acceso.mostrar())); } catch (error) { visible = false; }
-        if (!visible) {
-            boton?.remove();
-            return;
-        }
-        if (boton) return;
-        const microfono = document.getElementById("botonVozInicio");
-        const avatar = document.getElementById("botonAvatar");
-        if (!microfono && !avatar) return;
-        boton = document.createElement("button");
-        boton.type = "button";
-        boton.id = "botonPreguntaleInicio";
-        boton.className = "botonVozInicio botonPreguntaleInicio";
-        boton.setAttribute("aria-label", "Preguntale a VendeFrío");
-        boton.title = "Preguntale a VendeFrío";
-        boton.innerHTML = p.ico("chispa", 22);
-        boton.addEventListener("click", () => accesoPreguntale()?.abrir());
-        // Queda donde estaba el micrófono, que se corre un lugar a la izquierda.
-        if (microfono) microfono.after(boton);
-        else avatar.before(boton);
-    }
-
-    // Ya no va en Más: queda en Inicio.
-    const acceso = accesoPreguntale();
-    if (acceso) acceso.enMas = false;
 
     if (typeof window.actualizarDashboard === "function") {
         const original = window.actualizarDashboard;

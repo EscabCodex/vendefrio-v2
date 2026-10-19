@@ -1,4 +1,4 @@
-// VendeFrío - Preguntale a VendeFrío (T91). La función de Vercel
+// VendeFrío - El Asistente (T91, Etapa 8). La función de Vercel
 // (api/preguntar.js) corre acá mismo con una IA falsa que anota qué le
 // mandaron: la pregunta y el resumen de números que arma el celular.
 const { test, expect, capturar } = require("./ayudas");
@@ -33,7 +33,7 @@ async function llamar(cuerpo, credencial) {
     return { estado, datos };
 }
 
-test("preguntale: pregunta con tus palabras y responde con tus números", async ({ page }, testInfo) => {
+test("asistente: tus números al toque, cómo se usa, la IA y las órdenes", async ({ page }, testInfo) => {
     await page.route("**/api/preguntar", async ruta => {
         const pedido = ruta.request();
         const { estado, datos } = await llamar(pedido.postDataJSON(), String(pedido.headers().authorization || "").replace(/^Bearer /, ""));
@@ -45,30 +45,51 @@ test("preguntale: pregunta con tus palabras y responde con tus números", async 
     // Sin sesión, la función no atiende.
     expect((await llamar({ pregunta: "hola" }, "")).estado).toBe(401);
 
-    // Etapa 8: está arriba a la derecha de Inicio, ya no en Más.
+    // Un solo botón arriba a la derecha de Inicio; ya no está en Más.
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.locator("#pantallaMenu").getByRole("button", { name: "Preguntale a VendeFrío" }).click();
-    const pantalla = page.locator("#pantallaPreguntale");
-    // Con la IA en la nube apagada, avisa cómo prenderla.
-    await expect(pantalla.locator("#avisoIaApagada")).toContainText("Prendé la IA en la nube");
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Asistente" }).click();
+    const ventana = page.getByRole("dialog", { name: "Asistente" });
+    await expect(ventana).toBeVisible();
+
+    // 1. Sus números, al toque y sin IA.
+    await ventana.getByRole("button", { name: "¿Cuánto vendí hoy?" }).click();
+    let respuesta = ventana.locator(".burbujaApp").last();
+    await expect(respuesta.locator("strong")).toHaveText("$ 9.800");
+    await expect(respuesta).toContainText("hoy, en 1 pedido a 1 comercio.");
+
+    // 2. Cómo se usa la app, en pasos.
+    const campo = ventana.getByRole("textbox", { name: "Hablale o escribile al Asistente" });
+    await campo.fill("¿Cómo registro un cobro?");
+    await ventana.getByRole("button", { name: "Enviar" }).click();
+    respuesta = ventana.locator(".burbujaApp").last();
+    await expect(respuesta).toContainText("Registrar un cobro");
+    await expect(respuesta.locator("li")).toHaveCount(4);
+    await capturar(page, "asistente-01-charla");
+    expect(mensajes).toHaveLength(0);
+
+    // 3. Lo que no sabe solo, con la IA en la nube prendida.
     await page.evaluate(() => {
         const preferencias = JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}");
         localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias, iaNube: true }));
     });
-    await pantalla.getByRole("button", { name: "¿Cuánto vendí este mes?" }).click();
-    const respuesta = pantalla.locator(".burbujaApp").last();
+    await campo.fill("¿Qué producto se vende más?");
+    await ventana.getByRole("button", { name: "Enviar" }).click();
+    respuesta = ventana.locator(".burbujaApp:not(.burbujaPensando)").last();
     await expect(respuesta).toContainText("Este mes vendiste");
     await expect(respuesta.locator("strong")).toHaveText("$ 9.800");
     await expect(respuesta.locator(".miniBarras span")).toHaveCount(4);
-    await pantalla.getByRole("textbox", { name: "Tu pregunta" }).fill("¿Y quién me debe más?");
-    await pantalla.getByRole("button", { name: "Preguntar", exact: true }).click();
-    await expect(pantalla.locator(".burbujaYo")).toHaveCount(2);
-    await expect(pantalla.locator(".burbujaApp:not(.burbujaPensando)")).toHaveCount(2);
-    await capturar(page, "preguntale-01-charla");
+    await capturar(page, "asistente-02-con-ia");
 
-    // La IA recibió los números del celular y lo charlado antes.
-    expect(mensajes[0]).toContain("¿Cuánto vendí este mes?");
+    // La IA recibió los números del celular, la guía de uso y lo charlado antes.
+    expect(mensajes[0]).toContain("¿Qué producto se vende más?");
     expect(mensajes[0]).toMatch(/Vendido: \$ 9\.800 en 1 pedidos/);
     expect(mensajes[0]).toContain("Almacén Don Pepe: $ 9.800");
-    expect(mensajes[1]).toContain("Lo que se habló antes:");
+    expect(mensajes[0]).toContain("Cómo se usa la app");
+    expect(mensajes[0]).toContain("Lo que se habló antes:");
+
+    // 4. Una orden: la hace al toque y se cierra.
+    await campo.fill("abrir pedidos");
+    await ventana.getByRole("button", { name: "Enviar" }).click();
+    await expect(ventana).toBeHidden();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
 });

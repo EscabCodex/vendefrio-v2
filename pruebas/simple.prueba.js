@@ -134,6 +134,18 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(ficha.locator(".datosFichaPedido")).toContainText("$ 8.000");
     await ficha.locator(".seccionDetallesPedido").scrollIntoViewIfNeeded();
     await capturar(page, "simple-05-ficha-con-cambios");
+    // Los cuatro pasos del pedido, cada uno con su botón (pedido del dueño).
+    const pasos = ficha.locator(".pasoFicha");
+    await expect(pasos).toHaveCount(4);
+    await expect(pasos.nth(0)).toContainText("Paso 1: Armá el pedido");
+    await expect(pasos.nth(1)).toContainText("Paso 2: Salí a repartir");
+    await expect(pasos.nth(1).getByRole("button", { name: "Salir a repartir" })).toBeVisible();
+    await expect(pasos.nth(2)).toContainText("Paso 3: Entregalo");
+    await expect(pasos.nth(2).locator(".deslizador")).toBeVisible();
+    await expect(pasos.nth(3)).toContainText("Paso 4: Registrá el cobro");
+    await expect(pasos.nth(3)).toContainText("Se registra después de entregar.");
+    await pasos.nth(1).evaluate(paso => paso.scrollIntoView({ block: "center" }));
+    await capturar(page, "simple-05b-pasos-del-pedido");
 
     // En la nube: el pedido con su precio y los detalles aparte.
     await expect.poll(() => page.evaluate(async () => {
@@ -202,8 +214,8 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     expect((await queHacer.boundingBox()).y).toBeGreaterThan(resumen.y);
     await expect(queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ })).toContainText("1 para armar");
     await expect(queHacer.getByRole("button", { name: /Cobrar/ })).toBeVisible();
-    // "Preguntale a VendeFrío" arriba a la derecha, al lado del micrófono.
-    await expect(inicio.locator("header").getByRole("button", { name: "Preguntale a VendeFrío" })).toBeVisible();
+    // El Asistente arriba a la derecha, en el lugar del micrófono.
+    await expect(inicio.locator("header").getByRole("button", { name: "Asistente" })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "simple-09-inicio-que-hacer");
 

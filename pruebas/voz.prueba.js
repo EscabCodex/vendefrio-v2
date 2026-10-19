@@ -77,18 +77,19 @@ test("voz: comandos desde Inicio y pedido dictado o pegado", async ({ page }, te
         "nada"
     ]);
 
-    // Micrófono en Inicio: algo que no entiende.
-    const microfono = page.getByRole("button", { name: "Comando por voz" });
-    await expect(microfono).toBeVisible();
+    // El Asistente en Inicio (Etapa 8): algo que no entiende.
+    const asistente = page.locator("#pantallaMenu header").getByRole("button", { name: "Asistente" });
+    await expect(asistente).toBeVisible();
+    await expect(page.getByRole("button", { name: "Comando por voz" })).toHaveCount(0);
     await page.evaluate(() => { window.__fraseVoz = "cantame una canción"; });
-    await microfono.click();
-    const ventana = page.locator(".ventanaVoz");
-    await expect(ventana.locator(".textoVoz")).toContainText("No entendí");
+    await asistente.click();
+    const ventana = page.getByRole("dialog", { name: "Asistente" });
+    await expect(ventana.locator(".burbujaApp").last()).toContainText("No entendí");
     await capturar(page, "voz-01-te-escucho");
 
     // Hablando normal: "Haceme un pedido para el de la esquina".
     await page.evaluate(() => { window.__fraseVoz = "che, haceme un pedido para el de la esquina"; });
-    await ventana.getByRole("button", { name: "Escuchar de nuevo" }).click();
+    await ventana.getByRole("button", { name: "Hablar" }).click();
     await expect(ventana).toBeHidden();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
