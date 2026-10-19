@@ -33,7 +33,8 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
 
     // Pedidos > A cobrar: "Te deben" y "ver por comercio".
     await irAPedidos(page);
-    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /A cobrar/ }).click();
+    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
+    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     const banner = page.locator("#verACobrarPorComercio");
     await expect(banner).toContainText("Te deben $ 19.600");
     await banner.click();
@@ -135,7 +136,8 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
         .map(id => obtenerHistorial().find(item => item.id === id).estado).join(","), ids)).toBe("entregado,entregado");
     await page.evaluate(id => window.nubeVendeFrio.registrarCobro(id, { forma: "efectivo", monto: 9800 }), ids[0]);
     await irAPedidos(page);
-    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /A cobrar/ }).click();
+    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
+    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     await page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first().click();
     const ficha = page.locator(".fichaPedido");
     await ficha.getByRole("button", { name: "Registrar cobro" }).click();

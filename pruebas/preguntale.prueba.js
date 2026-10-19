@@ -2,7 +2,7 @@
 // (api/preguntar.js) corre acá mismo con una IA falsa que anota qué le
 // mandaron: la pregunta y el resumen de números que arma el celular.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -45,8 +45,9 @@ test("preguntale: pregunta con tus palabras y responde con tus números", async 
     // Sin sesión, la función no atiende.
     expect((await llamar({ pregunta: "hola" }, "")).estado).toBe(401);
 
-    await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: /Preguntale a VendeFrío/ }).click();
+    // Etapa 8: está arriba a la derecha de Inicio, ya no en Más.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await page.locator("#pantallaMenu").getByRole("button", { name: "Preguntale a VendeFrío" }).click();
     const pantalla = page.locator("#pantallaPreguntale");
     // Con la IA en la nube apagada, avisa cómo prenderla.
     await expect(pantalla.locator("#avisoIaApagada")).toContainText("Prendé la IA en la nube");

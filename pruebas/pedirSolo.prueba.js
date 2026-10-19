@@ -20,7 +20,8 @@ test("pedir solo: link, pedido del comercio y cargarlo como Cargado", async ({ p
     })).toBe("Martes");
 
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    await page.locator(".modalFichaComercio").getByRole("button", { name: "Link para que pida solo" }).click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" }).getByRole("button", { name: "Link para que pida solo" }).click();
     const hoja = page.getByRole("dialog", { name: "Link para que pida solo" });
     await expect(hoja.locator("#linkPedido")).toContainText("pedir.html?t=");
     await expect(hoja.getByRole("link", { name: "Mandar por WhatsApp" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491155551234\?text=Hola%20Almac/);

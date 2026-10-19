@@ -213,11 +213,14 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
         const pedido = obtenerHistorial().find(item => item.comercio === "Super Norte");
         window.nubeVendeFrio.entregarPedido(pedido.id, {});
     });
-    await expect(page.locator("#filtrosEtapaPedidos")).toContainText("A cobrar");
+    await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
+    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toContainText("A cobrar");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toBeHidden();
 
     // Rutas: todos los comercios y "Optimizar ruta".
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: /Rutas/ }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     // El mapa viene dentro de la app (T40): abre aunque no haya internet
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
@@ -284,7 +287,7 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
 
     // Más > Cierre del día.
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: /Cierre del día/ }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Cierre del día/ }).click();
     const cierre = page.locator("#pantallaCierre");
     await expect(cierre).toBeVisible();
     await expect(cierre.locator("#nombreDiaCierre")).toContainText("Hoy");
@@ -327,8 +330,8 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
     // Un empleado sin "Cobra" no tiene "Cierre del día" en Más.
     const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);
     await abrirMas(empleado);
-    await expect(empleado.locator(".masAccesos")).toContainText("Rutas");
-    await expect(empleado.locator(".masAccesos")).not.toContainText("Cierre del día");
+    await expect(empleado.locator("#masAccesos")).toContainText("Rutas");
+    await expect(empleado.locator("#masAccesos")).not.toContainText("Cierre del día");
     await contexto.close();
     expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });

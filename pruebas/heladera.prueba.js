@@ -13,7 +13,8 @@ test("heladera: foto con comentario y las anteriores para comparar", async ({ pa
     await page.evaluate(() => agregarComercio({ nombre: "Almacén Don Pepe", direccion: "San Martín 123" }));
 
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    await page.locator(".modalFichaComercio").getByRole("button", { name: "Exhibición" }).click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" }).getByRole("button", { name: "Exhibición" }).click();
     const pantalla = page.locator("#pantallaHeladera");
     await expect(pantalla).toContainText("Todavía no hay fotos");
 

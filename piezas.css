@@ -662,3 +662,33 @@ html #pantallaPedido .marca[data-plegable="1"] .tituloMarca{cursor:pointer;align
 .marca[data-plegable="1"]:not(.cerrada) .flechaMarca{transform:rotate(180deg);}
 .marca.cerrada{margin-bottom:2px !important;}
 html[data-precios="no"] #pantallaPedido .precioPedidoBoton{display:none;}
+/* Etapa 8: ficha del comercio con un solo botón "Más opciones". */
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones{grid-template-columns:1fr;}
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaMasOpciones{min-height:48px!important;font-size:15px;font-weight:700;}
+.pzOpcion.fichaOpcion svg{color:var(--texto-sec);flex-shrink:0;}
+.pzOpcion.fichaOpcionPeligro,.pzOpcion.fichaOpcionPeligro svg{color:var(--peligro);}
+.fichaOpcionSeparador{border:0;border-top:1px solid var(--borde);margin:6px 0;width:100%;}
+/* Etapa 8: Pedidos con tres pestañas y "Otros" (mismo tamaño que antes). */
+.filtroEtapaOtros svg{flex-shrink:0;}
+.pzOpcion .filtroEtapaCantidad{margin-left:auto;}
+.pzOpcion[aria-current="true"]{color:var(--acento);}
+/* Etapa 8: Inicio "¿Qué querés hacer?" (debajo del resumen de hoy). */
+.queHacer{margin-top:4px;}
+.queHacerLista{display:flex;flex-direction:column;gap:10px;}
+.queHacerOpcion{
+  display:flex;align-items:center;gap:14px;width:100%;min-height:76px;padding:14px 16px;
+  border:0;border-radius:var(--radius-lg);background:var(--superficie);color:var(--texto);
+  box-shadow:var(--sombra);font:inherit;text-align:left;cursor:pointer;
+}
+.queHacerIcono{display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
+.queHacerTexto{display:flex;flex-direction:column;min-width:0;}
+.queHacerTexto strong{font-size:18px;font-weight:800;line-height:1.2;}
+.queHacerTexto small{font-size:14px;color:var(--texto-sec);margin-top:2px;}
+.queHacerOpcion.principal{background:var(--acento);color:var(--acento-txt);}
+.queHacerOpcion.principal .queHacerIcono{background:rgba(255,255,255,.18);color:var(--acento-txt);}
+.queHacerOpcion.principal small{color:var(--acento-txt);opacity:.85;}
+.queHacerOpcion:active{transform:scale(.99);}
+html[data-tema="oscuro"] .queHacerIcono{color:var(--acento);}
+html[data-tema="oscuro"] .queHacerOpcion.principal .queHacerIcono{background:rgba(0,0,0,.12);color:var(--acento-txt);}
+/* Etapa 8: Más en tres grupos con título. */
+.masGruposAccesos .masGrupoTitulo:first-child{margin-top:4px;}

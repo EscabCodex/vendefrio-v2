@@ -222,7 +222,7 @@
                         <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
                     </button>
 
-                    <div class="masAccesos" id="masAccesos"></div>
+                    <div class="masGruposAccesos" id="masAccesos"></div>
 
                     <h2 class="configGrupoTitulo">Trabajo diario</h2>
                     <div class="configLista">
@@ -346,16 +346,33 @@
         if (accesos) {
             const tarjeta = (destino, icono, texto) =>
                 `<button type="button" class="masAcceso" data-mas="${destino}"><span data-color="${destino}">${window.icono(icono, 22)}</span><strong>${texto}</strong></button>`;
-            accesos.innerHTML =
-                tarjeta("rutas", "mapa", "Rutas") +
-                tarjeta("estadisticas", "grafico", "Estadísticas") +
-                tarjeta("whatsapp", "whatsapp", "WhatsApp") +
-                (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
-                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "") +
+            const lista = [
+                { destino: "rutas", icono: "mapa", texto: "Rutas" },
+                { destino: "estadisticas", icono: "grafico", texto: "Estadísticas" },
+                { destino: "whatsapp", icono: "whatsapp", texto: "WhatsApp" },
+                window.cierreVendeFrio?.disponible?.() ? { destino: "cierre", icono: "recibo", texto: "Cierre del día" } : null,
+                !usaNubeReal() ? { destino: "historial", icono: "historial", texto: "Historial" } : null,
                 // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
-                (window.accesosMasExtras || []).filter(acceso => {
+                ...(window.accesosMasExtras || []).filter(acceso => {
+                    if (acceso.enMas === false) return false;
                     try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
-                }).map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("");
+                })
+            ].filter(Boolean);
+            // Etapa 8: en tres grupos con título. Lo que no está en la lista va a Herramientas.
+            const GRUPOS = [
+                ["Plata", ["aCobrar", "cierre"]],
+                ["Ventas", ["estadisticas", "mapaVentas", "cambios", "historial"]],
+                ["Herramientas", []]
+            ];
+            const conocidos = GRUPOS.flatMap(([, destinos]) => destinos);
+            accesos.innerHTML = GRUPOS.map(([titulo, destinos]) => {
+                const delGrupo = destinos.length
+                    ? destinos.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean)
+                    : lista.filter(acceso => !conocidos.includes(acceso.destino));
+                if (!delGrupo.length) return "";
+                return `<h2 class="configGrupoTitulo masGrupoTitulo">${titulo}</h2><div class="masAccesos">` +
+                    delGrupo.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>";
+            }).join("");
         }
 
         const valores = {

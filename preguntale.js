@@ -180,7 +180,7 @@
     }
 
     function abrir() {
-        const seccion = p.pantalla("pantallaPreguntale", { titulo: "Preguntale a VendeFrío", sub: "Ventas, cobros y stock, con tus palabras", volverA: "mas" });
+        const seccion = p.pantalla("pantallaPreguntale", { titulo: "Preguntale a VendeFrío", sub: "Ventas, cobros y stock, con tus palabras", volverA: "menu" });
         if (!seccion.dataset.listo) {
             seccion.dataset.listo = "1";
             seccion.addEventListener("submit", evento => {

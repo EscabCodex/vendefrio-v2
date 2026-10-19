@@ -60,6 +60,20 @@
         return boton;
     }
 
+    function abrirMasOpciones(comercio, opciones) {
+        const hoja = window.piezas.hoja({ titulo: comercio.nombre, sub: "Más opciones", etiqueta: "Más opciones de " + comercio.nombre, html: '<div class="pzOpciones"></div>' });
+        const lista = hoja.querySelector(".pzOpciones");
+        // Primero se cierra esta hoja y después corre la opción, que puede abrir otra.
+        lista.addEventListener("click", evento => { if (evento.target.closest("button")) window.piezas.cerrar(); }, true);
+        opciones.forEach(boton => {
+            const peligro = boton.classList.contains("eliminar");
+            boton.className = "pzOpcion fichaOpcion" + (peligro ? " fichaOpcionPeligro" : "");
+            boton.querySelectorAll("svg").forEach(svg => { svg.setAttribute("width", "22"); svg.setAttribute("height", "22"); });
+            if (peligro) lista.appendChild(document.createElement("hr")).className = "fichaOpcionSeparador";
+            lista.appendChild(boton);
+        });
+    }
+
     function tieneGps(comercio) {
         if (typeof comercioTieneGps === "function") return comercioTieneGps(comercio);
         return Number.isFinite(Number(comercio?.lat)) && Number.isFinite(Number(comercio?.lng)) && comercio.lat !== "" && comercio.lng !== "";
@@ -246,16 +260,20 @@
         const botonEliminar = comercioArchivado(comercio)
             ? crearBoton(window.icono("deshacer",14) + " Recuperar comercio", "ver", () => { cerrarFicha(); archivarComercioPorId(comercio.id, false); redibujarComerciosEnTodasPartes(); mostrarToast("Comercio recuperado"); })
             : crearBoton(window.icono("archivo",14) + " Archivar comercio", "eliminar", () => { cerrarFicha(); archivarComercioConDeshacer(comercio.nombre); });
-        modalFicha.querySelector(".fichaAcciones").append(
-            botonEstado,
+        const opciones = [
             crearBoton(window.icono("historial",14) + " Ver sus pedidos", "secundario", () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); }),
             crearBoton(window.icono("lapiz",14) + " Editar datos", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
+            botonEstado,
             // Botones de otras partes (T88: link para que pida solo).
             ...(window.accionesFichaComercioExtras || []).map(crear => {
                 try { return crear(comercio, crearBoton, cerrarFicha); } catch (error) { console.error(error); return null; }
             }).filter(Boolean),
             botonEliminar
-        );
+        ];
+        // Etapa 8: la ficha no se llena de botones; todo va adentro de "Más opciones".
+        const botonMas = crearBoton(window.icono("puntos",16) + " Más opciones", "secundario fichaMasOpciones", () => abrirMasOpciones(comercio, opciones));
+        botonMas.setAttribute("aria-haspopup", "dialog");
+        modalFicha.querySelector(".fichaAcciones").append(botonMas);
 
         modalFicha.querySelector(".fichaCerrar").onclick = event => { event.preventDefault(); event.stopPropagation(); cerrarFicha(); };
         modalFicha.addEventListener("click", event => { if (event.target === modalFicha || event.target.closest(".fichaCerrar")) cerrarFicha(); });

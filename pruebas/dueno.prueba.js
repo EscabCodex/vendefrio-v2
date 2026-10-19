@@ -55,7 +55,7 @@ test.describe("personal", () => {
 
         // Mapa de ventas (Más): Kiosco Luna bien, los otros flojos este mes.
         await abrirMas(page);
-        await page.locator(".masAccesos").getByRole("button", { name: /Mapa de ventas/ }).click();
+        await page.locator("#masAccesos").getByRole("button", { name: /Mapa de ventas/ }).click();
         const mapa = page.locator("#pantallaMapaVentas");
         await expect(mapa).toBeVisible();
         await expect(mapa.locator(".leaflet-interactive")).toHaveCount(3);
@@ -87,7 +87,7 @@ test.describe("nube", () => {
 
         // Más > Registro de cambios.
         await abrirMas(page);
-        await page.locator(".masAccesos").getByRole("button", { name: /Registro de cambios/ }).click();
+        await page.locator("#masAccesos").getByRole("button", { name: /Registro de cambios/ }).click();
         const registro = page.locator("#pantallaCambios");
         await expect(registro).toBeVisible();
         await expect(registro.locator(".grupoCambios h2").first()).toHaveText("Hoy");

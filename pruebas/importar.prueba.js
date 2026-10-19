@@ -20,7 +20,7 @@ test("importar: productos y comercios desde una planilla", async ({ page }) => {
     });
 
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: /Importar planilla/ }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Importar planilla/ }).click();
     const pantalla = page.locator("#pantallaImportar");
     await expect(pantalla).toBeVisible();
     await expect(pantalla.locator(".pasoImportar")).toHaveCount(3);
@@ -60,7 +60,7 @@ test("importar: productos y comercios desde una planilla", async ({ page }) => {
 
     // Comercios: con dirección y teléfono la reconoce sola.
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: /Importar planilla/ }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Importar planilla/ }).click();
     const comercios = "Nombre,Dirección,Teléfono\nKiosco Luna,Belgrano 45,11 4000-1111\nDespensa Mary,Mitre 900,11 4444-2222\n";
     await pantalla.locator("#archivoPlanilla").setInputFiles({ name: "clientes.csv", mimeType: "text/csv", buffer: Buffer.from(comercios) });
     await expect(pantalla.locator(".cabTabla")).toContainText("Comercio");

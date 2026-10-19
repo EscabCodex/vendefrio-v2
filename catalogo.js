@@ -33,13 +33,13 @@
     // Etapa 4 (T36): Catálogo y "Productos y marcas" son una sola sección,
     // con dos pestañas arriba: "Para vender" (la grilla) y "Productos y
     // marcas" (la administración de siempre). La barra marca "Catálogo" en
-    // las dos.
+    // las dos. Etapa 8: se llaman "Productos" y "Editar marcas".
     function crearSegmentoCatalogo(activa) {
         const segmento = document.createElement("div");
         segmento.className = "segmentoCatalogo";
         segmento.setAttribute("role", "tablist");
         segmento.setAttribute("aria-label", "Catálogo");
-        [["catalogo", "Para vender"], ["productos", "Productos y marcas"]].forEach(([destino, texto]) => {
+        [["catalogo", "Productos"], ["productos", "Editar marcas"]].forEach(([destino, texto]) => {
             const boton = document.createElement("button");
             boton.type = "button";
             boton.setAttribute("role", "tab");

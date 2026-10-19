@@ -46,21 +46,23 @@
     // no existe, T29b) está en "En reparto": así lo da estadoActualDelPedido.
     // "Incidencias" se marca encima del estado (T17), así que un
     // pedido con incidencia también sigue en su etapa.
+    // Etapa 8: tres pestañas (Para armar, Para entregar y Terminados) y
+    // las demás adentro de "Otros". Cada tarjeta sigue diciendo su estado.
     const ETAPAS = [
-        { id: "cargados", nombre: "Cargados", estados: ["cargado"] },
-        { id: "enPreparacion", nombre: "En preparación", estados: ["enPreparacion"] },
-        { id: "preparados", nombre: "Preparados", estados: ["preparado"] },
-        { id: "enReparto", nombre: "En reparto", estados: ["enReparto"] },
+        { id: "paraArmar", nombre: "Para armar", estados: ["cargado", "enPreparacion"] },
+        { id: "paraEntregar", nombre: "Para entregar", estados: ["preparado", "enReparto"] },
         // Historial (T27b): reemplaza a "Entregados" y a la sección
         // Historial. Lleva los entregados y los "Histórico" (los de antes,
         // sin estados), sin eliminados ni cancelados (pedidosDelHistorial).
-        { id: "historial", nombre: "Historial", estados: [] },
+        { id: "historial", nombre: "Terminados", estados: [] },
         // Cobro (T28): los entregados sin cobro registrado. Solo lo ve quien
         // tiene "Cobra" (y el dueño).
-        { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true },
-        { id: "incidencias", nombre: "Incidencias", estados: [] },
-        { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"] }
+        { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true, otros: true },
+        { id: "incidencias", nombre: "Incidencias", estados: [], otros: true },
+        { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"], otros: true }
     ];
+    // Los nombres de antes (Inicio, la voz) llevan a la pestaña que los junta.
+    const ETAPAS_DE_ANTES = { cargados: "paraArmar", enPreparacion: "paraArmar", preparados: "paraEntregar", enReparto: "paraEntregar" };
 
     // Con muchos pedidos (por ejemplo, Historial) se dibujan de a tandas.
     const TANDA = 40;
@@ -92,7 +94,7 @@
     const SVG_TILDE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
     let vistaActual = "nuevo";
-    let etapaActual = "cargados";
+    let etapaActual = "paraArmar";
     let mostrando = TANDA;
     let idFichaAbierta = "";
 
@@ -105,7 +107,7 @@
     // Acciones en tanda (T29c): las etapas donde se eligen varios pedidos
     // (manteniendo apretada la tarjeta) y los ids elegidos. Cada pedido se
     // mueve en su propia escritura.
-    const ETAPAS_EN_TANDA = ["cargados", "enPreparacion", "preparados", "enReparto"];
+    const ETAPAS_EN_TANDA = ["paraArmar", "paraEntregar"];
     let eligiendo = false;
     const elegidos = new Set();
 
@@ -508,7 +510,7 @@
             const oculta = ventanaPedidoGenerado.classList.contains("oculto");
 
             if (ventanaOculta && !oculta && enLaNube() && vistaActual === "nuevo" && !pantalla.classList.contains("oculto")) {
-                etapaActual = "cargados";
+                etapaActual = "paraArmar";
                 cambiarVista("pedidos");
                 window.scrollTo(0, 0);
             }
@@ -585,13 +587,20 @@
         avisoFiltroHistorial.classList.toggle("oculto", !aviso);
     }
 
+    let cantidadesOtros = [];
+
     function dibujarFiltros(registros, historial) {
         filtros.innerHTML = "";
+        cantidadesOtros = [];
 
         etapasVisibles().forEach(etapa => {
             const cantidad = etapa.id === "historial"
                 ? historial.length
                 : registros.filter(registro => esDeLaEtapa(registro, etapa)).length;
+            if (etapa.otros) {
+                cantidadesOtros.push({ etapa, cantidad });
+                return;
+            }
             const boton = crear("button", "filtroEtapa");
             boton.type = "button";
             boton.setAttribute("role", "tab");
@@ -602,6 +611,46 @@
             boton.append(crear("span", "filtroEtapaNombre", etapa.nombre), crear("span", "filtroEtapaCantidad", String(cantidad)));
             filtros.appendChild(boton);
         });
+
+        // "Otros": del mismo tamaño que las demás; dice cuál se está viendo.
+        const elegida = cantidadesOtros.find(item => item.etapa.id === etapaActual);
+        const otros = crear("button", "filtroEtapa filtroEtapaOtros");
+        otros.type = "button";
+        otros.setAttribute("role", "tab");
+        otros.setAttribute("aria-haspopup", "dialog");
+        otros.setAttribute("aria-selected", elegida ? "true" : "false");
+        if (elegida) otros.classList.add("activo");
+        const suma = cantidadesOtros.reduce((total, item) => total + item.cantidad, 0);
+        otros.append(
+            crear("span", "filtroEtapaNombre", elegida ? elegida.etapa.nombre : "Otros"),
+            crear("span", "filtroEtapaCantidad", String(elegida ? elegida.cantidad : suma))
+        );
+        otros.insertAdjacentHTML("beforeend", window.icono("chevAbajo", 14));
+        filtros.appendChild(otros);
+    }
+
+    function abrirOtros() {
+        const p = window.piezas;
+        const hoja = p.hoja({
+            titulo: "Otros pedidos",
+            html: '<div class="pzOpciones">' + cantidadesOtros.map(({ etapa, cantidad }) =>
+                `<button type="button" class="pzOpcion" data-etapa-otros="${etapa.id}"${etapa.id === etapaActual ? ' aria-current="true"' : ""}>${p.esc(etapa.nombre)}<span class="filtroEtapaCantidad">${cantidad}</span></button>`
+            ).join("") + "</div>"
+        });
+        hoja.addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-etapa-otros]");
+            if (!opcion) return;
+            p.cerrar();
+            elegirEtapa(opcion.dataset.etapaOtros);
+        });
+    }
+
+    function elegirEtapa(id) {
+        if (id === etapaActual) return;
+        etapaActual = id;
+        mostrando = TANDA;
+        dejarDeElegir();
+        dibujarLista();
     }
 
     // En vivo (T33): la tarjeta que cambió de estado (o que llegó nueva)
@@ -782,13 +831,14 @@
     }
 
     filtros.addEventListener("click", evento => {
+        if (evento.target.closest(".filtroEtapaOtros")) {
+            abrirOtros();
+            return;
+        }
         const boton = evento.target.closest("button[data-etapa]");
         if (!boton || boton.dataset.etapa === etapaActual) return;
 
-        etapaActual = boton.dataset.etapa;
-        mostrando = TANDA;
-        dejarDeElegir();
-        dibujarLista();
+        elegirEtapa(boton.dataset.etapa);
         boton.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     });
 
@@ -3908,6 +3958,7 @@
         pedidoAbierto: () => idFichaAbierta,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
+            etapa = ETAPAS_DE_ANTES[etapa] || etapa;
             if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;
             etapaActual = etapa;
             if (idFichaAbierta) cerrarFicha();
