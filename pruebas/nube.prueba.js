@@ -244,15 +244,27 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     const confirmar = page.locator("#modalRepartoTanda");
     await expect(tarjetas).toHaveCount(3);
 
-    // En "Cargados", el dueño ve las cinco acciones.
+    // En "Cargados", el dueño ve un solo botón grande (T110): los otros
+    // pasos van en "Mover a otro paso" y "Eliminar" en el ⋯.
     await mantenerApretada(page, tarjetas.filter({ hasText: "Super Norte" }));
-    for (const nombre of ["Salir a repartir (1)", "En preparación (1)", "Preparado (1)", "Entregado (1)", "Eliminar (1)"]) {
-        await expect(pie.getByRole("button", { name: nombre })).toBeVisible();
+    await expect(pie.getByRole("button", { name: "Salir a repartir (1)" })).toBeVisible();
+    for (const nombre of ["En preparación (1)", "Preparado (1)", "Entregado (1)", "Eliminar (1)"]) {
+        await expect(pie.getByRole("button", { name: nombre })).toBeHidden();
     }
     await capturar(page, "nube-17-acciones-tanda");
+    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
+    const mover = page.getByRole("dialog", { name: "Mover a otro paso" });
+    for (const nombre of ["En preparación (1)", "Preparado (1)", "Entregado (1)"]) {
+        await expect(mover.getByRole("button", { name: nombre })).toBeVisible();
+    }
+    await expect(mover.getByRole("button", { name: /Eliminar/ })).toHaveCount(0);
+    await capturar(page, "nube-17b-mover-a-otro-paso");
+    await page.evaluate(() => window.piezas.cerrar());
+    await expect(mover).toBeHidden();
 
-    // Eliminar pide confirmar.
-    await pie.getByRole("button", { name: "Eliminar (1)" }).click();
+    // Eliminar, en el ⋯, pide confirmar.
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("dialog", { name: "Más acciones" }).getByRole("button", { name: "Eliminar (1)" }).click();
     await expect(confirmar).toContainText("1 pedido (3 unidades) desaparece de la app para todos");
     await capturar(page, "nube-18-eliminar-tanda");
     await confirmar.getByRole("button", { name: "Eliminar (1)" }).click();
@@ -261,10 +273,12 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
 
     // "En preparación" con uno y "Preparado" con el otro.
     await mantenerApretada(page, tarjetas.filter({ hasText: "Kiosco Luna" }));
-    await pie.getByRole("button", { name: "En preparación (1)" }).click();
+    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
+    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "En preparación (1)" }).click();
     await confirmar.getByRole("button", { name: "En preparación (1)" }).click();
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
-    await pie.getByRole("button", { name: "Preparado (1)" }).click();
+    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
+    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Preparado (1)" }).click();
     await confirmar.getByRole("button", { name: "Preparado (1)" }).click();
     // "Para armar" junta Cargados y En preparación: queda Kiosco Luna.
     await expect(tarjetas).toHaveCount(1);
@@ -277,8 +291,9 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
 
     // "Entregado" en tanda: pasa a Historial, completo.
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
-    await expect(pie.getByRole("button", { name: /Eliminar/ })).toBeHidden();
-    await pie.getByRole("button", { name: "Entregado (1)" }).click();
+    await expect(pie.getByRole("button", { name: "Más acciones con los elegidos" })).toBeHidden();
+    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
+    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Entregado (1)" }).click();
     await confirmar.getByRole("button", { name: "Entregado (1)" }).click();
     await expect(tarjetas).toHaveCount(0);
     await etapas.getByRole("tab", { name: /Terminados/ }).click();

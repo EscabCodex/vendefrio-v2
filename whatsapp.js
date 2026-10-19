@@ -27,6 +27,8 @@
 
     // Lo que entendió la IA de un mensaje (T54, «Voz con IA»): id → { texto, lectura }.
     const lecturasIA = new Map();
+    // Lo que se eligió para lo no entendido (T118): id del mensaje → { tramo: producto o "no" }.
+    const respuestasNoEntendido = new Map();
 
     let elegidos = new Set();
     let ronda = null;
@@ -196,14 +198,20 @@
         const comercio = comercioDelMensaje(mensaje || {}, lectura);
         // Lo que no se entendió y tiene una cantidad parece un producto
         // ("2 cajas de alfajores"); lo demás es charla ("soy del kiosco").
-        const dudosos = (lectura.sinEntender || []).filter(tramo => CANTIDAD.test(tramo));
+        const respuestas = mensaje && respuestasNoEntendido.get(mensaje.id) || {};
+        const elegidos = [];
+        const dudosos = (lectura.sinEntender || []).filter(tramo => CANTIDAD.test(tramo)).filter(tramo => {
+            const respuesta = respuestas[tramo];
+            if (respuesta && respuesta !== "no") elegidos.push({ marca: respuesta.marca, producto: respuesta.producto, cantidad: respuesta.cantidad, dicho: tramo });
+            return !respuesta;
+        });
         return {
             comercio,
-            productos: lectura.productos || [],
+            productos: [...(lectura.productos || []), ...elegidos],
             sinEntender: dudosos,
             // Los cambios («2 cambio de ñoquis») no se suman: van en la observación.
             cambios: lectura.cambios || [],
-            completo: Boolean(comercio && lectura.productos.length && !dudosos.length)
+            completo: Boolean(comercio && (lectura.productos.length || elegidos.length) && !dudosos.length)
         };
     }
 
@@ -465,13 +473,17 @@
             } else if (accion === "empezar") {
                 const ids = comercios().filter(comercio => elegidos.has(String(comercio.id)) && numeroWhatsapp(comercio.telefono)).map(comercio => String(comercio.id));
                 if (!ids.length) return;
-                ronda = { ids, enviados: new Set() };
+                ronda = { ids, enviados: new Set(), salteados: new Set() };
                 redibujar();
                 window.scrollTo(0, 0);
             } else if (accion === "enviarUno") {
                 // El enlace abre WhatsApp; acá solo se marca como enviado.
                 ronda?.enviados.add(boton.dataset.id);
                 setTimeout(redibujar, 50);
+            } else if (accion === "saltear") {
+                // T119: pasa al que sigue; queda en la lista para mandarle después.
+                ronda?.salteados?.add(boton.dataset.id);
+                redibujar();
             } else if (accion === "terminar") {
                 ronda = null;
                 redibujar();
@@ -573,25 +585,34 @@
         if (ronda) {
             const lista = comercios().filter(comercio => ronda.ids.includes(String(comercio.id)));
             const hechos = lista.filter(comercio => ronda.enviados.has(String(comercio.id))).length;
-            const siguiente = lista.find(comercio => !ronda.enviados.has(String(comercio.id)));
+            const salteados = ronda.salteados || new Set();
+            const siguiente = lista.find(comercio => !ronda.enviados.has(String(comercio.id)) && !salteados.has(String(comercio.id)));
+            const numeroSiguiente = siguiente ? lista.indexOf(siguiente) + 1 : 0;
             return `
                 <section class="waTarjeta" aria-labelledby="waTituloRonda">
                     <h2 id="waTituloRonda">Ronda de pedidos</h2>
                     <p class="waProgreso"><strong>${hechos} de ${lista.length}</strong> enviados</p>
                     <div class="waBarra"><span style="width:${lista.length ? Math.round(hechos * 100 / lista.length) : 0}%"></span></div>
                     <p class="waAyuda">Tocá «Enviar»: se abre WhatsApp con el mensaje listo. Mandalo y volvé a la app para seguir con el próximo.</p>
-                    ${siguiente ? `<a class="waBotonGrande" data-wa="enviarUno" data-id="${escapar(String(siguiente.id))}" href="${escapar(enlacePara(siguiente))}" target="_blank" rel="noopener">${ico("whatsapp", 20)} Enviar a ${escapar(siguiente.nombre)}</a>` : `<p class="waListo">${ico("check", 18)} ¡Listo! Ya le escribiste a todos.</p>`}
+                    ${siguiente ? "" : `<p class="waListo">${ico("check", 18)} ¡Listo! Ya le escribiste a todos.</p>`}
                     <div class="waListaRonda">
                         ${lista.map(comercio => {
                             const hecho = ronda.enviados.has(String(comercio.id));
                             return `
                                 <div class="waFilaRonda${hecho ? " hecho" : ""}">
-                                    <span>${escapar(comercio.nombre)}</span>
+                                    <span>${escapar(comercio.nombre)}${!hecho && salteados.has(String(comercio.id)) ? ` <small class="waSalteado">Salteado</small>` : ""}</span>
                                     <a data-wa="enviarUno" data-id="${escapar(String(comercio.id))}" href="${escapar(enlacePara(comercio))}" target="_blank" rel="noopener">${hecho ? ico("check", 16) + " Enviado" : "Enviar"}</a>
                                 </div>`;
                         }).join("")}
                     </div>
                     <button type="button" class="waBotonSecundario" data-wa="terminar">Terminar ronda</button>
+                    ${siguiente ? `<div class="waPieRonda">
+                        <small>Siguiente: ${numeroSiguiente} de ${lista.length}</small>
+                        <div class="waPieRondaBotones">
+                            <a class="waBotonGrande" data-wa="enviarUno" data-id="${escapar(String(siguiente.id))}" href="${escapar(enlacePara(siguiente))}" target="_blank" rel="noopener">${ico("whatsapp", 20)} Enviar a ${escapar(siguiente.nombre)}</a>
+                            <button type="button" class="waBotonSecundario" data-wa="saltear" data-id="${escapar(String(siguiente.id))}">Saltear</button>
+                        </div>
+                    </div>` : ""}
                 </section>`;
         }
 
@@ -637,8 +658,11 @@
             const productos = lectura.productos.length
                 ? `<ul class="waProductos">${lectura.productos.map(item => `<li><b>${escapar(item.cantidad)} ×</b> ${escapar(item.producto)} <small>${escapar(item.marca)}</small></li>`).join("")}</ul>`
                 : `<p class="waAyuda">No se encontraron productos del catálogo.</p>`;
+            const preguntar = window.vozVendeFrio?.htmlPregunta;
             const faltan = lectura.sinEntender.length
-                ? `<p class="waNoEntendido">No entendí: ${lectura.sinEntender.map(tramo => "«" + escapar(tramo) + "»").join(", ")}</p>`
+                ? (preguntar
+                    ? `<div class="waNoEntendido sinEntenderDictado">${lectura.sinEntender.map(tramo => preguntar(tramo, false)).join("")}</div>`
+                    : `<p class="waNoEntendido">No entendí: ${lectura.sinEntender.map(tramo => "«" + escapar(tramo) + "»").join(", ")}</p>`)
                 : "";
             const cambios = lectura.cambios.length
                 ? `<p class="waAyuda">Cambios (no se suman): ${lectura.cambios.map(tramo => "«" + escapar(tramo) + "»").join(", ")}</p>`
@@ -721,6 +745,12 @@
         if (!caja) return;
         const buscador = document.activeElement && document.activeElement.id;
         caja.innerHTML = tarjetaMensajes() + tarjetaRonda() + tarjetaCompartir() + tarjetaAutomatico();
+        window.vozVendeFrio?.conectarPreguntas?.(caja, (tramo, respuesta, pregunta) => {
+            const id = pregunta.closest(".waMensaje")?.dataset.id;
+            if (!id) return;
+            respuestasNoEntendido.set(id, { ...(respuestasNoEntendido.get(id) || {}), [tramo]: respuesta });
+            dibujar();
+        });
         dibujarListaComercios();
         actualizarBotonesRonda();
         if (buscador === "waBuscar" || buscador === "waTexto") {

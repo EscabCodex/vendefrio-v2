@@ -275,12 +275,26 @@
                 window.gastosVendeFrio?.agregar(dibujar);
             } else if (boton.dataset.gasto) {
                 window.gastosVendeFrio?.verGasto(boton.dataset.gasto, dibujar);
+            } else if (boton.id === "cerrarYMandarCierre") {
+                const texto = textoParaMandar(calcular(diaElegido));
+                window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
             } else if (boton.id === "imprimirCierre") {
                 window.impresionVendeFrio?.imprimirLineas?.(lineasParaImprimir(calcular(diaElegido)), {
                     clave: "cierre",
                     aviso: "Cierre del día impreso"
                 });
             }
+        });
+
+        seccion.addEventListener("input", evento => {
+            if (evento.target.id !== "contadoCierre") return;
+            const texto = String(evento.target.value || "").trim();
+            const contado = texto === "" ? null : Math.max(0, Number(texto) || 0);
+            guardarContado(diaElegido, contado);
+            const resultado = textoDiferencia(efectivoEsperado(calcular(diaElegido)), contado);
+            const salida = document.getElementById("resultadoContadoCierre");
+            salida.className = "resultadoContado " + resultado.clase;
+            salida.textContent = resultado.texto;
         });
 
         window.impresionVendeFrio?.escuchar?.(() => {
@@ -301,6 +315,78 @@
     function textoCobro(cobro) {
         if (!cobro) return "A cobrar";
         return window.nubeVendeFrio.nombreDeFormaDeCobro(cobro.forma);
+    }
+
+    // ---------- Contá la plata (T114) ----------
+    // Lo que tendría que haber en efectivo: lo cobrado en efectivo menos los gastos.
+    const CLAVE_CONTADO = "vendefrio_cierre_contado";
+
+    function efectivoEsperado(datos) {
+        return Math.round(((Number(datos.porForma.efectivo) || 0) - (Number(datos.totalGastos) || 0)) * 100) / 100;
+    }
+
+    function contadoDelDia(inicio) {
+        try {
+            const valor = JSON.parse(localStorage.getItem(CLAVE_CONTADO) || "{}")[inicio];
+            return valor === undefined || valor === null || valor === "" ? null : Number(valor);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function guardarContado(inicio, valor) {
+        try {
+            const todos = JSON.parse(localStorage.getItem(CLAVE_CONTADO) || "{}");
+            // Se guardan solo los últimos 30 días contados.
+            Object.keys(todos).filter(dia => Number(dia) < inicio - 30 * DIA).forEach(dia => delete todos[dia]);
+            if (valor === null) delete todos[inicio]; else todos[inicio] = valor;
+            localStorage.setItem(CLAVE_CONTADO, JSON.stringify(todos));
+        } catch (error) { /* sin lugar: se ve igual, no se guarda */ }
+    }
+
+    function textoDiferencia(esperado, contado) {
+        if (contado === null) return { clase: "", texto: "Escribí cuánto contaste y te digo si da." };
+        const diferencia = Math.round((contado - esperado) * 100) / 100;
+        if (Math.abs(diferencia) < 1) return { clase: "daJusto", texto: "Da justo. ¡Bien!" };
+        if (diferencia < 0) return { clase: "faltan", texto: "Te faltan " + precio(-diferencia) };
+        return { clase: "sobran", texto: "Te sobran " + precio(diferencia) };
+    }
+
+    function htmlContarPlata(datos) {
+        const esperado = efectivoEsperado(datos);
+        const contado = contadoDelDia(datos.inicio);
+        const resultado = textoDiferencia(esperado, contado);
+        return `<section class="pzTarjeta pzRelleno contarPlata" id="contarPlataCierre">
+                <div class="contarPlataCab">
+                    <div><strong>Contá la plata</strong><small>Tendrías que tener <b id="esperadoCierre">${precio(esperado)}</b> en efectivo</small></div>
+                </div>
+                <label class="pzCampo"><span>¿Cuánto contaste?</span>
+                    <input id="contadoCierre" type="number" inputmode="decimal" min="0" step="1" placeholder="$" value="${contado === null ? "" : contado}">
+                </label>
+                <p class="resultadoContado ${resultado.clase}" id="resultadoContadoCierre" role="status">${resultado.texto}</p>
+            </section>`;
+    }
+
+    // Texto del cierre para mandar por WhatsApp.
+    function textoParaMandar(datos) {
+        const distribuidora = String(window.distribuidoraVendeFrio?.nombreActual?.() || "").trim();
+        const contado = contadoDelDia(datos.inicio);
+        const lineas = [
+            "*Cierre del " + nombreDelDia(datos.inicio).toLowerCase() + " " + textoFecha(datos.inicio) + "*" + (distribuidora ? " · " + distribuidora : ""),
+            "",
+            "Entregados: " + datos.entregados.length + " de " + datos.cargados + " cargados",
+            datos.noEntregados.length ? "Sin entregar: " + datos.noEntregados.length : "",
+            datos.cancelados.length ? "Cancelados: " + datos.cancelados.length : "",
+            "",
+            "Cobrado: " + precio(datos.totalRecaudado),
+            "  Efectivo: " + precio(datos.porForma.efectivo),
+            "  Transferencia: " + precio(datos.porForma.transferencia),
+            datos.totalGastos ? "Gastos: − " + precio(datos.totalGastos) : "",
+            "Queda en caja: " + precio(datos.quedaEnCaja),
+            "A cobrar: " + precio(datos.aCobrar),
+            contado === null ? "" : "Contado en efectivo: " + precio(contado) + " (" + textoDiferencia(efectivoEsperado(datos), contado).texto.replace(". ¡Bien!", "") + ")"
+        ];
+        return lineas.filter((linea, indice) => linea !== "" || (indice > 0 && lineas[indice - 1] !== "")).join("\n").trim();
     }
 
     function dibujar() {
@@ -325,13 +411,14 @@
 
         const datos = calcular(diaElegido);
 
+        // Los números del día en una sola línea (T114); los que dan cero no se muestran.
         const resumen = `
             <div class="kpisCierre">
                 <div><strong>${datos.cargados}</strong><span>cargados</span></div>
                 <div><strong>${datos.entregados.length}</strong><span>entregados</span></div>
-                <div><strong>${datos.noEntregados.length}</strong><span>sin entregar</span></div>
-                <div><strong>${datos.conCambios.length}</strong><span>con cambios</span></div>
-                <div><strong>${datos.cancelados.length}</strong><span>cancelados</span></div>
+                ${datos.noEntregados.length ? `<div class="kpiAviso"><strong>${datos.noEntregados.length}</strong><span>sin entregar</span></div>` : ""}
+                ${datos.conCambios.length ? `<div><strong>${datos.conCambios.length}</strong><span>con cambios</span></div>` : ""}
+                ${datos.cancelados.length ? `<div><strong>${datos.cancelados.length}</strong><span>cancelados</span></div>` : ""}
             </div>
         `;
 
@@ -406,6 +493,7 @@
 
         caja.innerHTML =
             (window.gastosVendeFrio ? window.gastosVendeFrio.htmlCierre(datos, diaElegido === hoy) : "") +
+            htmlContarPlata(datos) +
             resumen +
             tarjeta("Caja", caja1, "cajaCierre") +
             tarjeta("Por persona que cobró", personas) +
@@ -415,6 +503,7 @@
             cambios +
             sinEntregar +
             cancelados +
+            `<button type="button" class="pzBtn pzBtnPri cerrarYMandar" id="cerrarYMandarCierre">${window.icono("whatsapp", 18)} ${diaElegido === hoy ? "Cerrar el día y mandarlo" : "Mandar este cierre"}</button>` +
             imprimir +
             planilla;
     }

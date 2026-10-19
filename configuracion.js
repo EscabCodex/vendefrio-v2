@@ -1325,7 +1325,7 @@
                 <label class="ajFila configAviso">
                     <span class="ajIcono" data-tono="${tonos[numero % tonos.length]}">${ico(ICONOS[tipo.id] || "campana")}</span>
                     <span class="ajTexto"><strong>${escaparTexto(tipo.nombre)}</strong>
-                    <small>${escaparTexto(tipo.quien)}</small>${sinPermiso}</span>
+                    <small>${escaparTexto(tipo.corto || tipo.quien)}</small>${sinPermiso}</span>
                     <input type="checkbox" class="casillaAviso ajLlave" role="switch" value="${escaparTexto(tipo.id)}"
                         aria-label="${escaparTexto(tipo.nombre)}" ${avisos.recibe(tipo.id) ? "checked" : ""}>
                 </label>
@@ -1343,12 +1343,77 @@
             ${htmlNotificaciones()}
             <section class="ajGrupo">
                 <h3 class="ajGrupoTitulo subtituloAvisos">Qué avisos recibís</h3>
+                ${htmlTareasAvisos(avisos)}
                 <div class="ajTarjeta">${casillas}</div>
             </section>
             ${nota("Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda en la nube: vale en cualquier celular donde entres.")}
             ${htmlQueSuena()}
             ${grupo("", filaAccion("campana", "azul", "Ver mis avisos", "La lista de la campanita", 'data-accion="verAvisos"'))}
         `;
+    }
+
+    // --- Avisos según lo que hacés (T121): cada tarea prende sus avisos ---
+    const TAREAS_AVISOS = [
+        { id: "arma", nombre: "Armo pedidos", icono: "paquete", tipos: ["pedidoNuevo", "pedidoEditado", "pedidoCancelado"] },
+        { id: "reparto", nombre: "Reparto", icono: "camion", tipos: ["preparado", "pedidoEditado", "pedidoCancelado", "incidencia"] },
+        { id: "cobro", nombre: "Cobro", icono: "moneda", tipos: ["entregado"] },
+        { id: "dueno", nombre: "Soy el dueño", icono: "persona", tipos: null }
+    ];
+
+    function tiposDeTarea(tarea, avisos) {
+        const disponibles = avisos.tipos().map(tipo => tipo.id);
+        return tarea.tipos ? tarea.tipos.filter(id => disponibles.includes(id)) : disponibles;
+    }
+
+    // "Soy el dueño" se ve prendido cuando llegan todos; las otras, cuando
+    // llegan todos sus avisos y no todos los avisos.
+    function tareaPrendida(tarea, avisos) {
+        const todos = avisos.tipos().every(tipo => avisos.recibe(tipo.id));
+        if (!tarea.tipos) return todos;
+        const tipos = tiposDeTarea(tarea, avisos);
+        return !todos && tipos.length > 0 && tipos.every(id => avisos.recibe(id));
+    }
+
+    function htmlTareasAvisos(avisos) {
+        const botones = TAREAS_AVISOS.map(tarea => `
+            <button type="button" class="tareaAviso" data-tarea-aviso="${tarea.id}" aria-pressed="${tareaPrendida(tarea, avisos)}">${ico(tarea.icono)}<span>${escaparTexto(tarea.nombre)}</span></button>`).join("");
+        return `<div class="ajTarjeta tareasAvisos">
+                <p class="tituloTareasAvisos">¿Qué hacés vos? Tocá y se prenden solos</p>
+                <div class="botonesTareasAvisos">${botones}</div>
+                <p class="ayudaTareasAvisos">Abajo podés cambiar uno por uno.</p>
+            </div>`;
+    }
+
+    function marcarTareasAvisos() {
+        const avisos = window.avisosVendeFrio;
+        if (!avisos) return;
+        document.querySelectorAll("[data-tarea-aviso]").forEach(boton => {
+            const tarea = TAREAS_AVISOS.find(item => item.id === boton.dataset.tareaAviso);
+            if (tarea) boton.setAttribute("aria-pressed", String(tareaPrendida(tarea, avisos)));
+        });
+    }
+
+    // Tocar una tarea la suma o la saca de lo que hacés, y quedan prendidos
+    // justo los avisos de las tareas elegidas ("Soy el dueño": todos).
+    async function tocarTareaAvisos(boton) {
+        const avisos = window.avisosVendeFrio;
+        const tarea = TAREAS_AVISOS.find(item => item.id === boton.dataset.tareaAviso);
+        if (!avisos || !tarea) return;
+        let elegidas = TAREAS_AVISOS.filter(item => item.tipos && tareaPrendida(item, avisos));
+        if (!tarea.tipos) elegidas = tareaPrendida(tarea, avisos) ? [] : [tarea];
+        else elegidas = elegidas.includes(tarea) ? elegidas.filter(item => item !== tarea) : [...elegidas, tarea];
+        const prendidos = new Set(elegidas.flatMap(item => tiposDeTarea(item, avisos)));
+        const cambios = avisos.tipos().map(tipo => tipo.id).filter(id => prendidos.has(id) !== avisos.recibe(id));
+        try {
+            for (const id of cambios) {
+                await avisos.cambiarPreferencia(id, prendidos.has(id));
+                const casilla = document.querySelector(`.casillaAviso[value="${id}"]`);
+                if (casilla) casilla.checked = prendidos.has(id);
+            }
+        } catch (error) {
+            mostrarAviso("No se guardó el cambio", error.message);
+        }
+        marcarTareasAvisos();
     }
 
     // --- Notificaciones con la app cerrada (T29): en este celular ---
@@ -2752,10 +2817,16 @@
         if (!casilla || !window.avisosVendeFrio) return;
 
         window.avisosVendeFrio.cambiarPreferencia(casilla.value, casilla.checked)
+            .then(marcarTareasAvisos)
             .catch(error => {
                 casilla.checked = !casilla.checked;
                 mostrarAviso("No se guardó el cambio", error.message);
             });
+    });
+
+    document.addEventListener("click", event => {
+        const boton = event.target.closest?.("[data-tarea-aviso]");
+        if (boton) tocarTareaAvisos(boton);
     });
 
     document.addEventListener("click", event => {

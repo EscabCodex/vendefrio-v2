@@ -785,12 +785,107 @@
         return { comercio, productos: encontrados, sinEntender, cambios };
     }
 
+    // Lo que no se entendió (T118): cantidad, nombre y hasta 3 productos
+    // parecidos del catálogo para preguntar «¿cuál es?».
+    function sugerencias(tramo, cuantas = 3) {
+        const palabras = normalizar(tramo).split(" ").filter(Boolean);
+        let cantidad = 0;
+        if (palabras.length > 1 && cantidadDe(palabras[0])) cantidad = cantidadDe(palabras.shift());
+        else if (palabras.length > 1 && cantidadDe(palabras[palabras.length - 1])) cantidad = cantidadDe(palabras.pop());
+        const nombre = normalizarProducto(palabras.filter(palabra => !["x", "por", "unidad", "unidades", "caja", "cajas"].includes(palabra)).join(" "));
+        const productos = productosDelCatalogo()
+            .map(item => ({ marca: item.marca, producto: item.producto, puntaje: Math.max(parecido(item.clave, nombre), parecido(item.claveMarca, nombre)) }))
+            .filter(item => item.puntaje >= 0.15)
+            .sort((a, b) => b.puntaje - a.puntaje)
+            .slice(0, cuantas);
+        return { cantidad: cantidad || 1, productos };
+    }
+
+    // Busca en el catálogo por texto, para «Buscar otro».
+    function buscarEnCatalogo(texto, cuantos = 6) {
+        const buscado = normalizarProducto(texto);
+        if (!buscado) return [];
+        return productosDelCatalogo()
+            .map(item => ({ marca: item.marca, producto: item.producto, puntaje: item.claveMarca.includes(buscado) ? 2 : Math.max(parecido(item.clave, buscado), parecido(item.claveMarca, buscado)) }))
+            .filter(item => item.puntaje >= 0.2)
+            .sort((a, b) => b.puntaje - a.puntaje)
+            .slice(0, cuantos);
+    }
+
+    // Lo que el usuario eligió para cada cosa no entendida: { tramo: {marca, producto, cantidad} | "no" }.
+    let respuestasDictado = {};
+
+    function conRespuestas(lectura) {
+        const extra = [];
+        const sinEntender = [];
+        lectura.sinEntender.forEach(tramo => {
+            const respuesta = respuestasDictado[tramo];
+            if (respuesta === "no") return;
+            if (respuesta) extra.push({ marca: respuesta.marca, producto: respuesta.producto, cantidad: respuesta.cantidad, dicho: tramo });
+            else sinEntender.push(tramo);
+        });
+        return { ...lectura, productos: [...lectura.productos, ...extra], sinEntender };
+    }
+
+    function htmlPregunta(tramo, buscando) {
+        const esc = texto => String(texto).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        const { cantidad, productos } = sugerencias(tramo);
+        const chips = productos.map(item => `<button type="button" class="chipSugerencia" data-sugerencia="${esc(item.marca + "|" + item.producto)}" data-cantidad="${cantidad}">${esc(item.producto)}<small>${esc(item.marca)}</small></button>`).join("");
+        return `<div class="preguntaDictado" data-tramo="${esc(tramo)}">
+                <p>No entendí «${esc(tramo)}». ${productos.length ? "¿Cuál es?" : "No encontré nada parecido."}</p>
+                <div class="chipsSugerencia">
+                    ${chips}
+                    <button type="button" class="chipSugerencia chipBuscarOtro" data-buscar-otro>${window.icono ? window.icono("buscar", 14) : ""} Buscar otro</button>
+                    <button type="button" class="chipSugerencia chipNoTenemos" data-no-tenemos>No lo tenemos</button>
+                </div>
+                ${buscando ? `<div class="buscarOtroDictado"><input type="search" class="campoBuscarOtro" placeholder="Escribí el producto…" aria-label="Buscar producto para «${esc(tramo)}»" data-cantidad="${cantidad}"><div class="resultadosBuscarOtro"></div></div>` : ""}
+            </div>`;
+    }
+
+    // Conecta las preguntas de una caja: alElegir(tramo, respuesta) se llama
+    // con {marca, producto, cantidad} o "no".
+    function conectarPreguntas(caja, alElegir) {
+        if (caja.dataset.preguntasConectadas) return;
+        caja.dataset.preguntasConectadas = "1";
+        caja.addEventListener("click", evento => {
+            const pregunta = evento.target.closest(".preguntaDictado");
+            if (!pregunta) return;
+            const tramo = pregunta.dataset.tramo;
+            const sugerencia = evento.target.closest("[data-sugerencia]");
+            if (sugerencia) {
+                const [marca, ...resto] = sugerencia.dataset.sugerencia.split("|");
+                alElegir(tramo, { marca, producto: resto.join("|"), cantidad: Number(sugerencia.dataset.cantidad) || 1 }, pregunta);
+                return;
+            }
+            if (evento.target.closest("[data-no-tenemos]")) {
+                alElegir(tramo, "no", pregunta);
+                return;
+            }
+            if (evento.target.closest("[data-buscar-otro]")) {
+                const nueva = document.createElement("div");
+                nueva.innerHTML = htmlPregunta(tramo, true);
+                const reemplazo = nueva.firstElementChild;
+                pregunta.replaceWith(reemplazo);
+                reemplazo.querySelector(".campoBuscarOtro")?.focus();
+            }
+        });
+        caja.addEventListener("input", evento => {
+            const campo = evento.target.closest(".campoBuscarOtro");
+            if (!campo) return;
+            const esc = texto => String(texto).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+            const lista = buscarEnCatalogo(campo.value);
+            campo.parentElement.querySelector(".resultadosBuscarOtro").innerHTML = lista.length
+                ? lista.map(item => `<button type="button" class="chipSugerencia" data-sugerencia="${esc(item.marca + "|" + item.producto)}" data-cantidad="${campo.dataset.cantidad}">${esc(item.producto)}<small>${esc(item.marca)}</small></button>`).join("")
+                : (campo.value.trim() ? `<small class="sinResultadosBuscar">No hay productos con ese nombre.</small>` : "");
+        });
+    }
+
     let hojaDictado = null;
     // Lo que entendió la IA para un texto (T54); vale mientras el texto no cambie.
     let lecturaIA = null;
 
     function lecturaDe(texto) {
-        return lecturaIA && lecturaIA.texto === texto ? lecturaIA.lectura : leerPedido(texto);
+        return conRespuestas(lecturaIA && lecturaIA.texto === texto ? lecturaIA.lectura : leerPedido(texto));
     }
 
     function crearHojaDictado() {
@@ -817,6 +912,10 @@
         const botonDictar = hojaDictado.querySelector(".botonDictar");
         if (!Reconocimiento) botonDictar.classList.add("oculto");
         campo.addEventListener("input", () => mostrarLectura(campo.value));
+        conectarPreguntas(hojaDictado.querySelector(".resultadoDictado"), (tramo, respuesta) => {
+            respuestasDictado[tramo] = respuesta;
+            mostrarLectura(campo.value);
+        });
         botonDictar.addEventListener("click", () => {
             const estado = hojaDictado.querySelector(".estadoDictado");
             const antes = campo.value.trim();
@@ -882,9 +981,9 @@
             caja.appendChild(cambios);
         }
         if (lectura.sinEntender.length) {
-            const aviso = document.createElement("p");
+            const aviso = document.createElement("div");
             aviso.className = "sinEntenderDictado";
-            aviso.textContent = "No encontré: " + lectura.sinEntender.map(tramo => "«" + tramo + "»").join(", ");
+            aviso.innerHTML = lectura.sinEntender.map(tramo => htmlPregunta(tramo, false)).join("");
             caja.appendChild(aviso);
             if (iaPrendida() && !(lecturaIA && lecturaIA.texto === texto)) {
                 const boton = document.createElement("button");
@@ -914,6 +1013,7 @@
         crearHojaDictado();
         hojaDictado.querySelector("#textoDictado").value = "";
         hojaDictado.querySelector(".estadoDictado").textContent = "";
+        respuestasDictado = {};
         mostrarLectura("");
         hojaDictado.classList.remove("oculto");
     }
@@ -925,5 +1025,5 @@
     }
 
     // Etapa 8: el micrófono de Inicio ahora es el Asistente (asistente.js).
-    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, ejecutarOrden, detener, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, escuchar, abrirDictado, comando: empezarComando };
+    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, ejecutarOrden, detener, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, sugerencias, buscarEnCatalogo, htmlPregunta, conectarPreguntas, escuchar, abrirDictado, comando: empezarComando };
 }());

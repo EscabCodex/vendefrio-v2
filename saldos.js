@@ -76,33 +76,108 @@
         dibujarPantalla();
     }
 
+    // T113: filtro elegido en "A cobrar" (Todos, De mi ruta hoy, Más viejos).
+    let filtroACobrar = "todos";
+    const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+    function diasDesde(hora) {
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const dia = new Date(hora); dia.setHours(0, 0, 0, 0);
+        return Math.max(0, Math.round((hoy - dia) / 86400000));
+    }
+
+    // Comercios de la ruta de hoy: la ruta armada en Rutas o su día de visita.
+    function esDeMiRutaHoy(grupo) {
+        const enRuta = typeof rutaOrdenada !== "undefined" && Array.isArray(rutaOrdenada) &&
+            rutaOrdenada.some(comercio => normal(comercio && comercio.nombre) === normal(grupo.nombre));
+        const hoy = DIAS[new Date().getDay()];
+        return enRuta || normal(grupo.comercio && grupo.comercio.diaVisita) === normal(hoy);
+    }
+
+    function chipAntiguedad(grupo) {
+        if (grupo.pasoTope) return `<span class="pzChip pzChipPeligro">Pasó el tope</span>`;
+        const dias = diasDesde(grupo.desde);
+        const clase = dias > 15 ? "pzChipPeligro" : dias > 7 ? "pzChipAviso" : "pzChipGris";
+        return `<span class="pzChip ${clase}">${textoAntiguedad(grupo.desde)}</span>`;
+    }
+
+    function cuentasFiltradas(lista) {
+        if (filtroACobrar === "ruta") return lista.filter(esDeMiRutaHoy);
+        if (filtroACobrar === "viejos") return lista.slice().sort((a, b) => a.desde - b.desde);
+        return lista;
+    }
+
     function dibujarPantalla() {
         const seccion = document.getElementById("pantallaACobrar");
         if (!seccion || seccion.classList.contains("oculto")) return;
-        const lista = cuentas();
-        const total = lista.reduce((suma, grupo) => suma + grupo.total, 0);
-        const pedidos = lista.reduce((suma, grupo) => suma + grupo.pedidos.length, 0);
+        const todas = cuentas();
+        const lista = cuentasFiltradas(todas);
+        const total = todas.reduce((suma, grupo) => suma + grupo.total, 0);
+        const pedidos = todas.reduce((suma, grupo) => suma + grupo.pedidos.length, 0);
+        const conWhatsapp = todas.filter(grupo => enlaceRecordatorio(grupo));
         const filas = lista.map(grupo => {
+            const dias = diasDesde(grupo.desde);
+            const tono = grupo.pasoTope || dias > 15 ? "rojo" : dias > 7 ? "naranja" : "";
             const sub = textoPedidos(grupo.pedidos.length) + (grupo.tope ? " · tope " + p.plata(grupo.tope) : "");
-            const chip = grupo.pasoTope
-                ? `<span class="pzChip pzChipAviso">Pasó el tope</span>`
-                : `<span class="pzChip pzChipGris">${textoAntiguedad(grupo.desde)}</span>`;
-            return `<button type="button" class="pzFila" data-cuenta="${p.esc(grupo.nombre)}">
-                <div class="pzIni ${p.colorIni(grupo.nombre)}">${p.esc(p.iniciales(grupo.nombre))}</div>
-                <div class="pzFilaTxt"><strong>${p.esc(grupo.nombre)}</strong><small>${p.esc(sub)}</small></div>
-                <div class="pzFilaDer"><b class="${grupo.pasoTope ? "pzMontoNegativo" : ""}">${p.plata(grupo.total)}</b>${chip}</div>
-            </button>`;
+            const wa = enlaceRecordatorio(grupo);
+            return `<div class="filaACobrar" ${tono ? `data-tono="${tono}"` : ""}>
+                <button type="button" class="pzFila" data-cuenta="${p.esc(grupo.nombre)}">
+                    <div class="pzIni ${p.colorIni(grupo.nombre)}">${p.esc(p.iniciales(grupo.nombre))}</div>
+                    <div class="pzFilaTxt"><strong>${p.esc(grupo.nombre)}</strong><small>${p.esc(sub)}</small></div>
+                    <div class="pzFilaDer"><b class="${tono === "rojo" ? "pzMontoNegativo" : ""}">${p.plata(grupo.total)}</b>${chipAntiguedad(grupo)}</div>
+                </button>
+                ${wa ? `<button type="button" class="botonWaACobrar" data-recordar="${p.esc(grupo.nombre)}" aria-label="Mandar recordatorio a ${p.esc(grupo.nombre)}">${p.ico("whatsapp", 20)}</button>` : ""}
+            </div>`;
         }).join("");
+        const filtros = [["todos", "Todos"], ["ruta", "De mi ruta hoy"], ["viejos", "Más viejos"]]
+            .map(([clave, texto]) => `<button type="button" data-filtro-cobrar="${clave}" aria-pressed="${filtroACobrar === clave}">${texto}</button>`).join("");
+        const vacio = filtroACobrar === "ruta" && todas.length
+            ? "Nadie de tu ruta de hoy te debe."
+            : "No te deben nada. ¡Bien!";
         seccion.querySelector("main").innerHTML = `<div class="pzTarjeta pzRelleno pzTotalGrande">
                 <small>Te deben en total</small>
                 <strong>${p.plata(total)}</strong>
-                <span>${textoPedidos(pedidos)} · ${lista.length} ${lista.length === 1 ? "comercio" : "comercios"}</span>
+                <span>${textoPedidos(pedidos)} · ${todas.length} ${todas.length === 1 ? "comercio" : "comercios"}</span>
             </div>
-            <div class="pzTarjeta pzLista">${filas || `<div class="pzVacio">No te deben nada. ¡Bien!</div>`}</div>`;
+            ${todas.length ? `<div class="pzSegmentos filtrosACobrar" role="group" aria-label="Filtrar">${filtros}</div>` : ""}
+            <div class="pzTarjeta pzLista">${filas || `<div class="pzVacio">${vacio}</div>`}</div>
+            ${conWhatsapp.length > 1 ? `<button type="button" class="pzBtn pzBtnSec recordarATodos" data-recordar-todos>${p.ico("whatsapp", 20)}Recordarles a todos (${conWhatsapp.length})</button>` : ""}`;
         seccion.querySelector("main").onclick = evento => {
+            const filtro = evento.target.closest("[data-filtro-cobrar]");
+            if (filtro) { filtroACobrar = filtro.dataset.filtroCobrar; dibujarPantalla(); return; }
+            const wa = evento.target.closest("[data-recordar]");
+            if (wa) { const grupo = cuentaDe(wa.dataset.recordar); if (grupo) recordar(grupo); return; }
+            if (evento.target.closest("[data-recordar-todos]")) { recordarATodos(); return; }
             const fila = evento.target.closest("[data-cuenta]");
             if (fila) opcionesCuenta(fila.dataset.cuenta);
         };
+    }
+
+    // "Recordarles a todos": WhatsApp abre de a uno, así que se mandan en fila.
+    function recordarATodos() {
+        const lista = cuentas().filter(grupo => enlaceRecordatorio(grupo));
+        const enviados = new Set();
+        const filas = () => lista.map(grupo => `<div class="pzFila">
+                <div class="pzFilaTxt"><strong>${p.esc(grupo.nombre)}</strong><small>Debe ${p.plata(grupo.total)} · ${textoAntiguedad(grupo.desde).toLowerCase()}</small></div>
+                ${enviados.has(grupo.nombre)
+                    ? `<span class="pzChip pzChipOk">Enviado</span>`
+                    : `<button type="button" class="pzBtn pzBtnSec botonEnviarRecordatorio" data-enviar-recordatorio="${p.esc(grupo.nombre)}">Enviar</button>`}
+            </div>`).join("");
+        const caja = p.hoja({
+            titulo: "Recordarles a todos",
+            sub: "Tocá «Enviar» en cada uno. Se abre WhatsApp con el mensaje listo.",
+            html: `<div class="pzTarjeta pzLista listaRecordatorios">${filas()}</div>`,
+            botones: [{ texto: "Listo", clase: "pzBtnGris" }]
+        });
+        caja.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-enviar-recordatorio]");
+            if (!boton) return;
+            const grupo = lista.find(item => item.nombre === boton.dataset.enviarRecordatorio);
+            if (!grupo) return;
+            recordar(grupo);
+            enviados.add(grupo.nombre);
+            caja.querySelector(".listaRecordatorios").innerHTML = filas();
+        });
     }
 
     function opcionesCuenta(nombre) {

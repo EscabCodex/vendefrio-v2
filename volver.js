@@ -111,6 +111,11 @@
         if (casita.hidden !== vaAInicio) casita.hidden = vaAInicio;
         const botones = vaAInicio ? "1" : "2";
         if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
+
+        // Al bajar, una barrita con el nombre de la pantalla queda detrás de
+        // los botones, así no tapan los títulos (T122).
+        const nombrePantalla = (pantalla.querySelector(":scope > header h1, .configHeader h1")?.textContent || "").trim();
+        if (barra.dataset.titulo !== nombrePantalla) barra.dataset.titulo = nombrePantalla;
     }
 
     let pedido = false;
@@ -128,6 +133,10 @@
         const despegado = window.scrollY > 6 && preferencia("volverFlotante") !== false;
         if (document.documentElement.classList.contains("volverDespegado") !== despegado) {
             document.documentElement.classList.toggle("volverDespegado", despegado);
+        }
+        const conBarra = despegado && window.scrollY > 56;
+        if (document.documentElement.classList.contains("volverConBarra") !== conBarra) {
+            document.documentElement.classList.toggle("volverConBarra", conBarra);
         }
     }
 

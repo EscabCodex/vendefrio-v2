@@ -56,7 +56,7 @@
                 const valor = Number(precios[nombre]) > 0 ? Number(precios[nombre]) : "";
                 return `<div class="pzFila filaLista">
                     <div class="pzIni ${COLORES[i % COLORES.length]}">${p.ico(/zona/i.test(nombre) ? "ubicacion" : "etiqueta", 20)}</div>
-                    <div class="pzFilaTxt"><strong>${p.esc(nombre)}</strong><small>${cuantos} ${cuantos === 1 ? "comercio" : "comercios"}</small></div>
+                    <button type="button" class="pzFilaTxt botonTodaLista" data-toda-lista="${p.esc(nombre)}" aria-label="Ver toda la lista ${p.esc(nombre)}"><strong>${p.esc(nombre)}</strong><small>${cuantos} ${cuantos === 1 ? "comercio" : "comercios"} · <span class="enlaceTodaLista">ver toda la lista</span></small></button>
                     <label class="pzPrecioLista"><span>$</span><input type="number" inputmode="decimal" min="0" step="1" data-lista="${p.esc(nombre)}" value="${valor}" placeholder="${Number(actual.precio) || ""}" aria-label="Precio ${p.esc(nombre)}"></label>
                 </div>`;
             }).join("");
@@ -81,6 +81,11 @@
             else delete precios[campo.dataset.lista];
         };
         seccion.querySelector("main").onclick = evento => {
+            const toda = evento.target.closest("[data-toda-lista]");
+            if (toda) {
+                abrirLista(toda.dataset.todaLista, () => abrir(producto));
+                return;
+            }
             if (evento.target.closest("#listaNueva")) {
                 p.hoja({
                     titulo: "Lista nueva",
@@ -126,11 +131,126 @@
         dibujar();
     }
 
+    // ---------- Toda una lista en una pantalla (T115) ----------
+    // Cada producto con su precio general y el de la lista. Arriba, "% sobre
+    // el general" y redondeo para llenar todos de una vez; después se puede
+    // corregir uno por uno.
+    const REDONDEOS = [[1, "Sin redondear"], [10, "A $ 10"], [50, "A $ 50"], [100, "A $ 100"]];
+
+    function redondear(valor, paso) {
+        return paso > 1 ? Math.round(valor / paso) * paso : Math.round(valor);
+    }
+
+    function abrirLista(nombre, alVolver) {
+        const productos = todosLosProductos().filter(producto => producto.archivado !== true);
+        const precios = {};
+        productos.forEach(producto => {
+            const valor = Number(producto.precios && producto.precios[nombre]);
+            if (valor > 0) precios[producto.id] = valor;
+        });
+        let porcentaje = "";
+        let paso = 10;
+        const volver = typeof alVolver === "function" ? alVolver : volverAlCatalogo;
+
+        const seccion = p.pantalla("pantallaTodaLista", {
+            titulo: nombre,
+            sub: "Todos los precios de esta lista",
+            volverA: () => volver()
+        });
+        p.mostrar(seccion);
+
+        function filas() {
+            return productos.map(producto => {
+                const valor = precios[producto.id] || "";
+                const general = Number(producto.precio) || 0;
+                const diferencia = valor && general ? Math.round((valor - general) / general * 100) : null;
+                return `<div class="pzFila filaTodaLista">
+                    <div class="pzFilaTxt"><strong>${p.esc(producto.nombre)}</strong><small>${p.esc(producto.marca)} · general ${general ? p.plata(general) : "sin precio"}${diferencia !== null && diferencia !== 0 ? ` · <b class="${diferencia < 0 ? "bajaLista" : "subeLista"}">${diferencia > 0 ? "+" : ""}${diferencia}%</b>` : ""}</small></div>
+                    <label class="pzPrecioLista"><span>$</span><input type="number" inputmode="decimal" min="0" step="1" data-producto-lista="${p.esc(producto.id)}" value="${valor}" placeholder="${general || ""}" aria-label="Precio ${p.esc(producto.nombre)} en ${p.esc(nombre)}"></label>
+                </div>`;
+            }).join("");
+        }
+
+        function dibujar() {
+            const cuantos = comerciosEn(nombre);
+            seccion.querySelector("main").innerHTML = `<div class="pzTarjeta pzRelleno ajusteTodaLista">
+                    <strong>Llenar todos desde el precio general</strong>
+                    <small>${cuantos} ${cuantos === 1 ? "comercio usa" : "comercios usan"} esta lista. Ej.: −10 para un 10% menos.</small>
+                    <div class="filaAjusteLista">
+                        <label class="pzCampo campoPorcentaje"><span>% sobre el general</span><input id="porcentajeLista" type="number" inputmode="decimal" step="1" placeholder="0" value="${porcentaje}"></label>
+                        <button type="button" class="pzBtn pzBtnPri" id="aplicarPorcentajeLista">Aplicar a todos</button>
+                    </div>
+                    <div class="pzSegmentos redondeoLista" role="group" aria-label="Redondeo">
+                        ${REDONDEOS.map(([valor, texto]) => `<button type="button" data-redondeo="${valor}" aria-pressed="${paso === valor}">${texto}</button>`).join("")}
+                    </div>
+                </div>
+                <section class="pzBloque">
+                    <div class="pzBloqueCab"><h2>${productos.length} ${productos.length === 1 ? "producto" : "productos"}</h2></div>
+                    <div class="pzTarjeta pzLista" id="filasTodaLista">${filas() || `<div class="pzVacio">Todavía no cargaste productos.</div>`}</div>
+                </section>
+                <div class="pzNota">Si dejás un precio vacío, ese producto usa el general.</div>
+                <div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="guardarTodaLista">Guardar la lista</button></div>`;
+        }
+
+        seccion.querySelector("main").oninput = evento => {
+            if (evento.target.id === "porcentajeLista") {
+                porcentaje = evento.target.value;
+                return;
+            }
+            const campo = evento.target.closest("[data-producto-lista]");
+            if (!campo) return;
+            const valor = Math.round(Number(String(campo.value).replace(",", ".")) * 100) / 100;
+            if (Number.isFinite(valor) && valor > 0) precios[campo.dataset.productoLista] = valor;
+            else delete precios[campo.dataset.productoLista];
+        };
+        seccion.querySelector("main").onclick = evento => {
+            const redondeo = evento.target.closest("[data-redondeo]");
+            if (redondeo) {
+                paso = Number(redondeo.dataset.redondeo) || 1;
+                seccion.querySelectorAll("[data-redondeo]").forEach(boton => boton.setAttribute("aria-pressed", String(boton === redondeo)));
+                return;
+            }
+            if (evento.target.closest("#aplicarPorcentajeLista")) {
+                const cuanto = Number(String(porcentaje).replace(",", "."));
+                if (!Number.isFinite(cuanto) || cuanto <= -100) {
+                    mostrarToast("Escribí un porcentaje, por ejemplo −10");
+                    return;
+                }
+                productos.forEach(producto => {
+                    const general = Number(producto.precio) || 0;
+                    if (general > 0) precios[producto.id] = Math.max(1, redondear(general * (1 + cuanto / 100), paso));
+                });
+                document.getElementById("filasTodaLista").innerHTML = filas();
+                mostrarToast("Listo: revisalos y tocá «Guardar la lista»");
+                return;
+            }
+            if (evento.target.closest("#guardarTodaLista")) {
+                let fallo = false;
+                productos.forEach(producto => {
+                    const actuales = { ...(producto.precios && typeof producto.precios === "object" ? producto.precios : {}) };
+                    const antes = Number(actuales[nombre]) || 0;
+                    const ahora = Number(precios[producto.id]) || 0;
+                    if (antes === ahora) return;
+                    if (ahora > 0) actuales[nombre] = ahora; else delete actuales[nombre];
+                    if (!actualizarProductoPorId(producto.id, { precios: actuales })) fallo = true;
+                });
+                if (fallo) {
+                    mostrarAviso("No se guardó todo", "Revisá el almacenamiento y probá de nuevo.");
+                    return;
+                }
+                nuevas.add(nombre);
+                mostrarToast("Lista «" + nombre + "» guardada");
+                volver();
+            }
+        };
+        dibujar();
+    }
+
     function volverAlCatalogo() {
         if (typeof mostrarPantalla === "function") mostrarPantalla("catalogo");
         if (typeof window.renderizarCatalogo === "function") window.renderizarCatalogo();
     }
 
     window.listasDePrecios = listas;
-    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir };
+    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista };
 }());

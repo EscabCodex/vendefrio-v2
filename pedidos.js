@@ -73,6 +73,8 @@ function actualizarResumenPedido() {
 
     if (totalUnidadesPedido) {
         totalUnidadesPedido.textContent = String(unidades);
+        const palabraUnidades = document.getElementById("palabraUnidadesPedido");
+        if (palabraUnidades) palabraUnidades.textContent = unidades === 1 ? "unidad" : "unidades";
     }
 
     if (totalTiposPedido) {

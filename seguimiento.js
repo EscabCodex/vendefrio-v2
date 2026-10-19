@@ -707,6 +707,9 @@
 
         info.append(arriba, detalle);
         if (textoAutor) info.append(crear("p", "subtitulo autorSeguimiento", textoAutor));
+        // T124: si se anotó lo que el comercio quiere o lo que tiene en la heladera.
+        const tiene = window.tieneQuiereVendeFrio?.esTiene?.(pedido);
+        info.append(crear("span", "badge " + (tiene ? "tipoTiene" : "tipoQuiere"), tiene ? "Tiene" : "Quiere"));
 
         // Checklist (T24): cuánto lleva armado y si hay faltantes. En
         // "Cargado", solo si alguien ya tildó (T29b).
@@ -931,6 +934,18 @@
         botonesTanda[accion.id] = boton;
         pieTanda.appendChild(boton);
     });
+    // T110: abajo queda un solo botón grande; los otros pasos van en "Mover a
+    // otro paso" y "Eliminar" en el ⋯, separado.
+    const botonMoverTanda = crear("button", "btnAccion secundario botonMoverTanda");
+    botonMoverTanda.type = "button";
+    botonMoverTanda.innerHTML = "<span>Mover a otro paso</span>" + (window.icono ? window.icono("chevArriba", 16) : "");
+    const botonMasTanda = crear("button", "btnAccion secundario botonMasTanda");
+    botonMasTanda.type = "button";
+    botonMasTanda.setAttribute("aria-label", "Más acciones con los elegidos");
+    botonMasTanda.innerHTML = window.icono ? window.icono("puntos", 22) : "⋯";
+    const filaTanda = crear("div", "filaTandaPedidos");
+    filaTanda.append(botonMoverTanda, botonMasTanda);
+    pieTanda.appendChild(filaTanda);
     document.body.appendChild(pieTanda);
 
     // Los pedidos de la etapa que se ve ahora (todos, no solo los dibujados).
@@ -979,14 +994,53 @@
         botonMarcarTodos.textContent = todos ? "Desmarcar todos" : "Marcar todos";
 
         const disponibles = accionesDeLaEtapa();
+        const principal = accionPrincipalTanda(disponibles);
         ACCIONES_TANDA.forEach(accion => {
             const boton = botonesTanda[accion.id];
-            const cantidad = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id))).length;
+            const cantidad = cantidadTanda(accion);
             boton.textContent = accion.boton + " (" + cantidad + ")";
             boton.disabled = cantidad === 0;
-            boton.classList.toggle("oculto", !disponibles.includes(accion));
+            boton.classList.toggle("oculto", accion !== principal);
         });
+        botonMoverTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length);
+        botonMasTanda.classList.toggle("oculto", !disponibles.some(accion => accion.peligro));
+        filaTanda.classList.toggle("oculto", botonMoverTanda.classList.contains("oculto") && botonMasTanda.classList.contains("oculto"));
         actualizarBotonNuevo();
+    }
+
+    function cantidadTanda(accion) {
+        return [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id))).length;
+    }
+
+    function accionPrincipalTanda(disponibles) {
+        return disponibles.find(accion => !accion.peligro) || null;
+    }
+
+    function otrosPasosTanda(disponibles) {
+        const principal = accionPrincipalTanda(disponibles);
+        return disponibles.filter(accion => accion !== principal && !accion.peligro);
+    }
+
+    // Hoja con acciones de la tanda, cada una con cuántos pedidos toca.
+    function abrirHojaTanda(titulo, acciones) {
+        const p = window.piezas;
+        if (!p || !acciones.length) return;
+        const iconos = { enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
+        const caja = p.hoja({
+            titulo,
+            sub: textoPedidos(elegidos.size) + " elegido" + (elegidos.size === 1 ? "" : "s"),
+            html: `<div class="pzMotivos">${acciones.map(accion => {
+                const cantidad = cantidadTanda(accion);
+                return `<button type="button" class="pzMotivo${accion.peligro ? " motivoPeligroTanda" : ""}" data-accion-tanda="${accion.id}" ${cantidad ? "" : "disabled"}>${p.ico(iconos[accion.id] || "check", 20)}${p.esc(accion.boton + " (" + cantidad + ")")}</button>`;
+            }).join("")}</div>`
+        });
+        caja.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-accion-tanda]");
+            const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accionTanda);
+            if (!accion || boton.disabled) return;
+            p.cerrar();
+            abrirConfirmarTanda(accion);
+        });
     }
 
     function actualizarPieTanda() {
@@ -1074,6 +1128,14 @@
     });
 
     pieTanda.addEventListener("click", evento => {
+        if (evento.target.closest(".botonMoverTanda")) {
+            abrirHojaTanda("Mover a otro paso", otrosPasosTanda(accionesDeLaEtapa()));
+            return;
+        }
+        if (evento.target.closest(".botonMasTanda")) {
+            abrirHojaTanda("Más acciones", accionesDeLaEtapa().filter(accion => accion.peligro));
+            return;
+        }
         const boton = evento.target.closest("button[data-accion]");
         const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accion);
         if (accion && !boton.disabled) abrirConfirmarTanda(accion);
@@ -2609,6 +2671,28 @@
     // Ventana del faltante: cuánto se preparó (menos de lo pedido) y una
     // observación. Lo pedido se conserva.
     let faltanteAbierto = null;
+    const MOTIVO_OTRO = "Otro";
+    const MOTIVOS_FALTANTE = ["No había en el depósito", "Vencido", "Roto o en mal estado", MOTIVO_OTRO];
+
+    function elegirMotivoFaltante(motivo) {
+        if (!faltanteAbierto) return;
+        faltanteAbierto.motivo = motivo || "";
+        document.querySelectorAll("#modalFaltantePedido [data-motivo]").forEach(boton => {
+            boton.setAttribute("aria-pressed", boton.dataset.motivo === motivo ? "true" : "false");
+        });
+        const otro = motivo === MOTIVO_OTRO;
+        document.getElementById("observacionFaltantePedido").style.display = otro ? "" : "none";
+        const etiqueta = document.querySelector('#modalFaltantePedido label[for="observacionFaltantePedido"]');
+        if (etiqueta) etiqueta.style.display = otro ? "" : "none";
+    }
+
+    function dibujarFaltan() {
+        const texto = document.getElementById("faltanCuantosFaltante");
+        if (!texto || !faltanteAbierto) return;
+        const puestas = Number.parseInt(document.getElementById("cantidadFaltantePedido").value, 10);
+        const faltan = Number.isInteger(puestas) && puestas >= 0 && puestas < faltanteAbierto.pedida ? faltanteAbierto.pedida - puestas : 0;
+        texto.textContent = faltan ? "Falta" + (faltan === 1 ? " 1" : "n " + faltan) : "";
+    }
 
     function crearModalFaltante() {
         let modal = document.getElementById("modalFaltantePedido");
@@ -2671,7 +2755,26 @@
         guardar.type = "button";
         botones.append(cancelar, guardar);
 
-        contenido.append(titulo, explicacion, etiquetaCantidad, contador, etiquetaObservacion, campoObservacion, error, quitar, botones);
+        // Motivo con botones (T111): escribir queda solo para "Otro".
+        const faltan = crear("p", "faltanCuantosFaltante");
+        faltan.id = "faltanCuantosFaltante";
+        faltan.setAttribute("aria-live", "polite");
+        const etiquetaMotivo = crear("p", "etiquetaMotivoFaltante", "¿Por qué? Tocá uno");
+        const motivos = crear("div", "motivosFaltante");
+        motivos.setAttribute("role", "group");
+        motivos.setAttribute("aria-label", "Por qué falta");
+        MOTIVOS_FALTANTE.forEach(motivo => {
+            const boton = crear("button", "motivoFaltante", motivo);
+            boton.type = "button";
+            boton.dataset.motivo = motivo;
+            boton.setAttribute("aria-pressed", "false");
+            motivos.appendChild(boton);
+        });
+        etiquetaObservacion.style.display = "none";
+        campoObservacion.style.display = "none";
+        etiquetaObservacion.textContent = "Contá qué pasó";
+
+        contenido.append(titulo, explicacion, etiquetaCantidad, contador, faltan, etiquetaMotivo, motivos, etiquetaObservacion, campoObservacion, error, quitar, botones);
         modal.appendChild(contenido);
         document.body.appendChild(modal);
 
@@ -2686,8 +2789,18 @@
         modal.addEventListener("click", evento => {
             if (evento.target === modal) cerrarFaltante();
         });
-        campoCantidad.addEventListener("input", ocultarError);
+        campoCantidad.addEventListener("input", () => {
+            ocultarError();
+            dibujarFaltan();
+        });
         campoObservacion.addEventListener("input", ocultarError);
+        motivos.addEventListener("click", evento => {
+            const boton = evento.target.closest("button[data-motivo]");
+            if (!boton || !faltanteAbierto) return;
+            elegirMotivoFaltante(boton.dataset.motivo);
+            ocultarError();
+            if (boton.dataset.motivo === MOTIVO_OTRO) campoObservacion.focus();
+        });
 
         contador.addEventListener("click", evento => {
             const boton = evento.target.closest("button[data-paso]");
@@ -2698,6 +2811,7 @@
             const nuevo = Math.min(faltanteAbierto.pedida - 1, Math.max(0, base + Number(boton.dataset.paso)));
             campoCantidad.value = String(nuevo);
             ocultarError();
+            dibujarFaltan();
         });
 
         guardar.addEventListener("click", () => {
@@ -2713,9 +2827,14 @@
                 return;
             }
 
-            const observacion = campoObservacion.value.trim();
+            const motivo = faltanteAbierto.motivo;
+            const observacion = motivo && motivo !== MOTIVO_OTRO ? motivo : campoObservacion.value.trim();
+            if (!motivo) {
+                mostrarError("Tocá por qué falta.");
+                return;
+            }
             if (!observacion) {
-                mostrarError("Escribí una observación para seguir.", campoObservacion);
+                mostrarError("Contá qué pasó para seguir.", campoObservacion);
                 return;
             }
 
@@ -2766,15 +2885,17 @@
 
         const campoCantidad = document.getElementById("cantidadFaltantePedido");
         campoCantidad.max = String(linea.cantidad - 1);
-        campoCantidad.value = linea.faltante ? String(linea.faltante.preparada) : "";
+        campoCantidad.value = linea.faltante ? String(linea.faltante.preparada) : String(linea.cantidad - 1);
         campoCantidad.placeholder = "De 0 a " + (linea.cantidad - 1);
 
         document.getElementById("observacionFaltantePedido").value = linea.faltante ? String(linea.faltante.observacion || "") : "";
         document.getElementById("errorFaltantePedido").classList.add("oculto");
         document.getElementById("quitarFaltantePedido").classList.toggle("oculto", !linea.faltante);
+        const observacionVieja = linea.faltante ? String(linea.faltante.observacion || "").trim() : "";
+        elegirMotivoFaltante(MOTIVOS_FALTANTE.includes(observacionVieja) ? observacionVieja : observacionVieja ? MOTIVO_OTRO : "");
+        dibujarFaltan();
 
         modal.classList.remove("oculto");
-        setTimeout(() => campoCantidad.focus(), 50);
     }
 
     function cerrarFaltante() {
@@ -3441,10 +3562,36 @@
         return /^\d+(\.\d{1,2})?$/.test(limpio) ? Number(limpio) : NaN;
     }
 
-    // 12500.5 -> "12500,5" (para escribirlo en el campo).
+    // 12500.5 -> "$ 12.500,5" (para escribirlo en el campo; T112).
     function montoParaEscribir(valor) {
         const numero = Math.round((Number(valor) || 0) * 100) / 100;
-        return String(numero).replace(".", ",");
+        return textoPrecio(numero);
+    }
+
+    // Con cuánto puede pagar (T112): billetes redondos arriba del monto.
+    function billetesParaPagar(monto) {
+        if (!(monto > 0)) return [];
+        const opciones = [];
+        [1000, 10000, 20000].forEach(paso => {
+            const redondo = Math.ceil(monto / paso) * paso;
+            if (redondo > monto && !opciones.includes(redondo)) opciones.push(redondo);
+        });
+        return opciones.slice(0, 2);
+    }
+
+    function dibujarVuelto() {
+        const caja = document.getElementById("vueltoCobroPedido");
+        if (!caja || !cobroAbierto) return;
+        const monto = leerMonto(cobroAbierto.monto);
+        const pagaCon = cobroAbierto.pagaCon;
+        const vuelto = pagaCon === "justo" ? 0
+            : Number.isFinite(monto) && pagaCon ? Math.round((pagaCon - monto) * 100) / 100 : NaN;
+        caja.classList.toggle("oculto", !Number.isFinite(vuelto));
+        caja.classList.toggle("faltaPlata", vuelto < 0);
+        if (Number.isFinite(vuelto)) {
+            caja.querySelector("span").textContent = vuelto === 0 ? "Da justo, sin vuelto" : vuelto < 0 ? "No alcanza, faltan" : "Le das de vuelto";
+            caja.querySelector("strong").textContent = vuelto === 0 ? "" : textoPrecio(Math.abs(vuelto));
+        }
     }
 
     function crearModalCobro() {
@@ -3493,6 +3640,16 @@
         guardar.addEventListener("click", guardarCobro);
 
         cuerpo.addEventListener("click", evento => {
+            const billete = evento.target.closest("button[data-paga-con]");
+            if (billete && cobroAbierto) {
+                const valor = billete.dataset.pagaCon;
+                cobroAbierto.pagaCon = valor === "justo" ? "justo" : Number(valor);
+                cuerpo.querySelectorAll("button[data-paga-con]").forEach(otro => otro.setAttribute("aria-pressed", otro === billete ? "true" : "false"));
+                const campoOtro = document.getElementById("pagaConCobroPedido");
+                if (campoOtro) campoOtro.value = "";
+                dibujarVuelto();
+                return;
+            }
             const boton = evento.target.closest("button[data-cobro]");
             if (!boton || !cobroAbierto) return;
 
@@ -3514,8 +3671,16 @@
 
         // El monto se escribe sin redibujar (no se pierde lo que se tipea).
         cuerpo.addEventListener("input", evento => {
+            if (evento.target.id === "pagaConCobroPedido" && cobroAbierto) {
+                const valor = leerMonto(evento.target.value);
+                cobroAbierto.pagaCon = Number.isFinite(valor) && valor > 0 ? valor : null;
+                cuerpo.querySelectorAll("button[data-paga-con]").forEach(otro => otro.setAttribute("aria-pressed", "false"));
+                dibujarVuelto();
+                return;
+            }
             if (evento.target.id !== "montoCobroPedido" || !cobroAbierto) return;
             cobroAbierto.monto = evento.target.value;
+            dibujarVuelto();
             const error = document.getElementById("errorCobroPedido");
             if (error) error.classList.add("oculto");
         });
@@ -3693,6 +3858,42 @@
                 ? "Hay productos sin precio: revisá el monto."
                 : "Viene escrito el total a cobrar. Si pagó otro monto, corregilo.");
             cuerpo.append(etiqueta, campo, ayuda);
+        }
+
+        // Efectivo (T112): con cuánto paga y cuánto vuelto le das.
+        if (forma === "efectivo") {
+            const monto = leerMonto(cobroAbierto.monto);
+            const pagaCon = crear("div", "pagaConCobro");
+            pagaCon.appendChild(crear("span", "etiquetaCobro", "¿Con cuánto paga?"));
+            const billetes = crear("div", "billetesCobro");
+            billetes.setAttribute("role", "group");
+            billetes.setAttribute("aria-label", "Con cuánto paga");
+            [["justo", "Justo"], ...billetesParaPagar(monto).map(valor => [String(valor), textoPrecio(valor)])].forEach(([id, nombre]) => {
+                const boton = crear("button", "billeteCobro", nombre);
+                boton.type = "button";
+                boton.dataset.pagaCon = id;
+                const elegido = id === "justo" ? cobroAbierto.pagaCon === "justo" : cobroAbierto.pagaCon === Number(id);
+                boton.setAttribute("aria-pressed", elegido ? "true" : "false");
+                billetes.appendChild(boton);
+            });
+            const otro = document.createElement("input");
+            otro.type = "text";
+            otro.inputMode = "numeric";
+            otro.id = "pagaConCobroPedido";
+            otro.className = "pagaConOtro";
+            otro.placeholder = "Otro";
+            otro.setAttribute("aria-label", "Paga con otro monto");
+            if (typeof cobroAbierto.pagaCon === "number" && !billetesParaPagar(monto).includes(cobroAbierto.pagaCon)) {
+                otro.value = textoPrecio(cobroAbierto.pagaCon);
+            }
+            billetes.appendChild(otro);
+            const vuelto = crear("div", "vueltoCobro oculto");
+            vuelto.id = "vueltoCobroPedido";
+            vuelto.setAttribute("aria-live", "polite");
+            vuelto.append(crear("span", "", ""), crear("strong", "", ""));
+            pagaCon.append(billetes, vuelto);
+            cuerpo.appendChild(pagaCon);
+            dibujarVuelto();
         }
 
         if (forma === "transferencia") {
