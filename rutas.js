@@ -689,6 +689,20 @@ function confirmarEliminarRutaGuardada(nombre) {
         mostrarAviso("Ruta eliminada", "Se elimin\u00f3 la ruta guardada.");
     };
 
+    // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos segundos.
+    if (window.piezas) {
+        const rutasAntes = obtenerRutasGuardadas();
+        const ruta = buscarRutaGuardadaPorNombre(nombre);
+        if (!ruta || !eliminarRutaPorId(ruta.id)) return;
+        renderizarRutasGuardadas();
+        window.piezas.deshacer("Ruta «" + ruta.nombre + "» eliminada", () => {
+            if (buscarRutaGuardadaPorNombre(ruta.nombre)) return;
+            guardarRutasGuardadas(rutasAntes);
+            renderizarRutasGuardadas();
+        });
+        return;
+    }
+
     if (typeof abrirConfirmacion === "function") {
         abrirConfirmacion(
             "Eliminar ruta guardada",
@@ -1395,6 +1409,28 @@ function borrarGpsComercio() {
             actualizarDashboard();
         }
     };
+
+    // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos segundos.
+    if (window.piezas) {
+        const lugar = { lat: comercio.lat, lng: comercio.lng };
+        const redibujar = () => {
+            actualizarResumenRuta();
+            cargarSelectComerciosRuta();
+            renderizarSeleccionRuta();
+            renderizarPines();
+            if (typeof actualizarDashboard === "function") actualizarDashboard();
+        };
+        if (!actualizarComercioPorNombre(nombre, { lat: "", lng: "" })) {
+            mostrarAviso("No se pudo borrar", "No se encontr\u00f3 el comercio seleccionado.");
+            return;
+        }
+        redibujar();
+        window.piezas.deshacer("Ubicaci\u00f3n de " + nombre + " borrada", () => {
+            actualizarComercioPorNombre(nombre, lugar);
+            redibujar();
+        });
+        return;
+    }
 
     const mensaje =
         "\u00bfEst\u00e1s seguro de borrar el pin de ubicaci\u00f3n de \"" +

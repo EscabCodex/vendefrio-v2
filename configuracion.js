@@ -90,9 +90,9 @@
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
-        resumenNoche: true
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
     };
-    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante"];
 
     function valorDe(d, campo) {
         return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
@@ -156,6 +156,7 @@
                 </div>`) +
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
+                filaLlave("etiqueta", "azul", "Nombres en los íconos de arriba", "Asistente, Avisos, Ayuda y Más", "nombresArriba") +
                 filaLlave("menu", "azul", "Más en la barra de abajo", "Para llegar a Más con el pulgar", "masEnBarra") +
                 filaLlave("flechaIzquierda", "verde", "Volver siempre a mano", "La flecha y la casita quedan arriba al bajar", "volverFlotante") +
                 filaLlave("chispa", "naranja", "Menos movimiento", "Saca las animaciones y transiciones", "movimiento") +
@@ -287,6 +288,7 @@
         raiz.dataset.acento = valorDe(d, "acento");
         raiz.dataset.movimiento = valorDe(d, "movimiento") === true ? "reducido" : "normal";
         raiz.dataset.barra = valorDe(d, "barraNombres") === false ? "iconos" : "nombres";
+        raiz.dataset.nombresArriba = valorDe(d, "nombresArriba") === false ? "no" : "si";
         raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
         raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
@@ -1749,6 +1751,7 @@
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
                     ]) +
                     filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
+                    filaLlave("volumen", "verde", "Decirlo en voz alta al guardar", "Te confirma con la voz lo que se guardó", "hablarAlGuardar") +
                     filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios")) +
                 // T70: prueba de entrega al deslizar "Entregado".
                 grupo("Al entregar",

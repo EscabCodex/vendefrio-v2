@@ -706,3 +706,24 @@ html[data-tema="oscuro"] .queHacerOpcion.principal .queHacerIcono{background:rgb
 .pasoFicha.despues .pasoFichaNumero{background:var(--borde);color:var(--texto-sec);}
 .pasoFichaNota{font-size:13px;color:var(--texto-sec);}
 .pasoFicha > .btnAccion,.pasoFicha > .deslizador{width:100%;margin:0;}
+
+/* ---------- Etapa 8: "?" en cada pantalla ---------- */
+.botonAyudaPantalla{
+  order:9;flex-shrink:0;width:44px;height:44px;min-height:0;margin:0 0 0 auto;padding:0;
+  display:grid;place-items:center;position:relative;
+  border:0;border-radius:50%;background:var(--acento-bg);color:var(--acento-oscuro);
+  font-size:22px;font-weight:800;line-height:1;cursor:pointer;
+}
+html[data-tema="oscuro"] .botonAyudaPantalla{background:var(--superficie-2);color:var(--acento);}
+body > section > header > .campanaAvisos{order:8;}
+html.conAvisos body > section > header > .botonAyudaPantalla{margin-left:6px;}
+body > section:has(> .pzCabAccion) > header{padding-right:calc(72px + env(safe-area-inset-right));}
+.hojaAyuda .pasosAyuda{margin:4px 14px 14px 0;padding-left:44px;display:grid;gap:12px;font-size:18px;line-height:1.4;color:var(--texto);}
+.hojaAyuda .pzBtn{width:100%;margin-top:8px;}
+
+/* ---------- Etapa 8: nombres debajo de los íconos de arriba (opcional) ---------- */
+html[data-nombres-arriba="si"] .conNombre{position:relative;margin-bottom:14px;}
+html[data-nombres-arriba="si"] .conNombre::after{
+  content:attr(data-nombre);position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);
+  font-size:11px;font-weight:700;line-height:1;letter-spacing:0;color:var(--texto-sec);white-space:nowrap;pointer-events:none;
+}

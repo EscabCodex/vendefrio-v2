@@ -820,18 +820,13 @@ function repetirUltimoPedido() {
         );
     };
 
-    if (hayCantidadActual && typeof abrirConfirmacion === "function") {
-        abrirConfirmacion(
-            "Repetir pedido",
-            "Se reemplazara el pedido que estas armando. " +
-            String.fromCodePoint(0xBF) +
-            "Continuar?",
-            cargar
-        );
-        return;
-    }
-
+    // Etapa 8: sin "¿Seguro?". Si había algo a medio armar, "Deshacer" lo
+    // devuelve.
+    const volverAlPedido = hayCantidadActual ? recordarPedidoActual() : null;
     cargar();
+    if (volverAlPedido && window.piezas) {
+        window.piezas.deshacer("Se reemplazó el pedido que armabas", volverAlPedido);
+    }
 }
 
 function escaparTextoRegex(texto) {
@@ -1062,6 +1057,26 @@ function registrarPedido(nombreComercio) {
 // LIMPIAR PEDIDO
 // -----------------------------------------------------
 
+// Etapa 8 ("Deshacer" en vez de "¿Seguro?"): guarda cómo está el pedido
+// ahora y devuelve la función que lo deja como estaba.
+function recordarPedidoActual() {
+    const datos = obtenerDatosBorradorPedido();
+    const extras = window.nuevoPedidoVendeFrio?.leerBorrador?.();
+    return () => {
+        try {
+            localStorage.setItem(DB_BORRADOR_PEDIDO, JSON.stringify(datos));
+        } catch (error) {
+            return;
+        }
+        restaurarBorradorPedido();
+        if (extras) window.nuevoPedidoVendeFrio.guardarBorrador(extras);
+        if (inputCliente) inputCliente.dispatchEvent(new Event("input", { bubbles: true }));
+        document.querySelectorAll(".marca select").forEach(actualizarEstadoCantidad);
+        aplicarFiltroProductosPedido();
+        actualizarResumenPedido();
+    };
+}
+
 function limpiarPedido() {
     if (inputCliente) inputCliente.value = "";
     if (inputObs) inputObs.value = "";
@@ -1069,6 +1084,8 @@ function limpiarPedido() {
     document.querySelectorAll(".marca select").forEach(select => {
         select.value = "0";
         select.classList.remove("activo");
+        // Que el contador verde vuelva a ser el "+".
+        if (select.parentNode) select.parentNode.dataset.cantidad = "0";
     });
 
     borrarBorradorPedido();
@@ -1120,13 +1137,10 @@ if (botonReset) {
 
         if (!hayAlgoParaBorrar) return;
 
-        if (typeof abrirConfirmacion === "function") {
-            abrirConfirmacion(
-                "Vaciar pedido",
-                "Se van a borrar las cantidades, el comercio y las observaciones del pedido actual.",
-                limpiarPedido
-            );
-        }
+        // Etapa 8: sin "¿Seguro?". Se vacía y queda "Deshacer" unos segundos.
+        const volverAlPedido = recordarPedidoActual();
+        limpiarPedido();
+        if (window.piezas) window.piezas.deshacer("Pedido vaciado", volverAlPedido);
     });
 }
 

@@ -186,6 +186,7 @@ function marcarPendienteManual(nombre) {
 
     if (!comercio) return;
 
+    const antes = Boolean(comercio.pendienteSemana);
     if (!actualizarComercioPorId(comercio.id, { pendienteSemana: true })) {
         return;
     }
@@ -194,6 +195,15 @@ function marcarPendienteManual(nombre) {
 
     if (typeof actualizarDashboard === "function") {
         actualizarDashboard();
+    }
+
+    if (window.piezas) {
+        window.piezas.deshacer(nombre + " quedó pendiente esta semana", () => {
+            actualizarComercioPorId(comercio.id, { pendienteSemana: antes });
+            renderizarComercios();
+            if (typeof actualizarDashboard === "function") actualizarDashboard();
+        });
+        return;
     }
 
     mostrarAviso(
@@ -662,15 +672,8 @@ if (listaComerciosAdmin) {
         }
 
         if (elemento.classList.contains("marcarPendienteBtn")) {
-            if (typeof abrirConfirmacion === "function") {
-                abrirConfirmacion(
-                    "Marcar pendiente",
-                    "El comercio volver\u00e1 a aparecer como pendiente esta semana.",
-                    () => marcarPendienteManual(nombre)
-                );
-            } else {
-                marcarPendienteManual(nombre);
-            }
+            // Etapa 8: sin "¿Seguro?"; marcarPendienteManual deja "Deshacer".
+            marcarPendienteManual(nombre);
             return;
         }
 

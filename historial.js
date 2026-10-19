@@ -846,18 +846,19 @@ if (pantallaHistorial) {
                 return;
             }
 
-            abrirConfirmacion(
-                "Eliminar pedido",
-                "\u00bfSeguro que quer\u00e9s eliminar este pedido del historial?",
-                () => {
-                    eliminarPedidoPorId(id);
-                    renderizarHistorial();
-
-                    if (typeof actualizarDashboard === "function") {
-                        actualizarDashboard();
-                    }
-                }
-            );
+            // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos
+            // segundos (en este celular, sin nube).
+            const historialAntes = obtenerHistorial();
+            const redibujar = () => {
+                renderizarHistorial();
+                if (typeof actualizarDashboard === "function") actualizarDashboard();
+            };
+            if (!eliminarPedidoPorId(id)) return;
+            redibujar();
+            window.piezas?.deshacer("Pedido eliminado", () => {
+                guardarHistorial(historialAntes);
+                redibujar();
+            });
         }
     });
 }

@@ -386,7 +386,8 @@
         const boton = document.createElement("button");
         boton.type = "button";
         boton.id = "botonAsistente";
-        boton.className = "botonVozInicio botonAsistente";
+        boton.className = "botonVozInicio botonAsistente conNombre";
+        boton.dataset.nombre = "Asistente";
         boton.setAttribute("aria-label", "Asistente");
         boton.title = "Asistente";
         boton.innerHTML = p.ico("chispa", 22);

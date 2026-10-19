@@ -242,3 +242,80 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await page.getByRole("tab", { name: "Editar marcas" }).click();
     await expect(page.locator("#pantallaProductos")).toBeVisible();
 });
+
+test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", async ({ page }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+    await cargarPedido(page, false);
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    const inicio = page.locator("#pantallaMenu");
+    const nombreAbajo = selector => page.locator(selector).first().evaluate(el => getComputedStyle(el, "::after").content);
+
+    // 1. Los íconos de arriba con su nombre abajo (se puede apagar).
+    expect(await nombreAbajo("#botonAsistente")).toBe('"Asistente"');
+    expect(await nombreAbajo("#botonAvatar")).toBe('"Más"');
+    // Inicio no lleva "?": ahí está el Asistente.
+    await expect(inicio.locator(".botonAyudaPantalla")).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await capturar(page, "simple-11-nombres-arriba");
+
+    // 2. "?" en Pedidos: "¿Qué hago acá?" con pasos y "Escuchar en voz alta".
+    await irAPedidos(page);
+    await page.locator("#pantallaPedido header").getByRole("button", { name: "Ayuda de esta pantalla" }).click();
+    const ayuda = page.getByRole("dialog", { name: "Ayuda de Pedidos" });
+    await expect(ayuda.getByRole("heading", { name: "¿Qué hago acá?" })).toBeVisible();
+    await expect(ayuda.locator(".pasosAyuda li")).toHaveCount(3);
+    await expect(ayuda).toContainText("Acá están los pedidos de hoy");
+    await expect(ayuda.getByRole("button", { name: "Escuchar en voz alta" })).toBeVisible();
+    await capturar(page, "simple-12-ayuda-pedidos");
+    await ayuda.getByRole("button", { name: "Entendido" }).click();
+    await expect(ayuda).toBeHidden();
+
+    // También en Comercios y en Nuevo pedido, cada una con lo suyo.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
+    await page.locator("#pantallaComercios header").getByRole("button", { name: "Ayuda de esta pantalla" }).click();
+    await expect(page.getByRole("dialog", { name: "Ayuda de Comercios" })).toContainText("Agregar comercio");
+    await page.getByRole("dialog", { name: "Ayuda de Comercios" }).getByRole("button", { name: "Entendido" }).click();
+
+    // 3. "Vaciar pedido" sin "¿Seguro?": se vacía y "Deshacer" lo devuelve.
+    await irAPedidos(page);
+    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await elegirComercio(page, "Almacén Don Pepe");
+    await page.locator("#cliente").blur();
+    const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
+    await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("1");
+    await page.getByRole("button", { name: "Más opciones del pedido" }).click();
+    await page.getByRole("dialog", { name: "Opciones del pedido" }).getByRole("button", { name: "Vaciar pedido" }).click();
+    await expect(page.getByRole("heading", { name: "Vaciar pedido" })).toBeHidden();
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("0");
+    const aviso = page.locator(".pzDeshacer");
+    await expect(aviso).toContainText("Pedido vaciado");
+    await capturar(page, "simple-13-deshacer");
+    await aviso.getByRole("button", { name: "Deshacer" }).click();
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("1");
+    await expect(page.locator("#cliente")).toHaveValue("Almacén Don Pepe");
+
+    // 4. Apariencia: apagar los nombres de arriba.
+    await page.evaluate(() => mostrarPantalla("menu"));
+    await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="apariencia"]').click();
+    await page.locator("#configDetalle").getByRole("switch", { name: "Nombres en los íconos de arriba" }).uncheck();
+    await expect(page.locator("html")).toHaveAttribute("data-nombres-arriba", "no");
+    expect(await nombreAbajo("#botonAsistente")).toBe("none");
+
+    // 5. Trabajo: decir en voz alta lo que se guardó (apagado de fábrica).
+    await page.evaluate(() => {
+        window.dichos = [];
+        window.speechSynthesis.speak = dicho => window.dichos.push(dicho.text);
+    });
+    await page.evaluate(() => mostrarToast("Pedido guardado"));
+    expect(await page.evaluate(() => window.dichos)).toEqual([]);
+    await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="trabajo"]').click();
+    const llave = page.locator("#configDetalle").getByRole("switch", { name: "Decirlo en voz alta al guardar" });
+    await expect(llave).not.toBeChecked();
+    await llave.check();
+    await page.evaluate(() => mostrarToast("Pedido guardado"));
+    expect(await page.evaluate(() => window.dichos)).toEqual(["Pedido guardado"]);
+});

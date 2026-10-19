@@ -618,6 +618,8 @@
         boton.type = "button";
         boton.setAttribute("aria-label", "Avisos");
         boton.title = "Avisos";
+        boton.classList.add("conNombre");
+        boton.dataset.nombre = "Avisos";
         boton.innerHTML = window.icono ? window.icono("campana", 22) : "🔔";
         boton.appendChild(crear("span", "contadorAvisos oculto", "0"));
         return boton;

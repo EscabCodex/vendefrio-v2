@@ -580,6 +580,7 @@
 
     window.nuevoPedidoVendeFrio = {
         precioCambiado, puedeCambiarPrecio, ajustarProductos, textoParaMensaje, alGuardar,
-        anotarCambio, elegirFecha, editarPrecio, abrirOpciones, detalleDe, textoFecha
+        anotarCambio, elegirFecha, editarPrecio, abrirOpciones, detalleDe, textoFecha,
+        leerBorrador: leer, guardarBorrador: guardar
     };
 }());
