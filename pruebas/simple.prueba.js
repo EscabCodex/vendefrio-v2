@@ -99,7 +99,7 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#totalPlataPedido")).toHaveText("$ 8.000");
-    await helado.scrollIntoViewIfNeeded();
+    await helado.evaluate(fila => fila.scrollIntoView({ block: "center" }));
     await capturar(page, "simple-04-precio-y-cambios");
 
     // Al guardar: el mensaje lo dice todo y la ficha lo muestra.

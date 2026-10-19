@@ -609,8 +609,8 @@ html[data-tema="oscuro"] .pzSiempreAbrir > .pzIco{color:var(--acento);}
 .pzSiempreAbrir strong{display:inline-flex;align-items:center;gap:4px;}
 .pzSiempreAbrir strong .pzIco{transition:transform .2s;color:var(--texto-sec);}
 .pzSiempre.abierto .pzSiempreAbrir strong .pzIco{transform:rotate(180deg);}
-.pzSiempreLista{flex-basis:100%;margin:10px 0 0;padding:4px 0 0;border-top:1px solid color-mix(in srgb, var(--pz-pri-fuerte) 18%, transparent);}
-.pzSiempreLista[hidden]{display:none;}
+.pzBanner.pzSiempre > .pzSiempreLista{flex:0 0 100%;display:block;margin:10px 0 0;padding:4px 0 0;border-top:1px solid color-mix(in srgb, var(--pz-pri-fuerte) 18%, transparent);}
+.pzBanner.pzSiempre > .pzSiempreLista[hidden]{display:none;}
 .pzSiempreFila{display:flex;justify-content:space-between;gap:12px;padding:6px 2px;font-size:14px;}
 .pzSiempreFila span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pzSiempreFila b{font-weight:750;flex-shrink:0;}

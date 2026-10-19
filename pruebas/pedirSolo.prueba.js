@@ -7,7 +7,17 @@ test.use({ nube: true });
 
 test("pedir solo: link, pedido del comercio y cargarlo como Cargado", async ({ page, browser }, testInfo) => {
     await registrarDistribuidora(page, testInfo);
-    await page.evaluate(() => actualizarComercioPorNombre("Almacén Don Pepe", { diaVisita: "Martes" }));
+    // La primera bajada de la nube puede pisar un cambio hecho apenas
+    // registrada la distribuidora: se repite hasta que quede.
+    await expect.poll(() => page.evaluate(() => {
+        actualizarComercioPorNombre("Almacén Don Pepe", { diaVisita: "Martes" });
+        return buscarComercioPorNombre("Almacén Don Pepe").diaVisita;
+    }), { intervals: [500, 1000, 1000] }).toBe("Martes");
+    await page.waitForTimeout(1500);
+    await expect.poll(() => page.evaluate(() => {
+        actualizarComercioPorNombre("Almacén Don Pepe", { diaVisita: "Martes" });
+        return buscarComercioPorNombre("Almacén Don Pepe").diaVisita;
+    })).toBe("Martes");
 
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
     await page.locator(".modalFichaComercio").getByRole("button", { name: "Link para que pida solo" }).click();

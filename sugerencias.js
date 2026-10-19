@@ -247,8 +247,10 @@
                 ? `<s class="pzTachado">${p.plata(precioVigente(real.producto, comercio))}</s> <b class="precioEspecial">${p.plata(cambiado)}</b>`
                 : textoPrecio(real.producto, comercio);
             const editable = extra && extra.puedeCambiarPrecio();
-            const contenido = (precio ? precio + " c/u" : "Poner precio") + (editable ? " " + p.ico("lapiz", 13) : "");
-            const html = (editable
+            // Sin precio en el catálogo no se muestra nada: se cambia
+            // manteniendo apretado el producto.
+            const contenido = precio + " c/u" + (editable ? " " + p.ico("lapiz", 13) : "");
+            const html = (editable && precio
                 ? `<button type="button" class="precioPedidoBoton${cambiado !== null ? " cambiado" : ""}" data-editar-precio aria-label="Cambiar el precio de ${p.esc(real.producto.nombre)} para este pedido">${contenido}</button>`
                 : (precio ? `<small>${precio} c/u</small>` : "")) + chipPromo(real.producto, comercio);
             let lugar = texto.querySelector(".precioPedido");
