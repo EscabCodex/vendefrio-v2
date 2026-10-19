@@ -550,9 +550,9 @@ service cloud.firestore {
 
     // Eliminar (T26): el pedido no se borra nunca. Queda guardado por dentro
     // con eliminado: true y "eliminacion": { persona, horaCelular } (quién y
-    // cuándo), en una escritura sola. Solo quien lo cargó o el dueño, y solo
-    // mientras está "Cargado" (según la copia del estado, como al cancelar).
-    // Un "Histórico" no tiene autor: solo el dueño.
+    // cuándo), en una escritura sola. Solo quien lo cargó o el dueño, en
+    // cualquier paso (T125b; antes, solo "Cargado"). Un "Histórico" no
+    // tiene autor: solo el dueño.
     function eliminacionValida(idDistribuidora, antes, despues) {
       return despues.diff(antes).affectedKeys().hasOnly(["eliminado", "eliminacion"])
         && despues.eliminado == true
@@ -562,7 +562,7 @@ service cloud.firestore {
         && despues.eliminacion.horaCelular is number
         && personaPropia(idDistribuidora, despues.eliminacion.persona)
         && (("estados" in antes)
-          ? (antes.get("estado", "") == "cargado" && puedeCambiarLoPedido(idDistribuidora, antes))
+          ? puedeCambiarLoPedido(idDistribuidora, antes)
           : esDueno(idDistribuidora));
     }
 

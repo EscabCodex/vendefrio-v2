@@ -13,7 +13,7 @@
 // para confirmar (T24). Quien cargó el pedido y el dueño lo editan desde la
 // ficha; los demás ven una franja amarilla con lo que cambió, la checklist
 // marca los productos a revisar y "Entendido" la cierra (T25). Quien cargó
-// el pedido y el dueño lo eliminan (solo en "Cargado") o lo cancelan con
+// el pedido y el dueño lo eliminan (en cualquier paso, T125b) o lo cancelan con
 // motivo (antes de "Entregado"); el cancelado queda en "Cancelados" (T26).
 // Cualquiera lo entrega deslizando "Entregado" (desde Cargado, En
 // preparación, Preparado o En reparto, T29b) o con "Entregar con cambios" (lo entregado de cada
@@ -2381,7 +2381,7 @@
         });
     }
 
-    // Eliminar (T26): solo en "Cargado", para errores (por ejemplo, un pedido
+    // Eliminar (T26): en cualquier paso (T125b), para errores (por ejemplo, un pedido
     // cargado dos veces). Desaparece de la app, pero queda guardado por dentro.
     // Un "Histórico" (sin estado), solo el dueño, como en Historial (T27b).
     function eliminarPedido(id, estado) {

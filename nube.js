@@ -1234,9 +1234,8 @@
 
         if (!pedidoTieneEstados(pedido)) return persona.idPersona === "dueno";
 
-        return estadoActualDelPedido(pedido) === "cargado" &&
-            pedido.estado === "cargado" &&
-            esAutorODueno(pedido, persona);
+        // T125b: en cualquier paso (antes, solo "Cargado").
+        return esAutorODueno(pedido, persona);
     }
 
     // Si la persona de este celular puede cancelar el pedido.
@@ -1264,9 +1263,6 @@
             if (persona.idPersona !== "dueno") throw errorDelPedido("Un pedido Histórico solo lo elimina el dueño.");
         } else {
             if (!esAutorODueno(pedido, persona)) throw errorDelPedido("Solo quien cargó el pedido o el dueño lo elimina.");
-            if (estadoActualDelPedido(pedido) !== "cargado" || pedido.estado !== "cargado") {
-                throw errorDelPedido("Solo se elimina un pedido «Cargado». Si el comercio ya no lo quiere, cancelalo.");
-            }
         }
 
         enviarCambiosDelPedido(ref, [

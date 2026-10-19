@@ -291,7 +291,8 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
 
     // "Entregado" en tanda: pasa a Historial, completo.
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
-    await expect(pie.getByRole("button", { name: "Más acciones con los elegidos" })).toBeHidden();
+    // T125b: el ⋯ con "Eliminar" también está en "Para entregar".
+    await expect(pie.getByRole("button", { name: "Más acciones con los elegidos" })).toBeVisible();
     await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
     await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Entregado (1)" }).click();
     await confirmar.getByRole("button", { name: "Entregado (1)" }).click();
@@ -314,6 +315,14 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toHaveCount(0);
     await etapas.getByRole("tab", { name: /Para entregar/ }).click();
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
+
+    // T125b: eliminar fuera de "Cargado" (acá, un pedido «Preparado»).
+    await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("dialog", { name: "Más acciones" }).getByRole("button", { name: "Eliminar (1)" }).click();
+    await confirmar.getByRole("button", { name: "Eliminar (1)" }).click();
+    await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toHaveCount(0);
+    await expect(page.locator("#modalAviso")).toBeHidden();
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
 });
