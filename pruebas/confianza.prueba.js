@@ -29,7 +29,14 @@ test("confianza: versión nueva y cambios sin subir", async ({ page, context }, 
     await expect(page.locator("#indicadorNube")).toHaveAttribute("data-estado", "ok", { timeout: 20000 });
     // Con la máquina cargada, lo del registro puede tardar en subir: se
     // espera a que no quede nada pendiente antes de cortar la señal.
-    await expect.poll(() => page.evaluate(() => window.nubeVendeFrio?.sincronizacion?.().sinSubir ?? 0), { timeout: 20000 }).toBe(0);
+    // Lo guardado al registrar sale un instante después: tiene que quedar en
+    // cero un par de segundos seguidos, no solo un momento.
+    const pendientes = () => page.evaluate(() => window.nubeVendeFrio?.sincronizacion?.().sinSubir ?? 0);
+    await expect(async () => {
+        expect(await pendientes()).toBe(0);
+        await page.waitForTimeout(2000);
+        expect(await pendientes()).toBe(0);
+    }).toPass({ timeout: 30000 });
     await context.setOffline(true);
     await page.evaluate(() => window.firebase.firestore().disableNetwork());
     await cargarPedido(page, false);
