@@ -15,8 +15,15 @@ test("estadísticas: tarjetas con íconos y barras por día", async ({ page }) =
     await page.evaluate(() => {
         const dia = 86400000;
         const ahora = Date.now();
+        // Una hora antes, pero sin pasarse al día anterior (pasada la
+        // medianoche, "hace una hora" ya es ayer).
+        const hora = haceDias => {
+            const inicio = new Date(ahora - haceDias * dia);
+            inicio.setHours(0, 0, 0, 0);
+            return Math.max(inicio.getTime(), ahora - haceDias * dia - 3600000);
+        };
         const pedido = (comercio, haceDias, productos) => ({
-            comercio, timestamp: ahora - haceDias * dia - 3600000,
+            comercio, timestamp: hora(haceDias),
             productos: productos.map(([marca, producto, cantidad, precio]) => ({ marca, producto, cantidad, precio }))
         });
         guardarHistorial([
