@@ -36,8 +36,9 @@ async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await irAPedidos(page);
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, comercio);
-    await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    // Con varias marcas, cada una se abre tocándola (T97): solo si está cerrada.
+    if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();

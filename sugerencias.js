@@ -211,7 +211,10 @@
         // Un instante, por si tocó una opción de la lista.
         setTimeout(dibujar, 150);
     });
-    input.addEventListener("change", () => { usado = ""; dibujar(); });
+    // Al salir del campo, "change" llega en medio del toque: si se redibuja
+    // ya, la pantalla se mueve y el toque cae en otro lado (por ejemplo, en
+    // vez de abrir una marca). Se espera lo mismo que en "blur".
+    input.addEventListener("change", () => { usado = ""; setTimeout(dibujar, 150); });
     input.addEventListener("input", () => { usado = ""; dibujar(); });
 
     // Cada vez que cambia el pedido (cantidades, comercio, borrador) se redibuja.
