@@ -56,8 +56,8 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
     await opciones.getByRole("button", { name: "Mandar recordatorio por WhatsApp" }).click();
     const enlace = await page.evaluate(() => window.__abiertas[0]);
     expect(enlace).toMatch(/^https:\/\/wa\.me\/5491155551234\?text=/);
-    const hoy = new Date();
-    const fecha = hoy.getDate() + "/" + (hoy.getMonth() + 1);
+    // La fecha del celular (hora de Argentina), no la de la computadora.
+    const fecha = await page.evaluate(() => new Date().getDate() + "/" + (new Date().getMonth() + 1));
     expect(decodeURIComponent(enlace.split("text=")[1])).toBe(
         "¡Hola Pepe! Te escribo de Distribuidora Prueba. Te recuerdo que quedó pendiente $ 19.600 de los pedidos del " + fecha + ". Cuando puedas, avisame. ¡Gracias!"
     );

@@ -23,7 +23,10 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await page.locator("#cliente").fill("Anibal");
+    await page.locator("#cliente").blur();
+    // Con varias marcas, cada una se abre tocando su nombre (T97).
     await page.locator(".tituloMarca").first().click();
+    await expect(page.locator(".tituloMarca").first()).toHaveAttribute("aria-expanded", "true");
     const fila = page.locator(".listaProdutos .fila").first();
     await fila.getByRole("button", { name: "Aumentar cantidad" }).click();
     await fila.getByRole("button", { name: "Aumentar cantidad" }).click();
