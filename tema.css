@@ -1036,6 +1036,8 @@ html .configDetalle .btnAccion,
 html .modalAvisos button,
 html .contenidoAvisos button{border-radius:999px !important;}
 html .tarjetaMapaRuta > div:has(#btnOptimizarRuta){display:grid !important;grid-template-columns:1fr 1fr;gap:8px !important;}
+/* T129: en la hoja de partes de Google Maps, "Cancelar" sin fondo para que no se confunda con una parte. */
+.hojaPartesGoogleMaps > .pzBtn:last-child{background:transparent;color:var(--texto-sec);}
 html .tarjetaMapaRuta #btnOptimizarRuta{grid-column:1/-1;}
 html .tarjetaMapaRuta .btnAccion{min-height:46px;font-size:14px;}
 html .botonNavegacion3D{background:var(--superficie-2) !important;color:var(--texto) !important;}

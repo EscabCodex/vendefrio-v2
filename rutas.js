@@ -1626,6 +1626,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 const MAX_PARADAS_RUTA_EXACTA = 9;
+// Google Maps acepta hasta 10 puntos por enlace: tu ubicación (el origen vacío
+// de "dir//") y 9 paradas. Con más, el resto no aparece.
+const MAX_PARADAS_GOOGLE_MAPS = 9;
 
 function calcularRutaExacta(comercios, latitudInicial, longitudInicial) {
     let mejorDistanciaTotal = Infinity;
@@ -1681,6 +1684,83 @@ function calcularRutaExacta(comercios, latitudInicial, longitudInicial) {
     };
 }
 
+// Con muchas paradas: arranca por la más cercana cada vez y después mueve
+// paradas y da vuelta tramos del recorrido mientras eso lo acorte. El punto de partida
+// queda fijo y el final es libre, como en calcularRutaExacta.
+function calcularRutaAproximada(comercios, latitudInicial, longitudInicial) {
+    const puntos = [{ lat: latitudInicial, lng: longitudInicial }].concat(comercios);
+    const distancia = (a, b) => calcularDistancia(puntos[a].lat, puntos[a].lng, puntos[b].lat, puntos[b].lng);
+
+    const orden = [0];
+    const pendientes = new Set(comercios.map((comercio, indice) => indice + 1));
+    while (pendientes.size) {
+        const ultimo = orden[orden.length - 1];
+        let mejor = null;
+        pendientes.forEach(indice => {
+            if (mejor === null || distancia(ultimo, indice) < distancia(ultimo, mejor)) mejor = indice;
+        });
+        orden.push(mejor);
+        pendientes.delete(mejor);
+    }
+
+    // Desde cada punto del camino, cuánto cuesta ir hasta el siguiente (0 si es el último).
+    const tramo = (a, b) => (b === undefined ? 0 : distancia(a, b));
+
+    let mejoro = true;
+    let vueltas = 0;
+    while (mejoro && vueltas < 50) {
+        mejoro = false;
+        vueltas += 1;
+        // Mover 1 a 3 paradas seguidas a otro lugar del camino (o-opt), al derecho o al revés.
+        for (let largo = 1; largo <= 3; largo += 1) {
+            for (let i = 1; i + largo <= orden.length; i += 1) {
+                const tramoMovido = orden.slice(i, i + largo);
+                const resto = orden.slice(0, i).concat(orden.slice(i + largo));
+                const ahorro = distancia(orden[i - 1], tramoMovido[0]) +
+                    tramo(tramoMovido[largo - 1], orden[i + largo]) -
+                    tramo(orden[i - 1], orden[i + largo]);
+                let mejorLugar = null;
+                for (let lugar = 0; lugar < resto.length; lugar += 1) {
+                    if (lugar === i - 1) continue;
+                    [tramoMovido, tramoMovido.slice().reverse()].forEach(version => {
+                        const costo = distancia(resto[lugar], version[0]) +
+                            tramo(version[largo - 1], resto[lugar + 1]) -
+                            tramo(resto[lugar], resto[lugar + 1]);
+                        if (costo < ahorro - 0.01 && (!mejorLugar || costo < mejorLugar.costo)) {
+                            mejorLugar = { lugar, version, costo };
+                        }
+                    });
+                }
+                if (mejorLugar) {
+                    resto.splice(mejorLugar.lugar + 1, 0, ...mejorLugar.version);
+                    orden.splice(0, orden.length, ...resto);
+                    mejoro = true;
+                }
+            }
+        }
+        // Dar vuelta un tramo del camino (2-opt).
+        for (let i = 1; i < orden.length - 1; i += 1) {
+            for (let j = i + 1; j < orden.length; j += 1) {
+                const antes = distancia(orden[i - 1], orden[i]) +
+                    (j + 1 < orden.length ? distancia(orden[j], orden[j + 1]) : 0);
+                const despues = distancia(orden[i - 1], orden[j]) +
+                    (j + 1 < orden.length ? distancia(orden[i], orden[j + 1]) : 0);
+                if (despues < antes - 0.01) {
+                    orden.splice(i, j - i + 1, ...orden.slice(i, j + 1).reverse());
+                    mejoro = true;
+                }
+            }
+        }
+    }
+
+    const distancias = orden.slice(1).map((indice, posicion) => distancia(orden[posicion], indice));
+    return {
+        comercios: orden.slice(1).map(indice => puntos[indice]),
+        distancias,
+        distanciaTotal: distancias.reduce((total, metros) => total + metros, 0)
+    };
+}
+
 function optimizarRuta() {
     const comerciosElegidos = obtenerComerciosElegidosParaRuta();
 
@@ -1708,16 +1788,6 @@ function optimizarRuta() {
         return;
     }
 
-    if (comerciosConGps.length > MAX_PARADAS_RUTA_EXACTA) {
-        mostrarAviso(
-            "Demasiadas paradas para c\u00e1lculo exacto",
-            "La ruta exacta est\u00e1 limitada a " +
-                MAX_PARADAS_RUTA_EXACTA +
-                " paradas para no bloquear el celular. Reduc\u00ed la selecci\u00f3n y no se usar\u00e1 una ruta aproximada."
-        );
-        return;
-    }
-
     if (!navigator.geolocation) {
         mostrarAviso(
             "GPS no disponible",
@@ -1728,7 +1798,10 @@ function optimizarRuta() {
 
     navigator.geolocation.getCurrentPosition(
         posicion => {
-            const resultado = calcularRutaExacta(
+            // Hasta MAX_PARADAS_RUTA_EXACTA se prueban todas las combinaciones;
+            // con más paradas sería eterno, así que se busca un orden muy bueno.
+            const exacta = comerciosConGps.length <= MAX_PARADAS_RUTA_EXACTA;
+            const resultado = (exacta ? calcularRutaExacta : calcularRutaAproximada)(
                 comerciosConGps,
                 posicion.coords.latitude,
                 posicion.coords.longitude
@@ -1765,8 +1838,10 @@ function optimizarRuta() {
                 : "";
 
             mostrarAviso(
-                "Ruta m\u00ednima calculada",
-                "Se revisaron todas las combinaciones posibles.\n\n" +
+                exacta ? "Ruta m\u00ednima calculada" : "Ruta optimizada",
+                (exacta
+                    ? "Se revisaron todas las combinaciones posibles.\n\n"
+                    : "Se busc\u00f3 el orden m\u00e1s corto para las " + rutaOrdenada.length + " paradas.\n\n") +
                     "Orden de paradas:\n" +
                     listaOrdenada +
                     detalleSinGps
@@ -1811,6 +1886,57 @@ function abrirGoogleMaps() {
         return;
     }
 
+    if (paradas.length <= MAX_PARADAS_GOOGLE_MAPS) {
+        abrirParadasEnGoogleMaps(paradas);
+        return;
+    }
+
+    // Google Maps no acepta más paradas: se pasa la ruta en partes, en el mismo orden.
+    const partes = [];
+    for (let desde = 0; desde < paradas.length; desde += MAX_PARADAS_GOOGLE_MAPS) {
+        partes.push(paradas.slice(desde, desde + MAX_PARADAS_GOOGLE_MAPS));
+    }
+    const titulo = "Google Maps acepta hasta " + MAX_PARADAS_GOOGLE_MAPS + " paradas";
+    const explicacion = "Tu ruta tiene " + paradas.length + " paradas. Te la paso en " + partes.length +
+        " partes: abr\u00ed la Parte 1 y, cuando la termines, volv\u00e9 y abr\u00ed la siguiente.";
+
+    if (!window.piezas?.hoja) {
+        mostrarAviso(titulo, explicacion + " Ahora te abro la Parte 1.");
+        abrirParadasEnGoogleMaps(partes[0]);
+        return;
+    }
+
+    const proxima = Math.min(ultimaParteGoogleMaps.paradas === claveParadasGoogleMaps(paradas) ? ultimaParteGoogleMaps.parte + 1 : 0, partes.length - 1);
+    let numero = 0;
+    window.piezas.hoja({
+        titulo,
+        sub: explicacion,
+        clase: "hojaPartesGoogleMaps",
+        botones: partes.map((parte, indice) => {
+            const primera = numero + 1;
+            numero += parte.length;
+            return {
+                id: "btnParteGoogleMaps" + (indice + 1),
+                texto: "Parte " + (indice + 1) + " \u00b7 paradas " + primera + (parte.length > 1 ? " a " + numero : ""),
+                icono: "auto",
+                clase: indice === proxima ? "pzBtnPri" : "pzBtnSec",
+                alTocar: () => {
+                    ultimaParteGoogleMaps = { paradas: claveParadasGoogleMaps(paradas), parte: indice };
+                    abrirParadasEnGoogleMaps(parte);
+                }
+            };
+        }).concat([{ texto: "Cancelar", clase: "pzBtnGris" }])
+    });
+}
+
+// Para resaltar la parte que sigue la próxima vez que se toca "Google Maps".
+let ultimaParteGoogleMaps = { paradas: "", parte: -1 };
+
+function claveParadasGoogleMaps(paradas) {
+    return paradas.map(comercio => comercio.nombre).join("|");
+}
+
+function abrirParadasEnGoogleMaps(paradas) {
     const paradasFormateadas = paradas
         .map(comercio => {
             if (comercioTieneGps(comercio)) {
