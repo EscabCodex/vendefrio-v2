@@ -18,8 +18,8 @@ El dueño del producto (Jeremías) es principiante en programación y en IA. Si 
 
 ## Roles
 
-- **Dueño del producto (Jeremías):** define problemas reales y prioridades, pide cada tarea a Claude Code, revisa el pull request (capturas y pruebas) y lo une a `desarrollo`; cada 3 o 4 tareas prueba `desarrollo` en su celular y decide si se une a `main`.
-- **Claude Code:** ingeniería principal y única IA que modifica el repo. Programa, diseña la interfaz directamente en código, corre las pruebas automáticas y redacta la documentación. Trabaja en una rama nueva y abre un pull request hacia `desarrollo` sin unirlo.
+- **Dueño del producto (Jeremías):** define problemas reales y prioridades, pide cada tarea a Claude Code, lee lo que cambió y lo que dijo el Revisor; cada 3 o 4 tareas prueba `desarrollo` en su celular y decide si se une a `main`.
+- **Claude Code:** ingeniería principal y única IA que modifica el repo. Programa, diseña la interfaz directamente en código, corre las pruebas automáticas y redacta la documentación. Trabaja en una rama nueva y abre un pull request hacia `desarrollo`; lo une recién cuando el Revisor lo aprueba. Trabaja en equipo de agentes (ver "Equipo de agentes").
 - **Claude (chats y Proyecto de Claude):** consultas, análisis y especificaciones. No modifica código.
 - **Zapia:** ideas de producto y orden de prioridades. Conoce bien el proyecto.
 - **DeepSeek:** tareas chicas (ajustar un texto, resolver una duda puntual).
@@ -29,7 +29,7 @@ El dueño del producto (Jeremías) es principiante en programación y en IA. Si 
 
 1. **Una sola IA modifica el código a la vez.** Las demás proponen, revisan o preparan especificaciones.
 2. **GitHub es la fuente de verdad.** Vercel es la zona de prueba.
-3. **Cada tarea en su rama y su pull request hacia `desarrollo`.** Se une a `desarrollo` si pasan las pruebas automáticas y las capturas se ven bien. Nada se une a `main` sin probarlo en el celular y sin el OK del dueño (ver "Probar en tanda"). Cada entrega informa qué cambió, qué no y qué quedó pendiente.
+3. **Cada tarea en su rama y su pull request hacia `desarrollo`.** Se une a `desarrollo` cuando el Revisor (otra sesión de Claude) lo aprueba: pruebas automáticas en verde y capturas bien. Los pull requests que cambian la forma de trabajar (`CLAUDE.md`, esta guía, `.claude/agents/`) los une el dueño. Nada se une a `main` sin probarlo en el celular y sin el OK del dueño (ver "Probar en tanda"). Cada entrega informa qué cambió, qué no y qué quedó pendiente.
 4. **No se rompen datos ni funciones existentes** (ver `PROJECT_STATE.md`).
 5. **Toda tarea nueva** declara problema, usuario, resultado esperado, archivos involucrados, riesgos y criterio de aceptación.
 6. **Si algo no está definido, se pregunta o se declara como supuesto.** No se inventa el estado del proyecto.
@@ -44,7 +44,7 @@ Cada chat de Claude parte de cero y no garantiza recordar los anteriores. La app
 - **Siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan." Claude Code busca en el plan la primera tarea sin hacer. Si alguna vez querés otra, nombrala (por ejemplo "Seguí CLAUDE.md. Hacé solo T29c.").
 - **Elegir el modelo para cuidar el límite.** Sonnet gasta bastante menos que Opus. Claude Code te recomienda el modelo al cerrar cada tarea y al confirmar la siguiente: Sonnet para charlas, documentos y tareas de esfuerzo Bajo o Medio; Opus solo para esfuerzo Alto o Extra (reglas de la nube, claves, pagos, cambios grandes).
 - **Fuera de las horas pico** (días de semana, de día) el límite rinde más.
-- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request, y le pasa al dueño el mensaje, el esfuerzo y el modelo de la sesión siguiente. El dueño une el pull request a `desarrollo` y recién después abre la siguiente sesión.
+- **Al cerrar una tarea:** Claude Code marca la tarea en el plan y agrega la línea de la bitácora en `PROJECT_STATE.md` dentro del mismo pull request, y le pasa al dueño el mensaje, el esfuerzo y el modelo de la sesión siguiente. Cuando el Revisor lo aprueba, se une a `desarrollo` y recién después se abre la siguiente sesión.
 
 ## Rutina de cada sesión
 
@@ -53,7 +53,7 @@ Cada chat de Claude parte de cero y no garantiza recordar los anteriores. La app
 3. **Mandar siempre el mismo mensaje:** "Seguí CLAUDE.md. Hacé la próxima tarea del plan."
 4. **Confirmar:** Claude Code contesta qué tarea va a hacer y con qué esfuerzo y modelo (por ejemplo "Voy con T29b, esfuerzo Alto, modelo Opus. ¿Sigo?"). Si no coincide con lo que elegiste, cambialo en la sesión. Después contestá "Sí".
 5. **Esperar el pull request** que abre Claude Code hacia `desarrollo`, con la tarea marcada, la línea de la bitácora, el resultado de las pruebas automáticas y las capturas.
-6. **Revisarlo y unirlo a `desarrollo`** (ver "Revisar un pull request"). Probar a mano en el celular solo si el pull request lo pide.
+6. **Esperar el APROBADO del Revisor**, que lo une a `desarrollo`. Vos lo revisás solo si dice NECESITA AL DUEÑO (ver "Revisar un pull request"). Probar a mano en el celular solo si el pull request lo pide.
 7. **Cada 3 o 4 tareas, probar en tanda** y unir `desarrollo` a `main` (ver "Probar en tanda").
 8. **Actualizar `PROJECT_STATE.md`** también en el Proyecto de Claude, si se usa.
 
@@ -80,7 +80,7 @@ Una rama es una copia paralela del código.
 
 ## Revisar un pull request
 
-Ya no se suben archivos a mano ni se prueba cada tarea en el celular: Claude Code corre las pruebas automáticas antes de abrir el pull request.
+Ya no se suben archivos a mano ni se prueba cada tarea en el celular: Claude Code corre las pruebas automáticas antes de abrir el pull request, y el Revisor (ver "Equipo de agentes") lo revisa y lo une a `desarrollo`. Estos pasos son para cuando el Revisor dice NECESITA AL DUEÑO, para los pull requests que cambian la forma de trabajar, o si querés mirar uno vos.
 
 1. Abrir el repo en GitHub y entrar a la pestaña **Pull requests**. Tocar el que abrió Claude Code. Arriba tiene que decir que va a `desarrollo` ("wants to merge … into `desarrollo`").
 2. En la pestaña **Conversation**, leer la descripción: qué cambió, el resultado de las pruebas (por ejemplo "4 de 4 pasaron") y las capturas, en modo claro y oscuro. Mirar que las pantallas se vean bien.
@@ -107,6 +107,40 @@ Son programas que abren la app en un navegador manejado solo (Playwright, con Ch
 - **Comando:** `npm test` (necesita Node y Java). Corre todo y deja una captura de cada paso en la carpeta `capturas` (`personal-…`, `nube-…`, `impresion-…`, `notificaciones-…`, `diseno-…`, `navegacion-…` y `voz-…`, `whatsapp-…`, cada una en `-claro` y `-oscuro`). Las capturas viejas se borran en cada corrida, así no se acumulan.
 - **Archivos:** carpeta `pruebas` (las pruebas, el servidor de prueba y la configuración), `firebase.json` (los emuladores) y `package.json`. Ninguno cambia la app, y Vercel no los publica (`.vercelignore`).
 - **Lo que una máquina no prueba:** la impresora Bluetooth, dos celulares reales a la vez y las notificaciones. Eso lo probás vos, solo en las tareas que lo tocan.
+
+## Equipo de agentes
+
+Desde el 2026-10-20 el trabajo lo hace un equipo de 4 agentes (un agente es una sesión de Claude con un trabajo fijo y sus propias instrucciones). El diseño completo está en el documento "Equipo de agentes para VendeFrío" del Proyecto de Claude.
+
+| Agente | Qué hace | Dónde están sus instrucciones | Modelo |
+| --- | --- | --- | --- |
+| Coordinador | Elige la próxima tarea del plan, el esfuerzo y el modelo, y abre un hilo para cada agente | Instrucciones del Proyecto de Claude (abajo) | Sonnet |
+| Constructor | Programa una tarea en su rama, corre `npm test` y abre el pull request hacia `desarrollo` | `CLAUDE.md` | Opus si la tarea es Alto o Extra; si no, Sonnet |
+| Revisor | Revisa el pull request en otra sesión y responde APROBADO, DEVUELTO o NECESITA AL DUEÑO | `.claude/agents/revisor.md` | Sonnet (Opus si toca reglas o cobros) |
+| Asistente del dueño | Te pasa una tarea M por vez en 5 pasos o menos y arma la prueba en tanda | `.claude/agents/asistente.md` | Sonnet |
+
+**Lo que decide siempre el dueño:** unir a `main`, publicar `firestore.rules`, claves, cuentas y pagos, borrar datos, funciones nuevas fuera del plan y el desempate cuando el Revisor devuelve dos veces.
+
+**Instrucciones del Coordinador** (para pegar en las instrucciones del Proyecto de Claude, debajo de las que ya están):
+
+```text
+Sos el Coordinador del equipo de VendeFrío. No programás.
+
+Cuando Jere escribe "Seguí" (o "Seguí CLAUDE.md. Hacé la próxima tarea del plan."):
+1. Leé el plan de PROJECT_STATE.md en la rama desarrollo y buscá la primera tarea "- [ ]".
+2. Si es una tarea T: abrí UN hilo para el Constructor con este encargo:
+   "Tarea: [código y nombre]. Esfuerzo: [Bajo/Medio/Alto/Extra]. Modelo: [Sonnet/Opus]. Seguí CLAUDE.md."
+   Modelo: Opus solo si el esfuerzo es Alto o Extra, o si toca firestore.rules, claves o pagos. Si no, Sonnet.
+3. Si es una tarea M, o la tarea dice que espera el sí de Jere: no la programes. Abrí un hilo para el Asistente del dueño (.claude/agents/asistente.md).
+4. Cuando el Constructor abra el pull request, abrí un hilo nuevo para el Revisor (.claude/agents/revisor.md) con el número del pull request y la tarea.
+5. Si el Revisor devuelve el trabajo, pasáselo al hilo del Constructor. Si lo devuelve por segunda vez, frená y preguntale a Jere.
+
+Reglas:
+- Una tarea por hilo. Nunca mezcles tareas del plan.
+- En el chat, una línea por tarea. Español rioplatense.
+- Guardá en memoria solo decisiones de Jere y datos que sigan siendo ciertos, con fecha.
+- Si no sabés algo del proyecto, decilo. No lo inventes.
+```
 
 ## Instrucciones del Proyecto (para pegar en Claude)
 

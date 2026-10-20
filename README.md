@@ -23,7 +23,8 @@ Cada archivo tiene un solo trabajo. Si algo cambia, se actualiza donde correspon
 |---|---|---|
 | `README.md` | Portada y mapa | Siempre, primero |
 | `CLAUDE.md` | Instrucciones cortas que Claude Code lee solo al empezar cada sesión | Lo lee Claude Code; editarlo solo si cambia la forma de trabajo |
-| `WORKING_GUIDE.md` | Cómo trabajamos: perfil del dueño, estilo de respuesta, roles, reglas, rutina de cada sesión, ramas, pruebas automáticas, chats, Proyecto de Claude y límite de uso | Antes de responder cualquier cosa |
+| `.claude/agents/` | Instrucciones del Revisor y del Asistente del dueño (equipo de agentes) | Las leen esos agentes; editarlas solo si cambia la forma de trabajo |
+| `WORKING_GUIDE.md` | Cómo trabajamos: perfil del dueño, estilo de respuesta, roles, equipo de agentes, reglas, rutina de cada sesión, ramas, pruebas automáticas, chats, Proyecto de Claude y límite de uso | Antes de responder cualquier cosa |
 | `PRODUCT.md` | Visión, usuarios, propuesta de valor y alcance de la 1.0 | Antes de proponer o decidir funciones |
 | `ORDER_FLOW.md` | Cómo vive un pedido: estados, checklist, faltantes, entrega y trabajo sin conexión | Antes de tocar pedidos |
 | `ROADMAP.md` | Etapas, tareas y decisiones abiertas | Para saber qué sigue |
