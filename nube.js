@@ -56,12 +56,20 @@
     let borradosSinSubir = 0;
     const oyentesSincronizacion = [];
     let textoSincronizacion = "";
+    // Detalle de lo que falta subir (T60): qué es cada cambio y lo último
+    // que ya subió, para la pantalla "Sin subir".
+    let sinSenalDesde = 0;
+    const pendientesConocidos = new Map();
+    const subidosRecien = [];
     let textoPedidosSinSubir = "";
 
     // Estados: apagado, conectando, conectada, sinConexion, sinPermiso, error.
     function cambiarEstado(nuevoEstado) {
         if (estado === nuevoEstado) return;
         estado = nuevoEstado;
+        // "Sin señal desde las 10:42" (T60).
+        if (nuevoEstado === "sinConexion" && !sinSenalDesde) sinSenalDesde = Date.now();
+        if (nuevoEstado === "conectada") sinSenalDesde = 0;
 
         oyentes.forEach(oyente => {
             try {
@@ -1226,9 +1234,8 @@
 
         if (!pedidoTieneEstados(pedido)) return persona.idPersona === "dueno";
 
-        return estadoActualDelPedido(pedido) === "cargado" &&
-            pedido.estado === "cargado" &&
-            esAutorODueno(pedido, persona);
+        // T125b: en cualquier paso (antes, solo "Cargado").
+        return esAutorODueno(pedido, persona);
     }
 
     // Si la persona de este celular puede cancelar el pedido.
@@ -1256,9 +1263,6 @@
             if (persona.idPersona !== "dueno") throw errorDelPedido("Un pedido Histórico solo lo elimina el dueño.");
         } else {
             if (!esAutorODueno(pedido, persona)) throw errorDelPedido("Solo quien cargó el pedido o el dueño lo elimina.");
-            if (estadoActualDelPedido(pedido) !== "cargado" || pedido.estado !== "cargado") {
-                throw errorDelPedido("Solo se elimina un pedido «Cargado». Si el comercio ya no lo quiere, cancelalo.");
-            }
         }
 
         enviarCambiosDelPedido(ref, [
@@ -1377,8 +1381,16 @@
             };
         });
 
+        // Devoluciones (T71): bajan el total del pedido entregado.
+        let devuelto = 0;
+        if (entregado && window.devolucionesVendeFrio) {
+            devuelto = Number(window.devolucionesVendeFrio.montoDe(pedido.id)) || 0;
+            total.total = Math.max(0, total.total - devuelto);
+        }
+
         return {
             lineas,
+            devuelto,
             unidadesPedidas: lineas.reduce((suma, linea) => suma + linea.pedida, 0),
             unidadesPreparadas: lineas.reduce((suma, linea) => suma + linea.preparada, 0),
             unidadesEntregadas: lineas.reduce((suma, linea) => suma + linea.entregada, 0),
@@ -1637,10 +1649,12 @@
             Boolean(personaDeEsteCelular());
     }
 
-    // El total a cobrar de lo entregado (el monto que viene escrito).
+    // El total a cobrar de lo entregado (el monto que viene escrito), menos
+    // los pagos parciales (T74).
     function montoACobrar(pedido) {
         const entrega = entregaDelPedido(pedido);
-        return Math.round(entrega.total.total * 100) / 100;
+        const pagado = Number(window.saldosVendeFrio?.pagadoDe?.(pedido && pedido.id)) || 0;
+        return Math.round(Math.max(0, entrega.total.total - pagado) * 100) / 100;
     }
 
     // "Efectivo · $ 12.500".
@@ -1805,16 +1819,155 @@
         const enDocumentos = Object.values(idsSinSubir)
             .reduce((total, ids) => total + ids.size, 0);
         // Las fotos de los comprobantes (T28) no se escuchan: se cuentan aparte.
-        return enDocumentos + borradosSinSubir + comprobantesSinSubir.size;
+        return enDocumentos + borradosSinSubir + comprobantesSinSubir.size + pendientesExtra().length;
+    }
+
+    // Colecciones que maneja extras.js (visitas, gastos, etc.): avisan sus
+    // pendientes para sumarlos a "Sin subir".
+    const partesExtra = [];
+    function pendientesExtra() {
+        const lista = [];
+        partesExtra.forEach(parte => {
+            try {
+                parte().forEach(item => lista.push(item));
+            } catch (error) {
+                console.warn("No se pudo leer lo pendiente de una parte extra.", error);
+            }
+        });
+        return lista;
     }
 
     function sincronizacion() {
         return { estado, sinSubir: cantidadSinSubir() };
     }
 
+    // Qué es un cambio pendiente, en palabras del vendedor.
+    function describirCambio(parte, id) {
+        const crudo = documentos[parte] && documentos[parte].get(id);
+        const datos = crudo ? deDocumento(id, crudo) : {};
+        const descripcion = { parte, id, titulo: "Cambio", detalle: "", nombre: "", hora: Date.now() };
+
+        if (parte === "pedidos") {
+            const estadoActual = estadoActualDelPedido(datos);
+            const entradas = esMapa(datos.estados) ? Object.values(datos.estados) : [];
+            const ultima = entradas.reduce((mayor, entrada) => Math.max(mayor, Number(entrada && entrada.horaCelular) || 0), 0);
+            const unidades = (Array.isArray(datos.productos) ? datos.productos : [])
+                .reduce((total, item) => total + (Number(item && item.cantidad) || 0), 0);
+            const total = totalDelPedido(datos).total;
+            const cobro = cobroDelPedido(datos);
+            descripcion.nombre = String(datos.comercio || datos.cliente || "");
+            if (estadoActual === "entregado") {
+                descripcion.titulo = "Entregado";
+            } else if (estadoActual === "cancelado") {
+                descripcion.titulo = "Cancelado";
+            } else if (entradas.length <= 1) {
+                descripcion.titulo = "Pedido nuevo";
+            } else {
+                descripcion.titulo = "Pedido · " + (nombreDeEstadoPedido(estadoActual) || "cambio");
+            }
+            if (ultima) descripcion.hora = ultima;
+            if (cobro && estadoActual === "entregado") {
+                descripcion.detalle = "cobrado en " + nombreDeFormaDeCobro(cobro.forma).toLowerCase();
+            } else {
+                descripcion.detalle = unidades + " u" + (total ? " · $ " + Math.round(total).toLocaleString("es-AR") : "");
+            }
+        } else if (parte === "comercios") {
+            descripcion.titulo = "Comercio";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = "datos del comercio";
+        } else if (parte === "productos") {
+            descripcion.titulo = "Producto";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = String((crudo && crudo._marca) || "catálogo");
+        } else if (parte === "rutas") {
+            descripcion.titulo = "Ruta";
+            descripcion.nombre = String(datos.nombre || "");
+            descripcion.detalle = "recorrido guardado";
+        } else if (parte === "config") {
+            descripcion.titulo = "Marcas";
+            descripcion.detalle = "lista y orden de las marcas";
+        }
+        return descripcion;
+    }
+
+    // Anota lo pendiente con su descripción; lo que dejó de estar pendiente
+    // pasa a "Subido" (se guardan los últimos 5).
+    function anotarPendientes() {
+        const actuales = new Set();
+        Object.keys(idsSinSubir).forEach(parte => {
+            idsSinSubir[parte].forEach(id => {
+                const clave = parte + "/" + id;
+                actuales.add(clave);
+                const anterior = pendientesConocidos.get(clave);
+                const nueva = describirCambio(parte, id);
+                if (anterior && nueva.parte !== "pedidos") nueva.hora = anterior.hora;
+                nueva.desde = anterior ? anterior.desde : Date.now();
+                nueva.esperoSenal = Boolean(anterior && anterior.esperoSenal) || estado !== "conectada";
+                pendientesConocidos.set(clave, nueva);
+                // Si vuelve a esperar, deja de figurar como subido.
+                for (let i = subidosRecien.length - 1; i >= 0; i--) {
+                    if (subidosRecien[i].parte === parte && subidosRecien[i].id === id) subidosRecien.splice(i, 1);
+                }
+            });
+        });
+        pendientesExtra().forEach(item => {
+            const clave = item.parte + "/" + item.id;
+            actuales.add(clave);
+            const anterior = pendientesConocidos.get(clave);
+            const nueva = { titulo: "Cambio", detalle: "", nombre: "", hora: Date.now(), ...item };
+            nueva.desde = anterior ? anterior.desde : Date.now();
+            nueva.esperoSenal = Boolean(anterior && anterior.esperoSenal) || estado !== "conectada";
+            pendientesConocidos.set(clave, nueva);
+            for (let i = subidosRecien.length - 1; i >= 0; i--) {
+                if (subidosRecien[i].parte === item.parte && subidosRecien[i].id === item.id) subidosRecien.splice(i, 1);
+            }
+        });
+        pendientesConocidos.forEach((descripcion, clave) => {
+            if (actuales.has(clave)) return;
+            pendientesConocidos.delete(clave);
+            // Solo se muestra como "Subido" lo que tuvo que esperar.
+            if (descripcion.esperoSenal || Date.now() - descripcion.desde > 3000) {
+                subidosRecien.unshift({ ...descripcion, subido: Date.now() });
+            }
+        });
+        if (subidosRecien.length > 5) subidosRecien.length = 5;
+    }
+
+    function detalleSinSubir() {
+        return {
+            estado,
+            sinSenalDesde,
+            pendientes: Array.from(pendientesConocidos.values()).sort((a, b) => b.hora - a.hora),
+            subidos: subidosRecien.slice(),
+            borrados: borradosSinSubir,
+            fotos: comprobantesSinSubir.size,
+            total: cantidadSinSubir()
+        };
+    }
+
+    // "Reintentar ahora": corta y vuelve a abrir la conexión con la nube, así
+    // Firestore prueba enseguida en vez de esperar su próximo intento.
+    async function reintentarSubida() {
+        if (!db) {
+            window.location.reload();
+            return false;
+        }
+        if (!navigator.onLine) return false;
+        try {
+            await db.disableNetwork();
+            await db.enableNetwork();
+        } catch (error) {
+            console.warn("No se pudo reabrir la conexión con la nube.", error);
+        }
+        escucharNube();
+        return true;
+    }
+
     function avisarSincronizacion() {
+        anotarPendientes();
         const actual = sincronizacion();
-        const texto = actual.estado + "|" + actual.sinSubir;
+        const texto = actual.estado + "|" + actual.sinSubir + "|" +
+            Array.from(pendientesConocidos.keys()).join(",") + "|" + (subidosRecien[0] ? subidosRecien[0].subido : 0);
 
         if (texto !== textoSincronizacion) {
             textoSincronizacion = texto;
@@ -2995,6 +3148,13 @@
         escucharAccionesDePedidos,
         // Sincronización visible (T12).
         sincronizacion,
+        detalleSinSubir,
+        // extras.js suma sus pendientes y avisa cuando cambian.
+        sumarParteExtra(pendientes) {
+            if (typeof pendientes === "function") partesExtra.push(pendientes);
+        },
+        avisarSincronizacion,
+        reintentarSubida,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
         escucharSincronizacion(oyente) {
             if (typeof oyente !== "function") return () => {};

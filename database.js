@@ -426,19 +426,6 @@ function guardarColeccion(coleccion, datos) {
     return true;
 }
 
-function borrarColeccion(coleccion) {
-    try {
-        adaptadorDatos.borrar(coleccion);
-        memoriaDatos[coleccion] = { existe: false, texto: null };
-    } catch (error) {
-        console.error(`No se pudieron borrar los datos de ${coleccion}.`, error);
-        return false;
-    }
-
-    avisarCambioDatos([coleccion], false);
-    return true;
-}
-
 // Para cuando algo escribi\u00f3 en el adaptador sin pasar por guardarColeccion
 // (las migraciones de ids): la pr\u00f3xima lectura vuelve a cargar.
 function olvidarColeccionesEnMemoria(colecciones) {
@@ -688,6 +675,37 @@ function obtenerComercios() {
     return comercios;
 }
 
+// Archivar en vez de borrar (T63): lo archivado no se ofrece para vender
+// ni para visitar, pero sigue guardado (los pedidos viejos lo nombran).
+function comercioArchivado(comercio) {
+    return Boolean(comercio && comercio.archivado === true);
+}
+
+function productoArchivado(producto) {
+    return Boolean(producto && producto.archivado === true);
+}
+
+function comerciosActivos() {
+    return obtenerComercios().filter(comercio => !comercioArchivado(comercio));
+}
+
+// Productos para vender: los mismos, sin los archivados (las marcas quedan).
+function productosParaVender(productos = obtenerProductos()) {
+    const activos = {};
+    Object.keys(productos).forEach(marca => {
+        activos[marca] = (productos[marca] || []).filter(producto => !productoArchivado(producto));
+    });
+    return activos;
+}
+
+function archivarComercioPorId(id, archivado = true) {
+    return actualizarComercioPorId(id, { archivado: archivado === true, archivadoEl: archivado ? Date.now() : null });
+}
+
+function archivarProductoPorId(id, archivado = true) {
+    return actualizarProductoPorId(id, { archivado: archivado === true, archivadoEl: archivado ? Date.now() : null });
+}
+
 function guardarComercios(comercios) {
     const lista = Array.isArray(comercios) ? comercios : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_COMERCIO);
@@ -730,32 +748,6 @@ function agregarComercio(comercio) {
     return guardarComercios(comercios);
 }
 
-function actualizarComercio(nombreAnterior, datos) {
-    const comercios = obtenerComercios();
-    const indice = comercios.findIndex(comercio =>
-        normalizarTexto(comercio.nombre) === normalizarTexto(nombreAnterior)
-    );
-
-    if (indice === -1) return false;
-
-    const nombreNuevo = String(datos.nombre || comercios[indice].nombre).trim();
-
-    if (!nombreNuevo || existeComercioConNombre(nombreNuevo, nombreAnterior)) {
-        return false;
-    }
-
-    comercios[indice] = {
-        ...comercios[indice],
-        ...datos,
-        nombre: nombreNuevo,
-        direccion: String(datos.direccion !== undefined ? datos.direccion : (comercios[indice].direccion || "")).trim(),
-        enlaceMaps: String(datos.enlaceMaps !== undefined ? datos.enlaceMaps : (comercios[indice].enlaceMaps || "")).trim(),
-        telefono: String(datos.telefono !== undefined ? datos.telefono : (comercios[indice].telefono || "")).trim()
-    };
-
-    return guardarComercios(comercios);
-}
-
 function eliminarComercio(nombre) {
     const comercios = obtenerComercios();
     const nuevos = comercios.filter(comercio =>
@@ -769,6 +761,16 @@ function eliminarComercio(nombre) {
 // -----------------------------------------------------
 // PRODUCTOS Y MARCAS
 // -----------------------------------------------------
+
+// Datos del producto que no son id, nombre, precio ni imagen (Etapa 7).
+const CAMPOS_BASE_PRODUCTO = ["id", "nombre", "precio", "imagen", "foto", "producto"];
+function camposExtraDeProducto(producto) {
+    const extra = {};
+    Object.keys(producto || {}).forEach(campo => {
+        if (!CAMPOS_BASE_PRODUCTO.includes(campo) && producto[campo] !== undefined) extra[campo] = producto[campo];
+    });
+    return extra;
+}
 
 function obtenerProductos() {
     let productos = leerColeccion("productos", PRODUCTOS);
@@ -787,6 +789,9 @@ function obtenerProductos() {
             ? productos[marca]
                 .filter(producto => producto && typeof producto === "object")
                 .map(producto => ({
+                    // Etapa 7: se conservan los datos extra del producto
+                    // (archivado, oferta, stock, código, listas de precios).
+                    ...camposExtraDeProducto(producto),
                     ...(tieneId(producto) ? { id: producto.id } : {}),
                     nombre: String(producto.nombre || "").trim(),
                     precio: Number(producto.precio) || 0,
@@ -1045,16 +1050,6 @@ function agregarHistorial(registro) {
 
     const historial = obtenerHistorial();
     historial.unshift(registro);
-    return guardarHistorial(historial);
-}
-
-function eliminarHistorial(indice) {
-    const historial = obtenerHistorial();
-    const posicion = Number(indice);
-
-    if (!Number.isInteger(posicion) || !historial[posicion]) return false;
-
-    historial.splice(posicion, 1);
     return guardarHistorial(historial);
 }
 
@@ -1352,6 +1347,11 @@ function mostrarRecordatorioRespaldoNube(ultimo) {
 
 function revisarRecordatorioRespaldoNube() {
     if (!esDuenoEnLaNube() || !estaEnModoNube() || !document.body) return;
+    // T61: el recordatorio es un aviso en Inicio (confianza.js), sin tapar la app.
+    if (window.confianzaVendeFrio) {
+        window.confianzaVendeFrio.dibujarAvisos();
+        return;
+    }
     if (!window.nubeVendeFrio || window.nubeVendeFrio.estado() !== "conectada") return;
     if (document.documentElement.classList.contains("inicioAbierto")) return;
 
@@ -2033,46 +2033,6 @@ function guardarRutasGuardadas(rutas) {
     return guardarColeccion("rutasGuardadas", lista);
 }
 
-function agregarRutaGuardada(nombre, comercios, dia = "") {
-    const nombreLimpio = String(nombre || "").trim();
-    const listaComercios = Array.isArray(comercios)
-        ? comercios.map(comercio => String(comercio || "").trim()).filter(Boolean)
-        : [];
-
-    if (!nombreLimpio || listaComercios.length === 0) return false;
-
-    const rutas = obtenerRutasGuardadas();
-    const existente = rutas.find(ruta => {
-        return normalizarTexto(ruta.nombre) === normalizarTexto(nombreLimpio);
-    });
-
-    const datos = {
-        nombre: nombreLimpio,
-        comercios: listaComercios,
-        idsComercios: armarComerciosDeRuta(listaComercios).ids,
-        dia: String(dia || "").trim(),
-        actualizado: Date.now()
-    };
-
-    if (existente) {
-        Object.assign(existente, datos);
-    } else {
-        rutas.push(datos);
-    }
-
-    return guardarRutasGuardadas(rutas);
-}
-
-function eliminarRutaGuardada(nombre) {
-    const rutas = obtenerRutasGuardadas();
-    const nuevas = rutas.filter(ruta => {
-        return normalizarTexto(ruta.nombre) !== normalizarTexto(nombre);
-    });
-
-    if (nuevas.length === rutas.length) return false;
-    return guardarRutasGuardadas(nuevas);
-}
-
 // -----------------------------------------------------
 // FUNCIONES POR ID (T4)
 // -----------------------------------------------------
@@ -2094,11 +2054,6 @@ function buscarIndicePorId(registros, id) {
 }
 
 // --- Comercios ---
-
-function obtenerComercioPorId(id) {
-    const comercio = obtenerComercios().find(item => tieneId(item) && item.id === id);
-    return comercio ? clonarDatos(comercio) : null;
-}
 
 function existeOtroComercioConNombre(nombre, idExcluir) {
     const buscado = normalizarTexto(nombre);
@@ -2209,6 +2164,7 @@ function agregarProductoConId(marca, producto) {
     );
 
     productos[marcaReal].push({
+        ...camposExtraDeProducto(producto),
         id,
         nombre,
         precio: Number(producto.precio) || 0,
@@ -2233,6 +2189,8 @@ function actualizarProductoPorId(id, datos) {
     if (!nombre || existeProductoEnMarca(marca, nombre, indice)) return false;
 
     productos[marca][indice] = {
+        ...camposExtraDeProducto(anterior),
+        ...camposExtraDeProducto(datos),
         id,
         nombre,
         precio: datos.precio !== undefined
@@ -2257,11 +2215,6 @@ function eliminarProductoPorId(id) {
 
 // --- Pedidos (historial) ---
 
-function obtenerPedidoPorId(id) {
-    const pedido = obtenerHistorial().find(item => tieneId(item) && item.id === id);
-    return pedido ? clonarDatos(pedido) : null;
-}
-
 // Agrega el pedido al principio del historial, igual que agregarHistorial.
 // Devuelve el id del pedido nuevo, o "" si no se pudo agregar.
 function agregarPedidoConId(registro) {
@@ -2275,15 +2228,6 @@ function agregarPedidoConId(registro) {
 }
 
 // Cambia solo los campos que vienen en "datos". El id nunca cambia.
-function actualizarPedidoPorId(id, datos) {
-    const historial = obtenerHistorial();
-    const indice = buscarIndicePorId(historial, id);
-    if (indice === -1 || !datos || typeof datos !== "object") return false;
-
-    historial[indice] = { ...historial[indice], ...clonarDatos(datos), id };
-    return guardarHistorial(historial);
-}
-
 function eliminarPedidoPorId(id) {
     const historial = obtenerHistorial();
     const indice = buscarIndicePorId(historial, id);
@@ -2407,30 +2351,69 @@ function nuevaEntradaDeEstado(estado, nota, persona, horaCelular) {
 
 // Precio del producto en el catálogo en este momento, o null si no tiene
 // (el catálogo muestra "Precio no cargado").
-function precioDelCatalogo(marca, nombre, productos) {
+function precioDelCatalogo(marca, nombre, productos, comercio) {
     const marcaReal = Object.keys(productos).find(item => normalizarTexto(item) === normalizarTexto(marca));
     const lista = marcaReal && Array.isArray(productos[marcaReal]) ? productos[marcaReal] : [];
     const producto = lista.find(item => item && normalizarTexto(item.nombre) === normalizarTexto(nombre));
-    const precio = Number(producto && producto.precio);
 
-    return Number.isFinite(precio) && precio > 0 ? precio : null;
+    return precioVigente(producto, comercio);
+}
+
+// Fecha de hoy como "AAAA-MM-DD" (hora del celular).
+function fechaHoyISO(fecha) {
+    const dia = fecha instanceof Date ? fecha : new Date();
+    return dia.getFullYear() + "-" + String(dia.getMonth() + 1).padStart(2, "0") + "-" + String(dia.getDate()).padStart(2, "0");
+}
+
+// Oferta con fecha (T68): { precio, hasta: "AAAA-MM-DD" }. Vale hasta ese día
+// inclusive; después el producto vuelve solo a su precio.
+function ofertaVigente(producto, fecha) {
+    const oferta = producto && producto.oferta;
+    if (!oferta || typeof oferta !== "object") return null;
+    const precio = Number(oferta.precio);
+    const hasta = String(oferta.hasta || "");
+    if (!Number.isFinite(precio) || precio <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) return null;
+    if (hasta < fechaHoyISO(fecha)) return null;
+    return { precio, hasta };
+}
+
+// Precio sin oferta: el de la lista del comercio (T78) o el de siempre.
+function precioDeLista(producto, comercio) {
+    if (!producto) return null;
+    const lista = comercio && typeof comercio === "object" ? String(comercio.listaPrecios || "") : "";
+    const precios = producto.precios && typeof producto.precios === "object" ? producto.precios : null;
+    const deLista = lista && precios ? Number(precios[lista]) : NaN;
+    if (Number.isFinite(deLista) && deLista > 0) return deLista;
+    const base = Number(producto.precio);
+    return Number.isFinite(base) && base > 0 ? base : null;
+}
+
+// El precio que corre hoy para este comercio: la oferta, si es más barata,
+// o el de su lista. Lo usan Nuevo pedido, el total y el pedido en la nube.
+function precioVigente(producto, comercio) {
+    const normal = precioDeLista(producto, comercio);
+    const oferta = ofertaVigente(producto);
+    if (oferta && (normal === null || oferta.precio < normal)) return oferta.precio;
+    return normal;
 }
 
 // Lo que suma un pedido nuevo en la nube: los productos con su id de línea y
 // su precio, y los campos de estado y autor. Devuelve { productos, campos }
 // o null si todavía no se sabe quién usa el celular.
-function prepararPedidoParaLaNube(productos, horaCelular) {
+function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio) {
     const persona = personaDeEsteCelular();
     if (!persona) return null;
 
     const catalogo = obtenerProductos();
+    const comercio = nombreComercio ? buscarComercioPorNombre(nombreComercio) : null;
     const [idEntrada, entrada] = nuevaEntradaDeEstado(ESTADO_PEDIDO_INICIAL, "", persona, horaCelular);
 
     return {
         productos: productos.map(item => ({
             id: generarId(PREFIJO_ID_LINEA),
             ...item,
-            precio: precioDelCatalogo(item.marca, item.producto, catalogo)
+            // El precio cambiado solo para este pedido (T98) queda como está.
+            precio: item.precioCambiado ? item.precio : precioDelCatalogo(item.marca, item.producto, catalogo, comercio)
         })),
         campos: {
             estado: ESTADO_PEDIDO_INICIAL,
@@ -2590,28 +2573,7 @@ function renombrarComercioEnRutas(idComercio, nombreNuevo) {
     return cambio ? guardarRutasGuardadas(rutas) : true;
 }
 
-function obtenerRutaPorId(id) {
-    const ruta = obtenerRutasGuardadas().find(item => tieneId(item) && item.id === id);
-    return ruta ? clonarDatos(ruta) : null;
-}
-
 // Devuelve los comercios de una ruta: primero por id y, si no, por nombre.
-function obtenerComerciosDeRuta(ruta) {
-    if (!ruta || !Array.isArray(ruta.comercios)) return [];
-
-    const comercios = obtenerComercios();
-    const ids = Array.isArray(ruta.idsComercios) ? ruta.idsComercios : [];
-
-    return ruta.comercios
-        .map((nombre, posicion) => {
-            const id = ids[posicion];
-            return (id && comercios.find(comercio => comercio.id === id)) ||
-                buscarComercioPorNombre(nombre, comercios);
-        })
-        .filter(Boolean)
-        .map(clonarDatos);
-}
-
 function existeOtraRutaConNombre(nombre, idExcluir, rutas) {
     const buscado = normalizarTexto(nombre);
     return rutas.some(ruta =>

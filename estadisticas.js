@@ -8,7 +8,7 @@
         const s = document.createElement("section");
         s.id = "pantallaEstadisticas";
         s.className = "oculto pantallaExtra pantallaEstadisticas";
-        s.innerHTML = `<header><div class="logo">${window.icono("grafico",22)}</div><div><h1>Estadísticas</h1><p>Una vista clara de cómo se mueve tu negocio</p></div></header><main class="container"><div class="selectorPeriodoEstadisticas" aria-label="Filtrar estadísticas por período"><button type="button" data-periodo="hoy">Hoy</button><button type="button" data-periodo="semana">Semana</button><button type="button" data-periodo="mes">Mes</button><button type="button" class="activo" data-periodo="todo">Todo</button></div><select id="filtroPeriodoEstadisticas" class="selectorPeriodoOculto" aria-label="Período"><option value="hoy">Hoy</option><option value="semana">Esta semana</option><option value="mes">Este mes</option><option value="todo" selected>Todo</option></select><div id="contenidoEstadisticas" class="informeEstadisticas"></div><button type="button" class="statsPlanilla" id="descargarPlanillaEstadisticas" aria-label="Descargar planilla del período"><span class="ajIcono" data-tono="verde">${window.icono("descargar",20)}</span><span class="statsPlanillaTexto"><strong>Descargar planilla del período</strong><small>Para Excel o tu contador</small></span>${window.icono("chevDerecha",18)}</button></main></section>`;
+        s.innerHTML = `<header><div class="logo">${window.icono("grafico",22)}</div><div><h1>Estadísticas</h1><p>Cómo te va con las ventas</p></div></header><main class="container"><div class="selectorPeriodoEstadisticas" aria-label="Filtrar estadísticas por período"><button type="button" data-periodo="hoy">Hoy</button><button type="button" data-periodo="semana">Semana</button><button type="button" data-periodo="mes">Mes</button><button type="button" class="activo" data-periodo="todo">Todo</button></div><select id="filtroPeriodoEstadisticas" class="selectorPeriodoOculto" aria-label="Período"><option value="hoy">Hoy</option><option value="semana">Esta semana</option><option value="mes">Este mes</option><option value="todo" selected>Todo</option></select><div id="contenidoEstadisticas" class="informeEstadisticas"></div><button type="button" class="statsPlanilla" id="descargarPlanillaEstadisticas" aria-label="Descargar planilla del período"><span class="ajIcono" data-tono="verde">${window.icono("descargar",20)}</span><span class="statsPlanillaTexto"><strong>Descargar planilla del período</strong><small>Para Excel o tu contador</small></span>${window.icono("chevDerecha",18)}</button></main></section>`;
         document.body.insertBefore(s, document.querySelector("nav.bottom-nav"));
         // Planilla para el contador (T47): todos los pedidos del período
         // (también los que no se entregaron), sin los eliminados.
@@ -50,6 +50,34 @@
         if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
         if (periodo === "mes") inicio.setDate(1);
         return historial.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio && fecha <= ahora; });
+    }
+
+    // El período anterior del mismo largo (T80): ayer, los 7 días de antes o
+    // el mes pasado hasta el mismo día. null en "Todo".
+    function historialAnterior() {
+        const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
+        if (periodo === "todo") return null;
+        const historial = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        let inicio, fin;
+        if (periodo === "hoy") {
+            inicio = new Date(hoy); inicio.setDate(inicio.getDate() - 1);
+            fin = new Date(hoy);
+        } else if (periodo === "semana") {
+            inicio = new Date(hoy); inicio.setDate(inicio.getDate() - 13);
+            fin = new Date(hoy); fin.setDate(fin.getDate() - 6);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+            const ultimo = new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate();
+            fin = new Date(hoy.getFullYear(), hoy.getMonth() - 1, Math.min(hoy.getDate(), ultimo) + 1);
+        }
+        return historial.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio && fecha < fin; });
+    }
+
+    function diferencia(actual, anterior) {
+        const resta = actual - anterior;
+        if (!resta) return "";
+        return `<span class="statsDelta" data-tono="${resta > 0 ? "sube" : "baja"}">${resta > 0 ? "+" : "−"}${numero(Math.abs(resta))}</span>`;
     }
 
     function estadisticasPeriodo(historial) {
@@ -120,6 +148,12 @@
         const comercios = new Set(historial.map(p => p.comercio).filter(Boolean)).size;
         const vendido = historial.reduce((t, p) => t + totalPlata(p), 0);
         const promedio = total ? (unidades / total).toFixed(1).replace(".", ",") : "0";
+        const anterior = historialAnterior();
+        const antes = anterior ? {
+            total: anterior.length,
+            comercios: new Set(anterior.map(p => p.comercio).filter(Boolean)).size,
+            vendido: anterior.reduce((t, p) => t + totalPlata(p), 0)
+        } : null;
         const card = document.createElement("section");
         card.className = "statsResumen";
         card.innerHTML = `
@@ -127,46 +161,96 @@
                 <div>
                     <small>${ico("calendario", 14)} ${NOMBRE_PERIODO[periodoElegido()] || "Todo"}</small>
                     <strong>${numero(total)}</strong>
-                    <span>${total === 1 ? "pedido" : "pedidos"}</span>
+                    <span>${total === 1 ? "pedido" : "pedidos"}${antes ? diferencia(total, antes.total) : ""}</span>
                 </div>
-                ${vendido > 0 ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong></div>` : ""}
+                ${vendido > 0 && window.verPlataVendeFrio?.puedoVer?.() !== false ? `<div class="statsVendido"><small>Vendido</small><strong>${plata(vendido)}</strong>${antes && (antes.vendido || vendido) ? variacion(Math.round(vendido), Math.round(antes.vendido)) : ""}</div>` : ""}
             </div>
             <div class="statsNumeros">
-                <div><span class="statsNumIcono">${ico("tienda", 17)}</span><strong>${numero(comercios)}</strong><small>comercios</small></div>
+                <div><span class="statsNumIcono">${ico("tienda", 17)}</span><strong>${numero(comercios)}${antes ? diferencia(comercios, antes.comercios) : ""}</strong><small>comercios</small></div>
                 <div><span class="statsNumIcono">${ico("paquete", 17)}</span><strong>${numero(unidades)}</strong><small>unidades</small></div>
                 <div><span class="statsNumIcono">${ico("ordenar", 17)}</span><strong>${promedio}</strong><small>por pedido</small></div>
             </div>`;
         return card;
     }
 
-    // Pedidos por día en barras redondeadas, con el día de hoy marcado.
+    // Por día en barras redondeadas, con el día de hoy marcado (T116): se
+    // elige qué mirar (Plata, Pedidos o Unidades), atrás se ve en gris el
+    // período anterior y tocar una barra muestra el detalle del día.
+    let medidaGrafico = "pedidos";
+    const MEDIDAS = {
+        plata: { titulo: "Plata por día", texto: "Plata", valor: lista => lista.reduce((t, p) => t + totalPlata(p), 0), formato: v => plata(v), corto: v => v >= 1000 ? Math.round(v / 1000) + "k" : String(Math.round(v)) },
+        pedidos: { titulo: "Pedidos por día", texto: "Pedidos", valor: lista => lista.length, formato: v => numero(v) + (v === 1 ? " pedido" : " pedidos"), corto: v => String(v) },
+        unidades: { titulo: "Unidades por día", texto: "Unidades", valor: lista => lista.reduce((t, p) => t + unidadesPedido(p), 0), formato: v => numero(v) + (v === 1 ? " unidad" : " unidades"), corto: v => String(v) }
+    };
+
+    function pedidosDelDia(historial, dia) {
+        const siguiente = new Date(dia); siguiente.setDate(dia.getDate() + 1);
+        return historial.filter(p => { const f = fechaPedido(p); return f && f >= dia && f < siguiente; });
+    }
+
     function crearGraficoPedidos(historial) {
         const ahora = new Date();
         const periodo = periodoElegido();
         const cantidadDias = periodo === "mes" ? Math.min(14, ahora.getDate()) : periodo === "todo" ? 14 : 7;
+        const verPlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
+        if (medidaGrafico === "plata" && !verPlata) medidaGrafico = "pedidos";
+        const medida = MEDIDAS[medidaGrafico];
+        // El período anterior del mismo largo, para comparar barra con barra.
+        const completo = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : historial;
+        const largo = Math.max(cantidadDias, 1);
         const puntos = [];
-        for (let i = Math.max(cantidadDias, 1) - 1; i >= 0; i--) {
+        for (let i = largo - 1; i >= 0; i--) {
             const dia = new Date(ahora); dia.setHours(0, 0, 0, 0); dia.setDate(dia.getDate() - i);
-            const siguiente = new Date(dia); siguiente.setDate(dia.getDate() + 1);
-            const total = historial.filter(p => { const f = fechaPedido(p); return f && f >= dia && f < siguiente; }).length;
-            puntos.push({ dia, total, hoy: i === 0 });
+            const delDia = pedidosDelDia(historial, dia);
+            const antes = new Date(dia); antes.setDate(dia.getDate() - largo);
+            const delAnterior = pedidosDelDia(completo, antes);
+            puntos.push({ dia, antes, lista: delDia, total: medida.valor(delDia), anterior: medida.valor(delAnterior), hoy: i === 0 });
         }
-        const max = Math.max(...puntos.map(p => p.total), 1);
+        const max = Math.max(...puntos.map(p => Math.max(p.total, p.anterior)), 1);
         const mejor = puntos.reduce((a, b) => (b.total > a.total ? b : a), puntos[0]);
         const sumaDias = puntos.reduce((t, p) => t + p.total, 0);
-        const card = tarjeta("grafico", "azul", "Pedidos por día",
-            sumaDias ? `Mejor día: ${DIAS[mejor.dia.getDay()]} ${mejor.dia.getDate()}/${mejor.dia.getMonth() + 1}, con ${mejor.total}` : `Últimos ${puntos.length} días`,
+        const sumaAntes = puntos.reduce((t, p) => t + p.anterior, 0);
+        const card = tarjeta("grafico", "azul", medida.titulo,
+            sumaDias ? `Mejor día: ${DIAS[mejor.dia.getDay()]} ${mejor.dia.getDate()}/${mejor.dia.getMonth() + 1}, con ${medida.formato(mejor.total)}` : `Últimos ${puntos.length} días`,
             "statsGrafico");
-        const columnas = puntos.map(p => {
+        const opciones = Object.keys(MEDIDAS).filter(clave => clave !== "plata" || verPlata)
+            .map(clave => `<button type="button" data-medida="${clave}" aria-pressed="${clave === medidaGrafico}">${MEDIDAS[clave].texto}</button>`).join("");
+        const columnas = puntos.map((p, indice) => {
             const alto = p.total ? Math.max(8, Math.round((p.total / max) * 100)) : 0;
+            const altoAntes = p.anterior ? Math.max(6, Math.round((p.anterior / max) * 100)) : 0;
             const etiqueta = puntos.length <= 7 ? DIAS[p.dia.getDay()] : String(p.dia.getDate());
-            return `<div class="statsColumna${p.hoy ? " hoy" : ""}${p.total ? "" : " cero"}" title="${p.dia.getDate()}/${p.dia.getMonth() + 1}: ${p.total}">
-                <span class="statsValor">${p.total || ""}</span>
-                <div class="statsBarraDia"><i style="height:${alto}%"></i></div>
+            return `<button type="button" class="statsColumna${p.hoy ? " hoy" : ""}${p.total ? "" : " cero"}" data-columna="${indice}" aria-label="${DIAS[p.dia.getDay()]} ${p.dia.getDate()}/${p.dia.getMonth() + 1}: ${medida.formato(p.total)}">
+                <span class="statsValor">${p.total ? medida.corto(p.total) : ""}</span>
+                <div class="statsBarraDia">${altoAntes ? `<b class="statsBarraAntes" style="height:${altoAntes}%"></b>` : ""}<i style="height:${alto}%"></i></div>
                 <small>${etiqueta}</small>
-            </div>`;
+            </button>`;
         }).join("");
-        card.insertAdjacentHTML("beforeend", `<div class="statsColumnas" role="img" aria-label="Gráfico de pedidos por día" style="--columnas:${puntos.length}">${columnas}</div>`);
+        const leyenda = sumaAntes || sumaDias
+            ? `<div class="statsLeyenda"><span><i class="statsPuntoAhora"></i>Estos días · ${medida.formato(sumaDias)}</span><span><i class="statsPuntoAntes"></i>Los ${largo} de antes · ${medida.formato(sumaAntes)}</span></div>`
+            : "";
+        card.insertAdjacentHTML("beforeend", `<div class="pzSegmentos statsMedidas" role="group" aria-label="Qué mirar">${opciones}</div>
+            <div class="statsColumnas" role="group" aria-label="Gráfico por día" style="--columnas:${puntos.length}">${columnas}</div>
+            ${leyenda}
+            <div class="statsDetalleDia" id="detalleDiaEstadisticas" role="status">Tocá una barra para ver ese día.</div>`);
+        card.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-medida]");
+            if (boton) {
+                medidaGrafico = boton.dataset.medida;
+                card.replaceWith(crearGraficoPedidos(historial));
+                return;
+            }
+            const columna = evento.target.closest("[data-columna]");
+            if (!columna) return;
+            const punto = puntos[Number(columna.dataset.columna)];
+            card.querySelectorAll(".statsColumna").forEach(c => c.classList.toggle("elegida", c === columna));
+            const lista = punto.lista;
+            const partes = [numero(lista.length) + (lista.length === 1 ? " pedido" : " pedidos"), numero(MEDIDAS.unidades.valor(lista)) + " u"];
+            if (verPlata) partes.push(plata(MEDIDAS.plata.valor(lista)));
+            const comercios = [...new Set(lista.map(p => p.comercio).filter(Boolean))];
+            card.querySelector("#detalleDiaEstadisticas").innerHTML = `<strong>${DIAS[punto.dia.getDay()]} ${punto.dia.getDate()}/${punto.dia.getMonth() + 1}</strong>
+                <span>${partes.join(" · ")}</span>
+                <small>${comercios.length ? esc(comercios.slice(0, 3).join(", ")) + (comercios.length > 3 ? " y " + (comercios.length - 3) + " más" : "") : "Sin pedidos"} · antes: ${medida.formato(punto.anterior)}</small>`;
+        });
         return card;
     }
 
@@ -245,7 +329,7 @@
         historial.forEach(p => { const f = fechaPedido(p); if (inicio && f && f >= inicio) conPedido.add(String(p.comercio || "")); });
         const nombresAtrasados = new Set(atrasados.map(p => p.nombre));
         const lista = [
-            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · suele pedir cada ${p.promedioDias}`, tono: "atrasado" })),
+            ...atrasados.map(p => ({ perfil: p, texto: `Hace ${p.diasDesdeUltimo} días · pide cada ${p.promedioDias} días`, tono: "atrasado" })),
             ...perfiles.filter(p => p.nombre !== "Sin comercio" && !conPedido.has(p.nombre) && !nombresAtrasados.has(p.nombre))
                 .map(p => ({ perfil: p, texto: `Sin pedido esta semana · ${p.cantidadPedidos} ${p.cantidadPedidos === 1 ? "pedido" : "pedidos"} en total`, tono: "semana" }))
         ].slice(0, 8);
@@ -322,6 +406,29 @@
         return card;
     }
 
+    // Tarjetas que suman otros módulos (visitas sin pedido, metas, etc.).
+    // Es una lista compartida: los módulos que cargan antes ya la llenan.
+    const tarjetasExtra = window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || [];
+    function extras(historial, completo) {
+        return tarjetasExtra.map(crear => {
+            try {
+                return crear(historial, completo);
+            } catch (error) {
+                console.error("Falló una tarjeta de Estadísticas.", error);
+                return null;
+            }
+        });
+    }
+
+    function inicioPeriodo() {
+        const periodo = periodoElegido();
+        if (periodo === "todo") return null;
+        const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+        if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
+        if (periodo === "mes") inicio.setDate(1);
+        return inicio;
+    }
+
     function renderizar() {
         const destino = document.getElementById("contenidoEstadisticas"); if (!destino) return;
         destino.innerHTML = "";
@@ -336,6 +443,7 @@
             crearRanking(estadisticas),
             crearComparativa(completo),
             crearParaVisitar(perfilesTodos, perfilesTodos.filter(p => p.atrasado), completo),
+            ...extras(historial, completo),
             crearHabituales(perfilesTodos),
             crearMeses(completo)
         ].filter(Boolean).forEach(card => destino.appendChild(card));
@@ -350,4 +458,13 @@
         }
     }
     window.abrirEstadisticas=abrir;
+    window.estadisticasVendeFrio = {
+        tarjeta, vacio, periodoElegido, inicioPeriodo, NOMBRE_PERIODO,
+        sumarTarjeta(crear) { if (typeof crear === "function") tarjetasExtra.push(crear); },
+        // Vuelve a dibujar si la pantalla está abierta.
+        redibujar() {
+            const s = document.getElementById("pantallaEstadisticas");
+            if (s && !s.classList.contains("oculto")) renderizar();
+        }
+    };
 }());

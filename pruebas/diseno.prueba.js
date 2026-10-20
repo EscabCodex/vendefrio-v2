@@ -2,7 +2,7 @@
 // principal en la nube, con datos de prueba, y saca una captura de cada una
 // en claro y oscuro. Sirve para revisar el estilo nuevo pantalla por pantalla.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, abrirMas, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -31,7 +31,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await expect(page.locator(".fichaPedido")).toBeHidden();
 
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill("Almacén Don Pepe");
+    await elegirComercio(page, "Almacén Don Pepe");
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     await expect(async () => {
         if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
@@ -66,7 +66,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
     await capturar(page, "diseno-06-catalogo");
     // Catálogo y Productos y marcas son una sola sección (T36).
-    await page.getByRole("tab", { name: "Productos y marcas" }).click();
+    await page.getByRole("tab", { name: "Editar marcas" }).click();
     await expect(page.locator("#pantallaProductos")).toBeVisible();
     await expect(page.locator(".bottom-nav .nav-item.activo")).toHaveText(/Catálogo/);
     await capturar(page, "diseno-06b-productos-y-marcas");
@@ -75,18 +75,18 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await capturar(page, "diseno-07-mas");
 
     // Rutas, Estadísticas, Cierre del día y Empleados, desde "Más" (T38).
-    await page.locator(".masAccesos").getByRole("button", { name: "Rutas" }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await capturar(page, "diseno-08-rutas");
 
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: "Estadísticas" }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: "Estadísticas" }).click();
     await expect(page.locator("#pantallaEstadisticas")).toBeVisible();
     await capturar(page, "diseno-09-estadisticas");
 
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: "Cierre del día" }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: "Cierre del día" }).click();
     await expect(page.locator("#pantallaCierre")).toBeVisible();
     await capturar(page, "diseno-10-cierre-del-dia");
 

@@ -32,7 +32,7 @@ function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
     if (!resumen) return;
 
-    const comercios = obtenerComercios();
+    const comercios = comerciosActivos();
     const conGps = comercios.filter(comercioTieneGps).length;
     const sinGps = comercios.length - conGps;
 
@@ -144,6 +144,7 @@ function inicializarPantallaRutas() {
     crearModalOpcionesRutaGuardada();
     crearBotonNavegarRuta();
     renderizarPines();
+    mostrarRutaEnLista();
 }
 
 function crearControlesPinManual() {
@@ -195,6 +196,7 @@ function mostrarControlesEdicionPin() {
 function ocultarControlesEdicionPin() {
     const controles = document.getElementById("controlesPinPendiente");
     if (controles) controles.classList.add("oculto");
+    document.getElementById("barraMoverPin")?.classList.add("oculto");
 }
 
 function crearModalOpcionesRutaGuardada() {
@@ -342,23 +344,6 @@ function abrirOpcionesRutaGuardada(nombre) {
     modal.classList.remove("oculto");
 }
 
-function cargarModuloNavegacion3D() {
-    if (!document.querySelector('link[data-navegacion-3d="true"]')) {
-        const estilo = document.createElement("link");
-        estilo.rel = "stylesheet";
-        estilo.href = "navegacion3d.css";
-        estilo.dataset.navegacion3d = "true";
-        document.head.appendChild(estilo);
-    }
-
-    if (document.querySelector('script[data-navegacion-3d="true"]')) return;
-    const script = document.createElement("script");
-    script.src = "navegacion3d.js";
-    script.dataset.navegacion3d = "true";
-    script.defer = true;
-    document.body.appendChild(script);
-}
-
 // "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
 // en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
 // dependía de una librería de internet).
@@ -382,50 +367,6 @@ function crearBotonNavegarRuta() {
         }
     });
     botonMaps.insertAdjacentElement("afterend", boton);
-}
-
-function crearControlesNavegacion() {
-    const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("panelNavegacionApp")) return;
-
-    const panel = document.createElement("div");
-    panel.id = "panelNavegacionApp";
-    panel.className = "panelNavegacionApp";
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = "Navegaci\u00f3n en VendeFr\u00edo";
-
-    const estado = document.createElement("p");
-    estado.id = "estadoNavegacionApp";
-    estado.textContent = "Calcul\u00e1 una ruta para iniciar la navegaci\u00f3n dentro de la app.";
-
-    const acciones = document.createElement("div");
-    acciones.className = "accionesNavegacionApp";
-
-    const iniciar = document.createElement("button");
-    iniciar.id = "iniciarNavegacionApp";
-    iniciar.type = "button";
-    iniciar.className = "btnAccion agregar";
-    iniciar.textContent = "Iniciar navegaci\u00f3n";
-    iniciar.addEventListener("click", iniciarNavegacionApp);
-
-    const siguiente = document.createElement("button");
-    siguiente.id = "siguienteParadaNavegacion";
-    siguiente.type = "button";
-    siguiente.className = "btnAccion ver oculto";
-    siguiente.textContent = "Llegu\u00e9 / siguiente parada";
-    siguiente.addEventListener("click", avanzarParadaNavegacion);
-
-    const detener = document.createElement("button");
-    detener.id = "detenerNavegacionApp";
-    detener.type = "button";
-    detener.className = "btnAccion secundario oculto";
-    detener.textContent = "Detener navegaci\u00f3n";
-    detener.addEventListener("click", detenerNavegacionApp);
-
-    acciones.append(iniciar, siguiente, detener);
-    panel.append(titulo, estado, acciones);
-    botonMaps.insertAdjacentElement("afterend", panel);
 }
 
 function actualizarEstadoNavegacionApp(texto) {
@@ -544,7 +485,7 @@ function actualizarVistaNavegacion(posicion) {
 
 function formatearDistanciaNavegacion(metros) {
     const valor = Number(metros) || 0;
-    return valor < 1000 ? Math.round(valor) + " m" : (valor / 1000).toFixed(1) + " km";
+    return valor < 1000 ? Math.round(valor) + " m" : (valor / 1000).toFixed(1).replace(".", ",") + " km";
 }
 
 function iniciarNavegacionApp() {
@@ -570,25 +511,6 @@ function iniciarNavegacionApp() {
         () => actualizarEstadoNavegacionApp("No se pudo actualizar la ubicaci\u00f3n del celular."),
         { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
     );
-}
-
-function avanzarParadaNavegacion() {
-    if (!navegacionActiva) return;
-    indiceParadaNavegacion += 1;
-
-    if (indiceParadaNavegacion >= rutaOrdenada.length) {
-        actualizarEstadoNavegacionApp("Llegaste al final de la ruta.");
-        detenerNavegacionApp(false);
-        mostrarAviso("Ruta finalizada", "Completaste todas las paradas de la ruta.");
-        return;
-    }
-
-    const parada = rutaOrdenada[indiceParadaNavegacion];
-    pasoNavegacionActual = "";
-    if (rutaCalleNavegacion && mapaLeaflet) mapaLeaflet.removeLayer(rutaCalleNavegacion);
-    rutaCalleNavegacion = null;
-    if (ultimaPosicionNavegacion) cargarRutaPorCallesNavegacion(ultimaPosicionNavegacion);
-    actualizarEstadoNavegacionApp("Pr\u00f3xima parada: " + parada.nombre + ".");
 }
 
 function detenerNavegacionApp(mostrarMensaje = true) {
@@ -769,6 +691,20 @@ function confirmarEliminarRutaGuardada(nombre) {
         mostrarAviso("Ruta eliminada", "Se elimin\u00f3 la ruta guardada.");
     };
 
+    // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos segundos.
+    if (window.piezas) {
+        const rutasAntes = obtenerRutasGuardadas();
+        const ruta = buscarRutaGuardadaPorNombre(nombre);
+        if (!ruta || !eliminarRutaPorId(ruta.id)) return;
+        renderizarRutasGuardadas();
+        window.piezas.deshacer("Ruta «" + ruta.nombre + "» eliminada", () => {
+            if (buscarRutaGuardadaPorNombre(ruta.nombre)) return;
+            guardarRutasGuardadas(rutasAntes);
+            renderizarRutasGuardadas();
+        });
+        return;
+    }
+
     if (typeof abrirConfirmacion === "function") {
         abrirConfirmacion(
             "Eliminar ruta guardada",
@@ -881,7 +817,7 @@ function cargarSelectComerciosRuta() {
     opcionInicial.textContent = "Eleg\u00ed un comercio...";
     select.appendChild(opcionInicial);
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const opcion = document.createElement("option");
@@ -904,7 +840,7 @@ function cargarSelectComerciosRuta() {
 }
 
 function obtenerComerciosSeleccionRuta() {
-    return obtenerComercios()
+    return comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 
@@ -936,6 +872,9 @@ function actualizarEstadoSeleccionRuta() {
         chip.append(document.createTextNode(" " + texto));
         estado.appendChild(chip);
     });
+    // Los pines y las paradas siguen a la lista (T123).
+    if (mapaLeaflet && capaMarcadores) renderizarPines(false);
+    if (!rutaOrdenada.length) mostrarRutaEnLista();
 }
 
 function renderizarSeleccionRuta() {
@@ -1225,7 +1164,7 @@ function manejarArrastrePinGuardado(evento) {
     mostrarControlesEdicionPin();
 }
 
-function editarPinGuardado(nombre) {
+function editarPinGuardado(nombre, opciones = {}) {
     const marcador = marcadoresPorNombre.get(nombre);
     const select = document.getElementById("selectComercioGps");
 
@@ -1259,6 +1198,7 @@ function editarPinGuardado(nombre) {
 
     mostrarControlesEdicionPin();
 
+    if (opciones.sinAviso) return;
     mostrarAviso(
         "Editar ubicaci\u00f3n",
         "Arrastr\u00e1 el pin las veces que necesites. Despu\u00e9s eleg\u00ed Guardar o Cancelar."
@@ -1297,16 +1237,33 @@ function iniciarMapa() {
     mapaLeaflet.on("click", manejarClickMapaManual);
 }
 
-function renderizarPines() {
+// Pines del mapa (T123): azul con número si el comercio está en la ruta,
+// gris si no. Tocar un pin abre sus opciones: sumarlo o sacarlo de la
+// ruta, mover el pin, borrar la ubicación o hacerle un pedido.
+function iconoPinRuta(comercio) {
+    const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
+    const orden = rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
+    const texto = orden >= 0 ? String(orden + 1) : (enRuta ? "✓" : "");
+    return L.divIcon({
+        className: "pinRuta",
+        html: `<span class="globoPinRuta${enRuta ? " enRuta" : ""}"><b>${texto}</b></span>`,
+        iconSize: [34, 44],
+        iconAnchor: [17, 42],
+        popupAnchor: [0, -38]
+    });
+}
+
+function renderizarPines(ajustar = true) {
     if (!mapaLeaflet || !capaMarcadores) return;
 
     capaMarcadores.clearLayers();
     marcadoresPorNombre.clear();
 
-    const comerciosConGps = obtenerComercios().filter(
+    const comerciosConGps = comerciosActivos().filter(
         comercioTieneGps
     );
 
+    dibujarResumenPinesMapa(comerciosConGps);
     if (comerciosConGps.length === 0) return;
 
     const limites = L.latLngBounds();
@@ -1317,18 +1274,145 @@ function renderizarPines() {
             Number(comercio.lng)
         ];
 
-        const marcador = L.marker(coordenadas).bindPopup(
-            crearPopupComercio(comercio)
-        );
+        const marcador = L.marker(coordenadas, {
+            icon: iconoPinRuta(comercio),
+            title: comercio.nombre,
+            alt: comercio.nombre,
+            keyboard: true
+        });
+        marcador.on("click", () => {
+            // Mientras se mueve este pin, tocarlo no abre nada.
+            if (marcadorPinManual === marcador && coordenadasPinPendientes) return;
+            abrirOpcionesPin(comercio.nombre);
+        });
 
         capaMarcadores.addLayer(marcador);
         marcadoresPorNombre.set(comercio.nombre, marcador);
         limites.extend(coordenadas);
     });
 
-    mapaLeaflet.fitBounds(limites, {
-        padding: [30, 30]
+    if (ajustar) {
+        // Arriba queda lugar para el resumen, que no tape ningún pin.
+        mapaLeaflet.fitBounds(limites, {
+            paddingTopLeft: [30, 70],
+            paddingBottomRight: [30, 30]
+        });
+    }
+}
+
+// Arriba del mapa: cuántos van en la ruta.
+function dibujarResumenPinesMapa(comerciosConGps) {
+    const contenedor = document.getElementById("mapaRuta");
+    if (!contenedor) return;
+    let resumen = document.getElementById("resumenPinesMapa");
+    if (!resumen) {
+        resumen = document.createElement("div");
+        resumen.id = "resumenPinesMapa";
+        resumen.className = "resumenPinesMapa";
+        resumen.setAttribute("aria-live", "polite");
+        contenedor.appendChild(resumen);
+        if (typeof L !== "undefined" && L.DomEvent) L.DomEvent.disableClickPropagation(resumen);
+    }
+    const enRuta = comerciosConGps.filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre)).length;
+    resumen.classList.toggle("oculto", comerciosConGps.length === 0 || Boolean(coordenadasPinPendientes));
+    resumen.innerHTML = `<span class="puntoPinResumen enRuta"></span><span><b>${enRuta}</b> en la ruta</span><span class="separadorResumenPines"></span><span class="ayudaResumenPines">Tocá un pin para sumar o sacar</span>`;
+}
+
+function abrirOpcionesPin(nombre) {
+    const comercio = buscarComercioPorNombre(nombre);
+    if (!comercio || !window.piezas) return;
+    const p = window.piezas;
+    const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
+    const orden = rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
+    const carga = cargaParaParada(comercio.nombre);
+    const estado = orden >= 0 ? "Parada " + (orden + 1) + " de la ruta" : enRuta ? "Está en la ruta" : "No está en la ruta";
+    const detalle = [comercio.direccion || "Sin dirección", "Ubicación: " + obtenerEtiquetaOrigenGps(comercio).toLowerCase()];
+    if (carga.pedidos.length) detalle.push("Lleva " + carga.unidades + " u" + (carga.total ? " · " + p.plata(carga.total) : ""));
+    const caja = p.hoja({
+        titulo: comercio.nombre,
+        sub: estado,
+        clase: "hojaPinRuta",
+        etiqueta: "Opciones de " + comercio.nombre,
+        html: `<p class="detallePinRuta">${detalle.map(texto => p.esc(texto)).join("<br>")}</p>
+            <button type="button" class="pzBtn ${enRuta ? "pzBtnGris" : "pzBtnPri"} botonRutaPin" data-pin="ruta">${p.ico(enRuta ? "cerrarX" : "mas", 18)} ${enRuta ? "Sacar de la ruta" : "Sumar a la ruta"}</button>
+            <div class="pzOpciones opcionesPinRuta">
+                <button type="button" class="pzOpcion" data-pin="mover">${p.ico("ubicacion", 22)}Mover el pin</button>
+                <button type="button" class="pzOpcion" data-pin="pedido">${p.ico("documento", 22)}Hacer un pedido</button>
+                <button type="button" class="pzOpcion pzOpcionPeligro" data-pin="borrar">${p.ico("tacho", 22)}Borrar la ubicación</button>
+            </div>`
     });
+    caja.addEventListener("click", evento => {
+        const accion = evento.target.closest("[data-pin]")?.dataset.pin;
+        if (!accion) return;
+        p.cerrar();
+        if (accion === "ruta") cambiarPinEnRuta(comercio.nombre);
+        else if (accion === "mover") moverPinDesdeMapa(comercio.nombre);
+        else if (accion === "pedido" && typeof irAPedidoRapido === "function") irAPedidoRapido(comercio.nombre);
+        else if (accion === "borrar") {
+            const select = document.getElementById("selectComercioGps");
+            if (select) select.value = comercio.nombre;
+            borrarGpsComercio();
+        }
+    });
+}
+
+// Suma o saca un comercio de la ruta, de a uno, desde el mapa.
+function cambiarPinEnRuta(nombre) {
+    const sumar = !comerciosSeleccionadosRuta.has(nombre);
+    if (sumar) comerciosSeleccionadosRuta.add(nombre);
+    else comerciosSeleccionadosRuta.delete(nombre);
+    if (!sumar && rutaOrdenada.some(comercio => comercio.nombre === nombre)) {
+        // Sacarlo de una ruta ya armada: las demás paradas siguen en su orden.
+        rutaOrdenada = rutaOrdenada.filter(comercio => comercio.nombre !== nombre);
+        recalcularDistanciasRuta();
+    } else if (sumar && rutaOrdenada.length) {
+        // Sumarlo a una ruta ya armada: va al final y se puede mover.
+        const comercio = buscarComercioPorNombre(nombre);
+        if (comercio) {
+            rutaOrdenada = [...rutaOrdenada, comercio];
+            rutaReordenadaAMano = true;
+            recalcularDistanciasRuta();
+        }
+    }
+    renderizarSeleccionRuta();
+    renderizarPines(false);
+    mostrarRutaEnLista();
+    const cuantos = comerciosSeleccionadosRuta.size;
+    if (typeof mostrarToast === "function") {
+        mostrarToast((sumar ? "Sumaste " : "Sacaste ") + nombre + (sumar ? " a la ruta" : " de la ruta") + " (" + cuantos + (cuantos === 1 ? " comercio)" : " comercios)"));
+    }
+}
+
+// Mover el pin desde el mapa: se arrastra y se guarda con la barra de abajo del mapa.
+function moverPinDesdeMapa(nombre) {
+    editarPinGuardado(nombre, { sinAviso: true });
+    if (!coordenadasPinPendientes) return;
+    const contenedor = document.getElementById("mapaRuta");
+    if (!contenedor) return;
+    let barra = document.getElementById("barraMoverPin");
+    if (!barra) {
+        barra = document.createElement("div");
+        barra.id = "barraMoverPin";
+        barra.className = "barraMoverPin";
+        contenedor.appendChild(barra);
+        if (L.DomEvent) {
+            L.DomEvent.disableClickPropagation(barra);
+            L.DomEvent.disableScrollPropagation(barra);
+        }
+    }
+    barra.innerHTML = `<small>Arrastrá el pin de <b>${window.piezas.esc(nombre)}</b> al lugar justo</small>
+        <div><button type="button" class="pzBtn pzBtnGris" id="cancelarMoverPin">Cancelar</button><button type="button" class="pzBtn pzBtnPri" id="guardarMoverPin">Guardar</button></div>`;
+    barra.classList.remove("oculto");
+    barra.querySelector("#cancelarMoverPin").onclick = () => cancelarEdicionPin();
+    barra.querySelector("#guardarMoverPin").onclick = () => guardarPinManual();
+    document.getElementById("resumenPinesMapa")?.classList.add("oculto");
+    // El pin queda en el centro, un poco arriba, para que la barra no lo tape.
+    const marcador = marcadoresPorNombre.get(nombre);
+    if (marcador && mapaLeaflet) {
+        mapaLeaflet.setView(marcador.getLatLng(), Math.max(mapaLeaflet.getZoom(), 16), { animate: false });
+        mapaLeaflet.panBy([0, 50], { animate: false });
+    }
+    contenedor.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function guardarGpsActual(boton) {
@@ -1475,6 +1559,28 @@ function borrarGpsComercio() {
             actualizarDashboard();
         }
     };
+
+    // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos segundos.
+    if (window.piezas) {
+        const lugar = { lat: comercio.lat, lng: comercio.lng };
+        const redibujar = () => {
+            actualizarResumenRuta();
+            cargarSelectComerciosRuta();
+            renderizarSeleccionRuta();
+            renderizarPines();
+            if (typeof actualizarDashboard === "function") actualizarDashboard();
+        };
+        if (!actualizarComercioPorNombre(nombre, { lat: "", lng: "" })) {
+            mostrarAviso("No se pudo borrar", "No se encontr\u00f3 el comercio seleccionado.");
+            return;
+        }
+        redibujar();
+        window.piezas.deshacer("Ubicaci\u00f3n de " + nombre + " borrada", () => {
+            actualizarComercioPorNombre(nombre, lugar);
+            redibujar();
+        });
+        return;
+    }
 
     const mensaje =
         "\u00bfEst\u00e1s seguro de borrar el pin de ubicaci\u00f3n de \"" +
@@ -1638,6 +1744,11 @@ function optimizarRuta() {
 
             rutaOrdenada = resultado.comercios;
             distanciasRuta = resultado.distancias;
+            inicioRutaCalculada = { lat: posicion.coords.latitude, lng: posicion.coords.longitude };
+            rutaReordenadaAMano = false;
+            paradasHechasRuta = new Set();
+            paradasConPedidosRuta = new Set(rutaOrdenada.filter(comercio => cargaParaParada(comercio.nombre).pedidos.length).map(comercio => comercio.nombre));
+            pedidosAlArmarRuta = idsDePedidosRuta();
             comerciosSinGpsRuta = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
                 .map(comercio => comercio.nombre);
@@ -1662,6 +1773,7 @@ function optimizarRuta() {
             );
 
             mostrarRutaEnLista();
+            renderizarPines(false);
         },
         () => {
             mostrarAviso(
@@ -1723,7 +1835,7 @@ function formatearDistanciaTotal(metros) {
         return Math.round(distancia) + " m totales";
     }
 
-    return (distancia / 1000).toFixed(1) + " km totales";
+    return (distancia / 1000).toFixed(1).replace(".", ",") + " km totales";
 }
 
 function formatearDistanciaRuta(metros, indice) {
@@ -1736,80 +1848,276 @@ function formatearDistanciaRuta(metros, indice) {
         return Math.round(distancia) + " m " + referencia;
     }
 
-    return (distancia / 1000).toFixed(1) + " km " + referencia;
+    return (distancia / 1000).toFixed(1).replace(".", ",") + " km " + referencia;
+}
+
+// -------------------------------------------------
+// Paradas de la ruta (T120): cada una con minutos aproximados y lo que
+// lleva, se reordenan arrastrando ≡ y la próxima queda fija abajo con
+// "Ir" y "Entregar".
+// -------------------------------------------------
+
+// Desde dónde se calculó la ruta (para rehacer las distancias al reordenar).
+let inicioRutaCalculada = null;
+// Paradas que el repartidor marcó como hechas (o salteó) en esta ruta.
+let paradasHechasRuta = new Set();
+// Paradas que tenían pedidos para entregar cuando se armó la ruta.
+let paradasConPedidosRuta = new Set();
+let rutaReordenadaAMano = false;
+// Pedidos que ya existían al armar la ruta: uno nuevo para una parada
+// (tocando "Pedido" o "Hacer pedido") la deja hecha sola.
+let pedidosAlArmarRuta = null;
+
+function idsDePedidosRuta() {
+    if (typeof obtenerHistorial !== "function") return new Set();
+    return new Set(obtenerHistorial().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
+}
+
+function tienePedidoNuevoRuta(nombre) {
+    if (!pedidosAlArmarRuta || typeof obtenerHistorial !== "function") return false;
+    return obtenerHistorial().some(pedido => pedido && pedido.eliminado !== true && pedido.id != null &&
+        !pedidosAlArmarRuta.has(String(pedido.id)) && mismoNombreRuta(pedido.comercio, nombre));
+}
+
+const ESTADOS_PARA_ENTREGAR_RUTA = ["cargado", "enPreparacion", "preparado", "enReparto", "enVehiculo"];
+
+function mismoNombreRuta(a, b) {
+    return String(a || "").trim().toLocaleLowerCase("es") === String(b || "").trim().toLocaleLowerCase("es");
+}
+
+// Lo que lleva para un comercio: pedidos sin entregar, unidades y plata.
+function cargaParaParada(nombre) {
+    if (typeof obtenerHistorial !== "function") return { pedidos: [], unidades: 0, total: 0 };
+    const pedidos = obtenerHistorial().filter(pedido => pedido && pedido.eliminado !== true &&
+        mismoNombreRuta(pedido.comercio, nombre) &&
+        ESTADOS_PARA_ENTREGAR_RUTA.includes(typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : ""));
+    const unidades = pedidos.reduce((suma, pedido) => suma + (pedido.productos || []).reduce((t, item) => t + (Number(item.cantidad) || 0), 0), 0);
+    const total = pedidos.reduce((suma, pedido) => suma + (typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0), 0);
+    return { pedidos, unidades, total };
+}
+
+// Minutos aproximados en auto (línea recta: más lento en la ciudad).
+function minutosAproximados(metros) {
+    const km = (Number(metros) || 0) / 1000;
+    return Math.max(1, Math.round(km * 60 / (km < 3 ? 20 : 45)));
+}
+
+function textoDistanciaCorta(metros) {
+    const distancia = Number(metros) || 0;
+    const texto = distancia < 1000 ? Math.round(distancia) + " m" : (distancia / 1000).toFixed(1).replace(".", ",") + " km";
+    return texto + " · " + minutosAproximados(distancia) + " min";
+}
+
+function recalcularDistanciasRuta() {
+    distanciasRuta = rutaOrdenada.map((comercio, indice) => {
+        const anterior = indice === 0 ? inicioRutaCalculada : { lat: rutaOrdenada[indice - 1].lat, lng: rutaOrdenada[indice - 1].lng };
+        if (!anterior) return Number(distanciasRuta[indice]) || 0;
+        return calcularDistancia(Number(anterior.lat), Number(anterior.lng), Number(comercio.lat), Number(comercio.lng));
+    });
+}
+
+function paradaHecha(comercio) {
+    if (paradasHechasRuta.has(comercio.nombre)) return true;
+    if (tienePedidoNuevoRuta(comercio.nombre)) return true;
+    // Tenía pedidos y ya no le queda ninguno para entregar: ya se pasó.
+    return paradasConPedidosRuta.has(comercio.nombre) && cargaParaParada(comercio.nombre).pedidos.length === 0;
+}
+
+function indiceProximaParada() {
+    return rutaOrdenada.findIndex(comercio => !paradaHecha(comercio));
 }
 
 function mostrarRutaEnLista() {
-    const contenedor = document.getElementById(
-        "listaRutaOrdenada"
-    );
-
+    const contenedor = document.getElementById("listaRutaOrdenada");
     if (!contenedor) return;
-
     contenedor.innerHTML = "";
+    contenedor.classList.toggle("conParadas", rutaOrdenada.length > 0);
 
-    const encabezado = document.createElement("div");
-    encabezado.className = "encabezadoRuta";
-
-    const titulo = document.createElement("h3");
-    const distanciaTotal = distanciasRuta.reduce(
-        (total, distancia) => total + (Number(distancia) || 0),
-        0
-    );
-    titulo.textContent = rutaOrdenada.length > 0
-        ? "Ruta m\u00ednima exacta - " + formatearDistanciaTotal(distanciaTotal)
-        : "Ruta sugerida:";
-    encabezado.appendChild(titulo);
-
-    if (rutaOrdenada.length > 0) {
-        const botonSiguiente = document.createElement("button");
-        botonSiguiente.type = "button";
-        botonSiguiente.className = "btnAccion agregar pedidoParadaRuta";
-        botonSiguiente.dataset.nombre = rutaOrdenada[0].nombre;
-        botonSiguiente.innerHTML = window.icono("documento", 14) + " Pedido siguiente";
-        encabezado.appendChild(botonSiguiente);
+    if (rutaOrdenada.length === 0) {
+        dibujarProximaParada();
+        return;
     }
 
-    contenedor.appendChild(encabezado);
+    const distanciaTotal = distanciasRuta.reduce((total, distancia) => total + (Number(distancia) || 0), 0);
+    const minutosTotal = distanciasRuta.reduce((total, distancia) => total + minutosAproximados(distancia), 0);
+    const encabezado = document.createElement("div");
+    encabezado.className = "encabezadoParadas";
+    const titulo = document.createElement("h3");
+    titulo.textContent = rutaOrdenada.length + (rutaOrdenada.length === 1 ? " parada" : " paradas") + " · " +
+        formatearDistanciaTotal(distanciaTotal).replace(" totales", "") + " · unos " + minutosTotal + " min";
+    const subtitulo = document.createElement("small");
+    subtitulo.textContent = rutaReordenadaAMano ? "Orden a tu gusto" : "Ruta mínima exacta";
+    const textos = document.createElement("div");
+    textos.append(titulo, subtitulo);
+    encabezado.appendChild(textos);
 
     // Hoja de reparto impresa (T28e): solo en la nube y con Web Bluetooth.
-    if (rutaOrdenada.length > 0 && window.impresionVendeFrio?.disponible?.()) {
+    if (window.impresionVendeFrio?.disponible?.()) {
         const botonHoja = document.createElement("button");
         botonHoja.type = "button";
         botonHoja.id = "btnImprimirHojaReparto";
-        botonHoja.className = "btnAccion ver imprimirHojaReparto";
-        botonHoja.innerHTML = window.icono("impresora", 15) + " Imprimir hoja de reparto";
-        contenedor.appendChild(botonHoja);
+        botonHoja.className = "pzBtn pzBtnGris imprimirHojaReparto";
+        botonHoja.setAttribute("aria-label", "Imprimir hoja de reparto");
+        botonHoja.innerHTML = window.icono("impresora", 16) + " Hoja";
+        encabezado.appendChild(botonHoja);
     }
+    contenedor.appendChild(encabezado);
 
+    const lista = document.createElement("ol");
+    lista.className = "listaParadas";
+    const proxima = indiceProximaParada();
     rutaOrdenada.forEach((comercio, indice) => {
-        const elemento = document.createElement("div");
-        elemento.className = "paradaRuta";
-
-        const informacion = document.createElement("div");
-        const nombre = document.createElement("strong");
-        nombre.textContent = comercio.nombre;
-
-        const direccion = document.createElement("span");
-        direccion.textContent = comercio.direccion || "Sin direcci\u00f3n";
-
-        const distancia = document.createElement("small");
-        distancia.textContent = formatearDistanciaRuta(
-            distanciasRuta[indice],
-            indice
-        );
-
-        informacion.append(nombre, direccion, distancia);
-
-        const botonPedido = document.createElement("button");
-        botonPedido.type = "button";
-        botonPedido.className = "btnAccion ver pedidoParadaRuta";
-        botonPedido.dataset.nombre = comercio.nombre;
-        botonPedido.innerHTML = window.icono("documento", 14) + " Pedido";
-
-        elemento.append(informacion, botonPedido);
-        contenedor.appendChild(elemento);
+        const carga = cargaParaParada(comercio.nombre);
+        const hecha = paradaHecha(comercio);
+        const fila = document.createElement("li");
+        fila.className = "paradaOrden" + (indice === proxima ? " proxima" : "") + (hecha ? " hecha" : "");
+        fila.dataset.nombre = comercio.nombre;
+        const lleva = carga.pedidos.length
+            ? `<span class="pzChip pzChipGris sinPunto">${window.icono("paquete", 13)} Lleva ${carga.unidades} u${carga.total ? " · " + window.piezas.plata(carga.total) : ""}</span>`
+            : `<span class="pzChip pzChipGris sinPunto">Sin pedido para entregar</span>`;
+        fila.innerHTML = `<span class="numeroParada">${hecha ? window.icono("check", 16) : indice + 1}</span>
+            <button type="button" class="textoParada pedidoParadaRuta" data-nombre="${window.piezas.esc(comercio.nombre)}" aria-label="Pedido de ${window.piezas.esc(comercio.nombre)}">
+                <strong>${window.piezas.esc(comercio.nombre)}</strong>
+                <small>${window.piezas.esc(comercio.direccion || "Sin dirección")} · ${textoDistanciaCorta(distanciasRuta[indice])}</small>
+                <span class="llevaParada">${lleva}</span>
+            </button>
+            <span class="agarreParada" role="button" tabindex="0" aria-label="Mover ${window.piezas.esc(comercio.nombre)}. Mantené apretado y arrastrá">${window.icono("menu", 20)}</span>`;
+        lista.appendChild(fila);
     });
+    contenedor.appendChild(lista);
+
+    const ayuda = document.createElement("p");
+    ayuda.className = "ayudaParadas";
+    ayuda.textContent = "Mantené apretado ≡ y arrastrá para cambiar el orden.";
+    contenedor.appendChild(ayuda);
+
+    conectarArrastreParadas(lista);
+    dibujarProximaParada();
+}
+
+// Arrastrar ≡ para cambiar el orden (con el dedo o el mouse).
+function conectarArrastreParadas(lista) {
+    let arrastrando = null;
+    let puntero = null;
+
+    const terminar = () => {
+        if (!arrastrando) return;
+        arrastrando.classList.remove("arrastrando");
+        lista.classList.remove("ordenando");
+        const orden = [...lista.querySelectorAll(".paradaOrden")].map(fila => fila.dataset.nombre);
+        arrastrando = null;
+        puntero = null;
+        const antes = rutaOrdenada.map(comercio => comercio.nombre).join("|");
+        if (orden.join("|") === antes) return;
+        rutaOrdenada = orden.map(nombre => rutaOrdenada.find(comercio => comercio.nombre === nombre)).filter(Boolean);
+        rutaReordenadaAMano = true;
+        recalcularDistanciasRuta();
+        mostrarRutaEnLista();
+        renderizarPines(false);
+    };
+
+    lista.addEventListener("pointerdown", evento => {
+        const agarre = evento.target.closest(".agarreParada");
+        if (!agarre) return;
+        evento.preventDefault();
+        arrastrando = agarre.closest(".paradaOrden");
+        puntero = evento.pointerId;
+        arrastrando.classList.add("arrastrando");
+        lista.classList.add("ordenando");
+        try { agarre.setPointerCapture(evento.pointerId); } catch (error) { /* sin captura */ }
+    });
+    lista.addEventListener("pointermove", evento => {
+        if (!arrastrando || evento.pointerId !== puntero) return;
+        evento.preventDefault();
+        const filas = [...lista.querySelectorAll(".paradaOrden")].filter(fila => fila !== arrastrando);
+        const siguiente = filas.find(fila => {
+            const caja = fila.getBoundingClientRect();
+            return evento.clientY < caja.top + caja.height / 2;
+        });
+        if (siguiente) lista.insertBefore(arrastrando, siguiente);
+        else lista.appendChild(arrastrando);
+    });
+    lista.addEventListener("pointerup", terminar);
+    lista.addEventListener("pointercancel", terminar);
+    // Con el teclado: flechas arriba y abajo.
+    lista.addEventListener("keydown", evento => {
+        const agarre = evento.target.closest(".agarreParada");
+        if (!agarre || !["ArrowUp", "ArrowDown"].includes(evento.key)) return;
+        evento.preventDefault();
+        const fila = agarre.closest(".paradaOrden");
+        const indice = rutaOrdenada.findIndex(comercio => comercio.nombre === fila.dataset.nombre);
+        const destino = indice + (evento.key === "ArrowUp" ? -1 : 1);
+        if (indice < 0 || destino < 0 || destino >= rutaOrdenada.length) return;
+        const [movido] = rutaOrdenada.splice(indice, 1);
+        rutaOrdenada.splice(destino, 0, movido);
+        rutaReordenadaAMano = true;
+        recalcularDistanciasRuta();
+        mostrarRutaEnLista();
+        renderizarPines(false);
+        document.querySelector(`.paradaOrden[data-nombre="${CSS.escape(movido.nombre)}"] .agarreParada`)?.focus();
+    });
+}
+
+// La próxima parada, fija abajo (dentro de la pantalla de Rutas).
+function dibujarProximaParada() {
+    const pantalla = document.getElementById("pantallaRutas");
+    if (!pantalla) return;
+    let tarjeta = document.getElementById("proximaParadaRuta");
+    const indice = indiceProximaParada();
+    if (!rutaOrdenada.length || indice < 0 || navegacionActiva) {
+        tarjeta?.remove();
+        pantalla.classList.remove("conProximaParada");
+        if (rutaOrdenada.length && indice < 0 && !navegacionActiva) {
+            tarjeta = document.createElement("div");
+            tarjeta.id = "proximaParadaRuta";
+            tarjeta.className = "proximaParada terminada";
+            tarjeta.innerHTML = `<strong>${window.icono("check", 18)} Terminaste la ruta</strong><button type="button" class="pzBtn pzBtnGris" data-parada="reiniciar">Empezar de nuevo</button>`;
+            tarjeta.onclick = evento => {
+                if (!evento.target.closest('[data-parada="reiniciar"]')) return;
+                paradasHechasRuta.clear();
+                paradasConPedidosRuta.clear();
+                pedidosAlArmarRuta = idsDePedidosRuta();
+                mostrarRutaEnLista();
+            };
+            pantalla.appendChild(tarjeta);
+            pantalla.classList.add("conProximaParada");
+        }
+        return;
+    }
+    const comercio = rutaOrdenada[indice];
+    const carga = cargaParaParada(comercio.nombre);
+    if (!tarjeta) {
+        tarjeta = document.createElement("div");
+        tarjeta.id = "proximaParadaRuta";
+        pantalla.appendChild(tarjeta);
+    }
+    tarjeta.className = "proximaParada";
+    tarjeta.setAttribute("role", "region");
+    tarjeta.setAttribute("aria-label", "Próxima parada");
+    pantalla.classList.add("conProximaParada");
+    tarjeta.innerHTML = `<div class="cabProximaParada">
+            <small>Próxima parada · ${indice + 1} de ${rutaOrdenada.length}</small>
+            <button type="button" class="pzEnlace" data-parada="saltear">Ya pasé ${window.icono("chevDerecha", 14)}</button>
+        </div>
+        <div class="nombreProximaParada"><strong>${window.piezas.esc(comercio.nombre)}</strong><span>${textoDistanciaCorta(distanciasRuta[indice])}</span></div>
+        <div class="botonesProximaParada">
+            <button type="button" class="pzBtn pzBtnSec" data-parada="ir">${window.icono("navegar", 18)} Ir</button>
+            <button type="button" class="pzBtn pzBtnPri" data-parada="entregar">${window.icono(carga.pedidos.length ? "check" : "documento", 18)} ${carga.pedidos.length ? "Entregar" : "Hacer pedido"}</button>
+        </div>`;
+    tarjeta.onclick = evento => {
+        const accion = evento.target.closest("[data-parada]")?.dataset.parada;
+        if (!accion) return;
+        if (accion === "ir") {
+            window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Number(comercio.lat) + "," + Number(comercio.lng), "_blank", "noopener");
+        } else if (accion === "entregar") {
+            const actual = cargaParaParada(comercio.nombre);
+            if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
+            if (typeof irAPedidoRapido === "function") irAPedidoRapido(comercio.nombre);
+        } else if (accion === "saltear") {
+            paradasHechasRuta.add(comercio.nombre);
+            mostrarRutaEnLista();
+        }
+    };
 }
 
 configurarCierreModalAviso();

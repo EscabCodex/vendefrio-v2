@@ -11,7 +11,7 @@
     const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
     // Los que llevan a Inicio no necesitan la casita al lado.
     const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
-    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre"];
+    const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
 
     function preferencia(campo) {
@@ -55,8 +55,9 @@
             barra = document.createElement("div");
             barra.className = "barraVolver";
             pantalla.insertBefore(barra, pantalla.firstChild);
-            const destino = DESDE_MAS.includes(pantalla.id) ? "mas" : "menu";
-            const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", "Volver a " + DESTINOS[destino]);
+            // Las pantallas nuevas (piezas.js) dicen a dónde vuelven.
+            const destino = pantalla.dataset.volverA || (DESDE_MAS.includes(pantalla.id) ? "mas" : "menu");
+            const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", DESTINOS[destino] ? "Volver a " + DESTINOS[destino] : "Volver");
             generico.dataset.volver = destino;
             barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"));
         }
@@ -81,6 +82,12 @@
         if (!barra) return;
 
         const generico = barra.querySelector(".volverGenerico");
+        if (pantalla.dataset.volverA && generico.dataset.volver !== pantalla.dataset.volverA) {
+            generico.dataset.volver = pantalla.dataset.volverA;
+            const nombre = DESTINOS[pantalla.dataset.volverA] ? "Volver a " + DESTINOS[pantalla.dataset.volverA] : "Volver";
+            generico.setAttribute("aria-label", nombre);
+            generico.title = nombre;
+        }
         const casita = barra.querySelector(".botonInicioPantalla");
         const propio = [...barra.children].find(boton => {
             return boton !== generico && boton !== casita && !boton.hidden && !boton.classList.contains("oculto");
@@ -104,6 +111,11 @@
         if (casita.hidden !== vaAInicio) casita.hidden = vaAInicio;
         const botones = vaAInicio ? "1" : "2";
         if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
+
+        // Al bajar, una barrita con el nombre de la pantalla queda detrás de
+        // los botones, así no tapan los títulos (T122).
+        const nombrePantalla = (pantalla.querySelector(":scope > header h1, .configHeader h1")?.textContent || "").trim();
+        if (barra.dataset.titulo !== nombrePantalla) barra.dataset.titulo = nombrePantalla;
     }
 
     let pedido = false;
@@ -122,6 +134,10 @@
         if (document.documentElement.classList.contains("volverDespegado") !== despegado) {
             document.documentElement.classList.toggle("volverDespegado", despegado);
         }
+        const conBarra = despegado && window.scrollY > 56;
+        if (document.documentElement.classList.contains("volverConBarra") !== conBarra) {
+            document.documentElement.classList.toggle("volverConBarra", conBarra);
+        }
     }
 
     document.addEventListener("click", event => {
@@ -135,7 +151,11 @@
             irA("menu");
         } else {
             const boton = event.target.closest?.(".botonVolverPantalla");
-            if (boton) irA(DESTINOS[boton.dataset.volver] ? boton.dataset.volver : "menu");
+            if (boton && boton.dataset.volver === "propio" && window.piezas?.volverDesde(boton.closest("section"))) {
+                // La pantalla sabe a dónde volver (por ejemplo, a la ficha).
+            } else if (boton) {
+                irA(DESTINOS[boton.dataset.volver] ? boton.dataset.volver : "menu");
+            }
         }
         setTimeout(pedirActualizar, 60);
     }, true);

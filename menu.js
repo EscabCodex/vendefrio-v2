@@ -65,26 +65,6 @@ function mostrarPantalla(nombre) {
 // DASHBOARD
 // -----------------------------------------------------
 
-function obtenerResumenProductos() {
-    const productos = obtenerProductos();
-    const marcas = Object.keys(productos);
-    const totalProductos = marcas.reduce((total, marca) => {
-        return total + (Array.isArray(productos[marca]) ? productos[marca].length : 0);
-    }, 0);
-
-    return {
-        totalMarcas: marcas.length,
-        totalProductos
-    };
-}
-
-function fechaDeHaceDias(dias) {
-    const fecha = new Date();
-    fecha.setHours(0, 0, 0, 0);
-    fecha.setDate(fecha.getDate() - dias);
-    return fecha;
-}
-
 function obtenerFechaPedidoDashboard(pedido) {
     const timestamp = Number(pedido && pedido.timestamp);
 
@@ -110,16 +90,6 @@ function obtenerFechaPedidoDashboard(pedido) {
     return null;
 }
 
-function pedidoEstaEnPeriodoDashboard(pedido, dias) {
-    const fecha = obtenerFechaPedidoDashboard(pedido);
-    if (!fecha) return false;
-
-    const inicio = fechaDeHaceDias(dias - 1);
-    const ahora = new Date();
-
-    return fecha >= inicio && fecha <= ahora;
-}
-
 function tieneGpsValidoDashboard(comercio) {
     if (!comercio) return false;
 
@@ -143,13 +113,6 @@ function tieneGpsValidoDashboard(comercio) {
 
 function comercioVisitadoRecientemente(comercio) {
     return comercioEstaVisitadoEstaSemana(comercio);
-}
-
-function crearElementoDashboard(etiqueta, valor, color) {
-    const elemento = document.createElement("strong");
-    elemento.textContent = String(valor);
-    elemento.style.color = color;
-    return elemento;
 }
 
 let ubicacionDashboard = null;
@@ -377,6 +340,12 @@ function dibujarProximaParadaInicio(comercios) {
     info.setAttribute("aria-label", "Ver ficha de " + sugerido.nombre);
     info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small><span class="chipEstado" data-tono="aviso">Sin visitar esta semana</span></span>`;
     info.querySelector("strong").textContent = sugerido.nombre;
+    // Con horario cargado (T69), el chip dice cuándo atiende.
+    if (String(sugerido.horario || "").trim()) {
+        const chip = info.querySelector(".chipEstado");
+        chip.textContent = String(sugerido.horario).trim();
+        chip.classList.add("chipHorario");
+    }
     const partes = [sugerido.direccion || "Dirección pendiente"];
     if (ubicacionDashboard && tieneGpsValidoDashboard(sugerido)) {
         const km = distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(sugerido.lat), Number(sugerido.lng));
@@ -410,6 +379,33 @@ function dibujarProximaParadaInicio(comercios) {
     ir.dataset.navegarA = sugerido.nombre;
 
     acciones.append(pedido, ir);
+
+    // "Ya llego" por WhatsApp (T72): con teléfono, entre "Cargar pedido" e
+    // "Ir" (que queda solo con el ícono).
+    const yaLlego = window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(sugerido) : "";
+    if (yaLlego) {
+        const aviso = document.createElement("a");
+        aviso.className = "pzBtn pzBtnWa paradaYaLlego";
+        aviso.href = yaLlego;
+        aviso.target = "_blank";
+        aviso.rel = "noopener";
+        aviso.innerHTML = window.icono("whatsapp", 18) + " Ya llego";
+        pedido.after(aviso);
+        ir.innerHTML = window.icono("navegar", 20);
+        ir.setAttribute("aria-label", "Ir");
+        ir.classList.add("soloIcono");
+        acciones.classList.add("conYaLlego");
+    }
+
+    // "Visité, sin pedido" (T65): pide el motivo y lo marca visitado.
+    if (window.visitasVendeFrio) {
+        const sinPedido = document.createElement("button");
+        sinPedido.type = "button";
+        sinPedido.className = "pzBtn pzBtnSec paradaSinPedido";
+        sinPedido.innerHTML = window.icono("cerrarX", 16) + " Visité, sin pedido";
+        sinPedido.addEventListener("click", () => window.visitasVendeFrio.abrir(sugerido.nombre));
+        acciones.appendChild(sinPedido);
+    }
     contenedor.append(info, acciones);
 
     if (!ubicacionDashboard && navigator.geolocation) {
@@ -440,7 +436,7 @@ function actualizarDashboard() {
     actualizarEncabezadoInicio();
 
     const nube = usaNubeReal();
-    const comercios = obtenerComercios();
+    const comercios = comerciosActivos();
     const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
     const pedidosHoy = pedidosDeHoyInicio(pedidos);
     const cargadosHoy = pedidos.filter(esDeHoyInicio);
@@ -455,9 +451,12 @@ function actualizarDashboard() {
     const vendido = cargadosHoy.reduce((total, pedido) => total + totalInicio(pedido), 0);
     const hayPrecios = cargadosHoy.some(pedido => totalInicio(pedido) > 0);
     const comerciosHoy = new Set(cargadosHoy.map(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es"))).size;
+    // T93: sin permiso para ver la plata, unidades en vez de pesos.
+    const vePlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
+    const conPlata = vePlata && (hayPrecios || nube);
     const textos = {
-        dashTituloHoy: hayPrecios || nube ? "Vendido hoy" : "Unidades hoy",
-        dashVendidoHoy: hayPrecios || nube
+        dashTituloHoy: conPlata ? "Vendido hoy" : "Unidades hoy",
+        dashVendidoHoy: conPlata
             ? textoPlataInicio(vendido)
             : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)),
         dashResumenHoy: cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
@@ -465,7 +464,10 @@ function actualizarDashboard() {
         dashVisitadosSemana: visitadosSemana,
         dashTotalComercios: comercios.length,
         dashPedidosSemana: pedidosSemana.length,
-        dashVendidoSemana: textoPlataCortoInicio(pedidosSemana.reduce((total, pedido) => total + totalInicio(pedido), 0)),
+        dashVendidoSemana: vePlata
+            ? textoPlataCortoInicio(pedidosSemana.reduce((total, pedido) => total + totalInicio(pedido), 0))
+            : pedidosSemana.reduce((total, pedido) => total + unidadesInicio(pedido), 0).toLocaleString("es-AR"),
+        dashEtiquetaVendidoSemana: vePlata ? "vendido" : "unidades",
         dashPendientesSemana: sinVisitar
     };
     Object.keys(textos).forEach(id => {
@@ -707,6 +709,9 @@ document.addEventListener("click", event => {
     if (destino === "estadisticas" && typeof window.abrirEstadisticas === "function") window.abrirEstadisticas();
     else if (destino === "cierre" && window.cierreVendeFrio) window.cierreVendeFrio.abrir();
     else if (destino === "configuracion") abrirMenuMas();
+    else if ((window.accesosMasExtras || []).some(acceso => acceso.destino === destino)) {
+        window.accesosMasExtras.find(acceso => acceso.destino === destino).abrir();
+    }
     else mostrarPantalla(destino);
 });
 

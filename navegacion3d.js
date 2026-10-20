@@ -55,7 +55,7 @@ function crearVehiculoNavegacion3D() {
 function formatearDistancia3D(metros) {
     return Number(metros) < 1000
         ? Math.round(Number(metros) || 0) + " m"
-        : ((Number(metros) || 0) / 1000).toFixed(1) + " km";
+        : ((Number(metros) || 0) / 1000).toFixed(1).replace(".", ",") + " km";
 }
 
 function formatearTiempo3D(segundos) {

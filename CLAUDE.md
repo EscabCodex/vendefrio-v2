@@ -22,7 +22,7 @@ Sos el ingeniero de VendeFrío.
 
 - Hacé solo la tarea pedida. No mezcles tareas del plan.
 - Trabajá siempre en una rama nueva, nunca directo en `main` ni en `desarrollo`.
-- Abrí el pull request hacia `desarrollo` (no hacia `main`) y no lo unas: eso lo hace el dueño.
+- Abrí el pull request hacia `desarrollo` (no hacia `main`). Se une a `desarrollo` recién cuando el Revisor responde APROBADO (ver "Trabajo en equipo"). Nunca unas nada a `main`: eso lo hace el dueño.
 - No borres datos de `localStorage` sin que el dueño lo pida.
 - No cambies funciones existentes sin que el dueño lo pida.
 
@@ -37,6 +37,16 @@ Sos el ingeniero de VendeFrío.
 
 1. Marcá la tarea como hecha en el plan de `PROJECT_STATE.md`.
 2. Agregá una línea a la bitácora de `PROJECT_STATE.md`.
-3. Explicale al dueño, con pasos numerados y nivel principiante, cómo revisar el pull request (capturas y resultado de las pruebas) y unirlo a `desarrollo`.
+3. Explicale al dueño, con pasos numerados y nivel principiante, qué cambió y qué dijo el Revisor (capturas y resultado de las pruebas).
 4. Pasale el mensaje, el esfuerzo y el modelo recomendado (Sonnet u Opus) de la sesión siguiente.
 5. Si `desarrollo` ya junta 3 o 4 tareas que no están en `main`, avisale que toca probar en tanda y abrí (o actualizá) el pull request de `desarrollo` a `main` con la lista de tareas y qué probar.
+
+## Trabajo en equipo
+
+El equipo de agentes está en "Equipo de agentes" de `WORKING_GUIDE.md`. Vos sos el Constructor.
+
+1. Otro agente, el Revisor (`.claude/agents/revisor.md`), revisa tu pull request en una sesión aparte. No unas nada a `desarrollo` hasta que responda APROBADO.
+2. Si responde DEVUELTO, arreglá solo lo de su lista, volvé a correr `npm test` y avisá en el mismo pull request. Si lo devuelve por segunda vez, frená y preguntale al dueño.
+3. Si responde NECESITA AL DUEÑO, o la tarea toca `firestore.rules`, claves, pagos o borra datos, frená y avisale al dueño antes de seguir.
+4. Los pull requests que cambian la forma de trabajar (`CLAUDE.md`, `WORKING_GUIDE.md`, `.claude/agents/`) los une el dueño, no el Revisor.
+5. En la descripción del pull request dejá: qué cambió, qué no, cuántas pruebas pasaron y qué probar a mano.

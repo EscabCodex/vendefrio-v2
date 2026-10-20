@@ -7,7 +7,7 @@ const { expect, capturar, prepararPagina } = require("./ayudas");
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
 
-    await page.getByRole("button", { name: /Distribuidora/ }).click();
+    await page.getByRole("button", { name: "Entrar con email" }).click();
     await page.getByRole("button", { name: /Registrarse/ }).click();
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`dueno-${testInfo.project.name}-${Date.now()}@prueba.com`);
@@ -35,9 +35,10 @@ async function registrarDistribuidora(page, testInfo) {
 async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await irAPedidos(page);
     await page.getByRole("button", { name: "Nuevo pedido" }).click();
-    await page.locator("#cliente").fill(comercio);
-    await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
+    await elegirComercio(page, comercio);
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
+    // Con varias marcas, cada una se abre tocándola (T97): solo si está cerrada.
+    if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
@@ -53,6 +54,14 @@ async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await expect(generado).toBeVisible();
     await generado.click({ position: { x: 10, y: 10 } });
     await expect(generado).toBeHidden();
+}
+
+// Escribe el comercio en Nuevo pedido. Si ya quedó uno elegido (la tarjeta
+// con "Cambiar", T66), primero toca "Cambiar".
+async function elegirComercio(page, comercio) {
+    const cambiar = page.locator("#cambiarComercioPedido");
+    if (await cambiar.isVisible()) await cambiar.click();
+    await page.locator("#cliente").fill(comercio);
 }
 
 // Abre "Más" desde el avatar de Inicio (estilo nuevo, T31).
@@ -89,7 +98,7 @@ async function entrarComoEmpleado(page, browser, testInfo, nombre = "Maxi", opci
     const errores = await prepararPagina(empleado, true);
     if (opciones.impresora) await usarImpresoraFalsa(empleado);
     await empleado.goto("/");
-    await empleado.getByRole("button", { name: /Empleado/ }).click();
+    await empleado.getByRole("button", { name: "Entrar con código" }).click();
     await empleado.locator("#inicioCodigo").fill(codigo);
     await empleado.locator("#inicioFormEmpleado").getByRole("button", { name: "Entrar" }).click();
     await expect(empleado.locator("#inicioNombreEmpleado")).toBeVisible({ timeout: 20000 });
@@ -155,6 +164,7 @@ function textoDeBytes(bytes) {
 }
 
 module.exports = {
+    elegirComercio,
     registrarDistribuidora,
     cargarPedido,
     abrirMas,

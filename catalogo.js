@@ -33,13 +33,13 @@
     // Etapa 4 (T36): Catálogo y "Productos y marcas" son una sola sección,
     // con dos pestañas arriba: "Para vender" (la grilla) y "Productos y
     // marcas" (la administración de siempre). La barra marca "Catálogo" en
-    // las dos.
+    // las dos. Etapa 8: se llaman "Productos" y "Editar marcas".
     function crearSegmentoCatalogo(activa) {
         const segmento = document.createElement("div");
         segmento.className = "segmentoCatalogo";
         segmento.setAttribute("role", "tablist");
         segmento.setAttribute("aria-label", "Catálogo");
-        [["catalogo", "Para vender"], ["productos", "Productos y marcas"]].forEach(([destino, texto]) => {
+        [["catalogo", "Productos"], ["productos", "Editar marcas"]].forEach(([destino, texto]) => {
             const boton = document.createElement("button");
             boton.type = "button";
             boton.setAttribute("role", "tab");
@@ -79,7 +79,105 @@
             chips.appendChild(chip);
         });
     }
-    function renderizar() { const grilla = document.getElementById("grillaCatalogo"); const filtro = document.getElementById("filtroMarcaCatalogo"); if (!grilla || !filtro) return; const lista = datos(); const marcaActual = filtro.value; const marcas = [...new Set(lista.map(p => p.marca))].sort((a,b) => a.localeCompare(b,"es")); filtro.innerHTML = '<option value="todas">Todas las marcas</option>' + marcas.map(m => `<option value="${m.replace(/"/g,"&quot;")}">${m}</option>`).join(""); filtro.value = marcas.includes(marcaActual) ? marcaActual : "todas"; dibujarChipsMarcas(filtro, marcas, lista); const texto = (document.getElementById("buscarCatalogo")?.value || "").toLocaleLowerCase("es"); const visibles = lista.filter(p => (filtro.value === "todas" || p.marca === filtro.value) && (p.nombre + " " + p.marca).toLocaleLowerCase("es").includes(texto)); grilla.innerHTML = ""; visibles.forEach(p => { const card = document.createElement("article"); card.className = "itemCatalogo"; const imagen = p.imagen || p.foto || p.image || ""; card.innerHTML = `<div class="fotoCatalogo">${imagen ? `<img alt="">` : `<span>${p.nombre.trim().slice(0,1).toUpperCase()}</span>`}</div><button type="button" class="btnCatalogoEditar" aria-label="Editar precio o foto" title="Editar precio o foto">${window.icono("lapiz",15)}</button><small></small><strong></strong><div class="pieItemCatalogo"><b></b><button type="button" class="btnCatalogoPedido" aria-label="Agregar al pedido" title="Agregar al pedido">${window.icono("mas",18)}</button></div>`; card.dataset.marca = p.marca; if (imagen) { const img = card.querySelector("img"); img.src = imagen; img.alt = p.nombre; } card.querySelector("small").textContent = p.marca; card.querySelector("strong").textContent = p.nombre; card.querySelector("b").textContent = p.precio ? "$ " + Number(p.precio).toLocaleString("es-AR") : "Sin precio"; card.querySelector(".btnCatalogoPedido").onclick = () => { localStorage.setItem("vendefrio_producto_catalogo_pendiente", JSON.stringify({ marca: p.marca, producto: p.nombre })); mostrarPantalla("pedido"); }; card.querySelector(".btnCatalogoEditar").onclick = () => editarProductoCatalogo(p); grilla.appendChild(card); }); if (!visibles.length) grilla.innerHTML = '<p class="catalogoVacio">No se encontraron productos.</p>'; }
+    function renderizar() { const grilla = document.getElementById("grillaCatalogo"); const filtro = document.getElementById("filtroMarcaCatalogo"); if (!grilla || !filtro) return; const todos = datos(); const cantidadArchivados = todos.filter(p => p.archivado === true).length; if (!cantidadArchivados) verArchivados = false; dibujarFiltroArchivados(todos.length - cantidadArchivados, cantidadArchivados); const lista = todos.filter(p => (p.archivado === true) === verArchivados); const marcaActual = filtro.value; const marcas = [...new Set(lista.map(p => p.marca))].sort((a,b) => a.localeCompare(b,"es")); filtro.innerHTML = '<option value="todas">Todas las marcas</option>' + marcas.map(m => `<option value="${m.replace(/"/g,"&quot;")}">${m}</option>`).join(""); filtro.value = marcas.includes(marcaActual) ? marcaActual : "todas"; dibujarChipsMarcas(filtro, marcas, lista); const texto = (document.getElementById("buscarCatalogo")?.value || "").toLocaleLowerCase("es"); const visibles = lista.filter(p => (filtro.value === "todas" || p.marca === filtro.value) && (p.nombre + " " + p.marca).toLocaleLowerCase("es").includes(texto)); grilla.innerHTML = ""; visibles.forEach(p => { const card = document.createElement("article"); card.className = "itemCatalogo"; card.dataset.idProducto = p.id || ""; const imagen = p.imagen || p.foto || p.image || ""; card.innerHTML = `<div class="fotoCatalogo">${imagen ? `<img alt="">` : `<span>${p.nombre.trim().slice(0,1).toUpperCase()}</span>`}</div><button type="button" class="btnCatalogoEditar" aria-label="Opciones" title="Opciones">${window.icono("puntos",16)}</button><small></small><strong></strong><div class="pieItemCatalogo"><b></b><button type="button" class="btnCatalogoPedido" aria-label="Agregar al pedido" title="Agregar al pedido">${window.icono("mas",18)}</button></div>`; card.dataset.marca = p.marca; if (imagen) { const img = card.querySelector("img"); img.src = imagen; img.alt = p.nombre; } card.querySelector("small").textContent = p.marca; card.querySelector("strong").textContent = p.nombre; card.querySelector("b").textContent = p.precio ? "$ " + Number(p.precio).toLocaleString("es-AR") : "Sin precio"; const oferta = typeof ofertaVigente === "function" ? ofertaVigente(p) : null; if (oferta && window.ofertasVendeFrio && p.archivado !== true) { card.querySelector("b").innerHTML = window.ofertasVendeFrio.htmlPrecio(p); card.classList.add("enOferta"); card.querySelector("strong").insertAdjacentHTML("afterend", `<span class="pzChip pzChipPromo">${window.piezas.esc(window.ofertasVendeFrio.textoHasta(oferta.hasta))}</span>`); } card.querySelector(".btnCatalogoPedido").onclick = () => { localStorage.setItem("vendefrio_producto_catalogo_pendiente", JSON.stringify({ marca: p.marca, producto: p.nombre })); mostrarPantalla("pedido"); }; card.querySelector(".btnCatalogoEditar").setAttribute("aria-label", "Opciones de " + p.nombre); card.querySelector(".btnCatalogoEditar").onclick = () => opcionesProducto(p); if (p.archivado === true) { card.classList.add("archivado"); card.querySelector("b").textContent = "Archivado"; card.querySelector(".btnCatalogoPedido").remove(); } grilla.appendChild(card); }); if (!visibles.length) grilla.innerHTML = '<p class="catalogoVacio">No se encontraron productos.</p>'; dibujarExtras(grilla, verArchivados ? [] : visibles); dibujarVista(grilla, visibles.length); }
+    // Archivar en vez de borrar (T63): "Activos" y "Archivados" arriba de
+    // la grilla, y los tres puntos de cada producto.
+    let verArchivados = false;
+    function dibujarFiltroArchivados(activos, archivados) {
+        const grilla = document.getElementById("grillaCatalogo");
+        let filtro = document.getElementById("filtroArchivadosCatalogo");
+        if (!archivados) {
+            filtro?.remove();
+            return;
+        }
+        if (!filtro) {
+            filtro = document.createElement("div");
+            filtro.id = "filtroArchivadosCatalogo";
+            filtro.className = "pzFiltros";
+            filtro.setAttribute("role", "group");
+            filtro.setAttribute("aria-label", "Mostrar");
+            grilla.before(filtro);
+        }
+        filtro.innerHTML = "";
+        [[false, "Activos", activos], [true, "Archivados", archivados]].forEach(([valor, texto, cantidad]) => {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "pzFiltro";
+            boton.setAttribute("aria-pressed", String(verArchivados === valor));
+            boton.innerHTML = texto + " <b>" + cantidad + "</b>";
+            boton.onclick = () => { verArchivados = valor; renderizar(); };
+            filtro.appendChild(boton);
+        });
+    }
+    // Cuadros o Lista (T117): en lista entran el doble de productos. Se
+    // recuerda en el celular.
+    const CLAVE_VISTA = "vendefrio_catalogo_vista";
+    function vistaElegida() {
+        try { return localStorage.getItem(CLAVE_VISTA) === "lista" ? "lista" : "cuadros"; } catch (error) { return "cuadros"; }
+    }
+    function dibujarVista(grilla, cantidad) {
+        const vista = vistaElegida();
+        grilla.classList.toggle("vistaLista", vista === "lista");
+        let barra = document.getElementById("vistaCatalogo");
+        if (!barra) {
+            barra = document.createElement("div");
+            barra.id = "vistaCatalogo";
+            barra.className = "vistaCatalogo";
+            barra.innerHTML = `<small></small><div class="pzSegmentos" role="group" aria-label="Ver como">
+                <button type="button" data-vista="cuadros" aria-label="Ver en cuadros" title="Cuadros">${window.icono("menu", 16)}<span>Cuadros</span></button>
+                <button type="button" data-vista="lista" aria-label="Ver en lista" title="Lista">${window.icono("lista", 16)}<span>Lista</span></button></div>`;
+            barra.addEventListener("click", evento => {
+                const boton = evento.target.closest("[data-vista]");
+                if (!boton) return;
+                try { localStorage.setItem(CLAVE_VISTA, boton.dataset.vista); } catch (error) { /* sin lugar: queda por esta vez */ }
+                renderizar();
+            });
+        }
+        if (barra.nextElementSibling !== grilla) grilla.before(barra);
+        barra.querySelector("small").textContent = cantidad === 1 ? "1 producto" : cantidad + " productos";
+        barra.querySelectorAll("[data-vista]").forEach(boton => boton.setAttribute("aria-pressed", String(boton.dataset.vista === vista)));
+    }
+    // Opciones y dibujos de otras partes (T89 código de barras, T90 stock).
+    function extrasOpciones(p) {
+        return (window.opcionesProductoExtras || []).filter(extra => { try { return !extra.mostrar || extra.mostrar(p); } catch (error) { return false; } });
+    }
+    function dibujarExtras(grilla, visibles) {
+        (window.catalogoExtras || []).forEach(extra => {
+            try { extra(grilla, visibles); } catch (error) { console.error("Falló un agregado del catálogo.", error); }
+        });
+    }
+    function opcionesProducto(p) {
+        const pz = window.piezas;
+        if (!pz) return editarProductoCatalogo(p);
+        const archivado = p.archivado === true;
+        pz.hoja({
+            titulo: p.nombre,
+            sub: p.marca + (archivado ? " · archivado" : " · " + (p.precio ? pz.plata(p.precio) : "sin precio")),
+            html: `<div class="pzMotivos">
+                <button type="button" class="pzMotivo" data-opcion="editar">${pz.ico("lapiz", 20)}Editar precio o foto</button>
+                ${archivado
+                    ? `<button type="button" class="pzMotivo" data-opcion="recuperar">${pz.ico("deshacer", 20)}Recuperar para vender</button>`
+                    : `${window.ofertasVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="oferta">${pz.ico("etiqueta", 20)}${typeof ofertaVigente === "function" && ofertaVigente(p) ? "Cambiar la oferta" : "Poner en oferta"}</button>` : ""}${window.listasPreciosVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="listas">${pz.ico("etiqueta", 20)}Precios por lista</button>` : ""}${extrasOpciones(p).map(extra => `<button type="button" class="pzMotivo" data-opcion="${extra.opcion}">${pz.ico(extra.icono, 20)}${pz.esc(extra.texto(p))}</button>`).join("")}<button type="button" class="pzMotivo" data-opcion="archivar">${pz.ico("archivo", 20)}Archivar</button>`}
+            </div>
+            <p class="pzHojaSub">${archivado ? "Vuelve a aparecer en Nuevo pedido." : "Deja de aparecer para vender. Los pedidos viejos lo siguen mostrando igual."}</p>`
+        }).addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-opcion]")?.dataset.opcion;
+            if (!opcion) return;
+            pz.cerrar();
+            if (opcion === "editar") editarProductoCatalogo(p);
+            if (opcion === "oferta") window.ofertasVendeFrio.abrir(p);
+            if (opcion === "listas") window.listasPreciosVendeFrio.abrir(p);
+            extrasOpciones(p).find(extra => extra.opcion === opcion)?.abrir(p);
+            if (opcion === "archivar") window.archivarProductoConDeshacer?.(p.id);
+            if (opcion === "recuperar") {
+                archivarProductoPorId(p.id, false);
+                if (typeof renderizarPedido === "function") renderizarPedido();
+                renderizar();
+                window.mostrarToast?.("Producto recuperado: vuelve a estar para vender");
+            }
+        });
+    }
     function abrir() { const s = crear(); document.querySelectorAll('body > section[id^="pantalla"]').forEach(item => item.classList.add("oculto")); s.classList.remove("oculto"); renderizar(); }
     window.abrirCatalogo = abrir;
+    window.renderizarCatalogo = renderizar;
 }());

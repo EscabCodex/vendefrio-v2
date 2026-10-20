@@ -1,0 +1,25 @@
+:root{--fondo:#EEF3FA;--sup:#FFFFFF;--sup2:#E9EEF6;--txt:#0F1B2D;--txt2:#56657A;--pri:#1F5FE0;--pri-bg:#DCE7FD;--pri-txt:#FFFFFF;--aviso:#B35A00;--aviso-bg:#FFEBD3;--borde:#E1E8F2;color-scheme:light dark;}
+@media (prefers-color-scheme:dark){:root{--fondo:#0C0F13;--sup:#151A20;--sup2:#1C232B;--txt:#F2F4F6;--txt2:#99A2AD;--pri:#C8F04A;--pri-bg:#252F14;--pri-txt:#0C0F13;--aviso:#FFB547;--aviso-bg:#2E2412;--borde:#232A33;}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--fondo);color:var(--txt);font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+main{max-width:720px;margin:0 auto;padding:28px 16px 48px;display:grid;gap:16px;}
+.marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;}
+.marca img{width:36px;height:36px;border-radius:11px;}
+h1{font-size:34px;line-height:1.08;letter-spacing:-.03em;font-weight:800;}
+h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px;}
+p,li{font-size:15.5px;color:var(--txt2);}
+strong{color:var(--txt);}
+.card{background:var(--sup);border:1px solid var(--borde);border-radius:20px;padding:18px;}
+.grilla{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+.icono{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--pri-bg);color:var(--pri);margin-bottom:10px;}
+@media (prefers-color-scheme:dark){.icono{color:var(--pri);}}
+.icono svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+.boton{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border-radius:16px;background:var(--pri);color:var(--pri-txt);font-weight:800;font-size:16px;text-decoration:none;}
+.pasos{counter-reset:paso;list-style:none;display:grid;gap:10px;}
+.pasos li{counter-increment:paso;display:flex;gap:12px;align-items:flex-start;}
+.pasos li::before{content:counter(paso);flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--pri);color:var(--pri-txt);font-weight:800;font-size:14px;}
+ul.lista{padding-left:20px;display:grid;gap:4px;}
+.borrador{background:var(--aviso-bg);color:var(--txt);border-radius:16px;padding:14px 16px;font-size:14.5px;}
+.borrador strong{color:var(--aviso);}
+.pie{text-align:center;font-size:13px;}
+.pie a{color:var(--txt2);}

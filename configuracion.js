@@ -85,13 +85,14 @@
     // Valor de cada ajuste, o el de fábrica si nunca se tocó.
     const DEFECTOS = {
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
-        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal",
+        movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
-        vibrar: true, precios: true,
-        vehiculo: "bicicleta", navegador: "app", voz: "si", velocidadVoz: "normal",
-        zoom: "17", seguimiento: true, pantallaEncendida: true
+        vibrar: true, precios: true, iaCelular: false, iaNube: false,
+        vehiculo: "auto", navegador: "app", voz: "si", velocidadVoz: "normal",
+        zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
     };
-    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "masEnBarra", "volverFlotante"];
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante"];
 
     function valorDe(d, campo) {
         return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
@@ -155,6 +156,7 @@
                 </div>`) +
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
+                filaLlave("etiqueta", "azul", "Nombres en los íconos de arriba", "Asistente, Avisos, Ayuda y Más", "nombresArriba") +
                 filaLlave("menu", "azul", "Más en la barra de abajo", "Para llegar a Más con el pulgar", "masEnBarra") +
                 filaLlave("flechaIzquierda", "verde", "Volver siempre a mano", "La flecha y la casita quedan arriba al bajar", "volverFlotante") +
                 filaLlave("chispa", "naranja", "Menos movimiento", "Saca las animaciones y transiciones", "movimiento") +
@@ -221,7 +223,7 @@
                         <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
                     </button>
 
-                    <div class="masAccesos" id="masAccesos"></div>
+                    <div class="masGruposAccesos" id="masAccesos"></div>
 
                     <h2 class="configGrupoTitulo">Trabajo diario</h2>
                     <div class="configLista">
@@ -286,6 +288,7 @@
         raiz.dataset.acento = valorDe(d, "acento");
         raiz.dataset.movimiento = valorDe(d, "movimiento") === true ? "reducido" : "normal";
         raiz.dataset.barra = valorDe(d, "barraNombres") === false ? "iconos" : "nombres";
+        raiz.dataset.nombresArriba = valorDe(d, "nombresArriba") === false ? "no" : "si";
         raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
         raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
@@ -345,17 +348,39 @@
         if (accesos) {
             const tarjeta = (destino, icono, texto) =>
                 `<button type="button" class="masAcceso" data-mas="${destino}"><span data-color="${destino}">${window.icono(icono, 22)}</span><strong>${texto}</strong></button>`;
-            accesos.innerHTML =
-                tarjeta("rutas", "mapa", "Rutas") +
-                tarjeta("estadisticas", "grafico", "Estadísticas") +
-                (window.cierreVendeFrio?.disponible?.() ? tarjeta("cierre", "recibo", "Cierre del día") : "") +
-                (!usaNubeReal() ? tarjeta("historial", "historial", "Historial") : "");
+            const lista = [
+                { destino: "rutas", icono: "mapa", texto: "Rutas" },
+                { destino: "estadisticas", icono: "grafico", texto: "Estadísticas" },
+                { destino: "whatsapp", icono: "whatsapp", texto: "WhatsApp" },
+                window.cierreVendeFrio?.disponible?.() ? { destino: "cierre", icono: "recibo", texto: "Cierre del día" } : null,
+                !usaNubeReal() ? { destino: "historial", icono: "historial", texto: "Historial" } : null,
+                // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
+                ...(window.accesosMasExtras || []).filter(acceso => {
+                    if (acceso.enMas === false) return false;
+                    try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
+                })
+            ].filter(Boolean);
+            // Etapa 8: en tres grupos con título. Lo que no está en la lista va a Herramientas.
+            const GRUPOS = [
+                ["Plata", ["aCobrar", "cierre"]],
+                ["Ventas", ["estadisticas", "mapaVentas", "cambios", "historial"]],
+                ["Herramientas", []]
+            ];
+            const conocidos = GRUPOS.flatMap(([, destinos]) => destinos);
+            accesos.innerHTML = GRUPOS.map(([titulo, destinos]) => {
+                const delGrupo = destinos.length
+                    ? destinos.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean)
+                    : lista.filter(acceso => !conocidos.includes(acceso.destino));
+                if (!delGrupo.length) return "";
+                return `<h2 class="configGrupoTitulo masGrupoTitulo">${titulo}</h2><div class="masAccesos">` +
+                    delGrupo.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>";
+            }).join("");
         }
 
         const valores = {
             apariencia: { sistema: "Automática", claro: "Clara", oscuro: "Oscura" }[leer().tema || "sistema"],
             impresora: window.impresionVendeFrio?.impresoraGuardada?.()?.nombre || "Sin elegir",
-            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "bicicleta"] || "Bicicleta"
+            navegacion: { bicicleta: "Bicicleta", moto: "Moto", auto: "Auto", pie: "A pie" }[leer().vehiculo || "auto"] || "Auto"
         };
         document.querySelectorAll(".configValor[data-valor]").forEach(valor => {
             valor.textContent = valores[valor.dataset.valor] || "";
@@ -445,6 +470,21 @@
         return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
             filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
             "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
+    }
+
+    // --- Alias y QR para cobrar (T77) ---
+    // Solo el dueño (cobrarQr.js guarda y muestra los datos).
+    function htmlCobroTransferencia() {
+        const cobrar = window.cobrarQrVendeFrio;
+        const usuario = window.cuentaVendeFrio?.usuarioActual();
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!cobrar || !usuario || usuario.isAnonymous || !distribuidora || distribuidora.idActual() !== usuario.uid) return "";
+        const datos = cobrar.datos();
+        const valor = datos.alias
+            ? escaparTexto(datos.alias) + (datos.qr ? " · con QR" : " · sin QR")
+            : "Todavía sin cargar: se muestran al cobrar.";
+        return `<div id="cuentaCobroTransferencia">${filaEditable("qr", "verde", "Alias y QR para cobrar", valor, "",
+            "editarCobroTransferencia", datos.alias ? "Cambiar alias y QR" : "Cargar alias y QR")}</div>`;
     }
 
     // --- Nombre del dueño (T18) ---
@@ -683,7 +723,11 @@
                 filaDato("historial", "gris", "Último respaldo descargado en este celular", textoUltimoRespaldoNube(), "configUltimoRespaldoNube") +
                 `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
                 filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
-                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"')) +
+                filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"') +
+                // T61: cada cuánto avisa en Inicio.
+                filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
             nota("Descargá un respaldo una vez por semana y guardalo en un lugar seguro, como Google Drive. Al combinar, lo que ya está en la nube tiene prioridad.");
     }
 
@@ -1054,6 +1098,32 @@
         `;
     }
 
+    // "Quién ve la plata" (T93): solo lo cambia el dueño.
+    const TEXTOS_VER_PLATA = {
+        dueno: "Solo vos ves cuánto se vendió. Los demás ven cantidades.",
+        cobra: "Vos y quien tiene «Cobra» ven cuánto se vendió. Los demás ven cantidades.",
+        todos: "Todo el equipo ve cuánto se vendió."
+    };
+
+    function htmlVerPlata() {
+        const elegida = window.verPlataVendeFrio?.opcion?.() || "cobra";
+        const opciones = [["dueno", "Solo yo"], ["cobra", "Yo y quien cobra"], ["todos", "Todos"]];
+        return `
+            <label class="ajFila">
+                <span class="ajIcono" data-tono="verde">${ico("moneda")}</span>
+                <span class="ajTexto"><strong>Quién ve la plata</strong>
+                <small id="textoVerPlata">${TEXTOS_VER_PLATA[elegida]}</small></span>
+                <select id="elegirVerPlata" aria-label="Quién ve la plata">
+                    ${opciones.map(([valor, texto]) => `<option value="${valor}"${valor === elegida ? " selected" : ""}>${texto}</option>`).join("")}
+                </select>
+            </label>
+            <p class="ajFila ajEstadoFila">
+                ${ico("info", 16)}<span>Vale para Inicio, Estadísticas, las metas y el resumen de la noche.
+                Cobrar, el Cierre del día y «A cobrar» siguen siendo de quien tiene «Cobra».</span>
+            </p>
+        `;
+    }
+
     function htmlTextoLlave(prendida) {
         return prendida
             ? "Prendida: cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias. Los roles deciden solo a quién le llega cada aviso."
@@ -1073,6 +1143,7 @@
 
         return `
             ${grupo("Equipo", htmlLlaveEquipo())}
+            ${grupo("Plata", htmlVerPlata())}
             <section class="ajGrupo">
                 <h3 class="ajGrupoTitulo">Sumar un empleado</h3>
                 <div class="ajTarjeta ajTarjetaRelleno">
@@ -1254,7 +1325,7 @@
                 <label class="ajFila configAviso">
                     <span class="ajIcono" data-tono="${tonos[numero % tonos.length]}">${ico(ICONOS[tipo.id] || "campana")}</span>
                     <span class="ajTexto"><strong>${escaparTexto(tipo.nombre)}</strong>
-                    <small>${escaparTexto(tipo.quien)}</small>${sinPermiso}</span>
+                    <small>${escaparTexto(tipo.corto || tipo.quien)}</small>${sinPermiso}</span>
                     <input type="checkbox" class="casillaAviso ajLlave" role="switch" value="${escaparTexto(tipo.id)}"
                         aria-label="${escaparTexto(tipo.nombre)}" ${avisos.recibe(tipo.id) ? "checked" : ""}>
                 </label>
@@ -1272,12 +1343,77 @@
             ${htmlNotificaciones()}
             <section class="ajGrupo">
                 <h3 class="ajGrupoTitulo subtituloAvisos">Qué avisos recibís</h3>
+                ${htmlTareasAvisos(avisos)}
                 <div class="ajTarjeta">${casillas}</div>
             </section>
             ${nota("Nunca te llega aviso de lo que hacés vos. Lo que elegís se guarda en la nube: vale en cualquier celular donde entres.")}
             ${htmlQueSuena()}
             ${grupo("", filaAccion("campana", "azul", "Ver mis avisos", "La lista de la campanita", 'data-accion="verAvisos"'))}
         `;
+    }
+
+    // --- Avisos según lo que hacés (T121): cada tarea prende sus avisos ---
+    const TAREAS_AVISOS = [
+        { id: "arma", nombre: "Armo pedidos", icono: "paquete", tipos: ["pedidoNuevo", "pedidoEditado", "pedidoCancelado"] },
+        { id: "reparto", nombre: "Reparto", icono: "camion", tipos: ["preparado", "pedidoEditado", "pedidoCancelado", "incidencia"] },
+        { id: "cobro", nombre: "Cobro", icono: "moneda", tipos: ["entregado"] },
+        { id: "dueno", nombre: "Soy el dueño", icono: "persona", tipos: null }
+    ];
+
+    function tiposDeTarea(tarea, avisos) {
+        const disponibles = avisos.tipos().map(tipo => tipo.id);
+        return tarea.tipos ? tarea.tipos.filter(id => disponibles.includes(id)) : disponibles;
+    }
+
+    // "Soy el dueño" se ve prendido cuando llegan todos; las otras, cuando
+    // llegan todos sus avisos y no todos los avisos.
+    function tareaPrendida(tarea, avisos) {
+        const todos = avisos.tipos().every(tipo => avisos.recibe(tipo.id));
+        if (!tarea.tipos) return todos;
+        const tipos = tiposDeTarea(tarea, avisos);
+        return !todos && tipos.length > 0 && tipos.every(id => avisos.recibe(id));
+    }
+
+    function htmlTareasAvisos(avisos) {
+        const botones = TAREAS_AVISOS.map(tarea => `
+            <button type="button" class="tareaAviso" data-tarea-aviso="${tarea.id}" aria-pressed="${tareaPrendida(tarea, avisos)}">${ico(tarea.icono)}<span>${escaparTexto(tarea.nombre)}</span></button>`).join("");
+        return `<div class="ajTarjeta tareasAvisos">
+                <p class="tituloTareasAvisos">¿Qué hacés vos? Tocá y se prenden solos</p>
+                <div class="botonesTareasAvisos">${botones}</div>
+                <p class="ayudaTareasAvisos">Abajo podés cambiar uno por uno.</p>
+            </div>`;
+    }
+
+    function marcarTareasAvisos() {
+        const avisos = window.avisosVendeFrio;
+        if (!avisos) return;
+        document.querySelectorAll("[data-tarea-aviso]").forEach(boton => {
+            const tarea = TAREAS_AVISOS.find(item => item.id === boton.dataset.tareaAviso);
+            if (tarea) boton.setAttribute("aria-pressed", String(tareaPrendida(tarea, avisos)));
+        });
+    }
+
+    // Tocar una tarea la suma o la saca de lo que hacés, y quedan prendidos
+    // justo los avisos de las tareas elegidas ("Soy el dueño": todos).
+    async function tocarTareaAvisos(boton) {
+        const avisos = window.avisosVendeFrio;
+        const tarea = TAREAS_AVISOS.find(item => item.id === boton.dataset.tareaAviso);
+        if (!avisos || !tarea) return;
+        let elegidas = TAREAS_AVISOS.filter(item => item.tipos && tareaPrendida(item, avisos));
+        if (!tarea.tipos) elegidas = tareaPrendida(tarea, avisos) ? [] : [tarea];
+        else elegidas = elegidas.includes(tarea) ? elegidas.filter(item => item !== tarea) : [...elegidas, tarea];
+        const prendidos = new Set(elegidas.flatMap(item => tiposDeTarea(item, avisos)));
+        const cambios = avisos.tipos().map(tipo => tipo.id).filter(id => prendidos.has(id) !== avisos.recibe(id));
+        try {
+            for (const id of cambios) {
+                await avisos.cambiarPreferencia(id, prendidos.has(id));
+                const casilla = document.querySelector(`.casillaAviso[value="${id}"]`);
+                if (casilla) casilla.checked = prendidos.has(id);
+            }
+        } catch (error) {
+            mostrarAviso("No se guardó el cambio", error.message);
+        }
+        marcarTareasAvisos();
     }
 
     // --- Notificaciones con la app cerrada (T29): en este celular ---
@@ -1500,6 +1636,7 @@
                     <div class="ajTarjeta">
                         ${htmlNombreDistribuidora()}
                         ${htmlDatosTicket()}
+                        ${htmlCobroTransferencia()}
                         ${htmlDistribuidora()}
                     </div>
                 </section>
@@ -1658,7 +1795,10 @@
                     filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
                 grupo("Archivo de respaldo",
                     filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
-                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"')) +
+                    filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"') +
+                    filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
+                    ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
+                ])) +
                 nota("Guardá el archivo en un lugar seguro, como Google Drive.");
         }
 
@@ -1676,7 +1816,30 @@
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
                     ]) +
                     filaLlave("vibrar", "violeta", "Vibrar al guardar", "Un toque corto al guardar un pedido", "vibrar") +
-                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios"));
+                    filaLlave("volumen", "verde", "Decirlo en voz alta al guardar", "Te confirma con la voz lo que se guardó", "hablarAlGuardar") +
+                    filaLlave("etiqueta", "naranja", "Precios en Nuevo pedido", "Mostrar el precio de cada producto", "precios")) +
+                // T70: prueba de entrega al deslizar "Entregado".
+                grupo("Al entregar",
+                    filaLlave("camara", "verde", "Pedir foto y firma al entregar", "Todo opcional; también se agrega después desde el pedido", "pruebaEntrega")) +
+                // T79: el resumen del día a la noche (dueño y quien cobra).
+                grupo("A la noche",
+                    filaLlave("luna", "violeta", "Resumen de la noche", "A las 20:30: vendido, entregado, cobrado y lo que falta", "resumenNoche")) +
+                // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
+                grupo("Voz con IA",
+                    filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
+                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube") +
+                    filaAccion("chispa", "violeta", "Probar la IA en la nube", "Dice si anda o qué le falta", 'data-accion="probarIA"')) +
+                `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
+                nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
+            window.vozVendeFrio?.estadoIACelular?.().then(estado => {
+                const texto = document.getElementById("estadoIACelular");
+                if (!texto) return;
+                texto.textContent = {
+                    available: "Este celular tiene IA y está lista.",
+                    downloadable: "Este celular tiene IA: se descarga la primera vez que la uses, con wifi.",
+                    downloading: "Este celular está descargando su IA."
+                }[estado] || "Este celular todavía no tiene IA propia para páginas.";
+            });
         }
 
         if (seccion === "navegacion") {
@@ -1714,7 +1877,14 @@
                         window.nubeVendeFrio?.modoNube?.()
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
-                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades")) +
+                    filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
+                    // T87: presentación y términos (borrador hasta que lo revise un abogado, M19).
+                    filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
+                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"')) +
+                // T62: informar un problema (y, el dueño, ver los informados).
+                grupo("Problemas",
+                    filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
+                    (esDuenoEnLaNube() ? filaAccion("lista", "naranja", "Problemas informados", "Lo que mandaron vos y tus empleados", 'data-accion="verProblemas"') : "")) +
                 grupo("Ayuda",
                     `<div class="ajFila ajTextoLargo ayudaVendeFrio">
                         <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
@@ -1859,6 +2029,16 @@
             document.getElementById("importarRespaldo")?.click();
         }
 
+        if (accion === "probarIA") {
+            const resultado = document.getElementById("resultadoProbarIA");
+            const texto = resultado?.querySelector("span");
+            if (resultado) resultado.hidden = false;
+            if (texto) texto.textContent = "Probando…";
+            window.vozVendeFrio?.probarIANube?.().then(respuesta => {
+                if (texto) texto.textContent = respuesta;
+            });
+        }
+
         if (accion === "rutas") {
             pantalla()?.classList.add("oculto");
             mostrarPantalla("rutas");
@@ -1891,6 +2071,20 @@
             const sinSubir = nube?.sincronizacion?.().sinSubir || 0;
 
             if (sinSubir > 0) {
+                // T60: muestra qué falta subir en vez de un aviso suelto.
+                if (window.piezas && window.confianzaVendeFrio) {
+                    window.piezas.modal({
+                        icono: "nube",
+                        color: "aviso",
+                        titulo: "Todavía no",
+                        texto: "Hay " + (sinSubir === 1 ? "1 cambio" : sinSubir + " cambios") + " sin subir a la nube. Si salís ahora se perderían: esperá a tener señal.",
+                        botones: [
+                            { texto: "Cerrar", clase: "pzBtnGris" },
+                            { texto: "Ver qué falta", clase: "pzBtnPri", alTocar: () => window.confianzaVendeFrio.abrirSinSubir() }
+                        ]
+                    });
+                    return;
+                }
                 return mostrarAviso(
                     "Todavía no",
                     "Hay " + sinSubir + " cambio(s) sin subir a la nube. Esperá a tener señal y que diga \"todo subido\" antes de salir."
@@ -2248,6 +2442,12 @@
             document.getElementById("datosTicketTelefono")?.focus();
         }
 
+        if (accion === "editarCobroTransferencia") {
+            window.cobrarQrVendeFrio?.editar(() => {
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+            });
+        }
+
         if (accion === "cancelarDatosTicket") {
             editandoDatosTicket = false;
             detalle("cuenta");
@@ -2275,6 +2475,11 @@
         if (accion === "reintentarNube") {
             window.nubeVendeFrio?.reintentar();
         }
+
+        if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
+        if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
+        if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
+        if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
             const d = leer();
@@ -2521,6 +2726,20 @@
             });
     });
 
+    // "Quién ve la plata" (T93): se guarda al elegir.
+    document.addEventListener("change", event => {
+        if (event.target.id !== "elegirVerPlata") return;
+
+        const selector = event.target;
+        window.verPlataVendeFrio.cambiar(selector.value)
+            .then(valor => {
+                const texto = document.getElementById("textoVerPlata");
+                if (texto) texto.textContent = TEXTOS_VER_PLATA[valor];
+                mostrarToast("Listo: guardado");
+            })
+            .catch(error => mostrarAviso("No se guardó el cambio", error.message));
+    });
+
     // Permisos de un rol (T19): se guardan al tocar la casilla.
     document.addEventListener("change", event => {
         const casilla = event.target.closest?.(".rolPermiso");
@@ -2598,10 +2817,16 @@
         if (!casilla || !window.avisosVendeFrio) return;
 
         window.avisosVendeFrio.cambiarPreferencia(casilla.value, casilla.checked)
+            .then(marcarTareasAvisos)
             .catch(error => {
                 casilla.checked = !casilla.checked;
                 mostrarAviso("No se guardó el cambio", error.message);
             });
+    });
+
+    document.addEventListener("click", event => {
+        const boton = event.target.closest?.("[data-tarea-aviso]");
+        if (boton) tocarTareaAvisos(boton);
     });
 
     document.addEventListener("click", event => {

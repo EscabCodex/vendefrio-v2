@@ -34,6 +34,7 @@
             id: "pedidoNuevo",
             nombre: "Pedido nuevo",
             quien: "Le llega a quien prepara pedidos.",
+            corto: "Para quien arma los pedidos.",
             permiso: "prepara",
             icono: "paquete",
             hecho: "Cargado por"
@@ -42,6 +43,7 @@
             id: "preparado",
             nombre: "Pedido preparado",
             quien: "Le llega a quien cargó el pedido y a quien reparte.",
+            corto: "Para quien reparte.",
             icono: "check",
             hecho: "Preparado por"
         },
@@ -49,6 +51,7 @@
             id: "entregado",
             nombre: "Pedido entregado",
             quien: "Le llega a quien cargó el pedido y, si el cobro quedó pendiente, a quien cobra.",
+            corto: "Para quien cobra.",
             icono: "check",
             hecho: "Entregado por"
         },
@@ -56,6 +59,7 @@
             id: "faltante",
             nombre: "Faltante",
             quien: "Le llega a quien cargó el pedido y a quien recibe aviso de faltantes.",
+            corto: "Si falta algo de un pedido tuyo.",
             icono: "alerta",
             hecho: "Anotado por"
         },
@@ -63,6 +67,7 @@
             id: "pedidoEditado",
             nombre: "Pedido editado",
             quien: "Le llega a quien cargó el pedido y a quien está trabajando en él: quien lo prepara, quien reparte o quien cobra, según la etapa.",
+            corto: "Si cambian un pedido tuyo o en el que trabajás.",
             icono: "notaLapiz",
             hecho: "Editado por"
         },
@@ -70,6 +75,7 @@
             id: "pedidoCancelado",
             nombre: "Pedido cancelado",
             quien: "Le llega a quien cargó el pedido y a quien ya estaba trabajando en él: quien lo prepara o quien reparte, según la etapa.",
+            corto: "Si cancelan un pedido tuyo o en el que trabajás.",
             icono: "cerrarX",
             hecho: "Cancelado por"
         },
@@ -77,6 +83,7 @@
             id: "incidencia",
             nombre: "Incidencia",
             quien: "Le llega a quien cargó el pedido y a quien controla pedidos.",
+            corto: "Si un pedido tiene un problema.",
             icono: "alerta",
             hecho: "Marcada por"
         },
@@ -84,6 +91,7 @@
             id: "incidenciaResuelta",
             nombre: "Incidencia resuelta",
             quien: "Le llega a quien cargó el pedido, a quien marcó la incidencia y a quien controla pedidos.",
+            corto: "Cuando se arregla ese problema.",
             icono: "check",
             hecho: "Resuelta por"
         },
@@ -91,6 +99,7 @@
             id: "rolPendiente",
             nombre: "Rol pendiente de aprobar",
             quien: "Te llega cuando un empleado elige un rol con «Cobra»: lo aprobás o lo rechazás en Empleados.",
+            corto: "Cuando un empleado pide el rol «Cobra».",
             icono: "alerta",
             hecho: "Lo eligió",
             soloDueno: true
@@ -618,6 +627,8 @@
         boton.type = "button";
         boton.setAttribute("aria-label", "Avisos");
         boton.title = "Avisos";
+        boton.classList.add("conNombre");
+        boton.dataset.nombre = "Avisos";
         boton.innerHTML = window.icono ? window.icono("campana", 22) : "🔔";
         boton.appendChild(crear("span", "contadorAvisos oculto", "0"));
         return boton;
@@ -902,7 +913,7 @@
     // -------------------------------------------------
 
     window.avisosVendeFrio = {
-        tipos: () => tiposDeEstaPersona().map(tipo => ({ id: tipo.id, nombre: tipo.nombre, quien: tipo.quien, permiso: tipo.permiso || "" })),
+        tipos: () => tiposDeEstaPersona().map(tipo => ({ id: tipo.id, nombre: tipo.nombre, quien: tipo.quien, corto: tipo.corto || "", permiso: tipo.permiso || "" })),
         disponible: () => Boolean(yo),
         estado: () => estado,
         recibe,

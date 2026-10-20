@@ -13,7 +13,7 @@
 // para confirmar (T24). Quien cargó el pedido y el dueño lo editan desde la
 // ficha; los demás ven una franja amarilla con lo que cambió, la checklist
 // marca los productos a revisar y "Entendido" la cierra (T25). Quien cargó
-// el pedido y el dueño lo eliminan (solo en "Cargado") o lo cancelan con
+// el pedido y el dueño lo eliminan (en cualquier paso, T125b) o lo cancelan con
 // motivo (antes de "Entregado"); el cancelado queda en "Cancelados" (T26).
 // Cualquiera lo entrega deslizando "Entregado" (desde Cargado, En
 // preparación, Preparado o En reparto, T29b) o con "Entregar con cambios" (lo entregado de cada
@@ -46,21 +46,23 @@
     // no existe, T29b) está en "En reparto": así lo da estadoActualDelPedido.
     // "Incidencias" se marca encima del estado (T17), así que un
     // pedido con incidencia también sigue en su etapa.
+    // Etapa 8: tres pestañas (Para armar, Para entregar y Terminados) y
+    // las demás adentro de "Otros". Cada tarjeta sigue diciendo su estado.
     const ETAPAS = [
-        { id: "cargados", nombre: "Cargados", estados: ["cargado"] },
-        { id: "enPreparacion", nombre: "En preparación", estados: ["enPreparacion"] },
-        { id: "preparados", nombre: "Preparados", estados: ["preparado"] },
-        { id: "enReparto", nombre: "En reparto", estados: ["enReparto"] },
+        { id: "paraArmar", nombre: "Para armar", estados: ["cargado", "enPreparacion"] },
+        { id: "paraEntregar", nombre: "Para entregar", estados: ["preparado", "enReparto"] },
         // Historial (T27b): reemplaza a "Entregados" y a la sección
         // Historial. Lleva los entregados y los "Histórico" (los de antes,
         // sin estados), sin eliminados ni cancelados (pedidosDelHistorial).
-        { id: "historial", nombre: "Historial", estados: [] },
+        { id: "historial", nombre: "Terminados", estados: [] },
         // Cobro (T28): los entregados sin cobro registrado. Solo lo ve quien
         // tiene "Cobra" (y el dueño).
-        { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true },
-        { id: "incidencias", nombre: "Incidencias", estados: [] },
-        { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"] }
+        { id: "aCobrar", nombre: "A cobrar", estados: [], soloCobra: true, otros: true },
+        { id: "incidencias", nombre: "Incidencias", estados: [], otros: true },
+        { id: "cancelados", nombre: "Cancelados", estados: ["cancelado"], otros: true }
     ];
+    // Los nombres de antes (Inicio, la voz) llevan a la pestaña que los junta.
+    const ETAPAS_DE_ANTES = { cargados: "paraArmar", enPreparacion: "paraArmar", preparados: "paraEntregar", enReparto: "paraEntregar" };
 
     // Con muchos pedidos (por ejemplo, Historial) se dibujan de a tandas.
     const TANDA = 40;
@@ -92,7 +94,7 @@
     const SVG_TILDE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
     let vistaActual = "nuevo";
-    let etapaActual = "cargados";
+    let etapaActual = "paraArmar";
     let mostrando = TANDA;
     let idFichaAbierta = "";
 
@@ -102,9 +104,14 @@
     let comercioHistorial = "";
     let idPedidoHistorial = "";
 
-    // "Salir a repartir" en tanda (T29c): las etapas donde se eligen varios
-    // pedidos y los ids elegidos. Cada pedido sale en su propia escritura.
-    const ETAPAS_EN_TANDA = ["cargados", "preparados"];
+    // Acciones en tanda (T29c): las etapas donde se eligen varios pedidos
+    // (manteniendo apretada la tarjeta) y los ids elegidos. Cada pedido se
+    // mueve en su propia escritura.
+    // T125: en todas las pestañas, con las mismas acciones que en la primera.
+    const ETAPAS_EN_TANDA = ["paraArmar", "paraEntregar", "historial", "aCobrar", "incidencias", "cancelados"];
+    // En estas pestañas no hay un paso "natural" para el botón grande: los
+    // pasos van todos en "Mover a otro paso".
+    const ETAPAS_SIN_PRINCIPAL = ["historial", "aCobrar", "incidencias", "cancelados"];
     let eligiendo = false;
     const elegidos = new Set();
 
@@ -507,7 +514,7 @@
             const oculta = ventanaPedidoGenerado.classList.contains("oculto");
 
             if (ventanaOculta && !oculta && enLaNube() && vistaActual === "nuevo" && !pantalla.classList.contains("oculto")) {
-                etapaActual = "cargados";
+                etapaActual = "paraArmar";
                 cambiarVista("pedidos");
                 window.scrollTo(0, 0);
             }
@@ -584,13 +591,20 @@
         avisoFiltroHistorial.classList.toggle("oculto", !aviso);
     }
 
+    let cantidadesOtros = [];
+
     function dibujarFiltros(registros, historial) {
         filtros.innerHTML = "";
+        cantidadesOtros = [];
 
         etapasVisibles().forEach(etapa => {
             const cantidad = etapa.id === "historial"
                 ? historial.length
                 : registros.filter(registro => esDeLaEtapa(registro, etapa)).length;
+            if (etapa.otros) {
+                cantidadesOtros.push({ etapa, cantidad });
+                return;
+            }
             const boton = crear("button", "filtroEtapa");
             boton.type = "button";
             boton.setAttribute("role", "tab");
@@ -601,6 +615,46 @@
             boton.append(crear("span", "filtroEtapaNombre", etapa.nombre), crear("span", "filtroEtapaCantidad", String(cantidad)));
             filtros.appendChild(boton);
         });
+
+        // "Otros": del mismo tamaño que las demás; dice cuál se está viendo.
+        const elegida = cantidadesOtros.find(item => item.etapa.id === etapaActual);
+        const otros = crear("button", "filtroEtapa filtroEtapaOtros");
+        otros.type = "button";
+        otros.setAttribute("role", "tab");
+        otros.setAttribute("aria-haspopup", "dialog");
+        otros.setAttribute("aria-selected", elegida ? "true" : "false");
+        if (elegida) otros.classList.add("activo");
+        const suma = cantidadesOtros.reduce((total, item) => total + item.cantidad, 0);
+        otros.append(
+            crear("span", "filtroEtapaNombre", elegida ? elegida.etapa.nombre : "Otros"),
+            crear("span", "filtroEtapaCantidad", String(elegida ? elegida.cantidad : suma))
+        );
+        otros.insertAdjacentHTML("beforeend", window.icono("chevAbajo", 14));
+        filtros.appendChild(otros);
+    }
+
+    function abrirOtros() {
+        const p = window.piezas;
+        const hoja = p.hoja({
+            titulo: "Otros pedidos",
+            html: '<div class="pzOpciones">' + cantidadesOtros.map(({ etapa, cantidad }) =>
+                `<button type="button" class="pzOpcion" data-etapa-otros="${etapa.id}"${etapa.id === etapaActual ? ' aria-current="true"' : ""}>${p.esc(etapa.nombre)}<span class="filtroEtapaCantidad">${cantidad}</span></button>`
+            ).join("") + "</div>"
+        });
+        hoja.addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-etapa-otros]");
+            if (!opcion) return;
+            p.cerrar();
+            elegirEtapa(opcion.dataset.etapaOtros);
+        });
+    }
+
+    function elegirEtapa(id) {
+        if (id === etapaActual) return;
+        etapaActual = id;
+        mostrando = TANDA;
+        dejarDeElegir();
+        dibujarLista();
     }
 
     // En vivo (T33): la tarjeta que cambió de estado (o que llegó nueva)
@@ -657,6 +711,9 @@
 
         info.append(arriba, detalle);
         if (textoAutor) info.append(crear("p", "subtitulo autorSeguimiento", textoAutor));
+        // T124: si se anotó lo que el comercio quiere o lo que tiene en la heladera.
+        const tiene = window.tieneQuiereVendeFrio?.esTiene?.(pedido);
+        info.append(crear("span", "badge " + (tiene ? "tipoTiene" : "tipoQuiere"), tiene ? "Tiene" : "Quiere"));
 
         // Checklist (T24): cuánto lleva armado y si hay faltantes. En
         // "Cargado", solo si alguien ya tildó (T29b).
@@ -688,7 +745,7 @@
         tarjeta.append(avatar, info);
         if (cambioDesdeLaUltimaVez(registro)) tarjeta.classList.add("filaCambio");
 
-        // Elegir varios (T29c): la tarjeta se marca en vez de abrir la ficha.
+        // Eligiendo varios (T29c): la tarjeta se marca en vez de abrir la ficha.
         if (eligiendo) {
             const casilla = crear("span", "casillaTanda");
             casilla.innerHTML = SVG_TILDE;
@@ -728,6 +785,15 @@
         dibujarBarraHistorial(enHistorial);
         dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
+        // Lo que suman otras partes arriba de la lista (T74: "A cobrar" por comercio).
+        (window.listaPedidosExtras || []).forEach(extra => {
+            try {
+                const elemento = extra(etapa.id, deLaEtapa);
+                if (elemento) lista.appendChild(elemento);
+            } catch (error) {
+                console.error("No se pudo dibujar un agregado de la lista.", error);
+            }
+        });
 
         const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
         resumen.textContent = deLaEtapa.length === 1
@@ -772,13 +838,14 @@
     }
 
     filtros.addEventListener("click", evento => {
+        if (evento.target.closest(".filtroEtapaOtros")) {
+            abrirOtros();
+            return;
+        }
         const boton = evento.target.closest("button[data-etapa]");
         if (!boton || boton.dataset.etapa === etapaActual) return;
 
-        etapaActual = boton.dataset.etapa;
-        mostrando = TANDA;
-        dejarDeElegir();
-        dibujarLista();
+        elegirEtapa(boton.dataset.etapa);
         boton.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     });
 
@@ -791,6 +858,11 @@
 
         const tarjeta = evento.target.closest(".tarjetaSeguimiento");
         if (!tarjeta) return;
+        // El toque que termina de mantener apretado no abre la ficha.
+        if (ignorarClick) {
+            ignorarClick = false;
+            return;
+        }
         if (eligiendo) alternarElegido(tarjeta);
         else abrirFicha(tarjeta.dataset.id);
     });
@@ -807,67 +879,187 @@
     });
 
     // -------------------------------------------------
-    // "Salir a repartir" en tanda (T29c)
+    // Acciones en tanda (T29c, cambiado el 2026-10-17)
     // -------------------------------------------------
-    // En "Cargados" y "Preparados", quien puede "Salir a repartir" toca
-    // "Elegir varios", marca pedidos (o "Marcar todos") y abajo toca "Salir a
-    // repartir (N)". Pide confirmar con un resumen y pasa cada pedido a "En
-    // reparto" en su propia escritura (las mismas reglas que desde la
-    // ficha). Sin señal quedan pendientes y suben solos. Si alguno ya no se
-    // puede mover (otro lo canceló o lo movió), lo dice y mueve los demás.
+    // Manteniendo apretada una tarjeta (medio segundo) se entra a elegir
+    // varios y queda elegida; después cada toque la marca o desmarca.
+    // Arriba quedan "Marcar todos" y "Cancelar"; abajo, las acciones que
+    // sirven para algún pedido de la etapa: "Salir a repartir", "En
+    // preparación", "Preparado", "Entregado" y "Eliminar", cada una con
+    // cuántos de los elegidos puede mover. Pide confirmar con un resumen y
+    // mueve cada pedido en su propia escritura (las mismas reglas que desde
+    // la ficha). Sin señal quedan pendientes y suben solos. Si alguno ya no
+    // se puede mover (otro lo canceló o lo movió), lo dice y mueve los demás.
+
+    const ACCIONES_TANDA = [
+        {
+            id: "enReparto", boton: "Salir a repartir", destino: "«En reparto», a tu nombre", hecho: ["Pedido en reparto", " pedidos en reparto"],
+            aplica: (pedido, estado) => pasosSiguientes(estado).some(paso => paso.hacia === "enReparto") ||
+                (movibleEnTanda(estado) && estado !== "enReparto" && (puede("reparte") || puede("controla"))),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", notaTanda(id))
+        },
+        {
+            id: "enPreparacion", boton: "En preparación", destino: "«En preparación»", hecho: ["Pedido en preparación", " pedidos en preparación"],
+            aplica: (pedido, estado) => movibleEnTanda(estado) && estado !== "enPreparacion" && puede("prepara"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "enPreparacion", notaTanda(id))
+        },
+        {
+            id: "preparado", boton: "Preparado", destino: "«Preparado», sin pasar por la checklist", hecho: ["Pedido preparado", " pedidos preparados"],
+            aplica: (pedido, estado) => movibleEnTanda(estado) && estado !== "preparado" && puede("prepara"),
+            hacer: id => window.nubeVendeFrio.agregarEstadoAlPedido(id, "preparado", "Marcado preparado en tanda")
+        },
+        {
+            id: "entregado", boton: "Entregado", destino: "«Entregado», completos (sin cambios)", hecho: ["Pedido entregado", " pedidos entregados"],
+            aplica: pedido => puedeEntregar(pedido),
+            hacer: id => window.nubeVendeFrio.entregarPedido(id, {})
+        },
+        {
+            id: "eliminar", boton: "Eliminar", destino: "", peligro: true, hecho: ["Pedido eliminado", " pedidos eliminados"],
+            aplica: pedido => puedeEliminar(pedido),
+            hacer: id => window.nubeVendeFrio.eliminarPedido(id)
+        }
+    ];
+
+    // Un pedido cancelado o "Histórico" (sin estados) no cambia de paso.
+    function movibleEnTanda(estado) {
+        return Boolean(estado) && estado !== "cancelado" && estado !== "historico";
+    }
+
+    // Volver un entregado para atrás lleva motivo (como desde la ficha).
+    function notaTanda(id) {
+        const pedido = buscarPedido(id);
+        return pedido && estadoActualDelPedido(pedido) === "entregado" ? "Vuelto atrás en tanda desde Pedidos" : "";
+    }
 
     const barraTanda = crear("div", "barraTandaPedidos oculto");
-    const botonElegir = crear("button", "btnAccion secundario botonElegirVarios", "Elegir varios");
-    botonElegir.type = "button";
     const botonMarcarTodos = crear("button", "btnAccion secundario botonMarcarTodos", "Marcar todos");
     botonMarcarTodos.type = "button";
     const botonDejarDeElegir = crear("button", "btnAccion secundario botonDejarDeElegir", "Cancelar");
     botonDejarDeElegir.type = "button";
-    barraTanda.append(botonElegir, botonMarcarTodos, botonDejarDeElegir);
+    barraTanda.append(botonMarcarTodos, botonDejarDeElegir);
     resumen.after(barraTanda);
 
     const pieTanda = crear("div", "pieTandaPedidos oculto");
-    const botonSalirEnTanda = crear("button", "btnAccion botonSalirEnTanda", "Salir a repartir");
-    botonSalirEnTanda.type = "button";
-    pieTanda.appendChild(botonSalirEnTanda);
+    pieTanda.setAttribute("role", "group");
+    pieTanda.setAttribute("aria-label", "Acciones con los pedidos elegidos");
+    const botonesTanda = {};
+    ACCIONES_TANDA.forEach(accion => {
+        const boton = crear("button", "btnAccion botonTanda" + (accion.peligro ? " botonTandaPeligro" : ""), accion.boton);
+        boton.type = "button";
+        boton.dataset.accion = accion.id;
+        botonesTanda[accion.id] = boton;
+        pieTanda.appendChild(boton);
+    });
+    // T110: abajo queda un solo botón grande; los otros pasos van en "Mover a
+    // otro paso" y "Eliminar" en el ⋯, separado.
+    const botonMoverTanda = crear("button", "btnAccion secundario botonMoverTanda");
+    botonMoverTanda.type = "button";
+    botonMoverTanda.innerHTML = "<span>Mover a otro paso</span>" + (window.icono ? window.icono("chevArriba", 16) : "");
+    const botonMasTanda = crear("button", "btnAccion secundario botonMasTanda");
+    botonMasTanda.type = "button";
+    botonMasTanda.setAttribute("aria-label", "Más acciones con los elegidos");
+    botonMasTanda.innerHTML = window.icono ? window.icono("puntos", 22) : "⋯";
+    const filaTanda = crear("div", "filaTandaPedidos");
+    filaTanda.append(botonMoverTanda, botonMasTanda);
+    pieTanda.appendChild(filaTanda);
     document.body.appendChild(pieTanda);
 
-    // Los ids de la etapa que se ve ahora (todos, no solo los dibujados).
-    let idsDeLaEtapaTanda = [];
+    // Los pedidos de la etapa que se ve ahora (todos, no solo los dibujados).
+    let registrosDeLaEtapaTanda = [];
 
-    function puedeSalirEnTanda(etapa) {
-        return Boolean(etapa) && ETAPAS_EN_TANDA.includes(etapa.id) && pasosSiguientes(etapa.estados[0]).some(paso => paso.hacia === "enReparto");
+    function idsDeLaEtapaTanda() {
+        return registrosDeLaEtapaTanda.map(registro => String(registro.pedido.id || ""));
+    }
+
+    function aplicaAccion(accion, pedido) {
+        if (!pedido || pedido.eliminado === true) return false;
+        return accion.aplica(pedido, estadoActualDelPedido(pedido));
+    }
+
+    // Las acciones que sirven para algún pedido de la etapa.
+    function accionesDeLaEtapa() {
+        return ACCIONES_TANDA.filter(accion => registrosDeLaEtapaTanda.some(registro => aplicaAccion(accion, registro.pedido)));
     }
 
     function dibujarBarraTanda(etapa, deLaEtapa) {
-        const tanda = puedeSalirEnTanda(etapa) && deLaEtapa.length > 0;
-        idsDeLaEtapaTanda = tanda ? deLaEtapa.map(registro => String(registro.pedido.id || "")) : [];
+        registrosDeLaEtapaTanda = etapa && ETAPAS_EN_TANDA.includes(etapa.id) ? deLaEtapa : [];
+        etapaTanda = etapa ? etapa.id : "";
+        const tanda = accionesDeLaEtapa().length > 0;
 
         if (!tanda) {
             dejarDeElegir();
         } else {
             // Un pedido que salió de la etapa (otro celular lo movió o lo
             // canceló) deja de estar elegido.
+            const ids = idsDeLaEtapaTanda();
             [...elegidos].forEach(id => {
-                if (!idsDeLaEtapaTanda.includes(id)) elegidos.delete(id);
+                if (!ids.includes(id)) elegidos.delete(id);
             });
         }
 
-        barraTanda.classList.toggle("oculto", !tanda);
+        barraTanda.classList.toggle("oculto", !eligiendo);
         actualizarTanda();
     }
 
-    function actualizarTanda() {
-        botonElegir.classList.toggle("oculto", eligiendo);
-        botonMarcarTodos.classList.toggle("oculto", !eligiendo);
-        botonDejarDeElegir.classList.toggle("oculto", !eligiendo);
+    function puedeElegirEnLaEtapa() {
+        return accionesDeLaEtapa().length > 0;
+    }
 
-        const todos = idsDeLaEtapaTanda.length > 0 && idsDeLaEtapaTanda.every(id => elegidos.has(id));
+    function actualizarTanda() {
+        const ids = idsDeLaEtapaTanda();
+        const todos = ids.length > 0 && ids.every(id => elegidos.has(id));
         botonMarcarTodos.textContent = todos ? "Desmarcar todos" : "Marcar todos";
 
-        botonSalirEnTanda.textContent = "Salir a repartir (" + elegidos.size + ")";
-        botonSalirEnTanda.disabled = elegidos.size === 0;
+        const disponibles = accionesDeLaEtapa();
+        const principal = accionPrincipalTanda(disponibles);
+        ACCIONES_TANDA.forEach(accion => {
+            const boton = botonesTanda[accion.id];
+            const cantidad = cantidadTanda(accion);
+            boton.textContent = accion.boton + " (" + cantidad + ")";
+            boton.disabled = cantidad === 0;
+            boton.classList.toggle("oculto", accion !== principal);
+        });
+        botonMoverTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length);
+        botonMasTanda.classList.toggle("oculto", !disponibles.some(accion => accion.peligro));
+        filaTanda.classList.toggle("oculto", botonMoverTanda.classList.contains("oculto") && botonMasTanda.classList.contains("oculto"));
         actualizarBotonNuevo();
+    }
+
+    function cantidadTanda(accion) {
+        return [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id))).length;
+    }
+
+    let etapaTanda = "";
+    function accionPrincipalTanda(disponibles) {
+        if (ETAPAS_SIN_PRINCIPAL.includes(etapaTanda)) return null;
+        return disponibles.find(accion => !accion.peligro) || null;
+    }
+
+    function otrosPasosTanda(disponibles) {
+        const principal = accionPrincipalTanda(disponibles);
+        return disponibles.filter(accion => accion !== principal && !accion.peligro);
+    }
+
+    // Hoja con acciones de la tanda, cada una con cuántos pedidos toca.
+    function abrirHojaTanda(titulo, acciones) {
+        const p = window.piezas;
+        if (!p || !acciones.length) return;
+        const iconos = { enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
+        const caja = p.hoja({
+            titulo,
+            sub: textoPedidos(elegidos.size) + " elegido" + (elegidos.size === 1 ? "" : "s"),
+            html: `<div class="pzMotivos">${acciones.map(accion => {
+                const cantidad = cantidadTanda(accion);
+                return `<button type="button" class="pzMotivo${accion.peligro ? " motivoPeligroTanda" : ""}" data-accion-tanda="${accion.id}" ${cantidad ? "" : "disabled"}>${p.ico(iconos[accion.id] || "check", 20)}${p.esc(accion.boton + " (" + cantidad + ")")}</button>`;
+            }).join("")}</div>`
+        });
+        caja.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-accion-tanda]");
+            const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accionTanda);
+            if (!accion || boton.disabled) return;
+            p.cerrar();
+            abrirConfirmarTanda(accion);
+        });
     }
 
     function actualizarPieTanda() {
@@ -885,14 +1077,56 @@
         const id = tarjeta.dataset.id;
         if (elegidos.has(id)) elegidos.delete(id);
         else elegidos.add(id);
+        if (!elegidos.size) {
+            // Sin ninguno elegido, vuelve a la lista de siempre.
+            dejarDeElegir();
+            dibujarLista();
+            return;
+        }
         marcarTarjeta(tarjeta, elegidos.has(id));
         actualizarTanda();
     }
 
-    botonElegir.addEventListener("click", () => {
-        eligiendo = true;
-        elegidos.clear();
-        dibujarLista();
+    // Mantener apretada la tarjeta: entra a elegir varios con esa elegida.
+    const ESPERA_MANTENER = 500;
+    let temporizadorMantener = null;
+    let inicioMantener = null;
+    let ignorarClick = false;
+
+    function cortarMantener() {
+        clearTimeout(temporizadorMantener);
+        temporizadorMantener = null;
+        inicioMantener = null;
+    }
+
+    lista.addEventListener("pointerdown", evento => {
+        ignorarClick = false;
+        if (evento.button !== undefined && evento.button !== 0) return;
+        const tarjeta = evento.target.closest(".tarjetaSeguimiento");
+        if (!tarjeta || eligiendo || !puedeElegirEnLaEtapa()) return;
+
+        cortarMantener();
+        inicioMantener = { x: evento.clientX, y: evento.clientY };
+        temporizadorMantener = setTimeout(() => {
+            cortarMantener();
+            ignorarClick = true;
+            navigator.vibrate?.(30);
+            eligiendo = true;
+            elegidos.clear();
+            elegidos.add(tarjeta.dataset.id);
+            dibujarLista();
+        }, ESPERA_MANTENER);
+    });
+
+    lista.addEventListener("pointermove", evento => {
+        if (!inicioMantener) return;
+        if (Math.abs(evento.clientX - inicioMantener.x) > 10 || Math.abs(evento.clientY - inicioMantener.y) > 10) cortarMantener();
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(tipo => lista.addEventListener(tipo, cortarMantener));
+
+    // Que el celular no abra su menú de "copiar" al mantener apretado.
+    lista.addEventListener("contextmenu", evento => {
+        if (evento.target.closest(".tarjetaSeguimiento") && (eligiendo || puedeElegirEnLaEtapa())) evento.preventDefault();
     });
 
     botonDejarDeElegir.addEventListener("click", () => {
@@ -901,17 +1135,29 @@
     });
 
     botonMarcarTodos.addEventListener("click", () => {
-        const todos = idsDeLaEtapaTanda.every(id => elegidos.has(id));
+        const ids = idsDeLaEtapaTanda();
+        const todos = ids.every(id => elegidos.has(id));
         elegidos.clear();
-        if (!todos) idsDeLaEtapaTanda.forEach(id => elegidos.add(id));
+        if (!todos) ids.forEach(id => elegidos.add(id));
+        else eligiendo = false;
         // Con "Marcar todos" se ven todos los elegidos, también los que
         // estaban después de "Ver más".
-        if (!todos) mostrando = Math.max(mostrando, idsDeLaEtapaTanda.length);
+        if (!todos) mostrando = Math.max(mostrando, ids.length);
         dibujarLista();
     });
 
-    botonSalirEnTanda.addEventListener("click", () => {
-        if (elegidos.size) abrirConfirmarTanda();
+    pieTanda.addEventListener("click", evento => {
+        if (evento.target.closest(".botonMoverTanda")) {
+            abrirHojaTanda("Mover a otro paso", otrosPasosTanda(accionesDeLaEtapa()));
+            return;
+        }
+        if (evento.target.closest(".botonMasTanda")) {
+            abrirHojaTanda("Más acciones", accionesDeLaEtapa().filter(accion => accion.peligro));
+            return;
+        }
+        const boton = evento.target.closest("button[data-accion]");
+        const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accion);
+        if (accion && !boton.disabled) abrirConfirmarTanda(accion);
     });
 
     function textoPedidos(cantidad) {
@@ -930,7 +1176,7 @@
         contenido.setAttribute("aria-modal", "true");
         contenido.setAttribute("aria-labelledby", "tituloRepartoTanda");
 
-        const titulo = crear("h2", "", "Salir a repartir");
+        const titulo = crear("h2", "");
         titulo.id = "tituloRepartoTanda";
 
         const explicacion = crear("p", "explicacionTextoPedido");
@@ -942,7 +1188,7 @@
         const botones = crear("div", "modalBotones");
         const volver = crear("button", "btnModalCancelar", "Volver");
         volver.type = "button";
-        const confirmar = crear("button", "btnModalConfirmar", "Salir a repartir");
+        const confirmar = crear("button", "btnModalConfirmar");
         confirmar.type = "button";
         confirmar.id = "confirmarRepartoTanda";
         botones.append(volver, confirmar);
@@ -958,24 +1204,33 @@
         });
         confirmar.addEventListener("click", () => {
             cerrar();
-            salirEnTanda();
+            hacerEnTanda();
         });
 
         return modal;
     }
 
-    // Los pedidos que se confirman: los elegidos al abrir la ventana. Si
-    // mientras tanto otro celular mueve alguno, al confirmar se avisa.
+    // Los pedidos que se confirman: los elegidos (a los que les sirve la
+    // acción) al abrir la ventana. Si mientras tanto otro celular mueve
+    // alguno, al confirmar se avisa.
     let idsAConfirmar = [];
+    let accionAConfirmar = null;
 
-    function abrirConfirmarTanda() {
+    function abrirConfirmarTanda(accion) {
         const modal = crearModalTanda();
-        idsAConfirmar = [...elegidos];
+        accionAConfirmar = accion;
+        idsAConfirmar = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id)));
         const pedidos = idsAConfirmar.map(buscarPedido).filter(Boolean);
         const unidades = pedidos.reduce((total, pedido) => total + unidadesDelPedido(pedido), 0);
+        const otros = elegidos.size - idsAConfirmar.length;
+        const cuantos = textoPedidos(idsAConfirmar.length) + " (" + textoUnidades(unidades) + ")";
 
+        document.getElementById("tituloRepartoTanda").textContent = accion.peligro ? accion.boton + " pedidos" : accion.boton;
         document.getElementById("explicacionRepartoTanda").textContent =
-            textoPedidos(idsAConfirmar.length) + " (" + textoUnidades(unidades) + ") pasan a \u00abEn reparto\u00bb, a tu nombre.";
+            (accion.peligro
+                ? cuantos + (idsAConfirmar.length === 1 ? " desaparece" : " desaparecen") + " de la app para todos. Es para errores, por ejemplo un pedido cargado dos veces."
+                : cuantos + (idsAConfirmar.length === 1 ? " pasa a " : " pasan a ") + accion.destino + ".") +
+            (otros > 0 ? " " + (otros === 1 ? "1 elegido no se puede mover así y queda como está." : otros + " elegidos no se pueden mover así y quedan como están.") : "");
 
         const listaTanda = document.getElementById("listaRepartoTanda");
         listaTanda.innerHTML = "";
@@ -988,47 +1243,51 @@
             listaTanda.appendChild(item);
         });
 
-        document.getElementById("confirmarRepartoTanda").textContent = "Salir a repartir (" + idsAConfirmar.length + ")";
+        const confirmar = document.getElementById("confirmarRepartoTanda");
+        confirmar.textContent = accion.boton + " (" + idsAConfirmar.length + ")";
+        confirmar.className = accion.peligro ? "btnModalPeligro" : "btnModalConfirmar";
         modal.classList.remove("oculto");
     }
 
-    function salirEnTanda() {
+    function hacerEnTanda() {
+        const accion = accionAConfirmar;
         const ids = idsAConfirmar;
         idsAConfirmar = [];
-        const noSalieron = [];
-        let salieron = 0;
+        accionAConfirmar = null;
+        if (!accion) return;
+        const noSeMovieron = [];
+        let hechos = 0;
 
         ids.forEach(id => {
             const pedido = buscarPedido(id);
             const comercio = String(pedido && pedido.comercio || "Un pedido").trim();
             const estado = pedido && pedido.eliminado !== true ? estadoActualDelPedido(pedido) : "";
-            const paso = pasosSiguientes(estado).find(item => item.hacia === "enReparto");
 
-            if (!paso) {
-                noSalieron.push(comercio + (estado ? " (ahora está \u00ab" + (nombreDeEstadoPedido(estado) || estado) + "\u00bb)" : " (ya no está)"));
+            if (!aplicaAccion(accion, pedido)) {
+                noSeMovieron.push(comercio + (estado ? " (ahora está «" + (nombreDeEstadoPedido(estado) || estado) + "»)" : " (ya no está)"));
                 return;
             }
 
             try {
-                window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "");
-                salieron += 1;
+                accion.hacer(id);
+                hechos += 1;
             } catch (error) {
-                console.error("No se pudo sacar a reparto el pedido.", error);
-                noSalieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
+                console.error("No se pudo mover el pedido en tanda.", error);
+                noSeMovieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
             }
         });
 
         dejarDeElegir();
         dibujarLista();
 
-        if (!noSalieron.length) {
-            mostrarToast(salieron === 1 ? "Pedido en reparto" : salieron + " pedidos en reparto");
+        if (!noSeMovieron.length) {
+            mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
             return;
         }
 
         mostrarAviso(
-            salieron ? "Algunos pedidos no salieron" : "No salió ningún pedido",
-            "Salieron " + salieron + " de " + ids.length + " a reparto. No se movieron: " + noSalieron.join("; ") + "."
+            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
+            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
         );
     }
 
@@ -1173,7 +1432,7 @@
                 izquierda.append(
                     crear("strong", "", String(item.producto || "Sin producto")),
                     crear("small", "", Number.isFinite(precio)
-                        ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u"
+                        ? "x" + cantidad + "  ·  " + textoPrecio(precio) + " c/u" + (item.precioCambiado ? "  ·  precio especial" : "")
                         : "x" + cantidad + "  ·  Sin precio")
                 );
 
@@ -1488,6 +1747,15 @@
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
         cuerpo.append(datos);
+        // Secciones que suman otros módulos (prueba de entrega, devoluciones).
+        (window.fichaPedidoExtras || []).forEach(crearSeccion => {
+            try {
+                const seccion = crearSeccion(pedido, estado);
+                if (seccion) cuerpo.appendChild(seccion);
+            } catch (error) {
+                console.error("Falló una sección de la ficha del pedido.", error);
+            }
+        });
         if (!enChecklist) cuerpo.appendChild(dibujarProductos(pedido, estado));
 
         const observaciones = String(pedido.observaciones || "").trim();
@@ -1705,7 +1973,7 @@
         else if (preparacion && !preparar && preparacion.completa) pista = "Está todo listo: lo marca como preparado quien prepara pedidos.";
         else if (estado === "cargado") {
             pista = puedeAnotarFaltantes()
-                ? "Al tildar el primer producto, el pedido pasa a \u00abEn preparaci\u00f3n\u00bb."
+                ? "Tild\u00e1 cada producto a medida que lo arm\u00e1s."
                 : "Tus tildes quedan anotados. El pedido pasa a \u00abEn preparaci\u00f3n\u00bb cuando tilda quien prepara pedidos.";
         }
 
@@ -1737,7 +2005,12 @@
         if (entregar) {
             const id = String(pedido.id || "");
             acciones.append(
-                crearDeslizador("Deslizá para marcar Entregado", () => entregarSinCambios(id, estado)),
+                crearDeslizador("Deslizá para marcar Entregado", () => {
+                    // Prueba de entrega (T70): si está pedida, antes la foto y la firma.
+                    const prueba = window.pruebaEntregaVendeFrio;
+                    if (prueba && prueba.antesDeEntregar(id, () => entregarSinCambios(id, estado))) return;
+                    entregarSinCambios(id, estado);
+                }),
                 crearBoton("btnAccion secundario botonEntregarConCambios", "Entregar con cambios", "entregarConCambios")
             );
         }
@@ -1761,6 +2034,25 @@
         if (estado === "entregado") acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
 
         if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
+
+        // Opciones que suman otros módulos (devolución, prueba de entrega).
+        (window.accionesPedidoExtras || []).forEach(crearAcciones => {
+            try {
+                (crearAcciones(pedido, estado) || []).forEach(extra => {
+                    const boton = crearBoton("btnAccion secundario botonExtraPedido", extra.texto, "");
+                    if (extra.icono && window.icono) boton.insertAdjacentHTML("afterbegin", window.icono(extra.icono, 18));
+                    boton.removeAttribute("data-accion");
+                    boton.addEventListener("click", evento => {
+                        evento.stopPropagation();
+                        document.getElementById("menuFichaPedido")?.classList.add("oculto");
+                        extra.alTocar(pedido);
+                    });
+                    acciones.appendChild(boton);
+                });
+            } catch (error) {
+                console.error("Falló una opción de la ficha del pedido.", error);
+            }
+        });
         if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
@@ -1774,10 +2066,16 @@
         if (eliminar) peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
         if (peligro.children.length) acciones.appendChild(peligro);
 
+        // Etapa 8 (pedido del dueño): los cuatro pasos en orden, cada uno
+        // con su botón abajo. Los hechos llevan un tilde y los que todavía
+        // no se pueden hacer se ven más claritos.
+        const pasos = armarPasos(acciones, estado, Boolean(cobrado));
+        if (pasos) acciones.prepend(pasos);
+
         // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
         // entrega). Lo demás va en "Más opciones" (⋯).
         const opciones = Array.from(acciones.querySelectorAll(
-            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .accionesSecundariasPedido .btnAccion"
+            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .botonExtraPedido, .accionesSecundariasPedido .btnAccion"
         ));
         if (opciones.length) {
             const menu = crear("div", "menuFichaPedido oculto");
@@ -1804,6 +2102,42 @@
         }
 
         return acciones;
+    }
+
+    const ORDEN_DE_PASOS = { cargado: 0, enPreparacion: 0, preparado: 1, enVehiculo: 2, enReparto: 2, entregado: 3 };
+
+    function armarPasos(acciones, estado, cobrado) {
+        const actual = ORDEN_DE_PASOS[estado];
+        if (actual === undefined) return null;
+        const hijos = Array.from(acciones.children);
+        const deslizador = hijos.find(elemento => elemento.classList.contains("deslizador"));
+        const pasos = [
+            { titulo: "Armá el pedido", hecho: actual > 0, elementos: hijos.filter(elemento =>
+                elemento.matches('[data-estado="enPreparacion"], [data-estado="preparado"]') || (actual === 0 && elemento.classList.contains("pistaChecklist"))) },
+            { titulo: "Salí a repartir", hecho: actual > 1, elementos: hijos.filter(elemento => elemento.matches('[data-estado="enReparto"]')) },
+            { titulo: "Entregalo", hecho: actual > 2, elementos: deslizador ? [deslizador] : [] },
+            { titulo: "Registrá el cobro", hecho: cobrado, elementos: hijos.filter(elemento => elemento.classList.contains("botonRegistrarCobro")) }
+        ];
+        const caja = crear("ol", "pasosFichaPedido");
+        caja.setAttribute("aria-label", "Pasos del pedido");
+        pasos.forEach((paso, indice) => {
+            const item = crear("li", "pasoFicha");
+            const disponible = paso.elementos.length > 0;
+            item.classList.add(paso.hecho ? "hecho" : disponible ? "ahora" : "despues");
+            const titulo = crear("p", "pasoFichaTitulo");
+            titulo.innerHTML = `<span class="pasoFichaNumero" aria-hidden="true">${paso.hecho && window.icono ? window.icono("check", 14) : indice + 1}</span>`;
+            titulo.append(crear("span", "", "Paso " + (indice + 1) + ": " + paso.titulo + (paso.hecho ? " (hecho)" : "")));
+            item.appendChild(titulo);
+            paso.elementos.forEach(elemento => item.appendChild(elemento));
+            if (!paso.hecho && !disponible) {
+                const nota = indice === 3 && !puedeCobrar() ? "Lo registra quien cobra."
+                    : indice === 3 ? "Se registra después de entregar."
+                        : indice < actual ? "" : "Lo hace quien tiene ese permiso.";
+                if (nota) item.appendChild(crear("small", "pasoFichaNota", nota));
+            }
+            caja.appendChild(item);
+        });
+        return caja;
     }
 
     function avisarError(error) {
@@ -2047,7 +2381,7 @@
         });
     }
 
-    // Eliminar (T26): solo en "Cargado", para errores (por ejemplo, un pedido
+    // Eliminar (T26): en cualquier paso (T125b), para errores (por ejemplo, un pedido
     // cargado dos veces). Desaparece de la app, pero queda guardado por dentro.
     // Un "Histórico" (sin estado), solo el dueño, como en Historial (T27b).
     function eliminarPedido(id, estado) {
@@ -2356,6 +2690,28 @@
     // Ventana del faltante: cuánto se preparó (menos de lo pedido) y una
     // observación. Lo pedido se conserva.
     let faltanteAbierto = null;
+    const MOTIVO_OTRO = "Otro";
+    const MOTIVOS_FALTANTE = ["No había en el depósito", "Vencido", "Roto o en mal estado", MOTIVO_OTRO];
+
+    function elegirMotivoFaltante(motivo) {
+        if (!faltanteAbierto) return;
+        faltanteAbierto.motivo = motivo || "";
+        document.querySelectorAll("#modalFaltantePedido [data-motivo]").forEach(boton => {
+            boton.setAttribute("aria-pressed", boton.dataset.motivo === motivo ? "true" : "false");
+        });
+        const otro = motivo === MOTIVO_OTRO;
+        document.getElementById("observacionFaltantePedido").style.display = otro ? "" : "none";
+        const etiqueta = document.querySelector('#modalFaltantePedido label[for="observacionFaltantePedido"]');
+        if (etiqueta) etiqueta.style.display = otro ? "" : "none";
+    }
+
+    function dibujarFaltan() {
+        const texto = document.getElementById("faltanCuantosFaltante");
+        if (!texto || !faltanteAbierto) return;
+        const puestas = Number.parseInt(document.getElementById("cantidadFaltantePedido").value, 10);
+        const faltan = Number.isInteger(puestas) && puestas >= 0 && puestas < faltanteAbierto.pedida ? faltanteAbierto.pedida - puestas : 0;
+        texto.textContent = faltan ? "Falta" + (faltan === 1 ? " 1" : "n " + faltan) : "";
+    }
 
     function crearModalFaltante() {
         let modal = document.getElementById("modalFaltantePedido");
@@ -2418,7 +2774,26 @@
         guardar.type = "button";
         botones.append(cancelar, guardar);
 
-        contenido.append(titulo, explicacion, etiquetaCantidad, contador, etiquetaObservacion, campoObservacion, error, quitar, botones);
+        // Motivo con botones (T111): escribir queda solo para "Otro".
+        const faltan = crear("p", "faltanCuantosFaltante");
+        faltan.id = "faltanCuantosFaltante";
+        faltan.setAttribute("aria-live", "polite");
+        const etiquetaMotivo = crear("p", "etiquetaMotivoFaltante", "¿Por qué? Tocá uno");
+        const motivos = crear("div", "motivosFaltante");
+        motivos.setAttribute("role", "group");
+        motivos.setAttribute("aria-label", "Por qué falta");
+        MOTIVOS_FALTANTE.forEach(motivo => {
+            const boton = crear("button", "motivoFaltante", motivo);
+            boton.type = "button";
+            boton.dataset.motivo = motivo;
+            boton.setAttribute("aria-pressed", "false");
+            motivos.appendChild(boton);
+        });
+        etiquetaObservacion.style.display = "none";
+        campoObservacion.style.display = "none";
+        etiquetaObservacion.textContent = "Contá qué pasó";
+
+        contenido.append(titulo, explicacion, etiquetaCantidad, contador, faltan, etiquetaMotivo, motivos, etiquetaObservacion, campoObservacion, error, quitar, botones);
         modal.appendChild(contenido);
         document.body.appendChild(modal);
 
@@ -2433,8 +2808,18 @@
         modal.addEventListener("click", evento => {
             if (evento.target === modal) cerrarFaltante();
         });
-        campoCantidad.addEventListener("input", ocultarError);
+        campoCantidad.addEventListener("input", () => {
+            ocultarError();
+            dibujarFaltan();
+        });
         campoObservacion.addEventListener("input", ocultarError);
+        motivos.addEventListener("click", evento => {
+            const boton = evento.target.closest("button[data-motivo]");
+            if (!boton || !faltanteAbierto) return;
+            elegirMotivoFaltante(boton.dataset.motivo);
+            ocultarError();
+            if (boton.dataset.motivo === MOTIVO_OTRO) campoObservacion.focus();
+        });
 
         contador.addEventListener("click", evento => {
             const boton = evento.target.closest("button[data-paso]");
@@ -2445,6 +2830,7 @@
             const nuevo = Math.min(faltanteAbierto.pedida - 1, Math.max(0, base + Number(boton.dataset.paso)));
             campoCantidad.value = String(nuevo);
             ocultarError();
+            dibujarFaltan();
         });
 
         guardar.addEventListener("click", () => {
@@ -2460,9 +2846,14 @@
                 return;
             }
 
-            const observacion = campoObservacion.value.trim();
+            const motivo = faltanteAbierto.motivo;
+            const observacion = motivo && motivo !== MOTIVO_OTRO ? motivo : campoObservacion.value.trim();
+            if (!motivo) {
+                mostrarError("Tocá por qué falta.");
+                return;
+            }
             if (!observacion) {
-                mostrarError("Escribí una observación para seguir.", campoObservacion);
+                mostrarError("Contá qué pasó para seguir.", campoObservacion);
                 return;
             }
 
@@ -2513,15 +2904,17 @@
 
         const campoCantidad = document.getElementById("cantidadFaltantePedido");
         campoCantidad.max = String(linea.cantidad - 1);
-        campoCantidad.value = linea.faltante ? String(linea.faltante.preparada) : "";
+        campoCantidad.value = linea.faltante ? String(linea.faltante.preparada) : String(linea.cantidad - 1);
         campoCantidad.placeholder = "De 0 a " + (linea.cantidad - 1);
 
         document.getElementById("observacionFaltantePedido").value = linea.faltante ? String(linea.faltante.observacion || "") : "";
         document.getElementById("errorFaltantePedido").classList.add("oculto");
         document.getElementById("quitarFaltantePedido").classList.toggle("oculto", !linea.faltante);
+        const observacionVieja = linea.faltante ? String(linea.faltante.observacion || "").trim() : "";
+        elegirMotivoFaltante(MOTIVOS_FALTANTE.includes(observacionVieja) ? observacionVieja : observacionVieja ? MOTIVO_OTRO : "");
+        dibujarFaltan();
 
         modal.classList.remove("oculto");
-        setTimeout(() => campoCantidad.focus(), 50);
     }
 
     function cerrarFaltante() {
@@ -3188,10 +3581,36 @@
         return /^\d+(\.\d{1,2})?$/.test(limpio) ? Number(limpio) : NaN;
     }
 
-    // 12500.5 -> "12500,5" (para escribirlo en el campo).
+    // 12500.5 -> "$ 12.500,5" (para escribirlo en el campo; T112).
     function montoParaEscribir(valor) {
         const numero = Math.round((Number(valor) || 0) * 100) / 100;
-        return String(numero).replace(".", ",");
+        return textoPrecio(numero);
+    }
+
+    // Con cuánto puede pagar (T112): billetes redondos arriba del monto.
+    function billetesParaPagar(monto) {
+        if (!(monto > 0)) return [];
+        const opciones = [];
+        [1000, 10000, 20000].forEach(paso => {
+            const redondo = Math.ceil(monto / paso) * paso;
+            if (redondo > monto && !opciones.includes(redondo)) opciones.push(redondo);
+        });
+        return opciones.slice(0, 2);
+    }
+
+    function dibujarVuelto() {
+        const caja = document.getElementById("vueltoCobroPedido");
+        if (!caja || !cobroAbierto) return;
+        const monto = leerMonto(cobroAbierto.monto);
+        const pagaCon = cobroAbierto.pagaCon;
+        const vuelto = pagaCon === "justo" ? 0
+            : Number.isFinite(monto) && pagaCon ? Math.round((pagaCon - monto) * 100) / 100 : NaN;
+        caja.classList.toggle("oculto", !Number.isFinite(vuelto));
+        caja.classList.toggle("faltaPlata", vuelto < 0);
+        if (Number.isFinite(vuelto)) {
+            caja.querySelector("span").textContent = vuelto === 0 ? "Da justo, sin vuelto" : vuelto < 0 ? "No alcanza, faltan" : "Le das de vuelto";
+            caja.querySelector("strong").textContent = vuelto === 0 ? "" : textoPrecio(Math.abs(vuelto));
+        }
     }
 
     function crearModalCobro() {
@@ -3240,6 +3659,16 @@
         guardar.addEventListener("click", guardarCobro);
 
         cuerpo.addEventListener("click", evento => {
+            const billete = evento.target.closest("button[data-paga-con]");
+            if (billete && cobroAbierto) {
+                const valor = billete.dataset.pagaCon;
+                cobroAbierto.pagaCon = valor === "justo" ? "justo" : Number(valor);
+                cuerpo.querySelectorAll("button[data-paga-con]").forEach(otro => otro.setAttribute("aria-pressed", otro === billete ? "true" : "false"));
+                const campoOtro = document.getElementById("pagaConCobroPedido");
+                if (campoOtro) campoOtro.value = "";
+                dibujarVuelto();
+                return;
+            }
             const boton = evento.target.closest("button[data-cobro]");
             if (!boton || !cobroAbierto) return;
 
@@ -3261,8 +3690,16 @@
 
         // El monto se escribe sin redibujar (no se pierde lo que se tipea).
         cuerpo.addEventListener("input", evento => {
+            if (evento.target.id === "pagaConCobroPedido" && cobroAbierto) {
+                const valor = leerMonto(evento.target.value);
+                cobroAbierto.pagaCon = Number.isFinite(valor) && valor > 0 ? valor : null;
+                cuerpo.querySelectorAll("button[data-paga-con]").forEach(otro => otro.setAttribute("aria-pressed", "false"));
+                dibujarVuelto();
+                return;
+            }
             if (evento.target.id !== "montoCobroPedido" || !cobroAbierto) return;
             cobroAbierto.monto = evento.target.value;
+            dibujarVuelto();
             const error = document.getElementById("errorCobroPedido");
             if (error) error.classList.add("oculto");
         });
@@ -3442,6 +3879,42 @@
             cuerpo.append(etiqueta, campo, ayuda);
         }
 
+        // Efectivo (T112): con cuánto paga y cuánto vuelto le das.
+        if (forma === "efectivo") {
+            const monto = leerMonto(cobroAbierto.monto);
+            const pagaCon = crear("div", "pagaConCobro");
+            pagaCon.appendChild(crear("span", "etiquetaCobro", "¿Con cuánto paga?"));
+            const billetes = crear("div", "billetesCobro");
+            billetes.setAttribute("role", "group");
+            billetes.setAttribute("aria-label", "Con cuánto paga");
+            [["justo", "Justo"], ...billetesParaPagar(monto).map(valor => [String(valor), textoPrecio(valor)])].forEach(([id, nombre]) => {
+                const boton = crear("button", "billeteCobro", nombre);
+                boton.type = "button";
+                boton.dataset.pagaCon = id;
+                const elegido = id === "justo" ? cobroAbierto.pagaCon === "justo" : cobroAbierto.pagaCon === Number(id);
+                boton.setAttribute("aria-pressed", elegido ? "true" : "false");
+                billetes.appendChild(boton);
+            });
+            const otro = document.createElement("input");
+            otro.type = "text";
+            otro.inputMode = "numeric";
+            otro.id = "pagaConCobroPedido";
+            otro.className = "pagaConOtro";
+            otro.placeholder = "Otro";
+            otro.setAttribute("aria-label", "Paga con otro monto");
+            if (typeof cobroAbierto.pagaCon === "number" && !billetesParaPagar(monto).includes(cobroAbierto.pagaCon)) {
+                otro.value = textoPrecio(cobroAbierto.pagaCon);
+            }
+            billetes.appendChild(otro);
+            const vuelto = crear("div", "vueltoCobro oculto");
+            vuelto.id = "vueltoCobroPedido";
+            vuelto.setAttribute("aria-live", "polite");
+            vuelto.append(crear("span", "", ""), crear("strong", "", ""));
+            pagaCon.append(billetes, vuelto);
+            cuerpo.appendChild(pagaCon);
+            dibujarVuelto();
+        }
+
         if (forma === "transferencia") {
             const foto = crear("div", "fotoCobro");
             foto.appendChild(crear("span", "etiquetaCobro", "Foto del comprobante (opcional)"));
@@ -3473,6 +3946,28 @@
             }
             foto.appendChild(acciones);
             cuerpo.appendChild(foto);
+
+            // Alias y QR de la distribuidora (T77): se le muestran al comercio.
+            const cobrarQr = window.cobrarQrVendeFrio;
+            if (cobrarQr && cobrarQr.hay()) {
+                const mostrar = crear("button", "btnAccion secundario mostrarAliasCobro", "Mostrar alias y QR");
+                mostrar.type = "button";
+                mostrar.id = "mostrarAliasCobro";
+                mostrar.addEventListener("click", () => {
+                    if (!cobroAbierto) return;
+                    const abierto = cobroAbierto;
+                    cobrarQr.mostrar({
+                        comercio: String(pedido.comercio || ""),
+                        monto: leerMonto(abierto.monto),
+                        alConfirmar: () => {
+                            if (cobroAbierto !== abierto) return;
+                            abierto.forma = "transferencia";
+                            guardarCobro();
+                        }
+                    });
+                });
+                cuerpo.appendChild(mostrar);
+            }
         }
 
         if (forma === "pendiente") {
@@ -3721,8 +4216,11 @@
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
     window.seguimientoVendeFrio = {
+        redibujarFicha: () => dibujarFicha(),
+        pedidoAbierto: () => idFichaAbierta,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
+            etapa = ETAPAS_DE_ANTES[etapa] || etapa;
             if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;
             etapaActual = etapa;
             if (idFichaAbierta) cerrarFicha();

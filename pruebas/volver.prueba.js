@@ -54,7 +54,7 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
 
     // Rutas, Estadísticas y Cierre del día también tienen su botón.
     await abrirMas(page);
-    await page.locator(".masAccesos").getByRole("button", { name: "Rutas" }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
     // Las tarjetas de Rutas arrancan plegadas, con el resumen a la vista.
     await expect(page.locator(".tarjetaSeleccionRuta")).not.toHaveAttribute("open", "");
@@ -65,13 +65,13 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await page.locator("#pantallaRutas").getByRole("button", { name: "Volver a Más" }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
     // Al lado, la casita lleva directo a Inicio.
-    await page.locator(".masAccesos").getByRole("button", { name: "Rutas" }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await casita(page).click();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     for (const acceso of ["Estadísticas", "Cierre del día"]) {
         await abrirMas(page);
-        await page.locator(".masAccesos").getByRole("button", { name: acceso }).click();
+        await page.locator("#masAccesos").getByRole("button", { name: acceso }).click();
         await page.evaluate(() => window.scrollTo(0, 0));
         await arriba(page).getByRole("button", { name: "Volver a Más" }).click();
         await expect(page.locator("#pantallaConfiguracion")).toBeVisible();

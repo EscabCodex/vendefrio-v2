@@ -25,7 +25,6 @@ const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;
-let botonRepetirPedido = null;
 let mensajeSinResultadosPedido = null;
 
 // -----------------------------------------------------
@@ -37,7 +36,7 @@ function actualizarDatalistPedido() {
 
     listaComercios.innerHTML = "";
 
-    obtenerComercios()
+    comerciosActivos()
         .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
         .forEach(comercio => {
             const option = document.createElement("option");
@@ -52,6 +51,12 @@ const cargarListaClientes = actualizarDatalistPedido;
 // -----------------------------------------------------
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
+
+// El comercio elegido en Nuevo pedido, o null.
+function comercioDelPedidoActual() {
+    const nombre = inputCliente ? inputCliente.value.trim() : "";
+    return nombre ? buscarComercioPorNombre(nombre) : null;
+}
 
 function actualizarResumenPedido() {
     let unidades = 0;
@@ -68,6 +73,8 @@ function actualizarResumenPedido() {
 
     if (totalUnidadesPedido) {
         totalUnidadesPedido.textContent = String(unidades);
+        const palabraUnidades = document.getElementById("palabraUnidadesPedido");
+        if (palabraUnidades) palabraUnidades.textContent = unidades === 1 ? "unidad" : "unidades";
     }
 
     if (totalTiposPedido) {
@@ -78,6 +85,7 @@ function actualizarResumenPedido() {
 
     // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
     const productosCatalogo = obtenerProductos();
+    const comercioActual = comercioDelPedidoActual();
     let plata = 0;
     document.querySelectorAll("#productos .marca").forEach(marca => {
         let enElPedido = 0;
@@ -87,7 +95,12 @@ function actualizarResumenPedido() {
             enElPedido += 1;
             const producto = (productosCatalogo[select.dataset.marca] || [])
                 .find(item => item && item.nombre === select.dataset.producto);
-            const precio = Number(producto && producto.precio);
+            // El precio que corre hoy: oferta o lista del comercio (T68, T78),
+            // o el cambiado solo para este pedido (T98).
+            const cambiado = window.nuevoPedidoVendeFrio
+                ? window.nuevoPedidoVendeFrio.precioCambiado(select.dataset.marca, select.dataset.producto)
+                : null;
+            const precio = Number(cambiado !== null ? cambiado : precioVigente(producto, comercioActual));
             if (Number.isFinite(precio)) plata += precio * cantidad;
         });
         const contador = marca.querySelector(".contadorMarca");
@@ -299,16 +312,7 @@ function prepararBuscadorProductosPedido() {
     const accionesBusqueda = document.createElement("div");
     accionesBusqueda.className = "accionesBusquedaPedido";
 
-    botonRepetirPedido = document.createElement("button");
-    botonRepetirPedido.type = "button";
-    botonRepetirPedido.className = "botonRepetirPedido";
-    botonRepetirPedido.innerHTML =
-        window.icono("refrescar", 15) +
-        " Repetir " +
-        String.fromCodePoint(0xFA) +
-        "ltimo pedido";
-    botonRepetirPedido.addEventListener("click", repetirUltimoPedido);
-
+    // "Repetir último pedido" está en el botón ⋯ de Nuevo pedido (T95).
     buscadorProductosPedido = document.createElement("input");
     buscadorProductosPedido.type = "search";
     buscadorProductosPedido.className = "buscadorPedido";
@@ -322,10 +326,7 @@ function prepararBuscadorProductosPedido() {
         aplicarFiltroProductosPedido();
     });
 
-    accionesBusqueda.append(
-        botonRepetirPedido,
-        buscadorProductosPedido
-    );
+    accionesBusqueda.append(buscadorProductosPedido);
 
     contenedorProductos.parentNode.insertBefore(
         accionesBusqueda,
@@ -345,15 +346,6 @@ function prepararBuscadorProductosPedido() {
     );
 }
 
-function actualizarEstadoBotonRepetir() {
-    if (!botonRepetirPedido) return;
-
-    // Eliminados y cancelados no se repiten (T26).
-    botonRepetirPedido.style.display = obtenerPedidosQueCuentan().length > 0
-        ? "inline-flex"
-        : "none";
-}
-
 function aplicarFiltroProductosPedido() {
     if (!contenedorProductos) return;
 
@@ -371,6 +363,9 @@ function aplicarFiltroProductosPedido() {
         let cantidadFilasVisibles = 0;
 
         const marcaElegida = !marcaElegidaPedido || marca.dataset.marca === marcaElegidaPedido;
+        // T97: abierta si la abrió, si se busca algo o si se eligió su chip.
+        const abierta = marca.dataset.plegable !== "1" || termino !== "" ||
+            Boolean(marcaElegidaPedido) || marcaAbiertaPedido(marca.dataset.marca);
 
         marca.querySelectorAll(".fila").forEach(fila => {
             const textoProducto = fila.querySelector("span");
@@ -389,8 +384,11 @@ function aplicarFiltroProductosPedido() {
 
         const cuerpo = marca.querySelector(".listaProdutos");
         if (cuerpo) {
-            cuerpo.style.display = "block";
+            cuerpo.style.display = abierta ? "block" : "none";
         }
+        marca.classList.toggle("cerrada", !abierta);
+        const titulo = marca.querySelector(".tituloMarca");
+        if (titulo && marca.dataset.plegable === "1") titulo.setAttribute("aria-expanded", String(abierta));
 
         if (visible) cantidadMarcasVisibles += 1;
     });
@@ -423,7 +421,34 @@ function ordenarProductosDelPedido(productos) {
     return lista;
 }
 
-function crearMarca(nombreMarca, productos, indiceMarca) {
+// Marcas desplegables (T97): con dos marcas o más, cada una se abre y se
+// cierra tocando su nombre. Las abiertas se recuerdan en este celular.
+const DB_MARCAS_ABIERTAS_PEDIDO = "vendefrio_marcas_abiertas_pedido";
+
+function marcasAbiertasPedido() {
+    try {
+        const lista = JSON.parse(localStorage.getItem(DB_MARCAS_ABIERTAS_PEDIDO) || "[]");
+        return Array.isArray(lista) ? lista : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function marcaAbiertaPedido(nombreMarca) {
+    return marcasAbiertasPedido().includes(nombreMarca);
+}
+
+function abrirMarcaPedido(nombreMarca, abrir) {
+    const lista = marcasAbiertasPedido().filter(nombre => nombre !== nombreMarca);
+    if (abrir) lista.push(nombreMarca);
+    try {
+        localStorage.setItem(DB_MARCAS_ABIERTAS_PEDIDO, JSON.stringify(lista));
+    } catch (error) {
+        console.warn("No se pudo recordar la marca abierta.", error);
+    }
+}
+
+function crearMarca(nombreMarca, productos, indiceMarca, plegable) {
     const card = document.createElement("div");
     card.className = "marca";
     card.style.setProperty("--acento", colorMarca(indiceMarca));
@@ -440,6 +465,16 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
     contador.className = "contadorMarca";
     titulo.append(nombre, contador);
     card.dataset.marca = nombreMarca;
+    if (plegable) {
+        card.dataset.plegable = "1";
+        titulo.setAttribute("role", "button");
+        titulo.tabIndex = 0;
+        titulo.setAttribute("aria-expanded", "false");
+        const flecha = document.createElement("i");
+        flecha.className = "flechaMarca";
+        flecha.innerHTML = window.icono("chevAbajo", 18);
+        titulo.appendChild(flecha);
+    }
 
     const cuerpo = document.createElement("div");
     cuerpo.className = "listaProdutos";
@@ -477,9 +512,17 @@ function crearMarca(nombreMarca, productos, indiceMarca) {
         });
     }
 
-    // Tocar el nombre de la marca la deja arriba de la pantalla.
-    titulo.addEventListener("click", () => {
-        cuerpo.style.display = "block";
+    // Tocar el nombre la abre o la cierra (T97). Con una sola marca, va abierta.
+    const alternar = () => {
+        if (!plegable) return;
+        abrirMarcaPedido(nombreMarca, card.classList.contains("cerrada"));
+        aplicarFiltroProductosPedido();
+    };
+    titulo.addEventListener("click", alternar);
+    titulo.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        evento.preventDefault();
+        alternar();
     });
 
     card.append(titulo, cuerpo);
@@ -536,14 +579,14 @@ function renderizarPedido() {
     if (!contenedorProductos) return;
 
     prepararBuscadorProductosPedido();
-    actualizarEstadoBotonRepetir();
     contenedorProductos.innerHTML = "";
-    const productos = obtenerProductos();
+    // Los archivados (T63) no se venden.
+    const productos = productosParaVender();
 
-    obtenerMarcasOrdenadas(productos)
-        .forEach((marca, indiceMarca) => {
-            crearMarca(marca, productos[marca], indiceMarca);
-        });
+    const marcas = obtenerMarcasOrdenadas(productos);
+    marcas.forEach((marca, indiceMarca) => {
+        crearMarca(marca, productos[marca], indiceMarca, marcas.length > 1);
+    });
 
     dibujarChipsMarcasPedido(obtenerMarcasOrdenadas(productos), productos);
     restaurarBorradorPedido();
@@ -601,11 +644,10 @@ function aplicarProductoPendienteCatalogo() {
     cambiarCantidad(select, 1);
 
     const marca = select.closest(".marca");
-    const cuerpo = marca ? marca.querySelector(".listaProdutos") : null;
-
-    document.querySelectorAll(".listaProdutos").forEach(lista => {
-        lista.style.display = lista === cuerpo ? "block" : "none";
-    });
+    if (marca) {
+        abrirMarcaPedido(marca.dataset.marca, true);
+        aplicarFiltroProductosPedido();
+    }
 
     const fila = select.closest(".fila");
     if (fila) fila.scrollIntoView({ block: "center" });
@@ -690,7 +732,12 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 function repetirUltimoPedido() {
     // Eliminados y cancelados no se repiten (T26).
     const historial = obtenerPedidosQueCuentan();
-    const ultimo = historial[0];
+    // T64: en la nube, el último pedido que cargó esta persona (no el de
+    // otro del equipo).
+    const yo = usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+    const ultimo = yo
+        ? historial.find(pedido => !pedido.autor || pedido.autor.idPersona === yo.idPersona)
+        : historial[0];
 
     if (!ultimo || (!ultimo.pedido && !Array.isArray(ultimo.productos))) {
         mostrarAviso(
@@ -775,18 +822,13 @@ function repetirUltimoPedido() {
         );
     };
 
-    if (hayCantidadActual && typeof abrirConfirmacion === "function") {
-        abrirConfirmacion(
-            "Repetir pedido",
-            "Se reemplazara el pedido que estas armando. " +
-            String.fromCodePoint(0xBF) +
-            "Continuar?",
-            cargar
-        );
-        return;
-    }
-
+    // Etapa 8: sin "¿Seguro?". Si había algo a medio armar, "Deshacer" lo
+    // devuelve.
+    const volverAlPedido = hayCantidadActual ? recordarPedidoActual() : null;
     cargar();
+    if (volverAlPedido && window.piezas) {
+        window.piezas.deshacer("Se reemplazó el pedido que armabas", volverAlPedido);
+    }
 }
 
 function escaparTextoRegex(texto) {
@@ -876,6 +918,9 @@ function generarPedido() {
         }
     });
 
+    // Precios cambiados solo para este pedido (T98).
+    if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.ajustarProductos(productosEstructurados);
+
     if (!hayProductos) {
         mostrarAviso(
             "Pedido vac\u00edo",
@@ -892,7 +937,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
 
         if (!datosNube) {
             mostrarAviso(
@@ -919,7 +964,8 @@ function generarPedido() {
         .map((bloque, indice) => {
             const emojiMarca = emojisMarcas[indice % emojisMarcas.length];
             const productos = bloque.productos
-                .map(item => "- " + item.producto + " x" + item.cantidad)
+                .map(item => "- " + item.producto + " x" + item.cantidad +
+                    (item.precioCambiado ? " (precio especial $ " + Number(item.precio).toLocaleString("es-AR") + ")" : ""))
                 .join("\n");
 
             return emojiMarca + " *" + bloque.marca + "*\n" + productos;
@@ -942,6 +988,10 @@ function generarPedido() {
         cantidadTipos +
         "\n\n" +
         detalleProductos;
+
+    // Fecha de entrega, cambios y precio especial (T95, T96, T98).
+    const textoExtra = window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.textoParaMensaje() : "";
+    if (textoExtra) mensaje += "\n\n" + textoExtra;
 
     if (observaciones) {
         mensaje +=
@@ -969,8 +1019,8 @@ function generarPedido() {
         ...(datosNube ? datosNube.campos : {})
     });
 
-    actualizarEstadoBotonRepetir();
     borrarBorradorPedido();
+    if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.alGuardar(idPedidoNuevo, cliente);
 
     if (pedidoCliente) pedidoCliente.textContent = cliente;
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
@@ -992,8 +1042,14 @@ function registrarPedido(nombreComercio) {
     // El pedido ya queda guardado en el historial aunque el nombre sea nuevo.
     if (!comercio) return false;
 
+    // T64: el contador sale de los pedidos guardados (más este, que se guarda
+    // enseguida), así dos celulares que cargan a la vez no se pisan la cuenta.
+    const anteriores = typeof contarPedidosDelComercio === "function" && typeof obtenerPedidosQueCuentan === "function"
+        ? contarPedidosDelComercio(comercio.nombre, obtenerPedidosQueCuentan())
+        : Number(comercio.pedidosRealizados) || 0;
+
     return actualizarComercioPorId(comercio.id, {
-        pedidosRealizados: (Number(comercio.pedidosRealizados) || 0) + 1,
+        pedidosRealizados: anteriores + 1,
         ultimaVisita: new Date().toLocaleDateString("es-AR"),
         pendienteSemana: false
     });
@@ -1003,6 +1059,26 @@ function registrarPedido(nombreComercio) {
 // LIMPIAR PEDIDO
 // -----------------------------------------------------
 
+// Etapa 8 ("Deshacer" en vez de "¿Seguro?"): guarda cómo está el pedido
+// ahora y devuelve la función que lo deja como estaba.
+function recordarPedidoActual() {
+    const datos = obtenerDatosBorradorPedido();
+    const extras = window.nuevoPedidoVendeFrio?.leerBorrador?.();
+    return () => {
+        try {
+            localStorage.setItem(DB_BORRADOR_PEDIDO, JSON.stringify(datos));
+        } catch (error) {
+            return;
+        }
+        restaurarBorradorPedido();
+        if (extras) window.nuevoPedidoVendeFrio.guardarBorrador(extras);
+        if (inputCliente) inputCliente.dispatchEvent(new Event("input", { bubbles: true }));
+        document.querySelectorAll(".marca select").forEach(actualizarEstadoCantidad);
+        aplicarFiltroProductosPedido();
+        actualizarResumenPedido();
+    };
+}
+
 function limpiarPedido() {
     if (inputCliente) inputCliente.value = "";
     if (inputObs) inputObs.value = "";
@@ -1010,13 +1086,12 @@ function limpiarPedido() {
     document.querySelectorAll(".marca select").forEach(select => {
         select.value = "0";
         select.classList.remove("activo");
-    });
-
-    document.querySelectorAll(".listaProdutos").forEach(lista => {
-        lista.style.display = "none";
+        // Que el contador verde vuelva a ser el "+".
+        if (select.parentNode) select.parentNode.dataset.cantidad = "0";
     });
 
     borrarBorradorPedido();
+    aplicarFiltroProductosPedido();
     actualizarResumenPedido();
 }
 
@@ -1064,13 +1139,10 @@ if (botonReset) {
 
         if (!hayAlgoParaBorrar) return;
 
-        if (typeof abrirConfirmacion === "function") {
-            abrirConfirmacion(
-                "Vaciar pedido",
-                "Se van a borrar las cantidades, el comercio y las observaciones del pedido actual.",
-                limpiarPedido
-            );
-        }
+        // Etapa 8: sin "¿Seguro?". Se vacía y queda "Deshacer" unos segundos.
+        const volverAlPedido = recordarPedidoActual();
+        limpiarPedido();
+        if (window.piezas) window.piezas.deshacer("Pedido vaciado", volverAlPedido);
     });
 }
 
@@ -1197,7 +1269,8 @@ function armarTextoDelPedido(cliente, fechaTexto, productos, observaciones) {
         .map((bloque, indice) => {
             const emojiMarca = emojisMarcas[indice % emojisMarcas.length];
             const lineas = bloque.productos
-                .map(item => "- " + item.producto + " x" + item.cantidad)
+                .map(item => "- " + item.producto + " x" + item.cantidad +
+                    (item.precioCambiado ? " (precio especial $ " + Number(item.precio).toLocaleString("es-AR") + ")" : ""))
                 .join("\n");
 
             return emojiMarca + " *" + bloque.marca + "*\n" + lineas;
@@ -1658,7 +1731,7 @@ function guardarEdicionPedido() {
             marca: fila.marca,
             producto: fila.producto,
             cantidad: fila.cantidad,
-            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo)
+            precio: precioDelCatalogo(fila.marca, fila.producto, catalogo, buscarComercioPorNombre(pedido.comercio || pedido.cliente || ""))
         };
     });
 
