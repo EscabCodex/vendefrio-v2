@@ -992,6 +992,32 @@ Propuesta con antes y después: https://claude.ai/artifact/2KBxkxNzrJh7D2LxcjTbw
 - [x] **T129 — Rutas con más de 9 paradas (pedido del dueño, 2026-10-20).** En la app se eligen y ordenan todas las paradas que quieras: hasta 9 se prueban todas las combinaciones, como antes; con más, se arma por la más cercana y se mejora dando vuelta tramos (2-opt, línea recta). El tope de 9 queda solo para Google Maps (`MAX_PARADAS_GOOGLE_MAPS` en `rutas.js`: el enlace acepta 10 puntos, tu ubicación y 9 paradas): con más, avisa y pasa la ruta en partes (Parte 1, Parte 2…) en el mismo orden, resaltando la que sigue. Prueba nueva `rutas.prueba.js`. Esfuerzo: Medio.
 - [x] **T130 — Cobrar varios pedidos seguidos (pedido del dueño, 2026-10-21).** Al elegir varios, "Cobrar" abre la hoja «¿Cómo pagó?» de siempre para cada uno, con «Cobro 1 de N» arriba: "Guardar y seguir" pasa al próximo, "Saltar" lo deja en «A cobrar» y "Terminar" (o tocar afuera) corta la tanda sin perder lo cobrado; al final, un resumen ("2 cobrados de 3. 1 queda en «A cobrar»"). Es el botón grande en Terminados y en «A cobrar» y va en el ⋯ en las otras pestañas. "Entregado" en tanda, si tenés "Cobra", sigue solo con el cobro de los entregados (como al entregar uno). Si otro celular cobra o mueve uno mientras tanto, se saltea y lo dice al final. Prueba nueva `cobroTanda.prueba.js`. Esfuerzo: Medio.
 
+### Bloque O — Rutas nueva: el híbrido (pedido del dueño, 2026-10-21)
+
+Maquetas: https://claude.ai/artifact/BNwF6HuBDdSeG5c3SLPuzq (fila de arriba, "Híbrido"; copia y notas en `/mnt/project-files/rutas-rework/`). El dueño eligió el híbrido (Vista previa + Carrusel + Estilo Waze, con lo que resuelven los 8 diseños) y hacerlo en 3 etapas, probando cada una en la calle antes de la siguiente. No se saca ninguna función de Rutas: Optimizar, elegir comercios (Todos, Pendientes, Ninguno, buscar), Rutas guardadas, Ubicaciones a mano, Google Maps en partes, Llamar, WhatsApp, Ya llego, Cargar pedido y Llegué.
+
+**Regla de todo el bloque (pedido del dueño, 2026-10-21): Rutas y la navegación tienen que andar fluidas en un celular barato y chico**, como el que queda fijo en la camioneta para los repartidores. Cada tarea del bloque se prueba también con el procesador frenado 6 veces (Chrome DevTools / Playwright) y en pantalla de 360×640, y no se cierra si la pantalla se traba (scroll, deslizar tarjetas y mover el mapa sin saltos; la maniobra se actualiza enseguida). Nada de animaciones pesadas, sombras o blur sobre el mapa en movimiento; el mapa y la lista no se redibujan enteros con cada posición del GPS.
+
+Etapa 1 — Arreglos y navegación:
+- [ ] **T141 — Rutas fluida en celulares de gama baja (va primero).** Medir hoy Rutas y la navegación con el procesador frenado 6 veces y pantalla de 360×640, anotar qué traba (redibujos con cada posición del GPS, listas enteras, cálculos de orden, capas del mapa, sombras) y arreglarlo. Dejar una prueba automática que falle si abrir Rutas o actualizar una posición tarda de más. Esfuerzo: Alto.
+- [ ] **T131 — Voz que dice cada frase entera.** Las frases van en fila: la nueva espera a que termine la anterior (si ya no sirve, se descarta). La frase se ve escrita en la tarjeta de la maniobra mientras se dice. Esfuerzo: Medio.
+- [ ] **T132 — La línea se borra al avanzar.** El camino se corta en el punto más cercano a tu posición: lo hecho queda gris punteado o desaparece y solo se ve lo que falta. Esfuerzo: Medio.
+- [ ] **T133 — Solo calles de auto en toda la app.** `rutas.js` y `navegacion3d.js` todavía piden el camino a `router.project-osrm.org`; pasarlos al mismo servidor y perfil que `navegacion.js` (T127) y revisar con un recorrido real que no use pasos peatonales. Esfuerzo: Medio.
+- [ ] **T134 — Pantalla «Manejando».** Mapa completo; arriba la tarjeta de maniobra grande (distancia, calle, carriles cuando el mapa los tiene y «Luego …») que el mapa nunca tapa; barra del día (parada 2 de 12); abajo la tarjeta chica de la parada con minutos y hora de llegada, y la siguiente asomando; velocímetro, voz y salir. Esfuerzo: Alto.
+- [ ] **T135 — Pantalla «Llegando».** A menos de 150 m del comercio (no al frenar, para que no salte en cada semáforo), o tocando la tarjeta, se agranda con Llamar, WhatsApp, Ya llego y Cargar pedido, «Deslizá para marcar Llegué», Saltear parada y Salir. Esfuerzo: Medio.
+
+Etapa 2 — Planificar:
+- [ ] **T136 — Planificar como vista previa.** Mapa completo con la ruta entera; arriba «Tu ubicación → N paradas» y Auto / Moto / Evitar avenidas; hasta 2 recorridos con sus minutos para elegir; abajo minutos, km y hora de terminar, con «Iniciar» y «Paradas», y Optimizar, Elegir, Guardadas y Google Maps. Esfuerzo: Alto.
+- [ ] **T137 — Carrusel de paradas.** Tarjetas que se deslizan de costado; al pasar una, el mapa va a ese comercio y su pin se agranda; en el ⋯ de la tarjeta, Ir primero y Sacar de la ruta. Esfuerzo: Medio.
+- [ ] **T138 — Lista de paradas.** Se abre con «Paradas»: 4 números del día (paradas, km, horas, a cobrar), Todos / Pendientes / Ninguno y buscar, línea de tiempo con la hora de cada parada y lo que lleva o cobra, arrastrar para ordenar, «Sin ubicación: poner pin» y Guardar ruta. Ubicaciones a mano queda dentro. Esfuerzo: Medio.
+
+Etapa 3 — Avisos del equipo:
+- [ ] **T139 — Botón «Avisar».** Calle cortada, Control, Tránsito lento, Pozo, Choque y Comercio cerrado (también por voz). El aviso dura 2 horas, lo ven los repartidores de la distribuidora en el mapa y en una tarjeta («Lucas avisó…»), y si está en tu camino se recalcula. Toca `firestore.rules` (avisar al dueño antes; que `main` siga andando). Esfuerzo: Alto.
+- [ ] **T140 — Compañeros en el mapa.** Los repartidores del equipo que están en ruta aparecen con su inicial en el mapa de Rutas (reusar la ubicación que ya comparte la app si existe). Esfuerzo: Medio.
+- [ ] **M22 — Probar cada etapa en la calle (dueño).** Un día de reparto con la etapa nueva en la vista previa de `desarrollo` antes de seguir con la próxima.
+
+Lo que no se puede gratis (queda para después): tránsito real de todos los autos (servicio pago), seguir con la pantalla apagada (una app web no puede) y carriles en todas las calles (solo donde el mapa los tiene).
+
 ## Bitácora de sesiones
 
 Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendiente.
@@ -1106,3 +1132,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-20 — Claude Code: pedido del dueño. Equipo de agentes (Coordinador, Constructor, Revisor y Asistente del dueño): vuelven los pull requests hacia `desarrollo`, que se unen cuando el Revisor responde APROBADO. Instrucciones nuevas en `CLAUDE.md` ("Trabajo en equipo"), `WORKING_GUIDE.md` ("Equipo de agentes") y `.claude/agents/` (`revisor.md`, `asistente.md`). Sin cambios en la app.
 - 2026-10-20 — Claude Code: T129 (pedido del dueño). Rutas sin tope de 9: la app ordena todas las paradas elegidas y solo Google Maps tiene el límite de 9, con un aviso y la ruta en partes. Prueba nueva `rutas.prueba.js`.
 - 2026-10-21 — Claude Code: T130 (pedido del dueño). Cobrar varios pedidos seguidos: «Cobro 1 de N» con la hoja de siempre, saltar y terminar sin perder lo cobrado, también después de "Entregado" en tanda. Prueba nueva `cobroTanda.prueba.js`.
+- 2026-10-21 — Claude Code: maquetas de Rutas (8 diseños y un híbrido). El dueño eligió el híbrido en 3 etapas; se suma el Bloque O (T131 a T140 y M22) al plan. Sin cambios en la app.
