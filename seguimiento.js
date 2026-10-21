@@ -913,6 +913,11 @@
             aplica: pedido => puedeEntregar(pedido),
             hacer: id => window.nubeVendeFrio.entregarPedido(id, {})
         },
+        // T130: cobrar los elegidos uno tras otro, con la hoja de siempre.
+        {
+            id: "cobrar", boton: "Cobrar", extra: true,
+            aplica: pedido => puedeRegistrarCobro(pedido) && cobroPendiente(pedido)
+        },
         {
             id: "eliminar", boton: "Eliminar", destino: "", peligro: true, hecho: ["Pedido eliminado", " pedidos eliminados"],
             aplica: pedido => puedeEliminar(pedido),
@@ -1020,7 +1025,7 @@
             boton.classList.toggle("oculto", accion !== principal);
         });
         botonMoverTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length);
-        botonMasTanda.classList.toggle("oculto", !disponibles.some(accion => accion.peligro));
+        botonMasTanda.classList.toggle("oculto", !masAccionesTanda(disponibles).length);
         filaTanda.classList.toggle("oculto", botonMoverTanda.classList.contains("oculto") && botonMasTanda.classList.contains("oculto"));
         actualizarBotonNuevo();
     }
@@ -1031,20 +1036,29 @@
 
     let etapaTanda = "";
     function accionPrincipalTanda(disponibles) {
+        // En «A cobrar» y Terminados el botón grande es "Cobrar" (T130).
+        const cobrar = disponibles.find(accion => accion.id === "cobrar");
+        if (cobrar && (etapaTanda === "aCobrar" || etapaTanda === "historial")) return cobrar;
         if (ETAPAS_SIN_PRINCIPAL.includes(etapaTanda)) return null;
-        return disponibles.find(accion => !accion.peligro) || null;
+        return disponibles.find(accion => !accion.peligro && !accion.extra) || null;
     }
 
     function otrosPasosTanda(disponibles) {
         const principal = accionPrincipalTanda(disponibles);
-        return disponibles.filter(accion => accion !== principal && !accion.peligro);
+        return disponibles.filter(accion => accion !== principal && !accion.peligro && !accion.extra);
+    }
+
+    // El ⋯: "Cobrar" (si no es el botón grande) y "Eliminar".
+    function masAccionesTanda(disponibles) {
+        const principal = accionPrincipalTanda(disponibles);
+        return disponibles.filter(accion => accion !== principal && (accion.peligro || accion.extra));
     }
 
     // Hoja con acciones de la tanda, cada una con cuántos pedidos toca.
     function abrirHojaTanda(titulo, acciones) {
         const p = window.piezas;
         if (!p || !acciones.length) return;
-        const iconos = { enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
+        const iconos = { cobrar: "moneda", enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
         const caja = p.hoja({
             titulo,
             sub: textoPedidos(elegidos.size) + " elegido" + (elegidos.size === 1 ? "" : "s"),
@@ -1058,7 +1072,7 @@
             const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accionTanda);
             if (!accion || boton.disabled) return;
             p.cerrar();
-            abrirConfirmarTanda(accion);
+            hacerAccionTanda(accion);
         });
     }
 
@@ -1152,13 +1166,25 @@
             return;
         }
         if (evento.target.closest(".botonMasTanda")) {
-            abrirHojaTanda("Más acciones", accionesDeLaEtapa().filter(accion => accion.peligro));
+            abrirHojaTanda("Más acciones", masAccionesTanda(accionesDeLaEtapa()));
             return;
         }
         const boton = evento.target.closest("button[data-accion]");
         const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accion);
-        if (accion && !boton.disabled) abrirConfirmarTanda(accion);
+        if (accion && !boton.disabled) hacerAccionTanda(accion);
     });
+
+    // "Cobrar" no pide confirmar: la hoja de cada cobro ya es la pregunta.
+    function hacerAccionTanda(accion) {
+        if (accion.id !== "cobrar") {
+            abrirConfirmarTanda(accion);
+            return;
+        }
+        const ids = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id)));
+        dejarDeElegir();
+        dibujarLista();
+        empezarCobroEnTanda(ids, false);
+    }
 
     function textoPedidos(cantidad) {
         return cantidad === 1 ? "1 pedido" : cantidad + " pedidos";
@@ -1256,6 +1282,7 @@
         accionAConfirmar = null;
         if (!accion) return;
         const noSeMovieron = [];
+        const hechosIds = [];
         let hechos = 0;
 
         ids.forEach(id => {
@@ -1271,6 +1298,7 @@
             try {
                 accion.hacer(id);
                 hechos += 1;
+                hechosIds.push(id);
             } catch (error) {
                 console.error("No se pudo mover el pedido en tanda.", error);
                 noSeMovieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
@@ -1280,15 +1308,25 @@
         dejarDeElegir();
         dibujarLista();
 
-        if (!noSeMovieron.length) {
+        const aviso = noSeMovieron.length ? [
+            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
+            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
+        ] : null;
+
+        // T130: entregados en tanda por quien cobra, se cobran uno tras otro
+        // (como el "¿Cómo pagó?" que sale al entregar uno).
+        if (accion.id === "entregado" && hechosIds.length && puedeCobrar()) {
+            mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
+            empezarCobroEnTanda(hechosIds, true, aviso);
+            return;
+        }
+
+        if (!aviso) {
             mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
             return;
         }
 
-        mostrarAviso(
-            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
-            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
-        );
+        mostrarAviso(aviso[0], aviso[1]);
     }
 
     // -------------------------------------------------
@@ -3558,6 +3596,12 @@
     let cobroPorAbrir = "";
     let esperaCobroPorAbrir = 0;
 
+    // Cobro en tanda (T130): { ids, indice, cobrados, pendientes, cambiaron,
+    // trasEntrega, esperarHasta, aviso }. La hoja muestra "Cobro 1 de N";
+    // al guardar pasa al siguiente. "Saltar" lo deja en «A cobrar» y
+    // "Terminar" corta la tanda: lo ya cobrado queda guardado.
+    let colaCobro = null;
+
     // Lado más largo de la foto del comprobante y tamaño máximo (en letras;
     // las reglas aceptan hasta 700.000).
     const LADO_MAXIMO_FOTO = 1280;
@@ -3628,6 +3672,17 @@
         const titulo = crear("h2", "", "¿Cómo pagó?");
         titulo.id = "tituloCobroPedido";
 
+        // Arriba, en tanda: "Cobro 1 de 9" y "Terminar".
+        const tanda = crear("div", "tandaCobro oculto");
+        tanda.id = "tandaCobroPedido";
+        const contador = crear("span", "contadorCobroTanda");
+        contador.id = "contadorCobroTanda";
+        contador.setAttribute("aria-live", "polite");
+        const terminar = crear("button", "terminarCobroTanda", "Terminar");
+        terminar.type = "button";
+        terminar.id = "terminarCobroTanda";
+        tanda.append(contador, terminar);
+
         const cuerpo = crear("div", "cuerpoCobroPedido");
         cuerpo.id = "cuerpoCobroPedido";
 
@@ -3648,13 +3703,20 @@
         guardar.id = "guardarCobroPedido";
         botones.append(volver, guardar);
 
-        contenido.append(titulo, cuerpo, archivo, botones);
+        contenido.append(tanda, titulo, cuerpo, archivo, botones);
         modal.appendChild(contenido);
         document.body.appendChild(modal);
 
-        volver.addEventListener("click", () => cerrarCobro(true));
+        volver.id = "volverCobroPedido";
+        volver.addEventListener("click", () => {
+            if (colaCobro) saltarCobroEnTanda();
+            else cerrarCobro(true);
+        });
+        terminar.addEventListener("click", terminarCobroEnTanda);
         modal.addEventListener("click", evento => {
-            if (evento.target === modal) cerrarCobro(true);
+            if (evento.target !== modal) return;
+            if (colaCobro) terminarCobroEnTanda();
+            else cerrarCobro(true);
         });
         guardar.addEventListener("click", guardarCobro);
 
@@ -3754,6 +3816,92 @@
         abrirCobro(id, true);
     }
 
+    // T130: empieza a cobrar varios, en el orden en que se ven.
+    function empezarCobroEnTanda(ids, trasEntrega, aviso) {
+        if (!ids.length) return;
+        colaCobro = {
+            ids: [...ids], indice: 0, cobrados: 0, pendientes: [], cambiaron: [],
+            trasEntrega: Boolean(trasEntrega),
+            // Recién entregados: puede tardar un instante en figurar.
+            esperarHasta: trasEntrega ? Date.now() + 5000 : 0,
+            aviso: aviso || null
+        };
+        const cola = colaCobro;
+        if (trasEntrega) setTimeout(() => {
+            if (colaCobro === cola) seguirCobroEnTanda();
+        }, 5100);
+        seguirCobroEnTanda();
+    }
+
+    function seguirCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola || cobroAbierto) return;
+
+        while (cola.indice < cola.ids.length) {
+            const id = cola.ids[cola.indice];
+            const pedido = buscarPedido(id);
+            if (pedido && puedeRegistrarCobro(pedido) && cobroPendiente(pedido)) {
+                abrirCobro(id, cola.trasEntrega);
+                return;
+            }
+            if (cola.trasEntrega && Date.now() < cola.esperarHasta && pedido && pedido.eliminado !== true &&
+                estadoActualDelPedido(pedido) !== "entregado") return;
+            // Otro ya lo cobró, lo movió o lo eliminó: sigue con el próximo.
+            cola.cambiaron.push(String(pedido && pedido.comercio || "Un pedido").trim());
+            cola.indice += 1;
+        }
+
+        terminarCobroEnTanda();
+    }
+
+    // El pedido que se ve sigue sin cobrar y pasa al siguiente.
+    function saltarCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola || !cobroAbierto) return;
+        cola.pendientes.push(cobroAbierto.id);
+        cerrarCobro(false);
+        cola.indice += 1;
+        seguirCobroEnTanda();
+    }
+
+    function terminarCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola) return;
+        colaCobro = null;
+        if (cobroAbierto) cerrarCobro(false);
+
+        // Los que no se cobraron quedan en «A cobrar». Si se acaban de
+        // entregar, se avisa a "Cobra" (como al cerrar uno solo).
+        const sinCobrar = cola.pendientes.concat(cola.ids.slice(cola.indice).filter(id => {
+            const pedido = buscarPedido(id);
+            return pedido && cobroPendiente(pedido);
+        }));
+        if (cola.trasEntrega) {
+            sinCobrar.forEach(id => {
+                try {
+                    window.nubeVendeFrio.avisarCobroPendiente(id);
+                } catch (error) {
+                    console.warn("No se pudo avisar el cobro pendiente.", error);
+                }
+            });
+        }
+
+        const total = cola.ids.length;
+        const texto = (cola.cobrados === 1 ? "1 cobrado" : cola.cobrados + " cobrados") + " de " + total +
+            (sinCobrar.length ? ". " + (sinCobrar.length === 1 ? "1 queda" : sinCobrar.length + " quedan") + " en «A cobrar»" : "");
+
+        if (cola.aviso || cola.cambiaron.length) {
+            const partes = [];
+            if (cola.aviso) partes.push(cola.aviso[1]);
+            partes.push(texto + ".");
+            if (cola.cambiaron.length) partes.push("Cambiaron mientras cobrabas (otro lo cobró o lo movió): " + cola.cambiaron.join("; ") + ".");
+            mostrarAviso(cola.aviso ? cola.aviso[0] : "Cobro en tanda", partes.join(" "));
+        } else {
+            mostrarToast(texto);
+        }
+        dibujarLista();
+    }
+
     function abrirCobro(id, trasEntrega) {
         const pedido = buscarPedido(id);
         if (!pedido || !puedeRegistrarCobro(pedido)) return;
@@ -3805,6 +3953,11 @@
     function revisarCobro() {
         const pedido = buscarPedido(cobroAbierto.id);
 
+        if (colaCobro && (!pedido || !puedeRegistrarCobro(pedido) || firmaDeCobro(pedido) !== cobroAbierto.firma)) {
+            pasarPorCambioEnTanda(pedido);
+            return;
+        }
+
         if (!pedido || !puedeRegistrarCobro(pedido)) {
             cerrarCobro(false);
             mostrarAviso("El pedido cambió", "El pedido ya no está entregado o ya no podés registrar su cobro. Revisá la ficha.");
@@ -3817,9 +3970,27 @@
         }
     }
 
+    // En tanda, si otro celular lo cobró o lo movió, se anota y sigue.
+    function pasarPorCambioEnTanda(pedido) {
+        colaCobro.cambiaron.push(String(pedido && pedido.comercio || "Un pedido").trim());
+        cerrarCobro(false);
+        colaCobro.indice += 1;
+        seguirCobroEnTanda();
+    }
+
     function dibujarCobro() {
         const cuerpo = document.getElementById("cuerpoCobroPedido");
         if (!cuerpo || !cobroAbierto) return;
+
+        const tanda = document.getElementById("tandaCobroPedido");
+        if (tanda) {
+            tanda.classList.toggle("oculto", !colaCobro);
+            if (colaCobro) {
+                document.getElementById("contadorCobroTanda").textContent = "Cobro " + (colaCobro.indice + 1) + " de " + colaCobro.ids.length;
+            }
+        }
+        const volver = document.getElementById("volverCobroPedido");
+        if (volver) volver.textContent = colaCobro ? "Saltar" : "Volver";
 
         const pedido = buscarPedido(cobroAbierto.id);
         if (!pedido) {
@@ -3983,7 +4154,8 @@
 
         const guardar = document.getElementById("guardarCobroPedido");
         if (guardar) {
-            guardar.textContent = forma === "pendiente" ? "Dejar pendiente" : "Guardar cobro";
+            const hayOtro = colaCobro && colaCobro.indice < colaCobro.ids.length - 1;
+            guardar.textContent = hayOtro ? (forma === "pendiente" ? "Pendiente y seguir" : "Guardar y seguir") : (forma === "pendiente" ? "Dejar pendiente" : "Guardar cobro");
             guardar.disabled = cobroAbierto.procesando;
         }
     }
@@ -4006,6 +4178,10 @@
 
         const pedido = buscarPedido(id);
         if (!pedido || !puedeRegistrarCobro(pedido) || firmaDeCobro(pedido) !== cobroAbierto.firma) {
+            if (colaCobro) {
+                pasarPorCambioEnTanda(pedido);
+                return;
+            }
             cerrarCobro(false);
             mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá la ficha y probá de nuevo si hace falta.");
             return;
@@ -4029,7 +4205,13 @@
             const cobro = window.nubeVendeFrio.registrarCobro(id, datos);
             cerrarCobro(false);
 
-            if (cobro) {
+            if (colaCobro) {
+                if (cobro) colaCobro.cobrados += 1;
+                else colaCobro.pendientes.push(id);
+                if (cobro && navigator.vibrate) navigator.vibrate(30);
+                colaCobro.indice += 1;
+                seguirCobroEnTanda();
+            } else if (cobro) {
                 mostrarToast("Cobro registrado: " + textoCobro(cobro));
                 if (navigator.vibrate) navigator.vibrate(30);
             } else if (trasEntrega) {
@@ -4192,6 +4374,7 @@
         if (entregaAbierta) revisarEntrega();
         if (cobroPorAbrir) abrirCobroPendienteDeAbrir();
         if (cobroAbierto) revisarCobro();
+        else if (colaCobro) seguirCobroEnTanda();
     }
 
     // Un pedido cargado en otro celular (o en este) aparece al instante.
