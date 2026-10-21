@@ -189,9 +189,12 @@
 
     // Algunas pantallas (como Más) se vuelven a dibujar enteras: se mira
     // todo el cuerpo, una vez por cuadro.
+    // Lo que cambia dentro de un mapa o de la navegación (cada posición del
+    // GPS) no agrega pantallas: se ignora, así no se trabaja de más (T141).
     let pendiente = false;
-    new MutationObserver(() => {
+    new MutationObserver(cambios => {
         if (pendiente) return;
+        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
         pendiente = true;
         requestAnimationFrame(() => {
             pendiente = false;
