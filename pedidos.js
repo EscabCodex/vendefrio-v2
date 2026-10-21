@@ -577,6 +577,8 @@ function dibujarChipsMarcasPedido(marcas, productos) {
 
 function renderizarPedido() {
     if (!contenedorProductos) return;
+    // Con la pantalla oculta no se dibuja: mostrarPantalla("pedido") la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaPedido")?.classList.contains("oculto")) return;
 
     prepararBuscadorProductosPedido();
     contenedorProductos.innerHTML = "";

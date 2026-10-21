@@ -1018,6 +1018,15 @@ Etapa 3 — Avisos del equipo:
 
 Lo que no se puede gratis (queda para después): tránsito real de todos los autos (servicio pago), seguir con la pantalla apagada (una app web no puede) y carriles en todas las calles (solo donde el mapa los tiene).
 
+### Bloque P — Salto de calidad: rápida y sin errores (pedido del dueño, 2026-10-21)
+
+El dueño quiere dar un salto de calidad antes de mostrarla a otros repartos: que todo ande rápido y sin trabas, sin perder ninguna función, animación ni detalle visual, y arreglar los errores chicos y grandes. Medido el 2026-10-21 con el procesador 4 veces más lento y datos de un reparto grande (200 comercios y 600 pedidos): al abrir quedaba trabada unos 6 segundos, Comercios tardaba 8 segundos en aparecer, Pedidos/Historial 5 a 7, Catálogo y Más medio segundo, Nuevo pedido casi uno y cada "+" unos 0,2. Los números T131 a T141 ya eran del Bloque O (Rutas), por eso este bloque empieza en T150.
+
+- [x] **T150 — Que la app abra rápido.** Comercios, Productos y marcas y Nuevo pedido ya no se dibujan mientras están ocultas: se dibujan al abrirlas, como ya hacía `mostrarPantalla` (con 200 comercios y 600 pedidos, el tiempo trabado al abrir bajó de unos 5,8 s a 0,2 s). La letra Inter va dentro de la app (`vendor/inter/`) en vez de pedirla a Google Fonts, que con poca señal frenaba toda la pantalla. El service worker deja de pedir primero a internet cada archivo: la app sale del celular al instante y baja la versión del servidor entera por detrás; si cambió algo, la guarda toda junta (nunca mezcla dos versiones) y aparece "Hay una versión nueva" con "Actualizar" (antes llegaba sola al abrir con buena señal; ahora llega en esa misma apertura, con el aviso). También revisa al volver a la app, cada 30 minutos. Prueba nueva `arranque.prueba.js` (con datos grandes y con señal pésima; `pruebas/servidor.js` puede simular señal lenta y una versión nueva). Esfuerzo: Alto.
+- [ ] **T151 — Pantallas sin trabas.** Comercios, Pedidos/Historial, Catálogo, Más, Nuevo pedido y los "+" con datos grandes: medir con el procesador frenado, encontrar lo que se repite de más (cada tarjeta recorriendo todos los pedidos, listas enteras redibujadas) y dejarlo por debajo de 0,15 s por toque. Prueba que falle si se vuelve lento. Esfuerzo: Alto.
+- [ ] **T152 — Errores chicos conocidos.** El buscador de Configuración no oculta filas, etiquetas blancas de Historial en modo oscuro, la barra de abajo que tapa el final de las ventanas grandes, "Repetir último pedido" que puede repetir el de otro, el contador de pedidos del comercio con dos cargas a la vez y la prueba "confianza: versión nueva y cambios sin subir" que falla 1 de cada 6 veces. Esfuerzo: Medio.
+- [ ] **T153 — Modo oscuro y botones repetidos.** Recorrer todas las pantallas en oscuro y los botones duplicados de la ficha del comercio, Rutas y el cierre. Esfuerzo: Medio.
+
 ## Bitácora de sesiones
 
 Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendiente.
@@ -1133,3 +1142,4 @@ Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendie
 - 2026-10-20 — Claude Code: T129 (pedido del dueño). Rutas sin tope de 9: la app ordena todas las paradas elegidas y solo Google Maps tiene el límite de 9, con un aviso y la ruta en partes. Prueba nueva `rutas.prueba.js`.
 - 2026-10-21 — Claude Code: T130 (pedido del dueño). Cobrar varios pedidos seguidos: «Cobro 1 de N» con la hoja de siempre, saltar y terminar sin perder lo cobrado, también después de "Entregado" en tanda. Prueba nueva `cobroTanda.prueba.js`.
 - 2026-10-21 — Claude Code: maquetas de Rutas (8 diseños y un híbrido). El dueño eligió el híbrido en 3 etapas; se suma el Bloque O (T131 a T140 y M22) al plan. Sin cambios en la app.
+- 2026-10-21 — Claude Code: T150 (pedido del dueño, Bloque P). La app abre rápido: no dibuja pantallas ocultas, la letra va dentro de la app y el service worker abre desde el celular y baja la versión nueva por detrás con el aviso "Hay una versión nueva". Prueba nueva `arranque.prueba.js`.

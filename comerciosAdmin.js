@@ -257,6 +257,8 @@ window.archivarComercioConDeshacer = archivarComercioConDeshacer;
 
 function renderizarComercios() {
     if (!listaComerciosAdmin) return;
+    // Con Comercios oculta no se dibuja: mostrarPantalla la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaComercios")?.classList.contains("oculto")) return;
 
     // Archivados (T63): aparte, con "Archivados (N)" al final de la lista.
     const guardados = obtenerComercios();
