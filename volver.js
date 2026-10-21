@@ -163,7 +163,12 @@
     window.addEventListener("scroll", marcarDespegado, { passive: true });
     window.addEventListener("load", pedirActualizar);
     // Pantallas que se abren o cambian por código.
-    new MutationObserver(pedirActualizar).observe(document.body, {
+    // Lo que cambia dentro de un mapa o de la navegación (cuadraditos del
+    // mapa, cada posición del GPS) no cambia de pantalla: se ignora (T141).
+    new MutationObserver(cambios => {
+        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
+        pedirActualizar();
+    }).observe(document.body, {
         attributes: true, attributeFilter: ["class", "data-vista"], subtree: true
     });
 

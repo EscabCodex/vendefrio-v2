@@ -873,7 +873,7 @@ function actualizarEstadoSeleccionRuta() {
         estado.appendChild(chip);
     });
     // Los pines y las paradas siguen a la lista (T123).
-    if (mapaLeaflet && capaMarcadores) renderizarPines(false);
+    refrescarPines();
     if (!rutaOrdenada.length) mostrarRutaEnLista();
 }
 
@@ -973,13 +973,28 @@ function inicializarSeleccionRuta() {
     renderizarSeleccionRuta();
 }
 
+// Todos, Pendientes y Ninguno solo cambian las tildes (T141): la lista ya
+// está armada y no hace falta rehacerla.
+function actualizarCasillasSeleccionRuta() {
+    const casillas = document.querySelectorAll("#listaSeleccionRuta input[type=checkbox]");
+    if (!casillas.length) {
+        renderizarSeleccionRuta();
+        return;
+    }
+    casillas.forEach(casilla => {
+        const marcada = comerciosSeleccionadosRuta.has(casilla.dataset.nombre);
+        if (casilla.checked !== marcada) casilla.checked = marcada;
+    });
+    actualizarEstadoSeleccionRuta();
+}
+
 function seleccionarTodosLosComerciosRuta() {
     obtenerComerciosSeleccionRuta().forEach(comercio => {
         comerciosSeleccionadosRuta.add(comercio.nombre);
     });
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function seleccionarPendientesRuta() {
@@ -989,14 +1004,14 @@ function seleccionarPendientesRuta() {
         .forEach(comercio => comerciosSeleccionadosRuta.add(comercio.nombre));
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function limpiarSeleccionRuta() {
     comerciosSeleccionadosRuta.clear();
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function obtenerComerciosElegidosParaRuta() {
@@ -1240,10 +1255,16 @@ function iniciarMapa() {
 // Pines del mapa (T123): azul con número si el comercio está en la ruta,
 // gris si no. Tocar un pin abre sus opciones: sumarlo o sacarlo de la
 // ruta, mover el pin, borrar la ubicación o hacerle un pedido.
-function iconoPinRuta(comercio) {
+function textoPinRuta(comercio, ordenes) {
     const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
-    const orden = rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
-    const texto = orden >= 0 ? String(orden + 1) : (enRuta ? "✓" : "");
+    const orden = ordenes ? (ordenes.has(comercio.nombre) ? ordenes.get(comercio.nombre) : -1)
+        : rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
+    return orden >= 0 ? String(orden + 1) : (enRuta ? "✓" : "");
+}
+
+function iconoPinRuta(comercio, ordenes) {
+    const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
+    const texto = textoPinRuta(comercio, ordenes);
     return L.divIcon({
         className: "pinRuta",
         html: `<span class="globoPinRuta${enRuta ? " enRuta" : ""}"><b>${texto}</b></span>`,
@@ -1286,6 +1307,7 @@ function renderizarPines(ajustar = true) {
             abrirOpcionesPin(comercio.nombre);
         });
 
+        marcador.clavePinRuta = textoPinRuta(comercio) + (comerciosSeleccionadosRuta.has(comercio.nombre) ? "+" : "-");
         capaMarcadores.addLayer(marcador);
         marcadoresPorNombre.set(comercio.nombre, marcador);
         limites.extend(coordenadas);
@@ -1298,6 +1320,35 @@ function renderizarPines(ajustar = true) {
             paddingBottomRight: [30, 30]
         });
     }
+}
+
+// T141: al tildar, ordenar o sacar una parada no se rearman los 80 pines
+// (en un celular barato el mapa se trababa): se cambia solo el dibujo de los
+// que cambiaron. Si hay comercios nuevos, movidos o un pin en edición, se
+// rearman todos como antes.
+function refrescarPines() {
+    if (!mapaLeaflet || !capaMarcadores) return;
+    const comerciosConGps = comerciosActivos().filter(comercioTieneGps);
+    const igual = !coordenadasPinPendientes && comerciosConGps.length === marcadoresPorNombre.size &&
+        comerciosConGps.every(comercio => {
+            const marcador = marcadoresPorNombre.get(comercio.nombre);
+            if (!marcador) return false;
+            const lugar = marcador.getLatLng();
+            return lugar.lat === Number(comercio.lat) && lugar.lng === Number(comercio.lng);
+        });
+    if (!igual) {
+        renderizarPines(false);
+        return;
+    }
+    const ordenes = new Map(rutaOrdenada.map((comercio, indice) => [comercio.nombre, indice]));
+    comerciosConGps.forEach(comercio => {
+        const marcador = marcadoresPorNombre.get(comercio.nombre);
+        const clave = textoPinRuta(comercio, ordenes) + (comerciosSeleccionadosRuta.has(comercio.nombre) ? "+" : "-");
+        if (marcador.clavePinRuta === clave) return;
+        marcador.setIcon(iconoPinRuta(comercio, ordenes));
+        marcador.clavePinRuta = clave;
+    });
+    dibujarResumenPinesMapa(comerciosConGps);
 }
 
 // Arriba del mapa: cuántos van en la ruta.
@@ -1375,8 +1426,7 @@ function cambiarPinEnRuta(nombre) {
         }
     }
     renderizarSeleccionRuta();
-    renderizarPines(false);
-    mostrarRutaEnLista();
+    if (rutaOrdenada.length) mostrarRutaEnLista();
     const cuantos = comerciosSeleccionadosRuta.size;
     if (typeof mostrarToast === "function") {
         mostrarToast((sumar ? "Sumaste " : "Sacaste ") + nombre + (sumar ? " a la ruta" : " de la ruta") + " (" + cuantos + (cuantos === 1 ? " comercio)" : " comercios)"));
@@ -1848,7 +1898,7 @@ function optimizarRuta() {
             );
 
             mostrarRutaEnLista();
-            renderizarPines(false);
+            refrescarPines();
         },
         () => {
             mostrarAviso(
@@ -1999,27 +2049,44 @@ function idsDePedidosRuta() {
     return new Set(obtenerHistorial().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
 }
 
+// T141: leer el historial es caro (cientos de pedidos) y la lista de paradas
+// lo pedía 3 veces por parada; en un celular barato, 80 paradas tardaban
+// segundos. Se arma una vez por dibujo un índice por comercio y se tira
+// apenas termina (el próximo dibujo ve los pedidos nuevos).
+let indicePedidosRuta = null;
+
+function pedidosRutaPorComercio() {
+    if (indicePedidosRuta) return indicePedidosRuta;
+    const indice = { carga: new Map(), nuevos: new Set() };
+    const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+    historial.forEach(pedido => {
+        if (!pedido || pedido.eliminado === true) return;
+        const clave = String(pedido.comercio || "").trim().toLocaleLowerCase("es");
+        if (pedidosAlArmarRuta && pedido.id != null && !pedidosAlArmarRuta.has(String(pedido.id))) indice.nuevos.add(clave);
+        const estado = typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : "";
+        if (!ESTADOS_PARA_ENTREGAR_RUTA.includes(estado)) return;
+        const carga = indice.carga.get(clave) || { pedidos: [], unidades: 0, total: 0 };
+        carga.pedidos.push(pedido);
+        carga.unidades += (pedido.productos || []).reduce((t, item) => t + (Number(item.cantidad) || 0), 0);
+        carga.total += typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0;
+        indice.carga.set(clave, carga);
+    });
+    indicePedidosRuta = indice;
+    setTimeout(() => { indicePedidosRuta = null; }, 0);
+    return indice;
+}
+
 function tienePedidoNuevoRuta(nombre) {
-    if (!pedidosAlArmarRuta || typeof obtenerHistorial !== "function") return false;
-    return obtenerHistorial().some(pedido => pedido && pedido.eliminado !== true && pedido.id != null &&
-        !pedidosAlArmarRuta.has(String(pedido.id)) && mismoNombreRuta(pedido.comercio, nombre));
+    if (!pedidosAlArmarRuta) return false;
+    return pedidosRutaPorComercio().nuevos.has(String(nombre || "").trim().toLocaleLowerCase("es"));
 }
 
 const ESTADOS_PARA_ENTREGAR_RUTA = ["cargado", "enPreparacion", "preparado", "enReparto", "enVehiculo"];
 
-function mismoNombreRuta(a, b) {
-    return String(a || "").trim().toLocaleLowerCase("es") === String(b || "").trim().toLocaleLowerCase("es");
-}
-
 // Lo que lleva para un comercio: pedidos sin entregar, unidades y plata.
 function cargaParaParada(nombre) {
-    if (typeof obtenerHistorial !== "function") return { pedidos: [], unidades: 0, total: 0 };
-    const pedidos = obtenerHistorial().filter(pedido => pedido && pedido.eliminado !== true &&
-        mismoNombreRuta(pedido.comercio, nombre) &&
-        ESTADOS_PARA_ENTREGAR_RUTA.includes(typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : ""));
-    const unidades = pedidos.reduce((suma, pedido) => suma + (pedido.productos || []).reduce((t, item) => t + (Number(item.cantidad) || 0), 0), 0);
-    const total = pedidos.reduce((suma, pedido) => suma + (typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0), 0);
-    return { pedidos, unidades, total };
+    const carga = pedidosRutaPorComercio().carga.get(String(nombre || "").trim().toLocaleLowerCase("es"));
+    return carga ? { pedidos: carga.pedidos.slice(), unidades: carga.unidades, total: carga.total } : { pedidos: [], unidades: 0, total: 0 };
 }
 
 // Minutos aproximados en auto (línea recta: más lento en la ciudad).
@@ -2139,7 +2206,7 @@ function conectarArrastreParadas(lista) {
         rutaReordenadaAMano = true;
         recalcularDistanciasRuta();
         mostrarRutaEnLista();
-        renderizarPines(false);
+        refrescarPines();
     };
 
     lista.addEventListener("pointerdown", evento => {
@@ -2179,7 +2246,7 @@ function conectarArrastreParadas(lista) {
         rutaReordenadaAMano = true;
         recalcularDistanciasRuta();
         mostrarRutaEnLista();
-        renderizarPines(false);
+        refrescarPines();
         document.querySelector(`.paradaOrden[data-nombre="${CSS.escape(movido.nombre)}"] .agarreParada`)?.focus();
     });
 }

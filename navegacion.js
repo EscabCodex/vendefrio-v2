@@ -176,9 +176,17 @@
         return Math.floor(minutos / 60) + " h " + (minutos % 60) + " min";
     }
 
+    // Un solo formateador (T141): crearlo en cada posición del GPS es caro en
+    // un celular barato.
+    const formatoHora = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
     function horaDeLlegada(segundos) {
-        const llegada = new Date(Date.now() + segundos * 1000);
-        return llegada.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+        return formatoHora.format(new Date(Date.now() + segundos * 1000));
+    }
+
+    // Cambia el texto solo si es otro: así cada posición del GPS no toca la
+    // pantalla de más (T141).
+    function ponerTexto(elemento, texto) {
+        if (elemento && elemento.textContent !== texto) elemento.textContent = texto;
     }
 
     // -------------------------------------------------
@@ -569,7 +577,7 @@
     }
 
     function avisar(texto) {
-        pantalla.querySelector(".avisoNavegacion").textContent = texto || "";
+        ponerTexto(pantalla.querySelector(".avisoNavegacion"), texto || "");
     }
 
     // Cartel de arriba, tiempo y distancia, voz y si hay que recalcular.
@@ -585,10 +593,10 @@
         const segundos = camino.duracion * restante;
         minutosQueFaltan = segundos / 60;
 
-        pantalla.querySelector(".tiempoNavegacion").textContent = llego ? "Llegaste" : textoMinutos(segundos);
-        pantalla.querySelector(".detalleTiempo").textContent = llego
+        ponerTexto(pantalla.querySelector(".tiempoNavegacion"), llego ? "Llegaste" : textoMinutos(segundos));
+        ponerTexto(pantalla.querySelector(".detalleTiempo"), llego
             ? "Estás en la puerta"
-            : textoDistancia(falta) + " · llegada " + horaDeLlegada(segundos);
+            : textoDistancia(falta) + " · llegada " + horaDeLlegada(segundos));
 
         // ¿Llegó?
         const alDestino = distancia(posicion, destinoDe(comercio));
@@ -643,11 +651,17 @@
         pasosAnunciados.set(clave, dichos);
     }
 
+    // El dibujo de la flecha se cambia solo cuando cambia la maniobra.
     function dibujarManiobra(paso, metros) {
         const comercio = paradaActual();
-        pantalla.querySelector(".iconoManiobra").innerHTML = iconoManiobra(paso);
-        pantalla.querySelector(".distanciaManiobra").textContent = paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros);
-        pantalla.querySelector(".textoManiobra").textContent = indicacion(paso, comercio ? comercio.nombre : "");
+        const icono = pantalla.querySelector(".iconoManiobra");
+        const flecha = iconoManiobra(paso);
+        if (icono.dataset.flecha !== flecha) {
+            icono.innerHTML = flecha;
+            icono.dataset.flecha = flecha;
+        }
+        ponerTexto(pantalla.querySelector(".distanciaManiobra"), paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros));
+        ponerTexto(pantalla.querySelector(".textoManiobra"), indicacion(paso, comercio ? comercio.nombre : ""));
     }
 
     // -------------------------------------------------
@@ -674,7 +688,12 @@
             calcularCamino();
             return;
         }
-        if (seguir && mapa && camino && !llego) mapa.panTo(posicion, { animate: velocidad < 8, duration: 0.4 });
+        // Mover el mapa por un par de metros no se nota y redibuja el camino
+        // entero (T141): se mueve cuando el punto se corrió unos píxeles.
+        if (seguir && mapa && camino && !llego) {
+            const corrido = mapa.latLngToContainerPoint(posicion).distanceTo(mapa.getSize().divideBy(2));
+            if (corrido > 4) mapa.panTo(posicion, { animate: velocidad < 8, duration: 0.4 });
+        }
         actualizar(false);
     }
 
