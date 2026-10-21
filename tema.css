@@ -1069,6 +1069,10 @@ html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
 .distanciaManiobra{font-size:24px;font-weight:800;line-height:1.05;}
 .distanciaManiobra:empty{display:none;}
 .textoManiobra{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;}
+/* T131: lo que dice la voz, escrito mientras lo dice. */
+.fraseManiobra{grid-column:1 / -1;margin:0;padding-top:8px;border-top:1px solid rgba(255,255,255,.28);font-size:13.5px;font-weight:600;line-height:1.3;opacity:.92;overflow-wrap:anywhere;}
+html[data-tema="oscuro"] .fraseManiobra{border-top-color:rgba(0,0,0,.18);}
+.fraseManiobra:empty{display:none;}
 
 .botonesNavegacion{
   position:absolute;z-index:1100;display:grid;gap:10px;

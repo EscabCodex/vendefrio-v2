@@ -34,12 +34,22 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await page.addInitScript(() => {
         window.__dichos = [];
         if (window.speechSynthesis) {
-            window.speechSynthesis.speak = frase => window.__dichos.push(frase.text);
+            // Cada frase "termina" enseguida, así pasa la que sigue en la fila (T131).
+            window.speechSynthesis.speak = frase => {
+                window.__dichos.push(frase.text);
+                setTimeout(() => frase.onend && frase.onend(), 30);
+            };
         }
     });
-    await page.route("https://routing.openstreetmap.de/**", ruta =>
-        ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CAMINO) })
-    );
+    // T133: el camino se pide siempre con el perfil de auto (sin pasos peatonales).
+    const pedidosDeCamino = [];
+    await page.route("https://routing.openstreetmap.de/**", ruta => {
+        pedidosDeCamino.push(ruta.request().url());
+        return ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CAMINO) });
+    });
+    page.on("request", pedido => {
+        if (pedido.url().includes("router.project-osrm.org")) pedidosDeCamino.push(pedido.url());
+    });
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation(SALIDA);
 
@@ -75,6 +85,18 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await navegacion.getByRole("button", { name: "Silenciar la voz" }).click();
     await expect(navegacion.getByRole("button", { name: "Prender la voz" })).toBeVisible();
     await navegacion.getByRole("button", { name: "Prender la voz" }).click();
+
+    // T132: al avanzar por Rivadavia, la línea se borra detrás y arranca donde estás.
+    const largoDeLaLinea = () => page.evaluate(() => document.querySelector("#pantallaNavegacion path.lineaCamino").getTotalLength());
+    const largoAlSalir = await largoDeLaLinea();
+    await page.context().setGeolocation({ latitude: SALIDA.latitude, longitude: -58.4015 });
+    await expect.poll(largoDeLaLinea).toBeLessThan(largoAlSalir * 0.8);
+    await expect(navegacion.locator("path.lineaHecha")).toHaveCount(1);
+    await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
+    await capturar(page, "navegacion-02b-linea-recortada");
+
+    expect(pedidosDeCamino.length).toBeGreaterThan(0);
+    pedidosDeCamino.forEach(url => expect(url).toMatch(/^https:\/\/routing\.openstreetmap\.de\/routed-car\/route\/v1\/driving\//));
 
     // Llegada.
     await page.context().setGeolocation({ latitude: COMERCIO.lat, longitude: COMERCIO.lng });

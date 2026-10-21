@@ -24,6 +24,9 @@
     let pantalla = null;
     let mapa = null;
     let capaCamino = null;
+    let lineasCamino = [];       // borde blanco y línea azul (T132: se recortan al avanzar)
+    let lineaHecha = null;       // lo ya hecho, gris punteado (T132)
+    let metroRecortado = 0;
     let marcadorYo = null;
     let marcadorDestino = null;
     let vigilancia = null;
@@ -39,6 +42,7 @@
     let seguir = true;
     let llego = false;
     const pasosAnunciados = new Map();
+    let proximaManiobra = -1;    // índice del paso que viene (para la voz)
 
     // -------------------------------------------------
     // Preferencias (Más > Cómo hacés el recorrido)
@@ -235,10 +239,17 @@
         return '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform:rotate(' + grados + 'deg)"><path d="M12 20V5"/><path d="m6 11 6-6 6 6"/></svg>';
     }
 
+    // T131: las frases van en fila. La nueva espera a que termine la que se
+    // está diciendo (antes la cortaba a la mitad); al llegarle el turno, si
+    // ya no sirve (la maniobra pasó o hay una más nueva para la misma), se
+    // descarta. Mientras se dice, se ve escrita en la tarjeta de arriba.
     // La frase queda guardada afuera: si no, el navegador a veces la tira a
     // la basura a mitad de camino y la voz se corta. Se prefiere una voz del
     // celular (no de internet), que con datos móviles se entrecorta.
     let fraseActual = null;
+    const filaDeFrases = [];     // { texto, clave, vigente }
+    const MAXIMO_EN_FILA = 3;
+    let vigiaFrase = null;
     function vozElegida() {
         const voces = window.speechSynthesis.getVoices();
         const castellanas = voces.filter(v => /^es/i.test(v.lang));
@@ -248,30 +259,79 @@
             || castellanas[0] || null;
     }
 
-    function hablar(texto) {
+    // Pone una frase en la fila. "clave" junta las frases de una misma
+    // maniobra: la nueva reemplaza a la que todavía esperaba. "vigente" dice
+    // si sigue sirviendo cuando le toca.
+    function hablar(texto, opciones = {}) {
         if (!conVoz() || !("speechSynthesis" in window) || !texto) return;
+        if (fraseActual && fraseActual.text === texto) return;
+        if (filaDeFrases.some(frase => frase.texto === texto)) return;
+        if (opciones.clave !== undefined) {
+            for (let i = filaDeFrases.length - 1; i >= 0; i--) {
+                if (filaDeFrases[i].clave === opciones.clave) filaDeFrases.splice(i, 1);
+            }
+        }
+        filaDeFrases.push({ texto, clave: opciones.clave, vigente: opciones.vigente || (() => true) });
+        // Si se juntan muchas (GPS que salta), quedan las más nuevas.
+        while (filaDeFrases.length > MAXIMO_EN_FILA) filaDeFrases.shift();
+        if (!fraseActual) decirLaSiguiente();
+    }
+
+    function decirLaSiguiente() {
+        clearTimeout(vigiaFrase);
+        fraseActual = null;
+        let siguiente = filaDeFrases.shift();
+        while (siguiente && !siguiente.vigente()) siguiente = filaDeFrases.shift();
+        if (!siguiente || !conVoz()) {
+            filaDeFrases.length = 0;
+            mostrarFrase("");
+            return;
+        }
         try {
             const sintesis = window.speechSynthesis;
-            if (fraseActual && fraseActual.text === texto && sintesis.speaking) return;
-            const frase = new SpeechSynthesisUtterance(texto);
+            const frase = new SpeechSynthesisUtterance(siguiente.texto);
             const voz = vozElegida();
             frase.lang = voz ? voz.lang : "es-AR";
             if (voz) frase.voice = voz;
             frase.rate = velocidadVoz();
-            frase.onend = frase.onerror = () => { if (fraseActual === frase) fraseActual = null; };
+            const termino = () => {
+                if (fraseActual !== frase) return;
+                // Un respiro entre frase y frase (algunos celulares se traban
+                // si se pide la próxima en el mismo instante).
+                fraseActual = { text: frase.text };
+                clearTimeout(vigiaFrase);
+                vigiaFrase = setTimeout(decirLaSiguiente, 150);
+            };
+            frase.onend = frase.onerror = termino;
             fraseActual = frase;
-            // Cortar y hablar enseguida hace que algunos celulares se traben:
-            // si estaba hablando, se corta y se espera un instante.
-            if (sintesis.speaking || sintesis.pending) {
-                sintesis.cancel();
-                setTimeout(() => { if (fraseActual === frase) sintesis.speak(frase); }, 120);
-            } else {
-                if (sintesis.paused) sintesis.resume();
-                sintesis.speak(frase);
-            }
+            mostrarFrase(siguiente.texto);
+            // Hay celulares que no avisan cuando terminan: pasado un tiempo
+            // largo para esa frase, se sigue igual.
+            vigiaFrase = setTimeout(termino, 3000 + siguiente.texto.length * 90 / frase.rate);
+            if (sintesis.paused) sintesis.resume();
+            sintesis.speak(frase);
         } catch (error) {
             // Sin voz en este celular: quedan las indicaciones en pantalla.
+            filaDeFrases.length = 0;
+            fraseActual = null;
+            mostrarFrase("");
         }
+    }
+
+    // Se calla y se vacía la fila (al silenciar o al salir).
+    function callar() {
+        clearTimeout(vigiaFrase);
+        filaDeFrases.length = 0;
+        fraseActual = null;
+        mostrarFrase("");
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    }
+
+    // La frase que se está diciendo, escrita en la tarjeta de la maniobra.
+    function mostrarFrase(texto) {
+        const lugar = pantalla?.querySelector(".fraseManiobra");
+        if (!lugar) return;
+        if (lugar.textContent !== texto) lugar.textContent = texto;
     }
 
     // -------------------------------------------------
@@ -362,6 +422,7 @@
             <div class="cartelManiobra" aria-live="polite">
                 <span class="iconoManiobra"></span>
                 <div><strong class="distanciaManiobra"></strong><span class="textoManiobra"></span></div>
+                <p class="fraseManiobra" aria-hidden="true"></p>
             </div>
             <div class="botonesNavegacion">
                 <button type="button" class="botonFlotanteNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 22)}</button>
@@ -394,7 +455,7 @@
             microfono.addEventListener("click", () => window.vozVendeFrio.comando());
             pantalla.querySelector(".botonesNavegacion").appendChild(microfono);
         }
-        pantalla.querySelector(".cerrarNavegacion").addEventListener("click", cerrar);
+        pantalla.querySelector(".cerrarNavegacion").addEventListener("click", () => cerrar());
         pantalla.querySelector(".vozNavegacion").addEventListener("click", alternarVoz);
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
             seguir = true;
@@ -444,7 +505,7 @@
         } catch (error) {
             // Sin lugar: el ajuste vale hasta cerrar.
         }
-        if (!conVoz() && "speechSynthesis" in window) window.speechSynthesis.cancel();
+        if (!conVoz()) callar();
         dibujarBotonVoz();
     }
 
@@ -460,14 +521,44 @@
     function dibujarCamino() {
         if (!mapa || !camino) return;
         if (capaCamino) capaCamino.remove();
-        capaCamino = L.layerGroup([
+        lineasCamino = [
             L.polyline(camino.puntos, { color: "#ffffff", weight: 10, opacity: 0.95, lineCap: "round", lineJoin: "round" }),
             L.polyline(camino.puntos, { className: "lineaCamino", color: "#1F5FE0", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: camino.recto ? "2 10" : null })
-        ]).addTo(mapa);
+        ];
+        metroRecortado = 0;
+        lineaHecha = L.polyline([], { className: "lineaHecha", color: "#9AA7B8", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round", dashArray: "2 9", interactive: false });
+        capaCamino = L.layerGroup([lineaHecha].concat(lineasCamino)).addTo(mapa);
         if (marcadorYo) marcadorYo.bringToFront?.();
         if ((seguir || !sigueSolo()) && camino.puntos.length > 1) {
             mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 130], paddingBottomRight: [30, 240], maxZoom: zoomPreferido() });
         }
+    }
+
+    // T132: la línea azul arranca donde estás y lo ya hecho queda gris
+    // punteado, como en la maqueta. Se recorta cada 5 m (no con cada lectura
+    // del GPS) y solo si vas por el camino; la línea recta (sin camino por
+    // calles) no se toca.
+    function recortarCamino(recorrido) {
+        if (!camino || camino.recto || lineasCamino.length === 0) return;
+        if (Math.abs(recorrido - metroRecortado) < 5) return;
+        metroRecortado = recorrido;
+        const { puntos, acumulado } = camino;
+        // El tramo donde caés: el último punto que ya pasaste.
+        let bajo = 0;
+        let alto = acumulado.length - 1;
+        while (bajo < alto) {
+            const medio = Math.ceil((bajo + alto) / 2);
+            if (acumulado[medio] <= recorrido) bajo = medio;
+            else alto = medio - 1;
+        }
+        const desde = puntos[bajo];
+        const hasta = puntos[Math.min(bajo + 1, puntos.length - 1)];
+        const largo = (acumulado[bajo + 1] ?? acumulado[bajo]) - acumulado[bajo];
+        const t = largo > 0 ? Math.min(1, (recorrido - acumulado[bajo]) / largo) : 0;
+        const aca = [desde[0] + (hasta[0] - desde[0]) * t, desde[1] + (hasta[1] - desde[1]) * t];
+        const falta = [aca].concat(puntos.slice(bajo + 1));
+        lineasCamino.forEach(linea => linea.setLatLngs(falta.length > 1 ? falta : [aca, aca]));
+        if (lineaHecha) lineaHecha.setLatLngs(puntos.slice(0, bajo + 1).concat([aca]));
     }
 
     function dibujarHoja() {
@@ -589,6 +680,7 @@
         const adelanto = proyeccion && proyeccion.lejos <= DISTANCIA_FUERA ? velocidad * ADELANTO_GPS : 0;
         const recorrido = proyeccion ? Math.min(camino.distancia, proyeccion.recorrido + adelanto) : 0;
         const falta = Math.max(0, camino.distancia - recorrido);
+        if (proyeccion && proyeccion.lejos <= DISTANCIA_FUERA) recortarCamino(proyeccion.recorrido);
         const restante = camino.distancia ? falta / camino.distancia : 0;
         const segundos = camino.duracion * restante;
         minutosQueFaltan = segundos / 60;
@@ -616,7 +708,7 @@
             fueraDelCamino++;
             if (fueraDelCamino >= 2 && Date.now() - ultimoCalculo > ESPERA_RECALCULO) {
                 avisar("Recalculando el camino…");
-                hablar("Recalculando");
+                hablar("Recalculando", { clave: "recalculando" });
                 calcularCamino();
                 return;
             }
@@ -634,19 +726,24 @@
         const hasta = proximo.metro - recorrido;
         dibujarManiobra(proximo, hasta);
 
-        // Voz: al empezar, a unos 200 m y justo antes de la maniobra.
+        // Voz: al empezar, a unos 200 m y justo antes de la maniobra. Cada
+        // frase sirve mientras esa siga siendo la próxima maniobra de este
+        // camino; si no, se descarta sin decirla (T131).
         const clave = camino.pasos.indexOf(proximo);
+        proximaManiobra = clave;
         const dichos = pasosAnunciados.get(clave) || new Set();
         const texto = indicacion(proximo, comercio.nombre);
+        const deEsteCamino = camino;
+        const voz = { clave: "maniobra" + clave, vigente: () => camino === deEsteCamino && proximaManiobra === clave && !llego };
         if (recienCalculado && !dichos.has("inicio")) {
             dichos.add("inicio");
-            hablar((hasta > 40 ? "En " + textoDistanciaHablada(hasta) + ", " : "") + texto.charAt(0).toLowerCase() + texto.slice(1));
+            hablar((hasta > 40 ? "En " + textoDistanciaHablada(hasta) + ", " : "") + texto.charAt(0).toLowerCase() + texto.slice(1), voz);
         } else if (hasta <= Math.max(220, velocidad * 18) && hasta > Math.max(60, velocidad * 7) && !dichos.has("lejos")) {
             dichos.add("lejos");
-            hablar("En " + textoDistanciaHablada(hasta) + ", " + texto.charAt(0).toLowerCase() + texto.slice(1));
+            hablar("En " + textoDistanciaHablada(hasta) + ", " + texto.charAt(0).toLowerCase() + texto.slice(1), voz);
         } else if (hasta <= Math.max(40, velocidad * 5) && !dichos.has("cerca")) {
             dichos.add("cerca");
-            hablar(texto);
+            hablar(texto, voz);
         }
         pasosAnunciados.set(clave, dichos);
     }
@@ -753,7 +850,7 @@
             return;
         }
         hablar(paradas.length > 1 ? "Terminaste el recorrido" : "");
-        cerrar();
+        cerrar({ despedida: true });
     }
 
     // Abre la navegación a uno o varios comercios (por nombre). Devuelve
@@ -793,17 +890,25 @@
         return true;
     }
 
-    function cerrar() {
+    // Con { despedida: true } se deja terminar la última frase ("Terminaste
+    // el recorrido"); si no, se calla enseguida.
+    function cerrar(opciones) {
         if (!pantalla) return;
         if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
-        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        if (opciones && opciones.despedida === true) {
+            filaDeFrases.splice(0, filaDeFrases.length - 1);
+        } else {
+            callar();
+        }
         pantalla.candado?.release?.().catch(() => {});
         pantalla.candado = null;
         pantalla.classList.add("oculto");
         document.documentElement.classList.remove("enNavegacion");
         if (marcadorYo) { marcadorYo.remove(); marcadorYo = null; }
         if (capaCamino) { capaCamino.remove(); capaCamino = null; }
+        lineasCamino = [];
+        lineaHecha = null;
         camino = null;
         posicion = null;
         paradas = [];
