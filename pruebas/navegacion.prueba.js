@@ -41,9 +41,15 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
             };
         }
     });
-    await page.route("https://routing.openstreetmap.de/**", ruta =>
-        ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CAMINO) })
-    );
+    // T133: el camino se pide siempre con el perfil de auto (sin pasos peatonales).
+    const pedidosDeCamino = [];
+    await page.route("https://routing.openstreetmap.de/**", ruta => {
+        pedidosDeCamino.push(ruta.request().url());
+        return ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CAMINO) });
+    });
+    page.on("request", pedido => {
+        if (pedido.url().includes("router.project-osrm.org")) pedidosDeCamino.push(pedido.url());
+    });
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation(SALIDA);
 
@@ -88,6 +94,9 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect(navegacion.locator("path.lineaHecha")).toHaveCount(1);
     await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
     await capturar(page, "navegacion-02b-linea-recortada");
+
+    expect(pedidosDeCamino.length).toBeGreaterThan(0);
+    pedidosDeCamino.forEach(url => expect(url).toMatch(/^https:\/\/routing\.openstreetmap\.de\/routed-car\/route\/v1\/driving\//));
 
     // Llegada.
     await page.context().setGeolocation({ latitude: COMERCIO.lat, longitude: COMERCIO.lng });
