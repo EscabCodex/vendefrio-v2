@@ -80,6 +80,15 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect(navegacion.getByRole("button", { name: "Prender la voz" })).toBeVisible();
     await navegacion.getByRole("button", { name: "Prender la voz" }).click();
 
+    // T132: al avanzar por Rivadavia, la línea se borra detrás y arranca donde estás.
+    const largoDeLaLinea = () => page.evaluate(() => document.querySelector("#pantallaNavegacion path.lineaCamino").getTotalLength());
+    const largoAlSalir = await largoDeLaLinea();
+    await page.context().setGeolocation({ latitude: SALIDA.latitude, longitude: -58.4015 });
+    await expect.poll(largoDeLaLinea).toBeLessThan(largoAlSalir * 0.8);
+    await expect(navegacion.locator("path.lineaHecha")).toHaveCount(1);
+    await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
+    await capturar(page, "navegacion-02b-linea-recortada");
+
     // Llegada.
     await page.context().setGeolocation({ latitude: COMERCIO.lat, longitude: COMERCIO.lng });
     await expect(navegacion.locator(".tiempoNavegacion")).toHaveText("Llegaste");
