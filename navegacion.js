@@ -24,6 +24,9 @@
     let pantalla = null;
     let mapa = null;
     let capaCamino = null;
+    let lineasCamino = [];       // borde blanco y línea azul (T132: se recortan al avanzar)
+    let lineaHecha = null;       // lo ya hecho, gris punteado (T132)
+    let metroRecortado = 0;
     let marcadorYo = null;
     let marcadorDestino = null;
     let vigilancia = null;
@@ -518,14 +521,44 @@
     function dibujarCamino() {
         if (!mapa || !camino) return;
         if (capaCamino) capaCamino.remove();
-        capaCamino = L.layerGroup([
+        lineasCamino = [
             L.polyline(camino.puntos, { color: "#ffffff", weight: 10, opacity: 0.95, lineCap: "round", lineJoin: "round" }),
             L.polyline(camino.puntos, { className: "lineaCamino", color: "#1F5FE0", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: camino.recto ? "2 10" : null })
-        ]).addTo(mapa);
+        ];
+        metroRecortado = 0;
+        lineaHecha = L.polyline([], { className: "lineaHecha", color: "#9AA7B8", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round", dashArray: "2 9", interactive: false });
+        capaCamino = L.layerGroup([lineaHecha].concat(lineasCamino)).addTo(mapa);
         if (marcadorYo) marcadorYo.bringToFront?.();
         if ((seguir || !sigueSolo()) && camino.puntos.length > 1) {
             mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 130], paddingBottomRight: [30, 240], maxZoom: zoomPreferido() });
         }
+    }
+
+    // T132: la línea azul arranca donde estás y lo ya hecho queda gris
+    // punteado, como en la maqueta. Se recorta cada 5 m (no con cada lectura
+    // del GPS) y solo si vas por el camino; la línea recta (sin camino por
+    // calles) no se toca.
+    function recortarCamino(recorrido) {
+        if (!camino || camino.recto || lineasCamino.length === 0) return;
+        if (Math.abs(recorrido - metroRecortado) < 5) return;
+        metroRecortado = recorrido;
+        const { puntos, acumulado } = camino;
+        // El tramo donde caés: el último punto que ya pasaste.
+        let bajo = 0;
+        let alto = acumulado.length - 1;
+        while (bajo < alto) {
+            const medio = Math.ceil((bajo + alto) / 2);
+            if (acumulado[medio] <= recorrido) bajo = medio;
+            else alto = medio - 1;
+        }
+        const desde = puntos[bajo];
+        const hasta = puntos[Math.min(bajo + 1, puntos.length - 1)];
+        const largo = (acumulado[bajo + 1] ?? acumulado[bajo]) - acumulado[bajo];
+        const t = largo > 0 ? Math.min(1, (recorrido - acumulado[bajo]) / largo) : 0;
+        const aca = [desde[0] + (hasta[0] - desde[0]) * t, desde[1] + (hasta[1] - desde[1]) * t];
+        const falta = [aca].concat(puntos.slice(bajo + 1));
+        lineasCamino.forEach(linea => linea.setLatLngs(falta.length > 1 ? falta : [aca, aca]));
+        if (lineaHecha) lineaHecha.setLatLngs(puntos.slice(0, bajo + 1).concat([aca]));
     }
 
     function dibujarHoja() {
@@ -647,6 +680,7 @@
         const adelanto = proyeccion && proyeccion.lejos <= DISTANCIA_FUERA ? velocidad * ADELANTO_GPS : 0;
         const recorrido = proyeccion ? Math.min(camino.distancia, proyeccion.recorrido + adelanto) : 0;
         const falta = Math.max(0, camino.distancia - recorrido);
+        if (proyeccion && proyeccion.lejos <= DISTANCIA_FUERA) recortarCamino(proyeccion.recorrido);
         const restante = camino.distancia ? falta / camino.distancia : 0;
         const segundos = camino.duracion * restante;
         minutosQueFaltan = segundos / 60;
@@ -873,6 +907,8 @@
         document.documentElement.classList.remove("enNavegacion");
         if (marcadorYo) { marcadorYo.remove(); marcadorYo = null; }
         if (capaCamino) { capaCamino.remove(); capaCamino = null; }
+        lineasCamino = [];
+        lineaHecha = null;
         camino = null;
         posicion = null;
         paradas = [];
