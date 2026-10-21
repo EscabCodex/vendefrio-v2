@@ -12,6 +12,18 @@ const pantallas = {
     rutas: document.getElementById("pantallaRutas")
 };
 
+// Las listas largas de las pantallas que se dejan se vacían: se vuelven a
+// dibujar al entrar, y miles de tarjetas ocultas hacen más lento todo lo
+// demás (T151).
+function vaciarListasOcultas(nombre) {
+    [["historial", "contenedorHistorial"], ["comercios", "listaComerciosAdmin"]].forEach(([pantalla, id]) => {
+        const lista = document.getElementById(id);
+        if (pantalla === nombre || !lista || !lista.firstChild) return;
+        window.piezas?.cortarTandas(lista);
+        lista.replaceChildren();
+    });
+}
+
 function mostrarPantalla(nombre) {
     if (typeof window.cerrarFichaComercio === "function" && nombre !== "comercios") window.cerrarFichaComercio();
     if (nombre === "mas") {
@@ -26,6 +38,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
         pantalla.classList.add("oculto");
     });
+    vaciarListasOcultas(nombre);
 
     if (pantallas[nombre]) {
         pantallas[nombre].classList.remove("oculto");

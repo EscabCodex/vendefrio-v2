@@ -28,6 +28,10 @@
     // Una sola pasada por el historial: lo entregado (con su hora) y lo
     // reservado de cada producto.
     function movimientos() {
+        // Sin ningún producto con stock cargado no hace falta recorrer el
+        // historial (T151): con muchos pedidos trababa el Catálogo.
+        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        if (!Object.values(productos).some(lista => (lista || []).some(tieneStock))) return { entregas: new Map(), reservas: new Map() };
         const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
         const entregas = new Map();
         const reservas = new Map();
@@ -64,9 +68,8 @@
         return { hay, reservadas, libres, nivel: hay <= 0 ? "no" : (libres < POCO ? "bajo" : "ok") };
     }
 
-    function todos() {
+    function todos(datos = movimientos()) {
         const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
-        const datos = movimientos();
         const lista = [];
         Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(producto => {
             if (!producto || producto.archivado === true) return;
@@ -97,7 +100,7 @@
             card.querySelector("strong")?.after(caja);
         });
 
-        const bajos = todos().filter(item => item.estado && item.estado.nivel !== "ok");
+        const bajos = todos(datos).filter(item => item.estado && item.estado.nivel !== "ok");
         let aviso = document.getElementById("avisoStockBajo");
         if (bajos.length) {
             if (!aviso) {

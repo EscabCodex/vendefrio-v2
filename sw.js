@@ -213,7 +213,9 @@ async function bajarVersionDelServidor() {
 // Al abrir, como mucho una revisión por minuto. Cuando la pide la app (al
 // volver a la pantalla, cada 30 minutos) se revisa siempre.
 function revisarVersionDelServidor(siempre) {
-  if (revisandoVersion) return revisandoVersion;
+  // Si la app pide revisar mientras hay una revisión en curso, se revisa de
+  // nuevo al terminar: la que está en curso pudo bajar los archivos de antes.
+  if (revisandoVersion) return siempre ? revisandoVersion.then(() => revisarVersionDelServidor(true)) : revisandoVersion;
   if (!siempre && Date.now() - ultimaRevisionVersion < SEGUNDOS_ENTRE_REVISIONES * 1000) return Promise.resolve();
   ultimaRevisionVersion = Date.now();
   revisandoVersion = bajarVersionDelServidor()
