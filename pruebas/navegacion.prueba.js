@@ -34,7 +34,11 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await page.addInitScript(() => {
         window.__dichos = [];
         if (window.speechSynthesis) {
-            window.speechSynthesis.speak = frase => window.__dichos.push(frase.text);
+            // Cada frase "termina" enseguida, así pasa la que sigue en la fila (T131).
+            window.speechSynthesis.speak = frase => {
+                window.__dichos.push(frase.text);
+                setTimeout(() => frase.onend && frase.onend(), 30);
+            };
         }
     });
     await page.route("https://routing.openstreetmap.de/**", ruta =>
