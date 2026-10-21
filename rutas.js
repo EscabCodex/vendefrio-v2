@@ -1872,6 +1872,8 @@ function optimizarRuta() {
             paradasHechasRuta = new Set();
             paradasConPedidosRuta = new Set(rutaOrdenada.filter(comercio => cargaParaParada(comercio.nombre).pedidos.length).map(comercio => comercio.nombre));
             pedidosAlArmarRuta = idsDePedidosRuta();
+            // El índice de recién se armó con los pedidos de la ruta anterior.
+            indicePedidosRuta = null;
             comerciosSinGpsRuta = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
                 .map(comercio => comercio.nombre);
@@ -2270,6 +2272,7 @@ function dibujarProximaParada() {
                 paradasHechasRuta.clear();
                 paradasConPedidosRuta.clear();
                 pedidosAlArmarRuta = idsDePedidosRuta();
+                indicePedidosRuta = null;
                 mostrarRutaEnLista();
             };
             pantalla.appendChild(tarjeta);

@@ -67,3 +67,45 @@ test("rutas: más de 9 paradas y Google Maps en partes", async ({ page }) => {
     expect(puntos[1]).toHaveLength(3);
     expect(puntos[0][0]).toBe("-34.6," + (-58.380 + 0.003));
 });
+
+// Revisor de T141: al volver a optimizar, un pedido hecho después de la
+// primera ruta pasa a ser de la ruta nueva; esa parada no queda hecha.
+test("rutas: reoptimizar con un pedido nuevo no saltea la parada", async ({ page }) => {
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    await page.locator("#inicioNombrePersonal").fill("Jere");
+    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
+    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.evaluate(() => {
+        [1, 2, 3].forEach(numero => agregarComercio({
+            nombre: "Kiosco " + numero, direccion: "Calle " + numero, lat: -34.600, lng: -58.380 + numero * 0.003
+        }));
+    });
+
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
+    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    await page.locator("#seleccionarTodosRuta").click();
+    const optimizar = async () => {
+        await page.locator("#btnOptimizarRuta").click();
+        await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    };
+    await optimizar();
+    const proxima = page.locator("#proximaParadaRuta");
+    await expect(proxima).toContainText("Próxima parada · 1 de 3");
+    await expect(proxima).toContainText("Kiosco 1");
+
+    // Un pedido nuevo para Kiosco 1 y se vuelve a optimizar.
+    await page.evaluate(() => guardarHistorial(obtenerHistorial().concat([{
+        comercio: "Kiosco 1", timestamp: Date.now(), productos: [{ marca: "Pastas", producto: "Ravioles", cantidad: 2, precio: 3000 }]
+    }])));
+    await optimizar();
+    await expect(proxima).toContainText("Próxima parada · 1 de 3");
+    await expect(proxima).toContainText("Kiosco 1");
+    await expect(page.locator(".paradaOrden.hecha")).toHaveCount(0);
+});
