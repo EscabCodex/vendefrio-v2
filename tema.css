@@ -1061,7 +1061,7 @@ html.enNavegacion body{overflow:hidden;}
   top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:calc(72px + env(safe-area-inset-right));
   display:grid;grid-template-columns:48px 1fr;align-items:center;gap:12px;
   padding:14px 16px;border-radius:22px;
-  background:var(--acento);color:var(--acento-txt);box-shadow:0 10px 30px rgba(0,0,0,.25);
+  background:var(--acento);color:var(--acento-txt);box-shadow:0 2px 6px rgba(0,0,0,.25);
 }
 .iconoManiobra{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.18);}
 html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
@@ -1077,7 +1077,7 @@ html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
 .botonFlotanteNav{
   display:grid;place-items:center;width:50px;height:50px;padding:0;margin:0;min-height:0;
   border:0;border-radius:50%;cursor:pointer;
-  background:var(--superficie);color:var(--texto);box-shadow:0 6px 18px rgba(0,0,0,.2);
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
 }
 .botonFlotanteNav.apagado{color:var(--peligro);}
 .centrarNavegacion{position:absolute;z-index:1100;right:max(12px, env(safe-area-inset-right));bottom:calc(208px + env(safe-area-inset-bottom));}
@@ -1089,7 +1089,7 @@ html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
   max-height:78vh;overflow-y:auto;overscroll-behavior:contain;
   padding:4px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   border-radius:28px 28px 0 0;
-  background:var(--superficie);color:var(--texto);box-shadow:0 -10px 30px rgba(0,0,0,.18);
+  background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
   touch-action:pan-y;
 }
 .asaHoja{display:grid;place-items:center;width:100%;height:24px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
@@ -1130,10 +1130,11 @@ html[data-tema="oscuro"] .accesoNavegacionIcono{color:var(--acento);}
 .avisoNavegacion:empty{display:none;}
 .pantallaNavegacion.llego .tiempoNavegacion{color:var(--visitado);}
 
+/* T141: sombras cortas sobre el mapa en movimiento (las largas traban un celular barato). */
 .pinNavegacion{background:none;border:0;}
 .pinNavegacionCabeza{
   position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;
-  background:var(--peligro);color:#fff;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);
+  background:var(--peligro);color:#fff;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);
 }
 .pinNavegacionCabeza::after{
   content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
@@ -2137,7 +2138,7 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .pinRuta{background:none;border:0;}
 .globoPinRuta{
   display:grid;place-items:center;width:34px;height:34px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);
-  background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 2px 6px rgba(0,0,0,.25);
+  background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 1px 3px rgba(0,0,0,.25);
 }
 .globoPinRuta b{transform:rotate(45deg);font-size:13px;font-weight:800;color:#5B6573;}
 .globoPinRuta.enRuta{background:var(--acento);border-color:#fff;}
@@ -2174,3 +2175,15 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .badge.tipoTiene{background:var(--pendiente-bg);color:var(--pendiente);}
 .badge.tipoQuiere{background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .badge.tipoQuiere{color:var(--acento);}
+
+/* T141: en Rutas, sin desenfoque detrás de los botones de volver y la barrita
+   del título: recalcularlo en cada cuadro al bajar traba un celular barato.
+   Fondo casi lleno en su lugar (se ve igual). */
+html.volverDespegado #pantallaRutas .barraVolver > button{
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:var(--superficie);
+}
+html.volverConBarra #pantallaRutas .barraVolver::before{
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:color-mix(in srgb, var(--fondo) 97%, transparent);
+}
