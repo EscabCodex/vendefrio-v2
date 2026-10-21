@@ -408,7 +408,9 @@ async function cargarRutaPorCallesNavegacion(posicion) {
         ...rutaOrdenada.slice(indiceParadaNavegacion).map(parada => [Number(parada.lng), Number(parada.lat)])
     ];
     const coordenadas = puntos.map(punto => punto.join(",")).join(";");
-    const url = "https://router.project-osrm.org/route/v1/driving/" +
+    // T133: solo calles de auto, el mismo servidor y perfil que navegacion.js
+    // (el OSRM de demostración mezclaba pasos peatonales).
+    const url = "https://routing.openstreetmap.de/routed-car/route/v1/driving/" +
         coordenadas + "?overview=full&geometries=geojson&steps=true";
 
     try {
