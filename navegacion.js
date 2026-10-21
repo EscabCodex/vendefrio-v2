@@ -35,6 +35,8 @@
     let posicion = null;
     let velocidad = 0;           // m/s, para adelantar el GPS y avisar antes
     let ultimaLectura = 0;
+    let rumbo = null;            // grados (0 = norte) hacia donde vas
+    let rumboDibujado = null;
     let camino = null;           // { puntos: [[lat,lng]], acumulado: [m], distancia, duracion, pasos: [] }
     let calculando = false;
     let ultimoCalculo = 0;
@@ -161,6 +163,13 @@
             }
         }
         return mejor.lejos === Infinity ? null : mejor;
+    }
+
+    function rumboEntre(a, b) {
+        const rad = Math.PI / 180;
+        const y = Math.sin((b[1] - a[1]) * rad) * Math.cos(b[0] * rad);
+        const x = Math.cos(a[0] * rad) * Math.sin(b[0] * rad) - Math.sin(a[0] * rad) * Math.cos(b[0] * rad) * Math.cos((b[1] - a[1]) * rad);
+        return (Math.atan2(y, x) / rad + 360) % 360;
     }
 
     function textoDistancia(metros) {
@@ -332,6 +341,15 @@
         const lugar = pantalla?.querySelector(".fraseManiobra");
         if (!lugar) return;
         if (lugar.textContent !== texto) lugar.textContent = texto;
+        pantalla.querySelector(".vozManiobra").classList.toggle("oculto", !texto);
+        acomodarPieManiobra();
+    }
+
+    // La franja de abajo de la tarjeta se ve solo si tiene algo (T134).
+    function acomodarPieManiobra() {
+        const pie = pantalla.querySelector(".pieManiobra");
+        const vacio = !pantalla.querySelector(".fraseManiobra").textContent && !pantalla.querySelector(".luegoManiobra").textContent;
+        if (pie.classList.contains("vacio") !== vacio) pie.classList.toggle("vacio", vacio);
     }
 
     // -------------------------------------------------
@@ -375,10 +393,17 @@
         (ruta.legs || []).forEach(tramo => (tramo.steps || []).forEach(paso => {
             const maniobra = paso.maneuver || {};
             if (!Array.isArray(maniobra.location)) return;
+            // Carriles (T134): solo donde el mapa los tiene cargados.
+            const cruce = Array.isArray(paso.intersections) ? paso.intersections[0] : null;
+            const carriles = cruce && Array.isArray(cruce.lanes) ? cruce.lanes.map(carril => ({
+                sirve: carril.valid === true,
+                hacia: Array.isArray(carril.indications) ? String(carril.indications[0] || "straight") : "straight"
+            })) : [];
             pasos.push({
                 lugar: [maniobra.location[1], maniobra.location[0]],
                 calle: String(paso.name || "").trim(),
-                maniobra: { tipo: String(maniobra.type || ""), lado: String(maniobra.modifier || ""), salida: Number(maniobra.exit) || 0 }
+                maniobra: { tipo: String(maniobra.type || ""), lado: String(maniobra.modifier || ""), salida: Number(maniobra.exit) || 0 },
+                carriles: carriles.length >= 2 && carriles.some(carril => carril.sirve) ? carriles : []
             });
         }));
         return armarCamino(puntos, Number(ruta.duration) || 0, pasos, false);
@@ -417,20 +442,47 @@
         pantalla.id = "pantallaNavegacion";
         pantalla.className = "pantallaNavegacion oculto";
         pantalla.setAttribute("aria-label", "Navegación");
+        // T134 «Manejando»: arriba la barra del día y la tarjeta grande de la
+        // maniobra (que nada tapa); abajo la tarjeta chica de la parada, con
+        // la siguiente asomando; a los costados el velocímetro, la voz y salir.
+        // Tocar la tarjeta de la parada abre la hoja con todos sus datos.
         pantalla.innerHTML = `
             <div class="mapaNavegacion" id="mapaNavegacion"></div>
+            <div class="barraDiaNavegacion" role="img"></div>
             <div class="cartelManiobra" aria-live="polite">
-                <span class="iconoManiobra"></span>
-                <div><strong class="distanciaManiobra"></strong><span class="textoManiobra"></span></div>
-                <p class="fraseManiobra" aria-hidden="true"></p>
+                <div class="filaManiobra">
+                    <span class="iconoManiobra"></span>
+                    <div class="textosManiobra"><strong class="distanciaManiobra"></strong><span class="textoManiobra"></span></div>
+                    <div class="carrilesManiobra oculto" role="img"></div>
+                </div>
+                <div class="pieManiobra vacio">
+                    <span class="vozManiobra oculto">${window.icono("volumen", 16)}<p class="fraseManiobra" aria-hidden="true"></p></span>
+                    <span class="luegoManiobra"></span>
+                </div>
             </div>
+            <div class="velocimetroNavegacion" aria-hidden="true"><strong>0</strong><small>km/h</small></div>
             <div class="botonesNavegacion">
-                <button type="button" class="botonFlotanteNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 22)}</button>
                 <button type="button" class="botonFlotanteNav vozNavegacion" aria-label="Voz"></button>
+                <button type="button" class="botonFlotanteNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 22)}</button>
             </div>
             <button type="button" class="botonFlotanteNav centrarNavegacion oculto" aria-label="Centrar en mi posición">${window.icono("mira", 22)}</button>
+            <div class="paradasNavegacion">
+                <button type="button" class="paradaActualNavegacion" aria-label="Ver más datos del comercio" aria-expanded="false">
+                    <span class="datosTarjetaParada">
+                        <small class="numeroTarjetaParada"></small>
+                        <strong class="nombreTarjetaParada"></strong>
+                        <span class="direccionTarjetaParada"></span>
+                    </span>
+                    <span class="tiempoTarjetaParada"><strong class="minutosTarjetaParada"></strong><small class="detalleTarjetaParada"></small></span>
+                </button>
+                <div class="siguienteParadaNavegacion" aria-hidden="true"><small>Después</small><strong></strong></div>
+            </div>
             <div class="hojaNavegacion" role="region" aria-label="Datos del comercio">
-                <button type="button" class="asaHoja" aria-label="Ver más datos del comercio" aria-expanded="false"><span></span></button>
+                <div class="cabezaHoja">
+                    <button type="button" class="botonChicoNav vozNavegacion" aria-label="Voz"></button>
+                    <button type="button" class="asaHoja" aria-label="Ver más datos del comercio" aria-expanded="false"><span></span></button>
+                    <button type="button" class="botonChicoNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 20)}</button>
+                </div>
                 <div class="hojaResumen">
                     <div class="hojaTiempo"><strong class="tiempoNavegacion"></strong><small class="detalleTiempo"></small></div>
                     <div class="hojaComercio"><div class="hojaAvatar"></div><div><h2 class="nombreNavegacion"></h2><p class="direccionNavegacion"></p></div></div>
@@ -453,20 +505,31 @@
             microfono.setAttribute("aria-label", "Comando por voz");
             microfono.innerHTML = window.icono("microfono", 22);
             microfono.addEventListener("click", () => window.vozVendeFrio.comando());
-            pantalla.querySelector(".botonesNavegacion").appendChild(microfono);
+            const botones = pantalla.querySelector(".botonesNavegacion");
+            botones.insertBefore(microfono, botones.querySelector(".cerrarNavegacion"));
         }
-        pantalla.querySelector(".cerrarNavegacion").addEventListener("click", () => cerrar());
-        pantalla.querySelector(".vozNavegacion").addEventListener("click", alternarVoz);
+        // Voz y salir están flotando y, con la hoja abierta, arriba de la hoja.
+        pantalla.querySelectorAll(".cerrarNavegacion").forEach(boton => boton.addEventListener("click", () => cerrar()));
+        pantalla.querySelectorAll(".vozNavegacion").forEach(boton => boton.addEventListener("click", alternarVoz));
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
             seguir = true;
             pantalla.querySelector(".centrarNavegacion").classList.add("oculto");
             if (posicion && mapa) mapa.setView(posicion, Math.max(mapa.getZoom(), zoomPreferido()));
         });
 
-        // La hoja: tocar el asa o deslizar para arriba o abajo.
+        // La hoja: tocar la tarjeta de la parada o el asa, o deslizar para
+        // arriba o abajo.
         const hoja = pantalla.querySelector(".hojaNavegacion");
         const asa = pantalla.querySelector(".asaHoja");
         asa.addEventListener("click", () => abrirHoja(!hoja.classList.contains("abierta")));
+        pantalla.querySelector(".paradaActualNavegacion").addEventListener("click", () => abrirHoja(true));
+        let inicioTarjeta = null;
+        const tarjetas = pantalla.querySelector(".paradasNavegacion");
+        tarjetas.addEventListener("pointerdown", evento => { inicioTarjeta = evento.clientY; });
+        tarjetas.addEventListener("pointerup", evento => {
+            if (inicioTarjeta !== null && inicioTarjeta - evento.clientY > 30) abrirHoja(true);
+            inicioTarjeta = null;
+        });
         let inicioY = null;
         hoja.addEventListener("pointerdown", evento => {
             if (evento.target.closest("button:not(.asaHoja), a")) return;
@@ -486,15 +549,18 @@
     function abrirHoja(abierta) {
         const hoja = pantalla.querySelector(".hojaNavegacion");
         hoja.classList.toggle("abierta", abierta);
+        pantalla.classList.toggle("conHojaAbierta", abierta);
         pantalla.querySelector(".asaHoja").setAttribute("aria-expanded", abierta ? "true" : "false");
+        pantalla.querySelector(".paradaActualNavegacion").setAttribute("aria-expanded", abierta ? "true" : "false");
     }
 
     function dibujarBotonVoz() {
-        const boton = pantalla.querySelector(".vozNavegacion");
         const prendida = conVoz();
-        boton.innerHTML = window.icono(prendida ? "volumen" : "volumenNo", 22);
-        boton.setAttribute("aria-label", prendida ? "Silenciar la voz" : "Prender la voz");
-        boton.classList.toggle("apagado", !prendida);
+        pantalla.querySelectorAll(".vozNavegacion").forEach(boton => {
+            boton.innerHTML = window.icono(prendida ? "volumen" : "volumenNo", boton.classList.contains("botonChicoNav") ? 20 : 22);
+            boton.setAttribute("aria-label", prendida ? "Silenciar la voz" : "Prender la voz");
+            boton.classList.toggle("apagado", !prendida);
+        });
     }
 
     function alternarVoz() {
@@ -522,15 +588,14 @@
         if (!mapa || !camino) return;
         if (capaCamino) capaCamino.remove();
         lineasCamino = [
-            L.polyline(camino.puntos, { color: "#ffffff", weight: 10, opacity: 0.95, lineCap: "round", lineJoin: "round" }),
-            L.polyline(camino.puntos, { className: "lineaCamino", color: "#1F5FE0", weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: camino.recto ? "2 10" : null })
+            L.polyline(camino.puntos, { className: "bordeCamino", color: "#0F3E9E", weight: 12, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }),
+            L.polyline(camino.puntos, { className: "lineaCamino", color: "#1F5FE0", weight: 8, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: camino.recto ? "2 10" : null, interactive: false })
         ];
         metroRecortado = 0;
         lineaHecha = L.polyline([], { className: "lineaHecha", color: "#9AA7B8", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round", dashArray: "2 9", interactive: false });
         capaCamino = L.layerGroup([lineaHecha].concat(lineasCamino)).addTo(mapa);
-        if (marcadorYo) marcadorYo.bringToFront?.();
         if ((seguir || !sigueSolo()) && camino.puntos.length > 1) {
-            mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 130], paddingBottomRight: [30, 240], maxZoom: zoomPreferido() });
+            mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 190], paddingBottomRight: [30, 140], maxZoom: zoomPreferido() });
         }
     }
 
@@ -617,6 +682,66 @@
 
         dibujarPedidosPendientes(comercio);
         dibujarParadas();
+        dibujarTarjetasParada();
+        dibujarBarraDelDia();
+    }
+
+    // Abajo, la tarjeta chica de la parada y la siguiente asomando (T134).
+    function dibujarTarjetasParada() {
+        const comercio = paradaActual();
+        ponerTexto(pantalla.querySelector(".numeroTarjetaParada"), paradas.length > 1 ? "Parada " + (indiceParada + 1) + " de " + paradas.length : "Tu parada");
+        ponerTexto(pantalla.querySelector(".nombreTarjetaParada"), comercio.nombre);
+        ponerTexto(pantalla.querySelector(".direccionTarjetaParada"), comercio.direccion || "Sin dirección cargada");
+        const siguiente = paradas[indiceParada + 1];
+        const caja = pantalla.querySelector(".siguienteParadaNavegacion");
+        caja.classList.toggle("oculto", !siguiente);
+        pantalla.querySelector(".paradasNavegacion").classList.toggle("sinSiguiente", !siguiente);
+        ponerTexto(caja.querySelector("strong"), siguiente ? siguiente.nombre : "");
+    }
+
+    // Arriba, una rayita por parada: verde las hechas y del color de la app
+    // la que sigue. Con muchas paradas, una sola barra que se llena.
+    function dibujarBarraDelDia() {
+        const barra = pantalla.querySelector(".barraDiaNavegacion");
+        barra.classList.toggle("oculto", paradas.length < 2);
+        barra.setAttribute("aria-label", "Parada " + (indiceParada + 1) + " de " + paradas.length);
+        barra.innerHTML = "";
+        if (paradas.length < 2) return;
+        if (paradas.length > 20) {
+            const llena = document.createElement("span");
+            llena.className = "rayaDia continua";
+            llena.style.setProperty("--avance", (indiceParada / paradas.length * 100).toFixed(1) + "%");
+            barra.appendChild(llena);
+            return;
+        }
+        paradas.forEach((parada, indice) => {
+            const raya = document.createElement("span");
+            raya.className = "rayaDia" + (indice < indiceParada ? " hecha" : indice === indiceParada ? " actual" : "");
+            barra.appendChild(raya);
+        });
+    }
+
+    // Carriles: una flechita por carril; los que sirven, enteros (T134).
+    const GIROS_CARRIL = { left: -90, "slight left": -45, "sharp left": -135, straight: 0, "slight right": 45, right: 90, "sharp right": 135, uturn: 180 };
+    function dibujarCarriles(paso) {
+        const caja = pantalla.querySelector(".carrilesManiobra");
+        const carriles = paso && Array.isArray(paso.carriles) ? paso.carriles : [];
+        const clave = carriles.map(carril => carril.hacia + (carril.sirve ? "+" : "-")).join(",");
+        if (caja.dataset.clave === clave) return;
+        caja.dataset.clave = clave;
+        caja.classList.toggle("oculto", !carriles.length);
+        caja.innerHTML = carriles.map(carril => '<svg viewBox="0 0 24 24" width="20" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' +
+            (carril.sirve ? "" : ' opacity=".45"') + ' style="transform:rotate(' + (GIROS_CARRIL[carril.hacia] ?? 0) + 'deg)"><path d="M12 21V4"/><path d="m6 10 6-6 6 6"/></svg>').join("");
+        const sirven = carriles.map((carril, indice) => carril.sirve ? indice + 1 : 0).filter(Boolean);
+        caja.setAttribute("aria-label", carriles.length ? "Usá " + (sirven.length === 1 ? "el carril " + sirven[0] : "los carriles " + sirven.join(" y ")) + " de " + carriles.length : "");
+    }
+
+    // "Luego …": la maniobra que viene después de la próxima.
+    function textoLuego(paso) {
+        if (!paso) return "";
+        if (paso.maniobra.tipo === "arrive") return "Luego llegás";
+        const texto = indicacion(paso, "");
+        return "Luego " + texto.charAt(0).toLowerCase() + texto.slice(1);
     }
 
     // Pedidos de este comercio que todavía no se entregaron (en la nube).
@@ -689,6 +814,9 @@
         ponerTexto(pantalla.querySelector(".detalleTiempo"), llego
             ? "Estás en la puerta"
             : textoDistancia(falta) + " · llegada " + horaDeLlegada(segundos));
+        ponerTexto(pantalla.querySelector(".minutosTarjetaParada"), llego ? "Llegaste" : textoMinutos(segundos));
+        ponerTexto(pantalla.querySelector(".detalleTarjetaParada"), llego ? "En la puerta" : textoDistancia(falta) + " · " + horaDeLlegada(segundos));
+        ponerTexto(pantalla.querySelector(".velocimetroNavegacion strong"), String(Math.round(velocidad * 3.6)));
 
         // ¿Llegó?
         const alDestino = distancia(posicion, destinoDe(comercio));
@@ -724,7 +852,7 @@
             return;
         }
         const hasta = proximo.metro - recorrido;
-        dibujarManiobra(proximo, hasta);
+        dibujarManiobra(proximo, hasta, camino.pasos[camino.pasos.indexOf(proximo) + 1]);
 
         // Voz: al empezar, a unos 200 m y justo antes de la maniobra. Cada
         // frase sirve mientras esa siga siendo la próxima maniobra de este
@@ -749,8 +877,11 @@
     }
 
     // El dibujo de la flecha se cambia solo cuando cambia la maniobra.
-    function dibujarManiobra(paso, metros) {
+    function dibujarManiobra(paso, metros, despues) {
         const comercio = paradaActual();
+        dibujarCarriles(paso);
+        ponerTexto(pantalla.querySelector(".luegoManiobra"), textoLuego(despues));
+        acomodarPieManiobra();
         const icono = pantalla.querySelector(".iconoManiobra");
         const flecha = iconoManiobra(paso);
         if (icono.dataset.flecha !== flecha) {
@@ -775,11 +906,27 @@
             velocidad = Math.min(40, distancia(posicion, nueva) / ((ahora - ultimaLectura) / 1000));
         }
         ultimaLectura = ahora;
+        // Hacia dónde vas (T134): el rumbo del GPS o el de los últimos metros.
+        if (Number.isFinite(lugar.coords.heading) && velocidad > 1) {
+            rumbo = lugar.coords.heading;
+        } else if (posicion && distancia(posicion, nueva) > 3) {
+            rumbo = rumboEntre(posicion, nueva);
+        }
         posicion = nueva;
         if (!marcadorYo) {
-            marcadorYo = L.circleMarker(posicion, { radius: 9, weight: 4, color: "#ffffff", fillColor: "#1F5FE0", fillOpacity: 1, className: "puntoYo" }).addTo(mapa);
+            marcadorYo = L.marker(posicion, {
+                icon: L.divIcon({ className: "marcadorYoNav", html: '<span class="flechaYo"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2 20 21 12 16.5 4 21z"/></svg></span>', iconSize: [44, 44], iconAnchor: [22, 22] }),
+                interactive: false, keyboard: false, zIndexOffset: 1000
+            }).addTo(mapa);
+            rumboDibujado = null;
         } else {
             marcadorYo.setLatLng(posicion);
+        }
+        // La flecha gira solo si el rumbo cambió de verdad.
+        if (rumbo !== null && (rumboDibujado === null || Math.abs(rumbo - rumboDibujado) > 4)) {
+            const flecha = marcadorYo.getElement()?.querySelector(".flechaYo svg");
+            if (flecha) flecha.style.transform = "rotate(" + Math.round(rumbo) + "deg)";
+            rumboDibujado = rumbo;
         }
         if (!camino && !calculando) {
             calcularCamino();
@@ -906,6 +1053,7 @@
         pantalla.classList.add("oculto");
         document.documentElement.classList.remove("enNavegacion");
         if (marcadorYo) { marcadorYo.remove(); marcadorYo = null; }
+        rumbo = null;
         if (capaCamino) { capaCamino.remove(); capaCamino = null; }
         lineasCamino = [];
         lineaHecha = null;
