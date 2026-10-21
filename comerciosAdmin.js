@@ -223,6 +223,27 @@ function contarPedidosDelComercio(nombre, historial) {
     return historial.filter(pedido => nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)).length;
 }
 
+// Lo mismo para toda la lista de una vez (T151): antes se recorría el
+// historial entero por cada tarjeta y en cada comparación del orden.
+function contarPedidosDeComercios(comercios, historial) {
+    // Cuántos pedidos tiene cada nombre escrito en el historial.
+    const porNombre = new Map();
+    historial.forEach(pedido => {
+        const nombre = normalizarTexto(pedido.comercio || pedido.cliente);
+        if (nombre) porNombre.set(nombre, (porNombre.get(nombre) || 0) + 1);
+    });
+    const cuentas = new Map();
+    comercios.forEach(comercio => {
+        const nombre = normalizarTexto(comercio.nombre);
+        let cantidad = 0;
+        if (nombre) porNombre.forEach((pedidos, delHistorial) => {
+            if (delHistorial === nombre || delHistorial.startsWith(nombre + " ") || nombre.startsWith(delHistorial + " ")) cantidad += pedidos;
+        });
+        cuentas.set(comercio.nombre, cantidad);
+    });
+    return cuentas;
+}
+
 let verComerciosArchivados = false;
 
 function agregarFilaArchivados(cantidad) {
@@ -257,6 +278,8 @@ window.archivarComercioConDeshacer = archivarComercioConDeshacer;
 
 function renderizarComercios() {
     if (!listaComerciosAdmin) return;
+    // Con Comercios oculta no se dibuja: mostrarPantalla la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaComercios")?.classList.contains("oculto")) return;
 
     // Archivados (T63): aparte, con "Archivados (N)" al final de la lista.
     const guardados = obtenerComercios();
@@ -265,6 +288,7 @@ function renderizarComercios() {
     const todosLosComercios = verComerciosArchivados ? archivados : guardados.filter(comercio => !comercioArchivado(comercio));
     // Eliminados y cancelados no cuentan (T26).
     const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+    const pedidosPorComercio = contarPedidosDeComercios(todosLosComercios, historialComercios);
     actualizarResumenComercios(verComerciosArchivados ? guardados.filter(comercio => !comercioArchivado(comercio)) : todosLosComercios);
     if (segmentoEstadoComercios && filtroEstadoComercios) sincronizarSegmento(segmentoEstadoComercios, filtroEstadoComercios.value);
 
@@ -294,7 +318,7 @@ function renderizarComercios() {
             const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
 
             if (orden === "frecuentes") {
-                const diferencia = contarPedidosDelComercio(b.nombre, historialComercios) - contarPedidosDelComercio(a.nombre, historialComercios);
+                const diferencia = pedidosPorComercio.get(b.nombre) - pedidosPorComercio.get(a.nombre);
                 if (diferencia) return diferencia;
             } else if (orden === "pendientes") {
                 const pendienteA = !estaVisitadoEstaSemana(a);
@@ -308,6 +332,7 @@ function renderizarComercios() {
             return a.nombre.localeCompare(b.nombre, "es");
         });
 
+    window.piezas?.cortarTandas(listaComerciosAdmin);
     listaComerciosAdmin.innerHTML = "";
 
     if (comercioMostradoIndividual) {
@@ -337,7 +362,8 @@ function renderizarComercios() {
         return;
     }
 
-    comercios.forEach(comercio => {
+    // Con muchos comercios se dibujan de a tandas, sin trabar (T151).
+    const dibujarComercio = comercio => {
         const card = document.createElement("div");
         card.className = "card comercioCard";
         card.tabIndex = 0;
@@ -362,7 +388,7 @@ function renderizarComercios() {
 
         const pedidos = document.createElement("span");
         pedidos.className = "datoComercio datoPedidos";
-        const cantidadPedidos = contarPedidosDelComercio(comercio.nombre, historialComercios);
+        const cantidadPedidos = pedidosPorComercio.get(comercio.nombre);
         pedidos.innerHTML =
             window.icono("paquete", 12) + " " +
             cantidadPedidos +
@@ -475,10 +501,15 @@ function renderizarComercios() {
         }
 
         card.appendChild(acciones);
-        listaComerciosAdmin.appendChild(card);
-    });
-
-    agregarFilaArchivados(archivados.length);
+        return card;
+    };
+    const dibujarTodo = () => {
+        comercios.forEach(comercio => listaComerciosAdmin.appendChild(dibujarComercio(comercio)));
+        agregarFilaArchivados(archivados.length);
+    };
+    if (window.piezas?.dibujarDeATandas) {
+        window.piezas.dibujarDeATandas(listaComerciosAdmin, comercios, dibujarComercio, { alTerminar: () => agregarFilaArchivados(archivados.length) });
+    } else dibujarTodo();
 }
 
 // Alias que utiliza menu.js al abrir la pantalla.

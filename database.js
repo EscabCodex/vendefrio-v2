@@ -45,12 +45,22 @@ function clonarDatos(datos) {
     return JSON.parse(JSON.stringify(datos));
 }
 
+// Se usa miles de veces por pantalla (comparar nombres de comercios y
+// productos): se recuerda el resultado de cada texto (T151).
+const textosNormalizados = new Map();
+
 function normalizarTexto(texto) {
-    return String(texto || "")
+    const original = String(texto || "");
+    let normalizado = textosNormalizados.get(original);
+    if (normalizado !== undefined) return normalizado;
+    normalizado = original
         .trim()
         .toLocaleLowerCase("es-AR")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
+    if (textosNormalizados.size > 20000) textosNormalizados.clear();
+    textosNormalizados.set(original, normalizado);
+    return normalizado;
 }
 
 function obtenerInicioSemanaActual() {

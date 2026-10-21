@@ -53,6 +53,8 @@ function crearBoton(clase, texto, titulo, datos = {}) {
 
 function renderizarProductosAdmin(filtro = "") {
     if (!listaProductosAdmin) return;
+    // Con Productos y marcas oculta no se dibuja: mostrarPantalla la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaProductos")?.classList.contains("oculto")) return;
 
     listaProductosAdmin.innerHTML = "";
     const productos = obtenerProductos();
