@@ -17,8 +17,10 @@ const PARADAS = [
 ];
 
 // Camino falso: al este por Rivadavia, a la izquierda por Belgrano (con
-// carriles: sirve el de la izquierda) y llegada.
-function camino(destino) {
+// carriles: sirve el de la izquierda) y llegada. Con `calleLarga`, antes de
+// llegar dobla a la derecha por esa calle (para un «Luego …» largo).
+function camino(destino, calleLarga) {
+    const giroLargo = calleLarga ? [{ name: calleLarga, maneuver: { type: "turn", modifier: "right", location: [ESQUINA[0], destino[1]] } }] : [];
     return {
         code: "Ok",
         routes: [{
@@ -36,6 +38,7 @@ function camino(destino) {
                             { valid: false, indications: ["straight", "right"] }
                         ] }]
                     },
+                    ...giroLargo,
                     { name: "", maneuver: { type: "arrive", modifier: "", location: destino } }
                 ]
             }]
@@ -48,20 +51,12 @@ function noSePisan(a, b) {
     return a.y + a.height <= b.y || b.y + b.height <= a.y || a.x + a.width <= b.x || b.x + b.width <= a.x;
 }
 
-test("manejando: maniobra grande, barra del día y tarjeta de la parada", async ({ page }) => {
-    await page.addInitScript(() => {
-        if (window.speechSynthesis) window.speechSynthesis.speak = frase => setTimeout(() => frase.onend && frase.onend(), 30);
-        navigator.geolocation.watchPosition = exito => {
-            window.__gps = (lat, lng) => exito({ coords: { latitude: lat, longitude: lng, speed: 8, accuracy: 5, heading: null }, timestamp: Date.now() });
-            return 1;
-        };
-        navigator.geolocation.clearWatch = () => {};
-    });
+// Entra como repartidor, carga las paradas y abre la navegación.
+async function abrirNavegacion(page, calleLarga) {
     await page.route("https://routing.openstreetmap.de/**", ruta => {
         const puntos = new URL(ruta.request().url()).pathname.split("/").pop().split(";").map(par => par.split(",").map(Number));
-        return ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(camino(puntos[puntos.length - 1])) });
+        return ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(camino(puntos[puntos.length - 1], calleLarga)) });
     });
-
     await page.goto("/");
     await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
     await page.locator("#inicioNombrePersonal").fill("Jere");
@@ -72,6 +67,29 @@ test("manejando: maniobra grande, barra del día y tarjeta de la parada", async 
         paradas.forEach(parada => agregarComercio({ ...parada, telefono: "11 4444-0000", origenGps: "gps" }));
         window.navegacionVendeFrio.abrir(paradas.map(parada => parada.nombre));
     }, PARADAS);
+}
+
+// La atribución del mapa (© OpenStreetMap) se ve entera, sin nada encima.
+async function atribucionVisible(page) {
+    const atribucion = page.locator("#pantallaNavegacion .leaflet-control-attribution");
+    await expect(atribucion).toContainText("OpenStreetMap");
+    await expect.poll(() => atribucion.evaluate(nodo => {
+        const caja = nodo.getBoundingClientRect();
+        const puntos = [[caja.left + 2, caja.top + 2], [caja.right - 2, caja.top + 2], [caja.left + 2, caja.bottom - 2], [caja.right - 2, caja.bottom - 2]];
+        return puntos.every(([x, y]) => nodo.contains(document.elementFromPoint(x, y)));
+    })).toBe(true);
+}
+
+test("manejando: maniobra grande, barra del día y tarjeta de la parada", async ({ page }) => {
+    await page.addInitScript(() => {
+        if (window.speechSynthesis) window.speechSynthesis.speak = frase => setTimeout(() => frase.onend && frase.onend(), 30);
+        navigator.geolocation.watchPosition = exito => {
+            window.__gps = (lat, lng) => exito({ coords: { latitude: lat, longitude: lng, speed: 8, accuracy: 5, heading: null }, timestamp: Date.now() });
+            return 1;
+        };
+        navigator.geolocation.clearWatch = () => {};
+    });
+    await abrirNavegacion(page);
 
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
@@ -119,6 +137,7 @@ test("manejando: maniobra grande, barra del día y tarjeta de la parada", async 
         expect(c.x).toBeGreaterThanOrEqual(0);
         expect(c.y + c.height).toBeLessThanOrEqual(640);
     });
+    await atribucionVisible(page);
     await capturar(page, "manejando-01-maniobra-y-parada");
 
     // Tocar la tarjeta abre la hoja con todo (Llamar, WhatsApp, Cargar pedido, Llegué).
@@ -139,4 +158,42 @@ test("manejando: maniobra grande, barra del día y tarjeta de la parada", async 
     await expect(tarjeta.locator(".numeroTarjetaParada")).toHaveText("Parada 2 de 3");
     await expect(barra.locator(".rayaDia.hecha")).toHaveCount(1);
     await expect(navegacion.locator(".siguienteParadaNavegacion strong")).toHaveText("Kiosco Luna");
+});
+
+test("manejando: la frase de la voz y un «Luego» largo entran juntos", async ({ page }) => {
+    await page.addInitScript(() => {
+        // La voz no termina nunca: la frase queda escrita en la tarjeta.
+        if (window.speechSynthesis) window.speechSynthesis.speak = () => {};
+        navigator.geolocation.watchPosition = exito => {
+            window.__gps = (lat, lng) => exito({ coords: { latitude: lat, longitude: lng, speed: 8, accuracy: 5, heading: null }, timestamp: Date.now() });
+            return 1;
+        };
+        navigator.geolocation.clearWatch = () => {};
+    });
+    await abrirNavegacion(page, "Avenida Presidente Figueroa Alcorta");
+
+    const navegacion = page.locator("#pantallaNavegacion");
+    await expect(navegacion).toBeVisible();
+    await page.evaluate(({ lat, lng }) => window.__gps(lat, lng), SALIDA);
+    await page.evaluate(({ lat, lng }) => window.__gps(lat, lng + 0.0005), SALIDA);
+
+    const cartel = navegacion.locator(".cartelManiobra");
+    await expect(cartel.locator(".fraseManiobra")).not.toBeEmpty();
+    await expect(cartel.locator(".luegoManiobra")).toHaveText("Luego doblá a la derecha por Avenida Presidente Figueroa Alcorta");
+    await expect(cartel.getByRole("img", { name: "Usá el carril 1 de 3" })).toBeVisible();
+
+    // La frase no se parte letra por letra: tiene lugar para varias palabras.
+    const anchoFrase = await cartel.locator(".fraseManiobra").evaluate(nodo => nodo.getBoundingClientRect().width);
+    expect(anchoFrase).toBeGreaterThan(120);
+
+    // La tarjeta no pisa la parada, el velocímetro ni los botones, y la
+    // atribución del mapa se sigue viendo.
+    const caja = async selector => navegacion.locator(selector).first().boundingBox();
+    const cajaCartel = await caja(".cartelManiobra");
+    for (const otra of [".paradaActualNavegacion", ".velocimetroNavegacion", ".botonesNavegacion"]) {
+        expect(noSePisan(cajaCartel, await caja(otra))).toBe(true);
+    }
+    expect(cajaCartel.height).toBeLessThan(320);
+    await atribucionVisible(page);
+    await capturar(page, "manejando-03-voz-y-luego-largo");
 });

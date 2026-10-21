@@ -517,6 +517,15 @@
             if (posicion && mapa) mapa.setView(posicion, Math.max(mapa.getZoom(), zoomPreferido()));
         });
 
+        // La atribución del mapa (© OpenStreetMap) va siempre justo debajo de
+        // la tarjeta de la maniobra, que cambia de alto con carriles y «Luego».
+        const cartel = pantalla.querySelector(".cartelManiobra");
+        if (window.ResizeObserver) {
+            new ResizeObserver(() => {
+                pantalla.style.setProperty("--bajoCartel", (cartel.offsetTop + cartel.offsetHeight) + "px");
+            }).observe(cartel);
+        }
+
         // La hoja: tocar la tarjeta de la parada o el asa, o deslizar para
         // arriba o abajo.
         const hoja = pantalla.querySelector(".hojaNavegacion");
