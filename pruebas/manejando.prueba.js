@@ -145,7 +145,7 @@ test("manejando: maniobra grande, barra del día y tarjeta de la parada", async 
     const hoja = navegacion.locator(".hojaNavegacion");
     await expect(hoja).toBeVisible();
     await expect(hoja.getByRole("link", { name: "Llamar" })).toBeVisible();
-    await expect(hoja.getByRole("button", { name: "Llegué" })).toBeVisible();
+    await expect(hoja.getByRole("button", { name: /Deslizá para marcar Llegué/ })).toBeVisible();
     await expect(tarjeta).toBeHidden();
     await expect(hoja.getByRole("button", { name: "Silenciar la voz" })).toBeVisible();
     await capturar(page, "manejando-02-hoja-abierta");

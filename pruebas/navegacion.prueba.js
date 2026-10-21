@@ -1,9 +1,10 @@
 // VendeFrío - Navegación propia (Etapa 5, T41 y T42): desde la ficha del
 // comercio, "Ir" abre el mapa con la línea del camino, la próxima maniobra y
-// la hoja con los datos del comercio; al llegar, "Llegué" lo marca visitado.
+// la hoja con los datos del comercio; al llegar, deslizar "Llegué" lo marca
+// visitado.
 // El GPS es falso y el camino (que en la app calcula el OSRM público) lo
 // contesta la prueba, así no hace falta internet.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, deslizar } = require("./ayudas");
 const { registrarDistribuidora } = require("./recorridos");
 
 test.use({ nube: true });
@@ -104,7 +105,7 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect.poll(() => page.evaluate(() => window.__dichos.join(" | "))).toContain("Llegaste a Kiosco La Esquina");
     await capturar(page, "navegacion-03-llegaste");
 
-    await navegacion.getByRole("button", { name: "Llegué" }).click();
+    await deslizar(page, "Deslizá para marcar Llegué");
     await expect(navegacion).toBeHidden();
     await expect(page.locator(".bottom-nav")).toBeVisible();
     const visitado = await page.evaluate(() => estaVisitadoEstaSemana(buscarComercioPorNombre("Kiosco La Esquina")));

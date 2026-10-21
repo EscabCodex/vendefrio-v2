@@ -4402,6 +4402,8 @@
     window.seguimientoVendeFrio = {
         redibujarFicha: () => dibujarFicha(),
         pedidoAbierto: () => idFichaAbierta,
+        // La navegación (T135) usa el mismo "Deslizá para marcar Llegué".
+        crearDeslizador,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
             etapa = ETAPAS_DE_ANTES[etapa] || etapa;
