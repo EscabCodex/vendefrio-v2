@@ -3649,7 +3649,8 @@
         const pagaCon = cobroAbierto.pagaCon;
         const vuelto = pagaCon === "justo" ? 0
             : Number.isFinite(monto) && pagaCon ? Math.round((pagaCon - monto) * 100) / 100 : NaN;
-        caja.classList.toggle("oculto", !Number.isFinite(vuelto));
+        // Solo se ve si hay vuelto o si no alcanza (con "Justo" no hace falta).
+        caja.classList.toggle("oculto", !Number.isFinite(vuelto) || vuelto === 0);
         caja.classList.toggle("faltaPlata", vuelto < 0);
         if (Number.isFinite(vuelto)) {
             caja.querySelector("span").textContent = vuelto === 0 ? "Da justo, sin vuelto" : vuelto < 0 ? "No alcanza, faltan" : "Le das de vuelto";

@@ -1947,6 +1947,7 @@ html[data-tema="oscuro"] .billeteCobro[aria-pressed="true"]{background:var(--sup
 .vueltoCobro{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:14px;background:var(--visitado-bg);color:var(--visitado);font-weight:650;}
 .vueltoCobro strong{font-size:24px;font-weight:800;}
 .vueltoCobro.faltaPlata{background:var(--pendiente-bg);color:var(--pendiente);}
+.vueltoCobro.oculto{display:none;}
 .pagaConCobro .etiquetaCobro{margin-top:0;}
 
 /* Faltante en dos toques (T111). */
