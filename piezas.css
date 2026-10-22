@@ -167,6 +167,7 @@ body > section.pzPantalla{position:relative;}
 .pzFondo.visible .pzHoja{transform:none;}
 .pzAsa{width:40px;height:5px;border-radius:9px;background:var(--borde-fuerte);margin:4px auto 10px;}
 .pzHojaTit{padding:4px 14px 2px;font-size:19px;font-weight:750;letter-spacing:-.01em;}
+.eleccionNavegacionNota{margin:4px 14px 6px;font-size:12px;color:var(--texto-sec);line-height:1.4;}
 .pzHojaSub{padding:0 14px 10px;font-size:14px;color:var(--texto-sec);line-height:1.4;}
 .pzHoja > .pzBtn{width:calc(100% - 12px);margin:8px 6px 0;}
 .pzHoja > .pzBotones{margin:8px 6px 0;}

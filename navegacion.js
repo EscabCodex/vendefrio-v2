@@ -1341,10 +1341,14 @@
     // Abre la navegación a uno o varios comercios (por nombre). Devuelve
     // false si no se puede (sin GPS guardado, sin mapa o con Google Maps
     // elegido): quien llama abre Google Maps como antes.
-    function abrir(nombres) {
-        const lista = (Array.isArray(nombres) ? nombres : [nombres])
+    function conGps(nombres) {
+        return (Array.isArray(nombres) ? nombres : [nombres])
             .map(nombre => (typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombre) : null))
             .filter(tieneGps);
+    }
+
+    function abrir(nombres) {
+        const lista = conGps(nombres);
         if (!lista.length || usaGoogleMaps() || !window.mapaVendeFrio?.disponible?.()) return false;
 
         crearPantalla();
@@ -1407,11 +1411,55 @@
         return Boolean(pantalla && !pantalla.classList.contains("oculto"));
     }
 
+    // T154: la primera vez que se toca "Ir" en este celular (sin el ajuste
+    // de Más > Recorrido guardado), una hoja pregunta cómo ir. Solo si la
+    // navegación propia se puede abrir; si no, sigue a Google Maps como antes.
+    function faltaElegir(nombres) {
+        const elegido = preferencias().navegador;
+        if (elegido === "app" || elegido === "google") return false;
+        return conGps(nombres).length > 0 && Boolean(window.mapaVendeFrio?.disponible?.()) && Boolean(window.piezas?.hoja);
+    }
+
+    function guardarNavegador(valor) {
+        try {
+            localStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ ...preferencias(), navegador: valor }));
+        } catch (error) {
+            // Sin lugar para guardar: se usa igual esta vez.
+        }
+    }
+
+    function preguntarComoIr(enlace) {
+        const caja = window.piezas.hoja({
+            titulo: "¿Cómo querés ir?",
+            clase: "hojaElegirNavegacion",
+            html: `<div class="pzOpciones">
+                    <button type="button" class="pzOpcion" data-navegador="app">${window.icono("navegar", 22)} Navegación de VendeFrío</button>
+                    <button type="button" class="pzOpcion" data-navegador="google">${window.icono("mapa", 22)} Google Maps</button>
+                </div>
+                <p class="eleccionNavegacionNota">Lo podés cambiar cuando quieras en Más &gt; Recorrido.</p>`
+        });
+        caja.querySelectorAll("[data-navegador]").forEach(boton => boton.addEventListener("click", () => {
+            const valor = boton.dataset.navegador;
+            guardarNavegador(valor);
+            window.piezas.cerrar();
+            if (valor === "app" && abrir(enlace.dataset.navegarA)) {
+                if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();
+                return;
+            }
+            window.open(enlace.href, "_blank", "noopener");
+        }));
+    }
+
     // "Ir" de Inicio, de la ficha del comercio y de Rutas: si se puede,
     // la navegación propia; si no, el enlace sigue a Google Maps.
     document.addEventListener("click", evento => {
         const enlace = evento.target.closest("[data-navegar-a]");
         if (!enlace) return;
+        if (faltaElegir(enlace.dataset.navegarA)) {
+            evento.preventDefault();
+            preguntarComoIr(enlace);
+            return;
+        }
         if (abrir(enlace.dataset.navegarA)) {
             evento.preventDefault();
             if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();

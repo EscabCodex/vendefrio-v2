@@ -64,6 +64,16 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
     await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
 
+    // T154: la primera vez, una hoja pregunta cómo ir.
+    const eleccion = page.getByRole("dialog", { name: "¿Cómo querés ir?" });
+    await expect(eleccion).toBeVisible();
+    await expect(eleccion.getByRole("button", { name: "Google Maps" })).toBeVisible();
+    await expect(eleccion).toContainText("Lo podés cambiar cuando quieras en Más > Recorrido.");
+    await capturar(page, "navegacion-00-como-queres-ir");
+    await eleccion.getByRole("button", { name: "Navegación de VendeFrío" }).click();
+    await expect(eleccion).toBeHidden();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).navegador)).toBe("app");
+
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
     await expect(page.locator(".bottom-nav")).toBeHidden();
@@ -110,4 +120,50 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect(page.locator(".bottom-nav")).toBeVisible();
     const visitado = await page.evaluate(() => estaVisitadoEstaSemana(buscarComercioPorNombre("Kiosco La Esquina")));
     expect(visitado).toBe(true);
+});
+
+// T154: si se elige Google Maps, se abre Google Maps y la hoja no vuelve a
+// salir; quien ya había elegido en Más > Recorrido tampoco la ve.
+test("navegación: elegir Google Maps la primera vez que se toca Ir", async ({ page }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+    await page.evaluate(({ lat, lng }) =>
+        agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", lat, lng, origenGps: "gps" }),
+    COMERCIO);
+    // Google Maps de mentira: no hace falta internet.
+    await page.context().route("https://www.google.com/**", ruta => ruta.fulfill({ status: 200, contentType: "text/html", body: "Google Maps" }));
+
+    const tocarIr = async () => {
+        await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
+        await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
+        await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    };
+    const eleccion = page.getByRole("dialog", { name: "¿Cómo querés ir?" });
+
+    await tocarIr();
+    await expect(eleccion).toBeVisible();
+    const [googleMaps] = await Promise.all([
+        page.waitForEvent("popup"),
+        eleccion.getByRole("button", { name: "Google Maps" }).click()
+    ]);
+    expect(googleMaps.url()).toContain("google.com/maps/dir/");
+    await googleMaps.close();
+    await expect(eleccion).toBeHidden();
+    await expect(page.locator("#pantallaNavegacion")).toBeHidden();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).navegador)).toBe("google");
+
+    // La segunda vez va derecho a Google Maps.
+    await page.evaluate(() => window.cerrarFichaComercio());
+    const [otraVez] = await Promise.all([page.waitForEvent("popup"), tocarIr()]);
+    await otraVez.close();
+    await expect(eleccion).toHaveCount(0);
+
+    // Quien ya eligió en Más > Recorrido no ve la hoja.
+    await page.evaluate(() => {
+        const datos = JSON.parse(localStorage.getItem("vendefrio_preferencias"));
+        localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...datos, navegador: "app" }));
+        window.cerrarFichaComercio();
+    });
+    await tocarIr();
+    await expect(page.locator("#pantallaNavegacion")).toBeVisible();
+    await expect(eleccion).toHaveCount(0);
 });
