@@ -27,6 +27,18 @@
         { nombre: "Granja El Sol", direccion: "Moreno 550", telefono: "11 6666-0101", lat: -34.6125, lng: -58.3735, cada: 14, pide: [["Helado 1 kg", 4], ["Cucurucho", 12]] }
     ];
 
+    // La fecha, las unidades y el mensaje que guarda Nuevo pedido.
+    function comoPedidoGuardado(comercio, timestamp, productos) {
+        const fecha = new Date(timestamp).toLocaleDateString("es-AR");
+        const cantidad = productos.reduce((total, item) => total + item.cantidad, 0);
+        const pedido = String.fromCodePoint(0x1F3EA) + " *" + comercio + "*\n" + fecha + "\n\n" +
+            String.fromCodePoint(0x1F4E6) + " *RESUMEN DEL PEDIDO*\nUnidades totales: " + cantidad +
+            "\nProductos diferentes: " + productos.length + "\n\n" +
+            String.fromCodePoint(0x1F535) + " *" + MARCA + "*\n" +
+            productos.map(item => "- " + item.producto + " x" + item.cantidad).join("\n");
+        return { fecha, cantidad, pedido };
+    }
+
     function marcados() {
         return p.lsLeer(CLAVE, null);
     }
@@ -67,13 +79,18 @@
         COMERCIOS.forEach((comercio, numero) => {
             for (let hace = comercio.deja || (numero % 3); hace <= 35; hace += comercio.cada) {
                 const variacion = (hace + numero) % 3 - 1;
+                const timestamp = hoy.getTime() - hace * DIA + numero * 1800000;
+                const productos = comercio.pide.map(([producto, cantidad]) => ({
+                    marca: MARCA, producto, cantidad: Math.max(1, cantidad + variacion * Math.ceil(cantidad / 5)), precio: precio[producto]
+                }));
                 pedidos.push({
                     comercio: comercio.nombre,
-                    timestamp: hoy.getTime() - hace * DIA + numero * 1800000,
+                    timestamp,
                     ejemplo: true,
-                    productos: comercio.pide.map(([producto, cantidad]) => ({
-                        marca: MARCA, producto, cantidad: Math.max(1, cantidad + variacion * Math.ceil(cantidad / 5)), precio: precio[producto]
-                    }))
+                    productos,
+                    // Como un pedido cargado en la app: Historial muestra la
+                    // fecha, las unidades y el mensaje de "Ver pedido".
+                    ...comoPedidoGuardado(comercio.nombre, timestamp, productos)
                 });
             }
         });

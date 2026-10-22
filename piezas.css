@@ -718,6 +718,16 @@ html[data-tema="oscuro"] .botonAyudaPantalla{background:var(--superficie-2);colo
 body > section > header > .campanaAvisos{order:8;}
 html.conAvisos body > section > header > .botonAyudaPantalla{margin-left:6px;}
 body > section:has(> .pzCabAccion) > header{padding-right:calc(72px + env(safe-area-inset-right));}
+/* En un celular chico, con "Avisos" y "?" en la cabecera, un título largo
+   ("Estadísticas", "Preferencias de trabajo") empujaba esos botones fuera de
+   la pantalla. Ahora el título se achica a lo que queda y, si una palabra no
+   entra, piezas.js lo pasa a su propio renglón, debajo de los botones (T152). */
+body > section > header > div:has(> h1){min-width:0;}
+body > section > header.cabeceraDosFilas{flex-wrap:wrap;row-gap:6px;}
+body > section > header.cabeceraDosFilas > div:has(> h1){order:20;flex:0 0 calc(100% + 108px);margin-left:-108px;}
+body > section[data-botones-volver="1"] > header.cabeceraDosFilas > div:has(> h1){flex-basis:calc(100% + 56px);margin-left:-56px;}
+body > section:not([data-botones-volver]) > header.cabeceraDosFilas > div:has(> h1){flex-basis:100%;margin-left:0;}
+}
 .hojaAyuda .pasosAyuda{margin:4px 14px 14px 0;padding-left:44px;display:grid;gap:12px;font-size:18px;line-height:1.4;color:var(--texto);}
 .hojaAyuda .pzBtn{width:100%;margin-top:8px;}
 
