@@ -9,12 +9,6 @@ test.use({ nube: true });
 
 test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-        // Acá se prueba lo que entiende el celular solo, sin Claude (T155:
-        // ia.prueba.js prueba el Asistente con Claude).
-        try {
-            const preferencias = JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}");
-            localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias, asistenteClaude: false }));
-        } catch (error) { /* sin lugar */ }
         window.__fraseVoz = "";
         class ReconocimientoFalso {
             start() {

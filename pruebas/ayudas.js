@@ -64,9 +64,21 @@ async function prepararPagina(page, nube) {
 const test = base.test.extend({
     // Las pruebas que usan la nube ponen { nube: true } con test.use().
     nube: [false, { option: true }],
+    // El Asistente le pregunta a Claude (T155). Las pruebas no tienen la
+    // función de verdad: Claude queda apagado, salvo en las que lo prueban
+    // con una IA falsa (ponen { claude: true } con test.use()).
+    claude: [false, { option: true }],
 
-    page: async ({ page, nube }, use) => {
+    page: async ({ page, nube, claude }, use) => {
         const errores = await prepararPagina(page, nube);
+        if (!claude) {
+            await page.addInitScript(() => {
+                try {
+                    const preferencias = JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}");
+                    if (preferencias.asistenteClaude === undefined) localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias, asistenteClaude: false }));
+                } catch (error) { /* sin lugar */ }
+            });
+        }
 
         await use(page);
 

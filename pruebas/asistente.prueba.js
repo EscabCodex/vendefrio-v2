@@ -5,7 +5,7 @@
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora, cargarPedido } = require("./recorridos");
 
-test.use({ nube: true });
+test.use({ nube: true, claude: true });
 
 process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
 process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
