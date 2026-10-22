@@ -2497,3 +2497,63 @@ html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
 .pieParadas .pzBtn{min-height:56px;border-radius:999px;}
 .pieParadas .pzBtn:first-child{flex:1;font-size:14px;}
 .pieParadas .pzBtn:last-child{flex:1.4;font-size:17px;font-weight:900;}
+
+/* ---------- T139 y T140: el equipo en los mapas ----------
+   Avisos de la calle y compañeros, con los colores de la maqueta
+   (H-avisar, H-nav, H-plan). Sombras cortas, sin desenfoque (T141). */
+:root{--equipo:#7B4DDB;--avisar:#E8590C;--lento-bg:#FFEBD3;--lento-txt:#9A4D00;}
+html[data-tema="oscuro"]{--equipo:#8B6CF0;--lento-bg:#2E2412;--lento-txt:#FFB547;}
+.pinAvisoCalle,.pinCompanero{background:none;border:0;}
+.cabezaAvisoCalle{
+  display:grid;place-items:center;width:40px;height:40px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.cabezaCompanero{
+  display:grid;place-items:center;width:38px;height:38px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;background:var(--equipo);color:#fff;font-size:12px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+/* Navegando: el botón grande naranja abajo a la derecha, al lado de la
+   columna de voz y salir (así la columna no crece y no llega a la maniobra). */
+.avisarNavegacion{
+  position:absolute;z-index:1100;right:calc(max(14px, env(safe-area-inset-right)) + 62px);bottom:calc(128px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;align-content:center;gap:2px;width:72px;height:72px;box-sizing:border-box;padding:0;margin:0;min-height:0;
+  border:4px solid #fff;border-radius:50%;background:var(--avisar);color:#fff;font:inherit;font-size:11px;font-weight:800;line-height:1;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;
+}
+/* «Lucas avisó…» debajo de la maniobra, sin tapar los créditos del mapa. */
+.tarjetaEquipoNav{
+  position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
+  top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 34px);
+  display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:0;border-radius:18px;text-align:left;
+  background:var(--superficie);color:var(--texto);font:inherit;box-shadow:0 2px 6px rgba(0,0,0,.22);cursor:pointer;
+}
+.tarjetaEquipoNav.oculto{display:none;}
+.pantallaNavegacion.conHojaAbierta .avisarNavegacion{display:none;}
+.pantallaNavegacion.conHojaAbierta .tarjetaEquipoNav{display:none;}
+.inicialEquipoNav{
+  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;
+  background:var(--equipo);color:#fff;font-size:12px;font-weight:900;
+}
+.textoEquipoNav{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.3;}
+/* Vista previa de Rutas: el aviso más nuevo, arriba de Iniciar. */
+.avisoEquipoRutas{
+  display:flex;align-items:center;gap:8px;width:100%;margin:8px 0 0;padding:8px 11px;min-height:0;border:0;border-radius:14px;
+  background:var(--lento-bg);color:var(--lento-txt);font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer;
+}
+.avisoEquipoRutas[hidden]{display:none;}
+.avisoEquipoRutas svg{flex:none;}
+.avisoEquipoRutas span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* La hoja «¿Qué querés avisar?». */
+.hojaAvisar .pzHojaTit{font-size:24px;font-weight:900;letter-spacing:-0.02em;}
+.tiposAvisar{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-top:6px;}
+.tipoAvisar{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;margin:0;padding:6px;
+  border:0;border-radius:22px;background:var(--superficie-2);color:var(--texto);font:inherit;font-size:13px;font-weight:800;
+  line-height:1.15;text-align:center;cursor:pointer;
+}
+.circuloAvisar{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#fff;}
+.vozAvisar{
+  display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:18px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;
+}
+.vozAvisar em{font-style:normal;color:var(--texto-sec);}

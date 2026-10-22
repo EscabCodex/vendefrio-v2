@@ -19,6 +19,7 @@
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
     const DISTANCIA_LLEGANDO = 150;   // m: se agranda la hoja (T135)
     const DISTANCIA_FUERA = 35;       // m: te saliste del camino
+    const DISTANCIA_AVISO = 30;       // m: un aviso del equipo está en el camino (T139)
     const ESPERA_RECALCULO = 5000;    // ms entre dos cálculos del camino
     const ADELANTO_GPS = 1.5;         // s: el GPS llega tarde; se adelanta según la velocidad
 
@@ -48,6 +49,7 @@
     let desplazoHoja = 0;        // px: con la hoja abierta, tu posición va más arriba
     const pasosAnunciados = new Map();
     let proximaManiobra = -1;    // índice del paso que viene (para la voz)
+    let calleActual = "";        // por dónde vas, para los avisos del equipo (T139)
 
     // -------------------------------------------------
     // Preferencias (Más > Cómo hacés el recorrido)
@@ -166,6 +168,31 @@
             }
         }
         return mejor.lejos === Infinity ? null : mejor;
+    }
+
+    // Qué tan cerca pasa una línea de un punto (m). Proyección plana.
+    function lejosDeLinea(punto, puntos) {
+        const cosLat = Math.cos(punto[0] * Math.PI / 180);
+        const metros = p => [p[0] * 111320, p[1] * 111320 * cosLat];
+        const P = metros(punto);
+        let menor = Infinity;
+        for (let i = 0; i < puntos.length - 1; i++) {
+            const A = metros(puntos[i]);
+            const B = metros(puntos[i + 1]);
+            const dx = B[0] - A[0];
+            const dy = B[1] - A[1];
+            const largo2 = dx * dx + dy * dy;
+            const t = largo2 ? Math.max(0, Math.min(1, ((P[0] - A[0]) * dx + (P[1] - A[1]) * dy) / largo2)) : 0;
+            menor = Math.min(menor, Math.hypot(P[0] - A[0] - t * dx, P[1] - A[1] - t * dy));
+        }
+        return menor;
+    }
+
+    // ¿Un aviso del equipo queda en lo que falta del camino? (T139)
+    function pasaCerca(lat, lng) {
+        if (!camino || camino.recto || camino.puntos.length < 2) return false;
+        const cerca = proyectarEntre([Number(lat), Number(lng)], ultimoRecorrido, Infinity);
+        return Boolean(cerca && cerca.lejos <= DISTANCIA_AVISO);
     }
 
     function rumboEntre(a, b) {
@@ -389,12 +416,29 @@
         // «Sin autopistas» elegido en la vista previa de Rutas (T136); si el
         // servidor no lo acepta, va el camino de siempre.
         const sinAutopistas = preferencias().sinAutopistas === true && perfil === "routed-car";
-        let respuesta = await fetch(url + (sinAutopistas ? "&exclude=motorway" : ""));
-        if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url);
+        // Calle cortada o choque avisados por el equipo (T139): se piden otros
+        // recorridos y va el primero que no pasa por ahí.
+        const bloqueos = window.avisosCalleVendeFrio?.bloqueos?.() || [];
+        const conOtros = bloqueos.length ? "&alternatives=3" : "";
+        let respuesta = await fetch(url + conOtros + (sinAutopistas ? "&exclude=motorway" : ""));
+        if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url + conOtros);
         if (!respuesta.ok) throw new Error("Sin camino");
         const datos = await respuesta.json();
-        const ruta = datos && Array.isArray(datos.routes) ? datos.routes[0] : null;
-        if (!ruta || !ruta.geometry || !Array.isArray(ruta.geometry.coordinates)) throw new Error("Sin camino");
+        const rutas = datos && Array.isArray(datos.routes)
+            ? datos.routes.filter(ruta => ruta && ruta.geometry && Array.isArray(ruta.geometry.coordinates)) : [];
+        if (!rutas.length) throw new Error("Sin camino");
+        let ruta = rutas[0];
+        let desvio = null;
+        if (bloqueos.length) {
+            const lineaDe = opcion => opcion.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+            const corta = opcion => bloqueos.find(aviso => lejosDeLinea([aviso.lat, aviso.lng], lineaDe(opcion)) <= DISTANCIA_AVISO);
+            const enElCamino = corta(rutas[0]);
+            if (enElCamino) {
+                const libre = rutas.find(opcion => !corta(opcion));
+                if (libre) ruta = libre;
+                desvio = { aviso: enElCamino, otro: Boolean(libre), extra: libre ? (Number(libre.duration) || 0) - (Number(rutas[0].duration) || 0) : 0 };
+            }
+        }
         const puntos = ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
         const pasos = [];
         (ruta.legs || []).forEach(tramo => (tramo.steps || []).forEach(paso => {
@@ -413,7 +457,9 @@
                 carriles: carriles.length >= 2 && carriles.some(carril => carril.sirve) ? carriles : []
             });
         }));
-        return armarCamino(puntos, Number(ruta.duration) || 0, pasos, false);
+        const armado = armarCamino(puntos, Number(ruta.duration) || 0, pasos, false);
+        armado.desvio = desvio;
+        return armado;
     }
 
     async function calcularCamino() {
@@ -433,6 +479,13 @@
         pasosAnunciados.clear();
         dibujarCamino();
         actualizar(true);
+        if (camino.desvio) window.avisosCalleVendeFrio?.alDesviar?.(camino.desvio);
+    }
+
+    // Un aviso nuevo del equipo cortó el camino (T139): se pide otro ya.
+    function recalcular() {
+        if (!abierta() || !posicion || calculando || llego) return;
+        calcularCamino();
     }
 
     // -------------------------------------------------
@@ -971,6 +1024,7 @@
         // camino; si no, se descarta sin decirla (T131).
         const clave = camino.pasos.indexOf(proximo);
         proximaManiobra = clave;
+        calleActual = (camino.pasos[clave - 1] || {}).calle || "";
         const dichos = pasosAnunciados.get(clave) || new Set();
         const texto = indicacion(proximo, comercio.nombre);
         const deEsteCamino = camino;
@@ -1167,6 +1221,7 @@
         }
         empezarParada();
         empezarGps();
+        window.equipoRutaVendeFrio?.alAbrirNavegacion?.(mapa, pantalla);
         // Pedir la pantalla prendida mientras se navega (si el celular deja).
         if (preferencias().pantallaEncendida !== false) {
             navigator.wakeLock?.request?.("screen").then(candado => { pantalla.candado = candado; }).catch(() => {});
@@ -1196,7 +1251,9 @@
         lineaHecha = null;
         camino = null;
         posicion = null;
+        calleActual = "";
         paradas = [];
+        window.equipoRutaVendeFrio?.alCerrarNavegacion?.();
     }
 
     function abierta() {
@@ -1214,5 +1271,10 @@
         }
     }, true);
 
-    window.navegacionVendeFrio = { abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, saltear: saltearParada, paradaActual };
+    window.navegacionVendeFrio = {
+        abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
+        // Para los avisos y los compañeros del equipo (T139, T140).
+        recalcular, pasaCerca, hablar,
+        posicion: () => posicion, calle: () => calleActual
+    };
 }());
