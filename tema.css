@@ -1053,50 +1053,131 @@ html.enNavegacion body{overflow:hidden;}
 .pantallaNavegacion{position:fixed;inset:0;z-index:1500;background:var(--fondo);overflow:hidden;}
 .pantallaNavegacion.oculto{display:none;}
 .mapaNavegacion{position:absolute;inset:0;background:var(--superficie-2);}
-.pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(130px + env(safe-area-inset-top));}
+.pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 6px);}
 .pantallaNavegacion .leaflet-control-attribution{font-size:10px;border-radius:8px 0 0 8px;}
 
-.cartelManiobra{
-  position:absolute;z-index:1100;
-  top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:calc(72px + env(safe-area-inset-right));
-  display:grid;grid-template-columns:48px 1fr;align-items:center;gap:12px;
-  padding:14px 16px;border-radius:22px;
-  background:var(--acento);color:var(--acento-txt);box-shadow:0 2px 6px rgba(0,0,0,.25);
+/* T134 «Manejando»: mapa completo; arriba la barra del día y la tarjeta
+   grande de la maniobra; abajo la tarjeta chica de la parada. Sombras cortas
+   (T141): nada pesado sobre el mapa en movimiento. */
+.barraDiaNavegacion{
+  position:absolute;z-index:1100;display:flex;gap:3px;
+  top:calc(10px + env(safe-area-inset-top));left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
 }
-.iconoManiobra{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.18);}
-html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
-.cartelManiobra div{display:grid;gap:2px;min-width:0;}
-.distanciaManiobra{font-size:24px;font-weight:800;line-height:1.05;}
+.barraDiaNavegacion.oculto{display:none;}
+.rayaDia{flex:1;height:6px;border-radius:3px;background:var(--borde-fuerte);}
+.rayaDia.hecha{background:var(--visitado);}
+.rayaDia.actual{background:var(--acento);}
+.rayaDia.continua{background:linear-gradient(90deg, var(--visitado) var(--avance), var(--borde-fuerte) var(--avance));}
+
+.cartelManiobra{
+  position:absolute;z-index:1100;overflow:hidden;
+  top:calc(24px + env(safe-area-inset-top));left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
+  border-radius:26px;background:var(--acento);color:var(--acento-txt);box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+.pantallaNavegacion:has(.barraDiaNavegacion.oculto) .cartelManiobra{top:calc(12px + env(safe-area-inset-top));}
+.filaManiobra{display:flex;align-items:center;gap:14px;padding:14px 16px 12px;}
+.iconoManiobra{flex:0 0 auto;display:grid;place-items:center;width:56px;height:56px;}
+.iconoManiobra svg{width:52px;height:52px;}
+.textosManiobra{flex:1;display:grid;gap:3px;min-width:0;}
+.distanciaManiobra{font-size:40px;font-weight:900;line-height:.95;letter-spacing:-0.03em;}
 .distanciaManiobra:empty{display:none;}
-.textoManiobra{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;}
-/* T131: lo que dice la voz, escrito mientras lo dice. */
-.fraseManiobra{grid-column:1 / -1;margin:0;padding-top:8px;border-top:1px solid rgba(255,255,255,.28);font-size:13.5px;font-weight:600;line-height:1.3;opacity:.92;overflow-wrap:anywhere;}
-html[data-tema="oscuro"] .fraseManiobra{border-top-color:rgba(0,0,0,.18);}
-.fraseManiobra:empty{display:none;}
+.textoManiobra{font-size:19px;font-weight:800;line-height:1.2;overflow-wrap:anywhere;}
+.carrilesManiobra{flex:0 0 auto;display:flex;gap:2px;padding:6px;border-radius:12px;background:rgba(0,0,0,.16);}
+.carrilesManiobra.oculto{display:none;}
+.pieManiobra{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:9px 16px;background:rgba(0,0,0,.16);font-size:14px;font-weight:700;line-height:1.3;}
+.pieManiobra.vacio{display:none;}
+/* T131: lo que dice la voz, escrito mientras lo dice. Si no entra al lado
+   de «Luego …», «Luego» baja a otra línea. */
+.vozManiobra{flex:1 1 13em;display:flex;align-items:center;gap:8px;min-width:0;}
+.vozManiobra.oculto{display:none;}
+.vozManiobra svg{flex:0 0 auto;}
+.fraseManiobra{margin:0;min-width:0;overflow-wrap:anywhere;}
+.fraseManiobra::before{content:"«";}
+.fraseManiobra::after{content:"»";}
+.luegoManiobra{flex:0 1 auto;min-width:0;margin-left:auto;opacity:.85;text-align:right;overflow-wrap:anywhere;}
+.luegoManiobra:empty{display:none;}
+
+.velocimetroNavegacion{
+  position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(128px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;align-content:center;width:64px;height:64px;box-sizing:border-box;border-radius:50%;
+  background:var(--superficie);color:var(--texto);border:4px solid var(--peligro);box-shadow:0 2px 6px rgba(0,0,0,.22);line-height:1;
+}
+.velocimetroNavegacion strong{font-size:22px;font-weight:900;}
+.velocimetroNavegacion small{font-size:10px;font-weight:700;color:var(--texto-sec);}
 
 .botonesNavegacion{
-  position:absolute;z-index:1100;display:grid;gap:10px;
-  top:calc(12px + env(safe-area-inset-top));right:max(12px, env(safe-area-inset-right));
+  position:absolute;z-index:1100;display:grid;gap:10px;justify-items:center;
+  right:max(14px, env(safe-area-inset-right));bottom:calc(128px + env(safe-area-inset-bottom));
 }
 .botonFlotanteNav{
-  display:grid;place-items:center;width:50px;height:50px;padding:0;margin:0;min-height:0;
+  display:grid;place-items:center;width:52px;height:52px;padding:0;margin:0;min-height:0;
   border:0;border-radius:50%;cursor:pointer;
   background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
 }
 .botonFlotanteNav.apagado{color:var(--peligro);}
-.centrarNavegacion{position:absolute;z-index:1100;right:max(12px, env(safe-area-inset-right));bottom:calc(208px + env(safe-area-inset-bottom));}
+.centrarNavegacion{position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(204px + env(safe-area-inset-bottom));}
 .centrarNavegacion.oculto{display:none;}
+
+.paradasNavegacion{
+  position:absolute;z-index:1100;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;padding-left:max(14px, env(safe-area-inset-left));overflow:hidden;
+}
+.paradaActualNavegacion{
+  flex:0 0 calc(100% - 72px);max-width:420px;box-sizing:border-box;display:flex;align-items:center;gap:12px;
+  min-height:0;margin:0;padding:14px 16px;border:0;border-radius:24px;text-align:left;font:inherit;cursor:pointer;
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
+}
+.datosTarjetaParada{flex:1;display:grid;gap:1px;min-width:0;}
+.numeroTarjetaParada{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--acento-oscuro, var(--acento));}
+html[data-tema="oscuro"] .numeroTarjetaParada{color:var(--acento);}
+.nombreTarjetaParada{font-size:19px;font-weight:900;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.direccionTarjetaParada{font-size:13px;font-weight:600;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tiempoTarjetaParada{flex:0 0 auto;display:grid;justify-items:end;gap:3px;text-align:right;}
+.minutosTarjetaParada{font-size:24px;font-weight:900;line-height:1;color:var(--visitado);}
+.detalleTarjetaParada{font-size:12px;font-weight:600;color:var(--texto-sec);white-space:nowrap;}
+.siguienteParadaNavegacion{
+  flex:0 0 260px;box-sizing:border-box;display:grid;gap:1px;align-content:center;padding:14px 16px;border-radius:24px;
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);opacity:.7;
+}
+.siguienteParadaNavegacion.oculto{display:none;}
+.paradasNavegacion.sinSiguiente{padding-right:max(14px, env(safe-area-inset-right));}
+.paradasNavegacion.sinSiguiente .paradaActualNavegacion{flex:1;max-width:none;}
+/* El camino como en la maqueta: azul con borde oscuro de día, lima de noche. */
+html[data-tema="oscuro"] .pantallaNavegacion .bordeCamino{stroke:#4E6112;}
+html[data-tema="oscuro"] .pantallaNavegacion .lineaCamino{stroke:#C8F04A;}
+html[data-tema="oscuro"] .pantallaNavegacion .lineaHecha{stroke:#4A5562;}
+/* Tu posición: la flecha hacia donde vas, con un halo (sin sombras). */
+.marcadorYoNav{background:none;border:0;}
+.flechaYo{display:grid;place-items:center;width:44px;height:44px;box-sizing:border-box;border-radius:50%;
+  background:#1F5FE0;color:#fff;border:4px solid #fff;outline:8px solid rgba(31,95,224,.18);}
+html[data-tema="oscuro"] .flechaYo{background:#3D8BFF;outline-color:rgba(108,182,255,.2);}
+.siguienteParadaNavegacion small{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+.siguienteParadaNavegacion strong{font-size:19px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* En modo oscuro, la regla general pinta todos los textos de claro: en la
+   tarjeta de la maniobra (lima) van del color del texto sobre el acento. */
+html[data-tema="oscuro"] .cartelManiobra :is(strong, span, p, small){color:inherit !important;}
+html[data-tema="oscuro"] .numeroTarjetaParada{color:var(--acento) !important;}
+html[data-tema="oscuro"] .minutosTarjetaParada{color:var(--visitado) !important;}
+html[data-tema="oscuro"] :is(.direccionTarjetaParada, .detalleTarjetaParada, .siguienteParadaNavegacion small){color:var(--texto-sec) !important;}
+/* Con la hoja abierta no se ven las tarjetas ni los botones de abajo. */
+.pantallaNavegacion.conHojaAbierta .paradasNavegacion,
+.pantallaNavegacion.conHojaAbierta .velocimetroNavegacion,
+.pantallaNavegacion.conHojaAbierta .botonesNavegacion,
+.pantallaNavegacion.conHojaAbierta .centrarNavegacion{display:none;}
 
 .hojaNavegacion{
   position:absolute;z-index:1100;left:0;right:0;bottom:0;
-  display:grid;gap:14px;
+  display:none;gap:14px;
   max-height:78vh;overflow-y:auto;overscroll-behavior:contain;
   padding:4px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   border-radius:28px 28px 0 0;
   background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
   touch-action:pan-y;
 }
-.asaHoja{display:grid;place-items:center;width:100%;height:24px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
+.cabezaHoja{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding-top:8px;}
+.botonChicoNav{display:grid;place-items:center;width:44px;height:44px;padding:0;margin:0;min-height:0;border:0;border-radius:50%;cursor:pointer;background:var(--superficie-2);color:var(--texto);}
+.botonChicoNav.apagado{color:var(--peligro);}
+.asaHoja{display:grid;place-items:center;width:100%;height:44px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
 .asaHoja span{width:44px;height:5px;border-radius:99px;background:var(--borde-fuerte);}
 .hojaResumen{display:grid;gap:12px;}
 .hojaTiempo{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
@@ -1117,6 +1198,7 @@ html[data-tema="oscuro"] .accesoNavegacionIcono{color:var(--acento);}
 .accesoNavegacion small{font-size:12px;font-weight:600;color:var(--texto-sec);}
 .hojaMas{display:none;gap:12px;}
 .hojaNavegacion.abierta .hojaMas{display:grid;}
+.hojaNavegacion.abierta{display:grid;}
 .hojaParadas:empty{display:none;}
 .hojaPedidos,.hojaParadas{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--superficie-2);}
 .hojaPedidos strong,.hojaParadas strong{font-size:13.5px;}
