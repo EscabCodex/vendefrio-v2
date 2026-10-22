@@ -1035,7 +1035,7 @@ El dueño revisó lo que Claude decidió solo en las Etapas 5 y 6 (M12). Le gust
 
 **Cómo se hace este bloque (dueño, 2026-10-22):**
 - Cada tarea se sube **directo a `desarrollo`, sin pull request**, cuando pasa `npm test`. Nada va a `main`.
-- **Primera tanda, a la vez (cada una en su hilo):** T154, T156, T157, T158, T159 y T163.
+- **Primera tanda, a la vez:** un hilo por tarea para T154, T157, T159 y T163, y un hilo para T158 y T156 juntas (en ese orden, porque las dos tocan Más > Apariencia).
 - **Segunda tanda, cuando termine la primera:** T155 y T161 (pueden ir a la vez).
 - **Tercera tanda:** T160 (después de T155) y T162 (después de T161).
 - Antes de subir, traer `desarrollo` de nuevo (otro hilo pudo haber subido algo) y volver a correr `npm test`.
