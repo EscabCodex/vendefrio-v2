@@ -13,12 +13,12 @@ function noSePisan(a, b) {
     return a.y + a.height <= b.y || b.y + b.height <= a.y || a.x + a.width <= b.x || b.x + b.width <= a.x;
 }
 
-test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ page }) => {
+// Dos caminos falsos: el más rápido (13 min, 5,2 km) y, sin autopistas,
+// otro un poco más largo (16 min, 6,1 km) que pasa más al norte. Entra como
+// repartidor con 3 kioscos.
+async function prepararRutas(page, pedidos = []) {
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
-    // Dos caminos: el más rápido (13 min, 5,2 km) y, sin autopistas, otro
-    // un poco más largo (16 min, 6,1 km) que pasa más al norte.
-    const pedidos = [];
     await page.route("https://routing.openstreetmap.de/**", ruta => {
         const url = new URL(ruta.request().url());
         pedidos.push(url.pathname + url.search);
@@ -36,7 +36,7 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
                 distance: sinAutopistas ? 6100 : 5200,
                 duration: sinAutopistas ? 960 : 780,
                 geometry: { type: "LineString", coordinates: camino },
-                legs: []
+                legs: puntos.slice(1).map(() => ({ duration: (sinAutopistas ? 960 : 780) / (puntos.length - 1) }))
             }] })
         });
     });
@@ -51,6 +51,11 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
             nombre: "Kiosco " + numero, direccion: "Calle " + numero, lat: -34.600 - numero * 0.002, lng: -58.380 + numero * 0.006
         }));
     });
+}
+
+test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ page }) => {
+    const pedidos = [];
+    await prepararRutas(page, pedidos);
 
     await page.evaluate(() => mostrarPantalla("rutas"));
     const pantalla = page.locator("#pantallaRutas");
@@ -103,7 +108,7 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
 
     // Elegir el otro recorrido tocando su cartelito: cambian los minutos y
     // queda guardado para la navegación.
-    await sinAutopistas.click();
+    await sinAutopistas.locator(".globoEtiquetaPlan").click();
     await expect(sinAutopistas).toHaveClass(/elegida/);
     await expect(page.locator("#minutosPlanRutas")).toHaveText("16 min");
     await expect(page.locator("#detallePlanRutas")).toHaveText(/^\(6,1 km\)/);
@@ -138,4 +143,63 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
     await pantalla.getByRole("button", { name: "Iniciar" }).click();
     await expect(page.locator("#pantallaNavegacion")).toBeVisible();
     await expect(page.locator("#pantallaNavegacion .barraDiaNavegacion .rayaDia")).toHaveCount(3);
+});
+
+test("planificar: carrusel de paradas", async ({ page }) => {
+    await prepararRutas(page);
+    // Kiosco 1 tiene un pedido para entregar y debe un saldo.
+    await page.evaluate(() => {
+        guardarHistorial([{
+            comercio: "Kiosco 1", timestamp: Date.now(),
+            productos: [{ marca: "Pastas", producto: "Ravioles", cantidad: 4, precio: 3000 }],
+            estados: { e1: { estado: "enReparto", horaCelular: Date.now() } }
+        }]);
+        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentaDe: nombre => (nombre === "Kiosco 1" ? { total: 12000 } : null) };
+        mostrarPantalla("rutas");
+    });
+    const pantalla = page.locator("#pantallaRutas");
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
+    await pantalla.getByRole("button", { name: "Optimizar" }).click();
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await expect(page.locator("#minutosPlanRutas")).toHaveText("13 min");
+
+    // Una tarjeta por parada; la próxima primero, con su hora y lo que lleva y cobra.
+    const carrusel = page.locator("#proximaParadaRuta");
+    const tarjetas = carrusel.locator(".paradaCarrusel");
+    await expect(tarjetas).toHaveCount(3);
+    await expect(tarjetas.first()).toHaveClass(/actual/);
+    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 1");
+    await expect(tarjetas.first().locator("small")).toHaveText(/^Calle 1 · \d\d:\d\d · lleva 4 u · cobrar \$ 12\.000$/);
+    await expect(page.locator('.pinRuta[title="Kiosco 1"]')).toHaveClass(/pinDestacado/);
+    await capturar(page, "planificar-02-carrusel");
+
+    // Deslizar a la segunda: el mapa va a Kiosco 2 y su pin se agranda.
+    await carrusel.locator(".pistaCarrusel").evaluate(pista => { pista.scrollLeft = pista.querySelectorAll(".paradaCarrusel")[1].offsetLeft - 14; });
+    await expect(page.locator('.pinRuta[title="Kiosco 2"]')).toHaveClass(/pinDestacado/);
+    await expect(page.locator('.pinRuta[title="Kiosco 1"]')).not.toHaveClass(/pinDestacado/);
+    await expect.poll(() => page.evaluate(() => {
+        const centro = mapaLeaflet.getCenter();
+        return Math.abs(centro.lat - (-34.604)) < 0.0005 && Math.abs(centro.lng - (-58.368)) < 0.0005;
+    })).toBe(true);
+
+    // ⋯ de la tercera: Ir primero. Pasa adelante de la próxima.
+    await tarjetas.nth(2).getByRole("button", { name: "Opciones de Kiosco 3" }).click();
+    const opciones = page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" });
+    await expect(opciones.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
+    await expect(opciones.getByRole("button", { name: "Ir con Google Maps" })).toBeVisible();
+    await opciones.getByRole("button", { name: "Ir primero" }).click();
+    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 3");
+    await expect(page.locator(".paradaOrden").first()).toHaveAttribute("data-nombre", "Kiosco 3");
+
+    // ⋯ de Kiosco 2: Sacar de la ruta.
+    await carrusel.getByRole("button", { name: "Opciones de Kiosco 2" }).click();
+    await page.getByRole("dialog", { name: "Opciones de la parada Kiosco 2" }).getByRole("button", { name: "Sacar de la ruta" }).click();
+    await expect(tarjetas).toHaveCount(2);
+    await expect(page.locator("#destinoRutas")).toHaveText("2 paradas · última: Kiosco 1");
+
+    // ⋯ de la próxima: Ya pasé. La siguiente queda primera.
+    await tarjetas.first().getByRole("button", { name: "Opciones de Kiosco 3" }).click();
+    await page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" }).getByRole("button", { name: "Ya pasé" }).click();
+    await expect(tarjetas).toHaveCount(1);
+    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 2 de 2: Kiosco 1");
 });

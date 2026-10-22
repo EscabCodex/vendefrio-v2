@@ -1319,6 +1319,7 @@ function renderizarPines(ajustar = true) {
         limites.extend(coordenadas);
     });
 
+    destacarPinRuta(paradaDestacadaRuta);
     if (ajustar) {
         // Arriba la cabecera y abajo la hoja de la vista previa: que no tapen ningún pin.
         mapaLeaflet.fitBounds(limites, margenesMapaRutas());
@@ -1352,6 +1353,7 @@ function refrescarPines() {
         marcador.clavePinRuta = clave;
     });
     dibujarResumenPinesMapa(comerciosConGps);
+    destacarPinRuta(paradaDestacadaRuta);
 }
 
 // Arriba del mapa: cuántos van en la ruta.
@@ -2261,67 +2263,193 @@ function conectarArrastreParadas(lista) {
     });
 }
 
-// La próxima parada, fija abajo (dentro de la pantalla de Rutas).
+// Carrusel de paradas (T137): arriba de la hoja de la vista previa, una
+// tarjeta por parada que falta, empezando por la próxima. Al deslizar, el
+// mapa va a ese comercio y su pin se agranda. En el ⋯ de cada tarjeta:
+// Hacer pedido o Entregar, Ir con Google Maps, Ya pasé, Ir primero y Sacar
+// de la ruta.
+let paradaDestacadaRuta = "";
+let esperaCarrusel = null;
+
 function dibujarProximaParada() {
     const pantalla = document.getElementById("pantallaRutas");
     if (!pantalla) return;
-    let tarjeta = document.getElementById("proximaParadaRuta");
+    let carrusel = document.getElementById("proximaParadaRuta");
     const indice = indiceProximaParada();
-    if (!rutaOrdenada.length || indice < 0 || navegacionActiva) {
-        tarjeta?.remove();
+    if (!rutaOrdenada.length || navegacionActiva) {
+        carrusel?.remove();
         pantalla.classList.remove("conProximaParada");
-        if (rutaOrdenada.length && indice < 0 && !navegacionActiva) {
-            tarjeta = document.createElement("div");
-            tarjeta.id = "proximaParadaRuta";
-            tarjeta.className = "proximaParada terminada";
-            tarjeta.innerHTML = `<strong>${window.icono("check", 18)} Terminaste la ruta</strong><button type="button" class="pzBtn pzBtnGris" data-parada="reiniciar">Empezar de nuevo</button>`;
-            tarjeta.onclick = evento => {
-                if (!evento.target.closest('[data-parada="reiniciar"]')) return;
-                paradasHechasRuta.clear();
-                paradasConPedidosRuta.clear();
-                pedidosAlArmarRuta = idsDePedidosRuta();
-                indicePedidosRuta = null;
-                mostrarRutaEnLista();
-            };
-            pantalla.appendChild(tarjeta);
-            pantalla.classList.add("conProximaParada");
-        }
+        destacarPinRuta("");
         return;
     }
-    const comercio = rutaOrdenada[indice];
-    const carga = cargaParaParada(comercio.nombre);
-    if (!tarjeta) {
-        tarjeta = document.createElement("div");
-        tarjeta.id = "proximaParadaRuta";
-        pantalla.appendChild(tarjeta);
-    }
-    tarjeta.className = "proximaParada";
-    tarjeta.setAttribute("role", "region");
-    tarjeta.setAttribute("aria-label", "Próxima parada");
-    pantalla.classList.add("conProximaParada");
-    tarjeta.innerHTML = `<div class="cabProximaParada">
-            <small>Próxima parada · ${indice + 1} de ${rutaOrdenada.length}</small>
-            <button type="button" class="pzEnlace" data-parada="saltear">Ya pasé ${window.icono("chevDerecha", 14)}</button>
-        </div>
-        <div class="nombreProximaParada"><strong>${window.piezas.esc(comercio.nombre)}</strong><span>${textoDistanciaCorta(distanciasRuta[indice])}</span></div>
-        <div class="botonesProximaParada">
-            <button type="button" class="pzBtn pzBtnSec" data-parada="ir">${window.icono("navegar", 18)} Ir</button>
-            <button type="button" class="pzBtn pzBtnPri" data-parada="entregar">${window.icono(carga.pedidos.length ? "check" : "documento", 18)} ${carga.pedidos.length ? "Entregar" : "Hacer pedido"}</button>
-        </div>`;
-    tarjeta.onclick = evento => {
-        const accion = evento.target.closest("[data-parada]")?.dataset.parada;
-        if (!accion) return;
-        if (accion === "ir") {
-            window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Number(comercio.lat) + "," + Number(comercio.lng), "_blank", "noopener");
-        } else if (accion === "entregar") {
-            const actual = cargaParaParada(comercio.nombre);
-            if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
-            if (typeof irAPedidoRapido === "function") irAPedidoRapido(comercio.nombre);
-        } else if (accion === "saltear") {
-            paradasHechasRuta.add(comercio.nombre);
-            mostrarRutaEnLista();
+    if (!carrusel) {
+        carrusel = document.createElement("div");
+        carrusel.id = "proximaParadaRuta";
+        carrusel.className = "carruselParadas";
+        carrusel.setAttribute("role", "region");
+        carrusel.setAttribute("aria-label", "Paradas de la ruta");
+        carrusel.addEventListener("click", tocarCarruselParadas);
+        (pantalla.querySelector(".vistaPreviaRutas") || pantalla).appendChild(carrusel);
+        if (window.L?.DomEvent) {
+            L.DomEvent.disableClickPropagation(carrusel);
+            L.DomEvent.disableScrollPropagation(carrusel);
         }
-    };
+    }
+    pantalla.classList.add("conProximaParada");
+    if (indice < 0) {
+        carrusel.classList.add("terminada");
+        carrusel.innerHTML = `<div class="paradaCarrusel terminada"><strong>${window.icono("check", 18)} Terminaste la ruta</strong><button type="button" class="pzBtn pzBtnGris" data-parada="reiniciar">Empezar de nuevo</button></div>`;
+        destacarPinRuta("");
+        return;
+    }
+    carrusel.classList.remove("terminada");
+    const horas = horasDeLlegadaRuta();
+    const verPlata = !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
+    const tarjetas = [];
+    for (let i = indice; i < rutaOrdenada.length; i++) {
+        const comercio = rutaOrdenada[i];
+        if (paradaHecha(comercio)) continue;
+        const carga = cargaParaParada(comercio.nombre);
+        const saldo = verPlata ? Number(window.saldosVendeFrio?.cuentaDe?.(comercio.nombre)?.total) || 0 : 0;
+        const detalle = [comercio.direccion || "Sin dirección", horas[i]];
+        if (carga.pedidos.length) detalle.push("lleva " + carga.unidades + " u");
+        if (saldo > 0) detalle.push("cobrar " + window.piezas.plata(saldo));
+        const nombre = window.piezas.esc(comercio.nombre);
+        tarjetas.push(`<article class="paradaCarrusel${i === indice ? " actual" : ""}" data-nombre="${nombre}" aria-label="Parada ${i + 1} de ${rutaOrdenada.length}: ${nombre}">
+            <span class="numeroCarrusel">${i + 1}</span>
+            <button type="button" class="datosCarrusel" data-parada="ver"><strong>${nombre}</strong><small>${window.piezas.esc(detalle.filter(Boolean).join(" · "))}</small></button>
+            <button type="button" class="masCarrusel" data-parada="opciones" aria-label="Opciones de ${nombre}">${window.icono("puntos", 18)}</button>
+        </article>`);
+    }
+    carrusel.innerHTML = `<div class="pistaCarrusel">${tarjetas.join("")}</div>`;
+    const pista = carrusel.firstElementChild;
+    pista.addEventListener("scroll", () => {
+        clearTimeout(esperaCarrusel);
+        esperaCarrusel = setTimeout(() => alDeslizarCarrusel(pista), 120);
+    }, { passive: true });
+    // La próxima, con su pin grande (sin mover el mapa).
+    destacarPinRuta(rutaOrdenada[indice].nombre);
+}
+
+// Hora de llegada a cada parada: con el camino por calles si llegó, si no
+// con la cuenta aproximada.
+function horasDeLlegadaRuta() {
+    const tramos = recorridoElegidoPlan()?.tramos;
+    let segundos = 0;
+    return rutaOrdenada.map((comercio, indice) => {
+        segundos += tramos && tramos.length === rutaOrdenada.length ? tramos[indice] : minutosAproximados(distanciasRuta[indice]) * 60;
+        const hora = new Date(Date.now() + segundos * 1000);
+        return String(hora.getHours()).padStart(2, "0") + ":" + String(hora.getMinutes()).padStart(2, "0");
+    });
+}
+
+function alDeslizarCarrusel(pista) {
+    const centro = pista.scrollLeft + pista.clientWidth / 2;
+    let elegida = null;
+    let menor = Infinity;
+    pista.querySelectorAll(".paradaCarrusel").forEach(tarjeta => {
+        const distancia = Math.abs(tarjeta.offsetLeft + tarjeta.offsetWidth / 2 - centro);
+        if (distancia < menor) {
+            menor = distancia;
+            elegida = tarjeta;
+        }
+    });
+    // Pegada al borde izquierdo, la primera.
+    if (pista.scrollLeft < 8) elegida = pista.querySelector(".paradaCarrusel");
+    if (elegida) irAParadaEnMapa(elegida.dataset.nombre);
+}
+
+function irAParadaEnMapa(nombre) {
+    if (!nombre || nombre === paradaDestacadaRuta) return;
+    destacarPinRuta(nombre);
+    const comercio = rutaOrdenada.find(item => item.nombre === nombre);
+    if (comercio && mapaLeaflet) mapaLeaflet.panTo([Number(comercio.lat), Number(comercio.lng)], { animate: true, duration: 0.35 });
+}
+
+// El pin de la parada de la tarjeta, más grande y arriba de los demás.
+function destacarPinRuta(nombre) {
+    const anterior = marcadoresPorNombre.get(paradaDestacadaRuta);
+    if (anterior) {
+        anterior.getElement()?.classList.remove("pinDestacado");
+        anterior.setZIndexOffset(0);
+    }
+    paradaDestacadaRuta = nombre;
+    const marcador = marcadoresPorNombre.get(nombre);
+    if (marcador) {
+        marcador.getElement()?.classList.add("pinDestacado");
+        marcador.setZIndexOffset(1000);
+    }
+}
+
+function tocarCarruselParadas(evento) {
+    const boton = evento.target.closest("[data-parada]");
+    if (!boton) return;
+    const accion = boton.dataset.parada;
+    if (accion === "reiniciar") {
+        paradasHechasRuta.clear();
+        paradasConPedidosRuta.clear();
+        pedidosAlArmarRuta = idsDePedidosRuta();
+        indicePedidosRuta = null;
+        mostrarRutaEnLista();
+        return;
+    }
+    const tarjeta = boton.closest(".paradaCarrusel");
+    const nombre = tarjeta?.dataset.nombre;
+    if (!nombre) return;
+    if (accion === "ver") {
+        tarjeta.scrollIntoView({ inline: "start", block: "nearest", behavior: "smooth" });
+        irAParadaEnMapa(nombre);
+    } else if (accion === "opciones") {
+        abrirOpcionesParadaRuta(nombre);
+    }
+}
+
+function abrirOpcionesParadaRuta(nombre) {
+    const indice = rutaOrdenada.findIndex(comercio => comercio.nombre === nombre);
+    if (indice < 0 || !window.piezas) return;
+    const comercio = rutaOrdenada[indice];
+    const p = window.piezas;
+    const carga = cargaParaParada(nombre);
+    const esLaProxima = indice === indiceProximaParada();
+    const caja = p.hoja({
+        titulo: nombre,
+        sub: "Parada " + (indice + 1) + " de " + rutaOrdenada.length,
+        clase: "hojaParadaCarrusel",
+        etiqueta: "Opciones de la parada " + nombre,
+        html: `<button type="button" class="pzBtn pzBtnPri botonRutaPin" data-carrusel="entregar">${p.ico(carga.pedidos.length ? "check" : "documento", 18)} ${carga.pedidos.length ? "Entregar" : "Hacer pedido"}</button>
+            <div class="pzOpciones">
+                <button type="button" class="pzOpcion" data-carrusel="ir">${p.ico("navegar", 22)}Ir con Google Maps</button>
+                ${esLaProxima ? `<button type="button" class="pzOpcion" data-carrusel="saltear">${p.ico("chevDerecha", 22)}Ya pasé</button>` : `<button type="button" class="pzOpcion" data-carrusel="primero">${p.ico("rayo", 22)}Ir primero</button>`}
+                <button type="button" class="pzOpcion pzOpcionPeligro" data-carrusel="sacar">${p.ico("cerrarX", 22)}Sacar de la ruta</button>
+            </div>`
+    });
+    caja.addEventListener("click", evento => {
+        const accion = evento.target.closest("[data-carrusel]")?.dataset.carrusel;
+        if (!accion) return;
+        p.cerrar();
+        if (accion === "entregar") {
+            const actual = cargaParaParada(nombre);
+            if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
+            if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
+        } else if (accion === "ir") {
+            window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Number(comercio.lat) + "," + Number(comercio.lng), "_blank", "noopener");
+        } else if (accion === "saltear") {
+            paradasHechasRuta.add(nombre);
+            mostrarRutaEnLista();
+        } else if (accion === "primero") {
+            // Pasa adelante de la próxima; las demás siguen en su orden.
+            const destino = Math.max(0, indiceProximaParada());
+            rutaOrdenada.splice(indice, 1);
+            rutaOrdenada.splice(destino, 0, comercio);
+            rutaReordenadaAMano = true;
+            recalcularDistanciasRuta();
+            mostrarRutaEnLista();
+            refrescarPines();
+        } else if (accion === "sacar") {
+            cambiarPinEnRuta(nombre);
+            refrescarPines();
+        }
+    });
 }
 
 // -------------------------------------------------
@@ -2471,7 +2599,9 @@ async function pedirRecorridoPlan(puntos, sinAutopistas) {
             sinAutopistas,
             puntos: ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
             distancia: Number(ruta.distance) || 0,
-            duracion: Number(ruta.duration) || 0
+            duracion: Number(ruta.duration) || 0,
+            // Cuánto tarda cada tramo, para la hora de cada parada (T137).
+            tramos: Array.isArray(ruta.legs) ? ruta.legs.map(tramo => Number(tramo.duration) || 0) : []
         };
     } catch (error) {
         return null;
@@ -2500,6 +2630,7 @@ async function calcularCaminoPlan() {
     caminoPlanRutas = { clave, recorridos, recto: !recorridos.length };
     dibujarCaminoPlan();
     dibujarResumenPlan();
+    dibujarProximaParada();
 }
 
 // El recorrido elegido: el sin autopistas si está pedido y existe.
@@ -2515,6 +2646,7 @@ function elegirRecorridoPlan(sinAutopistas) {
     dibujarChipsRutas();
     dibujarCaminoPlan();
     dibujarResumenPlan();
+    dibujarProximaParada();
 }
 
 function textoMinutosPlan(segundos) {
@@ -2551,8 +2683,8 @@ function dibujarCaminoPlan() {
         const nombre = recorrido.sinAutopistas ? "Sin autopistas" : "Más rápida";
         const icono = L.divIcon({
             className: "etiquetaCaminoPlan" + (recorrido === elegido ? " elegida" : ""),
-            html: `<span>${textoMinutosPlan(recorrido.duracion)}</span><small>${nombre}</small>`,
-            iconSize: null
+            html: `<div class="globoEtiquetaPlan"><span>${textoMinutosPlan(recorrido.duracion)}</span><small>${nombre}</small></div>`,
+            iconSize: [0, 0]
         });
         L.marker(medio, { icon: icono, keyboard: true, title: nombre + ", " + textoMinutosPlan(recorrido.duracion), zIndexOffset: 500 })
             .on("click", () => elegirRecorridoPlan(recorrido.sinAutopistas))

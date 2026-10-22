@@ -161,9 +161,11 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     // Los pines muestran el número de cada parada.
     await expect(page.locator(".globoPinRuta b", { hasText: /^80$/ })).toHaveCount(1);
     const primera = await page.locator(".paradaOrden").first().getAttribute("data-nombre");
-    tiempos.saltearParada = await medir("document.querySelector('#proximaParadaRuta [data-parada=\"saltear\"]').click()");
+    // «Ya pasé» está en el ⋯ de la tarjeta de la próxima (T137).
+    await page.locator("#proximaParadaRuta .paradaCarrusel.actual .masCarrusel").click();
+    tiempos.saltearParada = await medir("document.querySelector('[data-carrusel=\"saltear\"]').click()");
     await expect(page.locator(".paradaOrden").first()).toHaveClass(/hecha/);
-    await expect(page.locator("#proximaParadaRuta")).not.toContainText(primera);
+    await expect(page.locator("#proximaParadaRuta .paradaCarrusel.actual")).not.toHaveAttribute("data-nombre", primera);
 
     // Mover el mapa con el dedo (entre la cabecera y la parada de abajo) y
     // bajar por la lista de paradas.

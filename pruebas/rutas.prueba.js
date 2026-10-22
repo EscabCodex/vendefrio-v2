@@ -100,16 +100,15 @@ test("rutas: reoptimizar con un pedido nuevo no saltea la parada", async ({ page
         await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
     };
     await optimizar();
-    const proxima = page.locator("#proximaParadaRuta");
-    await expect(proxima).toContainText("Próxima parada · 1 de 3");
-    await expect(proxima).toContainText("Kiosco 1");
+    // La próxima es la primera tarjeta del carrusel (T137).
+    const proxima = page.locator("#proximaParadaRuta .paradaCarrusel.actual");
+    await expect(proxima).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 1");
 
     // Un pedido nuevo para Kiosco 1 y se vuelve a optimizar.
     await page.evaluate(() => guardarHistorial(obtenerHistorial().concat([{
         comercio: "Kiosco 1", timestamp: Date.now(), productos: [{ marca: "Pastas", producto: "Ravioles", cantidad: 2, precio: 3000 }]
     }])));
     await optimizar();
-    await expect(proxima).toContainText("Próxima parada · 1 de 3");
-    await expect(proxima).toContainText("Kiosco 1");
+    await expect(proxima).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 1");
     await expect(page.locator(".paradaOrden.hecha")).toHaveCount(0);
 });

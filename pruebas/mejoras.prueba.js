@@ -260,12 +260,15 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(paradas.first()).toContainText("min");
     await expect(paradas.first()).toContainText("Sin pedido para entregar");
     await expect(paradas.filter({ hasText: "Kiosco Luna" })).toContainText("Lleva 3 u · $ 9.800");
-    const proxima = page.locator("#proximaParadaRuta");
-    await expect(proxima).toContainText("Próxima parada · 1 de 3");
-    await expect(proxima).toContainText("Despensa Mary");
-    await expect(proxima.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
-    await proxima.getByRole("button", { name: /Ya pasé/ }).click();
-    await expect(proxima).toContainText("Próxima parada · 2 de 3");
+    // La próxima es la primera tarjeta del carrusel; en su ⋯, Hacer pedido
+    // y Ya pasé (T137).
+    const proxima = page.locator("#proximaParadaRuta .paradaCarrusel.actual");
+    await expect(proxima).toHaveAttribute("aria-label", "Parada 1 de 3: Despensa Mary");
+    await proxima.getByRole("button", { name: "Opciones de Despensa Mary" }).click();
+    const opcionesParada = page.getByRole("dialog", { name: "Opciones de la parada Despensa Mary" });
+    await expect(opcionesParada.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
+    await opcionesParada.getByRole("button", { name: "Ya pasé" }).click();
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 2 de 3: /);
     // La lista se abre con «Paradas» (T136).
     await page.locator("#btnParadasRutas").click();
     await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
@@ -286,7 +289,7 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(paradas.filter({ hasText: conPedido })).toHaveClass(/hecha/);
-    await expect(proxima).toContainText("Próxima parada · 3 de 3");
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 3 de 3: /);
 
     // Cambiar el orden con el teclado (con el dedo es arrastrar ≡).
     await page.locator("#btnParadasRutas").click();
