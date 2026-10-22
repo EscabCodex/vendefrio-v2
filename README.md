@@ -3,6 +3,7 @@
 Plataforma móvil (PWA) para distribuidoras que venden y reparten productos a almacenes, kioscos y supermercados. El pedido se carga una sola vez, desde el celular, y acompaña toda la operación: venta, preparación, reparto y entrega.
 
 - **Repositorio:** `EscabCodex/vendefrio-v2` (rama `main`, fuente de verdad)
+- **Mail de la app (contacto principal):** vendefrio.app@gmail.com
 - **App del equipo (`main`):** https://vendefrio-v2.vercel.app/
 - **Tareas sin probar a mano (`desarrollo`):** https://vendefrio-v2-git-desarrollo-escab-codex.vercel.app/
 - **Pruebas automáticas:** `npm test` (carpeta `pruebas`; capturas en `capturas`)

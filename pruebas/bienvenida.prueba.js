@@ -58,6 +58,7 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     const [terminos] = await Promise.all([page.waitForEvent("popup"), filaTerminos.click()]);
     await expect(terminos.getByRole("heading", { name: "Términos y privacidad" })).toBeVisible();
     await expect(terminos.getByText("No es asesoramiento legal.")).toBeVisible();
+    await expect(terminos.getByRole("link", { name: "vendefrio.app@gmail.com" }).first()).toHaveAttribute("href", "mailto:vendefrio.app@gmail.com");
     await terminos.close();
 });
 
