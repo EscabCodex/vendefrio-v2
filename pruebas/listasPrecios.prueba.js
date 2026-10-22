@@ -112,3 +112,71 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
         return [helado.precios["Súper"], buscarComercioPorNombre("Kiosco La Esquina").listaPrecios, obtenerHistorial().find(item => item.comercio === "Almacén Don Pepe").productos.find(linea => linea.producto === "Helado 1 kg").precio];
     })).toEqual([undefined, "", 3900]);
 });
+
+// T162: exportar una lista a planilla (CSV) y como folleto para imprimir.
+test("listas de precios: exportar a planilla y folleto para imprimir", async ({ page }, testInfo) => {
+    await registrarDistribuidora(page, testInfo);
+    // (La primera bajada de la nube puede pisar lo recién agregado: se insiste.)
+    await expect.poll(() => page.evaluate(() => {
+        const marca = obtenerProductos()["Pastas Doña Rosa"];
+        if (!marca) agregarMarca("Pastas Doña Rosa");
+        [["Ravioles de verdura x 1 kg", 6200], ["Tapas de pascualina", 1900]].forEach(([nombre, precio]) => {
+            if (!(obtenerProductos()["Pastas Doña Rosa"] || []).some(producto => producto.nombre === nombre)) agregarProducto("Pastas Doña Rosa", { nombre, precio });
+        });
+        return (obtenerProductos()["Pastas Doña Rosa"] || []).length;
+    })).toBe(2);
+    await page.evaluate(() => window.distribuidoraVendeFrio.cambiarDatosTicket({ direccion: "Av. Siempreviva 742", telefono: "11 4444-5555" }));
+
+    // "Almacenes": −10% del general, redondeado a $ 100.
+    await abrirMas(page);
+    await page.locator('.masAcceso[data-mas="listasPrecios"]').click();
+    const pantalla = page.locator("#pantallaListasPrecios");
+    await pantalla.locator('[data-sugerida="Almacenes"]').click();
+    const toda = page.locator("#pantallaTodaLista");
+    await toda.locator("#porcentajeLista").fill("-10");
+    await toda.locator('[data-redondeo="100"]').click();
+    await toda.locator("#aplicarPorcentajeLista").click();
+    await expect(toda.getByRole("spinbutton", { name: "Precio Tapas de pascualina en Almacenes" })).toHaveValue("1700");
+    await toda.locator("#guardarTodaLista").click();
+    await expect(pantalla).toBeVisible();
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("4 productos con precio");
+
+    // Planilla: marca, producto, precio de la lista y el general.
+    await pantalla.getByRole("button", { name: "Opciones de Almacenes" }).click();
+    const opciones = page.getByRole("dialog", { name: "Opciones de Almacenes" });
+    const descarga = page.waitForEvent("download");
+    await opciones.getByRole("button", { name: "Exportar a planilla" }).click();
+    const archivo = await descarga;
+    expect(archivo.suggestedFilename()).toMatch(/^Lista Almacenes \d{4}-\d{2}-\d{2}\.csv$/);
+    const texto = require("fs").readFileSync(await archivo.path(), "utf8");
+    expect(texto.replace(/^﻿/, "").split("\r\n").slice(0, 3)).toEqual([
+        "Marca;Producto;Precio Almacenes;Precio general",
+        "Frío Sur;Helado 1 kg;4100;4500",
+        "Frío Sur;Palito bombón;700;800"
+    ]);
+    expect(texto).toContain("Pastas Doña Rosa;Tapas de pascualina;1700;1900");
+
+    // Folleto: datos de la distribuidora y los precios por marca.
+    await pantalla.getByRole("button", { name: "Opciones de Almacenes" }).click();
+    await page.getByRole("dialog", { name: "Opciones de Almacenes" }).getByRole("button", { name: "Folleto para imprimir" }).click();
+    const folleto = page.locator("#pantallaFolleto");
+    await expect(folleto).toBeVisible();
+    const hoja = folleto.locator(".folletoHoja");
+    await expect(hoja.locator("h1")).toHaveText("Distribuidora Prueba");
+    await expect(hoja.locator(".folletoCab")).toContainText("Av. Siempreviva 742 · Tel.: 11 4444-5555");
+    await expect(hoja).toContainText("Lista de precios · Almacenes");
+    await expect(hoja.locator(".folletoMarca h2")).toHaveText(["Frío Sur", "Pastas Doña Rosa"]);
+    await expect(hoja.locator("li", { hasText: "Ravioles de verdura" })).toContainText("$ 5.600");
+    await capturar(page, "listas-04-folleto");
+
+    // Imprimir: se llama a la impresión y en papel queda solo el folleto.
+    await page.evaluate(() => { window.impresiones = 0; window.print = () => { window.impresiones += 1; }; });
+    await folleto.locator("#imprimirFolleto").click();
+    expect(await page.evaluate(() => window.impresiones)).toBe(1);
+    await page.emulateMedia({ media: "print" });
+    await expect(page.locator("#folletoImprimir .folletoHoja")).toBeVisible();
+    await expect(folleto).toBeHidden();
+    await capturar(page, "listas-05-folleto-impreso");
+    await page.emulateMedia({ media: "screen" });
+    await expect(page.locator("#folletoImprimir")).toBeHidden();
+});
