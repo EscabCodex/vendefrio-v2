@@ -5,11 +5,29 @@
 // lista del comercio (database.js, precioDeLista); si el producto no tiene
 // precio en esa lista, usa el general. Los pedidos ya cargados guardan el
 // precio que tenían.
+// T161: Más > Listas de precios para crear, renombrar y borrar listas, y en
+// Nuevo pedido se elige cualquier lista (nuevoPedido.js, elegirLista).
 (function () {
     "use strict";
 
     const p = window.piezas;
-    const nuevas = new Set();
+    // Las listas creadas que todavía no tienen precios (en este celular).
+    const DB_CREADAS = "vendefrio_listas_creadas";
+    const nuevas = {
+        leer: () => {
+            const guardadas = p.lsLeer(DB_CREADAS, []);
+            return Array.isArray(guardadas) ? guardadas.map(String).filter(Boolean) : [];
+        },
+        add(nombre) {
+            const lista = this.leer();
+            if (!lista.includes(nombre)) p.lsGuardar(DB_CREADAS, [...lista, nombre]);
+        },
+        cambiar(viejo, nuevo) {
+            const lista = this.leer().filter(nombre => nombre !== viejo);
+            p.lsGuardar(DB_CREADAS, nuevo ? [...lista, nuevo] : lista);
+        },
+        [Symbol.iterator]() { return this.leer()[Symbol.iterator](); }
+    };
     const COLORES = ["pzIniInfo", "pzIni2", "pzIni1", "pzIni3"];
 
     function todosLosProductos() {
@@ -246,11 +264,217 @@
         dibujar();
     }
 
+    // ---------- Más > Listas de precios (T161) ----------
+    // Todas las listas juntas: crear, cargar precios, renombrar y borrar.
+    const SUGERIDAS = ["Supermercados", "Almacenes", "Kioscos"];
+
+    function puedeEditar() {
+        const enNube = typeof usaNubeReal === "function" && usaNubeReal();
+        return !enNube || p.esDueno() || Boolean(window.empleadosVendeFrio?.puede?.("editaCatalogo"));
+    }
+
+    function productosEn(nombre) {
+        return todosLosProductos().filter(producto => producto.archivado !== true &&
+            producto.precios && Number(producto.precios[nombre]) > 0).length;
+    }
+
+    function nombreLimpio(texto) {
+        return String(texto || "").trim().replace(/\s+/g, " ").slice(0, 30);
+    }
+
+    function yaExiste(nombre, salvo = "") {
+        const buscado = nombre.toLocaleLowerCase("es");
+        return listas().some(otra => otra !== salvo && otra.toLocaleLowerCase("es") === buscado);
+    }
+
+    function pedirNombre({ titulo, boton, actual = "", alGuardar }) {
+        p.hoja({
+            titulo,
+            sub: actual ? "Los comercios y los precios de la lista quedan igual" : "Por ejemplo, Supermercados, Almacenes o Kioscos",
+            html: `<label class="pzCampo"><span>Nombre</span><input id="nombreListaPrecios" maxlength="30" value="${p.esc(actual)}" placeholder="Ej.: Almacenes"></label>`,
+            botones: [{
+                texto: boton,
+                icono: "check",
+                alTocar: caja => {
+                    const nombre = nombreLimpio(caja.querySelector("#nombreListaPrecios").value);
+                    if (!nombre) {
+                        mostrarToast("Escribí el nombre de la lista");
+                        return false;
+                    }
+                    if (nombre === actual) return true;
+                    if (yaExiste(nombre, actual)) {
+                        mostrarToast("Ya hay una lista «" + nombre + "»");
+                        return false;
+                    }
+                    return alGuardar(nombre) !== false;
+                }
+            }]
+        });
+        setTimeout(() => document.getElementById("nombreListaPrecios")?.select(), 200);
+    }
+
+    // Cambia el nombre de la lista en los precios de cada producto y en los
+    // comercios que la usan. Todo de una vez, con un solo guardado.
+    function cambiarLista(viejo, nuevo) {
+        const productos = obtenerProductos();
+        let tocados = 0;
+        Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(producto => {
+            if (!producto || !producto.precios || typeof producto.precios !== "object" || !(viejo in producto.precios)) return;
+            const precios = { ...producto.precios };
+            if (nuevo && Number(precios[viejo]) > 0) precios[nuevo] = precios[viejo];
+            delete precios[viejo];
+            producto.precios = precios;
+            tocados += 1;
+        }));
+        if (tocados && !guardarProductos(productos)) return false;
+        const comercios = obtenerComercios();
+        const usan = comercios.filter(comercio => comercio.listaPrecios === viejo);
+        if (usan.length) {
+            usan.forEach(comercio => { comercio.listaPrecios = nuevo || ""; });
+            if (!guardarComercios(comercios)) return false;
+        }
+        nuevas.cambiar(viejo, nuevo);
+        return true;
+    }
+
+    function crearLista(nombre) {
+        nuevas.add(nombre);
+        abrirLista(nombre, abrirPantalla);
+        mostrarToast("Lista «" + nombre + "» creada: cargá los precios");
+    }
+
+    function opcionesDe(nombre) {
+        const caja = p.hoja({
+            titulo: nombre,
+            sub: productosEn(nombre) + " con precio · " + comerciosEn(nombre) + " " + (comerciosEn(nombre) === 1 ? "comercio" : "comercios"),
+            etiqueta: "Opciones de " + nombre,
+            html: `<div class="pzOpciones">
+                <button type="button" class="pzOpcion" data-opcion-lista="precios">${p.ico("etiqueta", 22)}Cargar o cambiar precios</button>
+                <button type="button" class="pzOpcion" data-opcion-lista="nombre">${p.ico("lapiz", 22)}Cambiar el nombre</button>
+                <button type="button" class="pzOpcion pzOpcionPeligro" data-opcion-lista="borrar">${p.ico("tacho", 22)}Borrar la lista</button>
+            </div>`
+        });
+        caja.addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-opcion-lista]")?.dataset.opcionLista;
+            if (!opcion) return;
+            p.cerrar();
+            setTimeout(() => {
+                if (opcion === "precios") abrirLista(nombre, abrirPantalla);
+                if (opcion === "nombre") renombrar(nombre);
+                if (opcion === "borrar") borrar(nombre);
+            }, 0);
+        });
+    }
+
+    function renombrar(nombre) {
+        pedirNombre({
+            titulo: "Cambiar el nombre",
+            boton: "Guardar nombre",
+            actual: nombre,
+            alGuardar: nuevo => {
+                if (!cambiarLista(nombre, nuevo)) {
+                    mostrarAviso("No se guardó", "Revisá el almacenamiento y probá de nuevo.");
+                    return false;
+                }
+                mostrarToast("Ahora se llama «" + nuevo + "»");
+                dibujarPantalla();
+                return true;
+            }
+        });
+    }
+
+    async function borrar(nombre) {
+        const cuantos = comerciosEn(nombre);
+        const si = await p.preguntar({
+            icono: "tacho",
+            color: "peligro",
+            titulo: "¿Borrar la lista «" + nombre + "»?",
+            texto: (cuantos ? (cuantos === 1 ? "El comercio que la usa vuelve" : "Los " + cuantos + " comercios que la usan vuelven") + " a los precios generales. " : "") +
+                "Los pedidos ya cargados no cambian.",
+            si: "Borrar",
+            claseSi: "pzBtnPeligro"
+        });
+        if (!si) return;
+        if (!cambiarLista(nombre, "")) {
+            mostrarAviso("No se borró", "Revisá el almacenamiento y probá de nuevo.");
+            return;
+        }
+        mostrarToast("Lista «" + nombre + "» borrada");
+        dibujarPantalla();
+    }
+
+    let seccionMas = null;
+
+    function dibujarPantalla() {
+        if (!seccionMas) return;
+        const nombres = listas();
+        const editar = puedeEditar();
+        const filas = nombres.map((nombre, i) => {
+            const productos = productosEn(nombre);
+            const comercios = comerciosEn(nombre);
+            return `<div class="pzFila filaListaMas">
+                <div class="pzIni ${COLORES[i % COLORES.length]}">${p.ico(/zona/i.test(nombre) ? "ubicacion" : "etiqueta", 20)}</div>
+                <button type="button" class="pzFilaTxt botonTodaLista" data-abrir-lista="${p.esc(nombre)}" aria-label="Precios de ${p.esc(nombre)}"><strong>${p.esc(nombre)}</strong><small>${productos} ${productos === 1 ? "producto" : "productos"} con precio · ${comercios} ${comercios === 1 ? "comercio" : "comercios"}</small></button>
+                ${editar ? `<button type="button" class="opcionesListaPrecios" data-opciones-lista="${p.esc(nombre)}" aria-label="Opciones de ${p.esc(nombre)}">${p.ico("puntos", 20)}</button>` : ""}
+            </div>`;
+        }).join("");
+        const sugeridas = SUGERIDAS.filter(nombre => !yaExiste(nombre));
+        seccionMas.querySelector("main").innerHTML = `<div class="pzBanner pzBanPri">${p.ico("etiqueta", 22)}<div><strong>Un precio para cada tipo de comercio</strong><small>Cada comercio usa su lista (se elige en su ficha). Al armar un pedido podés usar cualquier otra. Si un producto no tiene precio en la lista, va el general.</small></div></div>
+            <section class="pzBloque">
+                <div class="pzBloqueCab"><h2>${nombres.length ? nombres.length + (nombres.length === 1 ? " lista" : " listas") : "Listas"}</h2></div>
+                <div class="pzTarjeta pzLista" id="filasListasPrecios">${filas || `<div class="pzVacio">Todavía no hay listas. Creá la primera abajo.</div>`}</div>
+            </section>
+            ${editar && sugeridas.length ? `<section class="pzBloque">
+                <div class="pzBloqueCab"><span class="pzEtiqueta">Crear rápido</span></div>
+                <div class="pzFiltros chipsListas" role="group" aria-label="Listas sugeridas">${sugeridas.map(nombre => `<button type="button" class="pzFiltro" data-sugerida="${p.esc(nombre)}">${p.ico("mas", 14)} ${p.esc(nombre)}</button>`).join("")}</div>
+            </section>` : ""}
+            ${editar ? `<div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="crearListaPrecios">${p.ico("mas", 18)}Lista nueva</button></div>` : ""}`;
+    }
+
+    function abrirPantalla() {
+        seccionMas = p.pantalla("pantallaListasPrecios", {
+            titulo: "Listas de precios",
+            sub: "Precios distintos por tipo de comercio",
+            icono: "etiqueta",
+            volverA: "mas"
+        });
+        p.mostrar(seccionMas);
+        const main = seccionMas.querySelector("main");
+        main.onclick = evento => {
+            const abrirla = evento.target.closest("[data-abrir-lista]");
+            if (abrirla) {
+                if (puedeEditar()) abrirLista(abrirla.dataset.abrirLista, abrirPantalla);
+                else mostrarToast("Los precios los cambia quien edita el catálogo");
+                return;
+            }
+            const opciones = evento.target.closest("[data-opciones-lista]");
+            if (opciones) {
+                opcionesDe(opciones.dataset.opcionesLista);
+                return;
+            }
+            const sugerida = evento.target.closest("[data-sugerida]");
+            if (sugerida) {
+                crearLista(sugerida.dataset.sugerida);
+                return;
+            }
+            if (evento.target.closest("#crearListaPrecios")) {
+                pedirNombre({ titulo: "Lista nueva", boton: "Crear lista", alGuardar: nombre => { setTimeout(() => crearLista(nombre), 220); } });
+            }
+        };
+        dibujarPantalla();
+    }
+
+    (window.accesosMasExtras = window.accesosMasExtras || []).push({
+        destino: "listasPrecios", icono: "etiqueta", texto: "Listas de precios",
+        mostrar: () => !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer(),
+        abrir: abrirPantalla
+    });
+
     function volverAlCatalogo() {
         if (typeof mostrarPantalla === "function") mostrarPantalla("catalogo");
         if (typeof window.renderizarCatalogo === "function") window.renderizarCatalogo();
     }
 
     window.listasDePrecios = listas;
-    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista };
+    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista, abrirPantalla, cambiarLista };
 }());

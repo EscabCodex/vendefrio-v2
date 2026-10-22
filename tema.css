@@ -2177,6 +2177,18 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 .filaTodaLista .bajaLista{color:var(--visitado);}
 .filaTodaLista .subeLista{color:var(--pendiente);}
 
+/* T161: Más > Listas de precios y la lista de cada pedido */
+[data-color="listasPrecios"]{background:var(--acento-bg) !important;color:var(--pz-pri-fuerte) !important;}
+.filaListaMas{min-height:66px;}
+.opcionesListaPrecios{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto-sec);cursor:pointer;}
+.pzComercioElegido .listaDelPedido{display:grid;grid-template-columns:16px minmax(0,1fr) 16px;align-items:center;justify-items:start;gap:10px;width:100%;min-height:44px;margin:0;padding:8px 16px;border:0;border-top:1px solid var(--borde);border-radius:0;background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;}
+.pzComercioElegido .listaDelPedido span{width:100%;text-align:left;}
+.chipsListas{flex-wrap:wrap;overflow:visible;}
+.listaDelPedido b{color:var(--texto);font-weight:700;}
+.listaDelPedido.otraLista,.listaDelPedido.otraLista b{color:var(--pz-pri-fuerte);}
+.opcionListaPedido small{color:var(--texto-ter);font-size:12.5px;margin-left:4px;}
+.opcionListaPedido[aria-pressed="true"]{color:var(--pz-pri-fuerte);font-weight:700;}
+
 /* T116: Estadísticas: qué mirar, período anterior y tocar una barra */
 .statsMedidas{margin:4px 0 12px;}
 .statsMedidas button{flex:1;min-height:38px;font-size:13.5px;}

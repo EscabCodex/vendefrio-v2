@@ -2409,13 +2409,14 @@ function precioVigente(producto, comercio) {
 
 // Lo que suma un pedido nuevo en la nube: los productos con su id de línea y
 // su precio, y los campos de estado y autor. Devuelve { productos, campos }
-// o null si todavía no se sabe quién usa el celular.
-function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio) {
+// o null si todavía no se sabe quién usa el celular. "comercioElegido" trae
+// la lista de precios elegida para este pedido (T161).
+function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio, comercioElegido) {
     const persona = personaDeEsteCelular();
     if (!persona) return null;
 
     const catalogo = obtenerProductos();
-    const comercio = nombreComercio ? buscarComercioPorNombre(nombreComercio) : null;
+    const comercio = comercioElegido || (nombreComercio ? buscarComercioPorNombre(nombreComercio) : null);
     const [idEntrada, entrada] = nuevaEntradaDeEstado(ESTADO_PEDIDO_INICIAL, "", persona, horaCelular);
 
     return {
