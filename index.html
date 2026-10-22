@@ -236,13 +236,23 @@
   </div>
 
   <main class="container panelParadasRutas" aria-label="Paradas">
+    <!-- T138: la lista de paradas del día como línea de tiempo. -->
     <div class="cabezaPanelParadas">
       <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
-      <h2>Paradas</h2>
+      <h2>Paradas de hoy</h2>
+      <button id="btnOptimizarOrden" class="optimizarOrden" type="button">Optimizar orden</button>
+    </div>
+    <div id="numerosParadas" class="numerosParadas"></div>
+    <div class="accionesSeleccionRuta filtrosParadas" role="group" aria-label="Elegir comercios">
+      <button id="seleccionarTodosRuta" type="button">Todos</button>
+      <button id="seleccionarPendientesRuta" type="button">Pendientes</button>
+      <button id="limpiarSeleccionRuta" type="button">Ninguno</button>
+      <button id="btnBuscarParadas" class="buscarParadas" type="button" aria-label="Buscar comercio" title="Buscar comercio"><i data-ico="buscar" data-ico-tam="16"></i></button>
     </div>
     <div class="card tarjetaMapaRuta">
       <div id="listaRutaOrdenada" style="font-size: 14px;"></div>
     </div>
+    <div id="sinUbicacionParadas" class="sinUbicacionParadas"></div>
     <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
       <summary class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
@@ -251,21 +261,7 @@
           <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
         </div>
       </summary>
-      <p class="ayudaDesplegable">Elegí qué paradas querés incluir en la próxima ruta.</p>
-
-      <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
-        <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
-          <i data-ico="check" data-ico-tam="15"></i> Todos
-        </button>
-
-        <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
-          <i data-ico="reloj" data-ico-tam="15"></i> Pendientes
-        </button>
-
-        <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
-          <i data-ico="cerrarX" data-ico-tam="15"></i> Ninguno
-        </button>
-      </div>
+      <p class="ayudaDesplegable">Tildá uno por uno o buscalo por nombre.</p>
 
       <label class="buscadorSeleccionRuta">
         <i data-ico="buscar" data-ico-tam="17"></i>
@@ -311,6 +307,10 @@
         <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
       </button>
     </details>
+    <div class="pieParadas">
+      <button id="btnGuardarRutaParadas" class="pzBtn pzBtnGris" type="button">Guardar ruta</button>
+      <button id="btnListoParadas" class="pzBtn pzBtnPri" type="button">Listo, ver mapa</button>
+    </div>
   </main>
 </section>
 

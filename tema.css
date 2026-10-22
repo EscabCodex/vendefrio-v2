@@ -2432,11 +2432,68 @@ html[data-tema="oscuro"] #pantallaRutas .caminoPlan.otro{stroke:#4A5562;}
 #pantallaRutas .barraMoverPin{z-index:1002;bottom:calc(12px + env(safe-area-inset-bottom));}
 /* «Paradas»: la lista y todo lo de antes, encima del mapa. */
 #pantallaRutas .panelParadasRutas{display:none;}
+/* T138: una hoja alta sobre el mapa oscurecido (sin desenfoque). */
 #pantallaRutas.conParadasAbiertas .panelParadasRutas{
-  display:block;position:fixed;inset:0;z-index:1100;margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
-  padding:calc(10px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background:var(--fondo);
+  display:block;position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1100;
+  margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
+  padding:10px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--fondo);box-shadow:0 0 0 100vmax rgba(0,0,0,.35);
 }
+/* Sin relleno abajo: el pie con «Listo, ver mapa» queda pegado al borde. */
+html #pantallaRutas.conParadasAbiertas main.panelParadasRutas{padding-bottom:0 !important;}
 #pantallaRutas.conParadasAbiertas .carruselParadas{display:none;}
-.cabezaPanelParadas{display:flex;align-items:center;gap:6px;margin:0 0 10px;}
-.cabezaPanelParadas h2{margin:0;font-size:22px;font-weight:850;color:var(--texto);}
+.cabezaPanelParadas{display:flex;align-items:center;gap:2px;margin:0 0 10px -8px;}
+.cabezaPanelParadas .volverRutas{width:40px;height:40px;}
+.cabezaPanelParadas h2{flex:1;min-width:0;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.optimizarOrden{
+  flex:none;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:999px;
+  background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font:inherit;font-size:13px;font-weight:800;cursor:pointer;
+}
+html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
+.numerosParadas{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:6px;}
+.numeroParadas{display:grid;gap:5px;padding:9px 8px;border-radius:16px;background:var(--superficie);min-width:0;}
+.numeroParadas strong{font-size:20px;font-weight:900;letter-spacing:-0.03em;line-height:1;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.numeroParadas small{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+#pantallaRutas .filtrosParadas{display:flex;align-items:center;gap:6px;margin:12px 0 0;padding:0;border-radius:0;background:none;}
+#pantallaRutas .filtrosParadas button{
+  min-height:36px;margin:0;padding:0 12px;border:0;border-radius:999px;background:var(--superficie);color:var(--texto);
+  font:inherit;font-size:13px;font-weight:650;cursor:pointer;
+}
+#pantallaRutas .filtrosParadas button:first-child{background:var(--texto);color:var(--fondo);font-weight:800;}
+#pantallaRutas .filtrosParadas .buscarParadas{display:grid;place-items:center;width:36px;padding:0;margin-left:auto;}
+/* La línea de tiempo: hora, número sobre la línea y la tarjeta de la parada. */
+#pantallaRutas .tarjetaMapaRuta{margin:8px 0 0;padding:0;overflow:visible;background:none !important;box-shadow:none !important;border:0 !important;}
+#pantallaRutas .ayudaParadas{padding:0 4px;}
+#pantallaRutas .encabezadoParadas{margin:0 0 2px;padding:0 4px;}
+#pantallaRutas .paradaOrden{align-items:stretch;gap:10px;padding:0;border:0;background:none;}
+.horaParada{flex:none;width:40px;padding-top:16px;font-size:13px;font-weight:700;color:var(--texto-sec);text-align:right;}
+.lineaParada{position:relative;flex:none;display:flex;justify-content:center;width:26px;padding-top:12px;}
+.lineaParada::before{content:"";position:absolute;top:0;bottom:0;left:12px;width:2px;background:var(--borde);}
+.paradaOrden:first-child .lineaParada::before{top:12px;}
+.paradaOrden:last-child .lineaParada::before{bottom:auto;height:12px;}
+#pantallaRutas .numeroParada{position:relative;width:26px;height:26px;font-size:11px;font-weight:900;border:0;background:var(--superficie-2);color:var(--texto);}
+#pantallaRutas .paradaOrden.proxima .numeroParada{background:var(--acento);color:var(--acento-txt, #fff);}
+#pantallaRutas .paradaOrden.hecha .numeroParada{background:var(--visitado-bg);color:var(--visitado);}
+.cajaParada{flex:1;min-width:0;display:flex;align-items:center;gap:8px;margin:4px 0;padding:9px 6px 9px 12px;border-radius:16px;background:var(--superficie);}
+#pantallaRutas .paradaOrden.arrastrando{box-shadow:none;}
+#pantallaRutas .paradaOrden.arrastrando .cajaParada{box-shadow:var(--sombra-flotante);}
+.chipCobrarParada{background:var(--pendiente-bg);color:var(--pendiente);}
+.llevaParada{display:flex;flex-wrap:wrap;gap:6px;}
+.vacioParadas{margin:12px 2px;font-size:14px;color:var(--texto-sec);}
+.sinUbicacionParadas{margin:12px 0 0;padding:12px;border-radius:18px;background:var(--superficie);}
+.sinUbicacionParadas.oculto{display:none;}
+.sinUbicacionParadas h3{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:14px;font-weight:800;color:var(--pendiente);}
+.filaSinUbicacion{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--borde);}
+.filaSinUbicacion > span{flex:1;min-width:0;display:grid;}
+.filaSinUbicacion strong{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.filaSinUbicacion small{font-size:12px;color:var(--texto-sec);}
+.filaSinUbicacion .pzBtn{width:auto;flex:none;min-height:40px;padding:0 12px;font-size:13px;}
+#pantallaRutas .panelParadasRutas > details{margin:12px 0 0;}
+.pieParadas{
+  position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:12px calc(-1 * max(14px, env(safe-area-inset-left))) 0;
+  padding:12px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:var(--fondo);box-shadow:0 -8px 14px -10px rgba(0,0,0,.3);
+}
+.pieParadas .pzBtn{min-height:56px;border-radius:999px;}
+.pieParadas .pzBtn:first-child{flex:1;font-size:14px;}
+.pieParadas .pzBtn:last-child{flex:1.4;font-size:17px;font-weight:900;}

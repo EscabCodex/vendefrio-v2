@@ -203,3 +203,79 @@ test("planificar: carrusel de paradas", async ({ page }) => {
     await expect(tarjetas).toHaveCount(1);
     await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 2 de 2: Kiosco 1");
 });
+
+test("planificar: lista de paradas como línea de tiempo", async ({ page }) => {
+    await prepararRutas(page);
+    // Kiosco 2 debe un saldo; un cuarto comercio, elegido, no tiene ubicación.
+    await page.evaluate(() => {
+        agregarComercio({ nombre: "Almacén Sin Pin", direccion: "Calle 9" });
+        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentaDe: nombre => (nombre === "Kiosco 2" ? { total: 412000 } : null) };
+        mostrarPantalla("rutas");
+    });
+    const pantalla = page.locator("#pantallaRutas");
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
+    await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: "Paradas" }).click();
+    const panel = pantalla.locator(".panelParadasRutas");
+    await expect(panel.getByRole("heading", { name: "Paradas de hoy" })).toBeVisible();
+    // Solo los 3 kioscos y el almacén (la app trae comercios de ejemplo).
+    await panel.locator(".filtrosParadas").getByRole("button", { name: "Ninguno" }).click();
+    await panel.getByRole("button", { name: "Buscar comercio", exact: true }).click();
+    for (const nombre of ["Kiosco 1", "Kiosco 2", "Kiosco 3", "Almacén Sin Pin"]) {
+        await page.locator(`#listaSeleccionRuta input[data-nombre="${nombre}"]`).check();
+    }
+    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    await panel.evaluate(caja => { caja.scrollTop = 0; });
+    // Sin ubicación: no entra a la ruta, se le pone el pin desde acá.
+    await expect(panel.locator(".sinUbicacionParadas")).toContainText("Sin ubicación (1)");
+    await expect(panel.locator(".sinUbicacionParadas")).toContainText("Almacén Sin Pin");
+
+    // Optimizar orden: la línea de tiempo con la hora de cada parada.
+    await panel.getByRole("button", { name: "Optimizar orden" }).click();
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    const numeros = panel.locator(".numeroParadas");
+    await expect(numeros.nth(0)).toContainText("3");
+    await expect(numeros.nth(1)).toContainText("5,2");
+    await expect(numeros.nth(2)).toContainText("0:13");
+    await expect(numeros.nth(3)).toContainText("412k");
+    const paradas = panel.locator(".paradaOrden");
+    await expect(paradas).toHaveCount(3);
+    await expect(paradas.locator(".horaParada").first()).toHaveText(/^\d\d:\d\d$/);
+    await expect(paradas.filter({ hasText: "Kiosco 2" })).toContainText("Cobrar $ 412.000");
+    await expect(paradas.first()).toHaveClass(/proxima/);
+    // En la pantalla chica, «Listo, ver mapa» queda abajo de todo a la vista.
+    const listo = await panel.getByRole("button", { name: "Listo, ver mapa" }).boundingBox();
+    expect(listo.y + listo.height).toBeLessThanOrEqual(640);
+    await capturar(page, "planificar-03-paradas");
+
+    // Arrastrar ≡ (con el teclado): cambia el orden.
+    await paradas.nth(2).locator(".agarreParada").focus();
+    await page.keyboard.press("ArrowUp");
+    await expect(paradas.nth(1)).toHaveAttribute("data-nombre", "Kiosco 3");
+    await expect(panel.locator(".encabezadoParadas")).toContainText("Orden a tu gusto");
+
+    // Buscar: abre «Comercios para esta ruta» con el buscador listo.
+    await panel.getByRole("button", { name: "Buscar comercio", exact: true }).click();
+    await expect(page.getByLabel("Buscar comercio para la ruta")).toBeFocused();
+    await expect(page.locator(".tarjetaSeleccionRuta")).toHaveAttribute("open", "");
+    // Guardar ruta: abre «Rutas guardadas» con el nombre listo.
+    await panel.getByRole("button", { name: "Guardar ruta", exact: true }).first().click();
+    await expect(page.locator("#nombreRutaGuardada")).toBeFocused();
+
+    // Poner pin: se cierra la lista, se toca el mapa y se guarda.
+    await panel.getByRole("button", { name: "Poner pin a Almacén Sin Pin" }).click();
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await expect(panel).toBeHidden();
+    await page.locator("#mapaRuta").click({ position: { x: 40, y: 340 } });
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await expect(page.locator("#barraMoverPin")).toContainText("Almacén Sin Pin");
+    await page.locator("#guardarMoverPin").click();
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    expect(await page.evaluate(() => comercioTieneGps(buscarComercioPorNombre("Almacén Sin Pin")))).toBe(true);
+
+    // Listo, ver mapa: vuelve al mapa.
+    await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: "Paradas" }).click();
+    await expect(panel.locator(".sinUbicacionParadas")).toBeHidden();
+    await panel.getByRole("button", { name: "Listo, ver mapa" }).click();
+    await expect(panel).toBeHidden();
+    await expect(pantalla.locator(".hojaPlanRutas")).toBeVisible();
+});
