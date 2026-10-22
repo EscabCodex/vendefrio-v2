@@ -23,7 +23,11 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await expect(pasos).toBeHidden();
 
     // "Suelen pedir hoy": pidió los mismos días de la semana, hace 1 y 2
-    // semanas, y hoy todavía no.
+    // semanas, y hoy todavía no. Arranca apagada (T156): se prende en
+    // Más > Apariencia > Qué se ve en Inicio.
+    await abrirConfiguracionEn(page, "apariencia");
+    await page.getByRole("switch", { name: "Suelen pedir los…" }).check();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await page.evaluate(() => {
         agregarComercio({ nombre: "Kiosco Luna", direccion: "Sarmiento 20" });
         agregarComercio({ nombre: "Super Norte", direccion: "Mitre 900" });

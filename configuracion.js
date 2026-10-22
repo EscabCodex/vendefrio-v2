@@ -90,21 +90,119 @@
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
         vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
-        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false,
+        // T158: tonos del tema, color a elección, formas, íconos y fondo de Inicio.
+        tonoDia: "hielo", tonoNoche: "grafito", acentoPropio: "", formaBotones: "redondos",
+        tarjetas: "suaves", iconos: "normales", fondoInicio: "liso",
+        // T156: qué tarjetas se ven en Inicio ("Suelen pedir los…" arranca apagada).
+        inicioVerResumen: true, inicioVerQueHacer: true, inicioVerProxima: true, inicioVerSuelenPedir: false,
+        inicioVerPedidosHoy: true, inicioVerSemana: true, inicioVerAvisos: true
     };
-    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante"];
+
+    // Tarjetas de Inicio (T156): campo, clave en data-inicio-sin, título, ayuda, ícono y tono.
+    const TARJETAS_INICIO = [
+        ["inicioVerAvisos", "avisos", "Avisos", "Pedidos que llegaron, reparto y respaldo", "campana", "naranja"],
+        ["inicioVerResumen", "resumen", "Resumen de hoy", "Lo vendido y los pedidos del día", "grafico", "azul"],
+        ["inicioVerQueHacer", "queHacer", "¿Qué querés hacer?", "Cargar un pedido, ver los de hoy y cobrar", "chispa", "violeta"],
+        ["inicioVerProxima", "proxima", "Próxima parada", "El comercio que sigue, con «Ir» y «Cargar pedido»", "ubicacion", "verde"],
+        ["inicioVerSuelenPedir", "suelenPedir", "Suelen pedir los…", "Comercios que suelen pedir este día y todavía no pidieron", "calendario", "naranja"],
+        ["inicioVerPedidosHoy", "pedidosHoy", "Pedidos de hoy", "La lista de lo cargado hoy", "lista", "azul"],
+        ["inicioVerSemana", "semana", "Esta semana", "Comercios visitados, pedidos y vendido de la semana", "calendario", "gris"]
+    ];
+
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante",
+        "tonoDia", "tonoNoche", "acentoPropio", "acentoPropioVars", "formaBotones", "tarjetas", "iconos", "fondoInicio",
+        ...TARJETAS_INICIO.map(tarjeta => tarjeta[0])];
 
     function valorDe(d, campo) {
         return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
     }
 
-    // --- Apariencia (T50): el tema con una vista de cómo se ve, el color
-    // principal, el tamaño del texto, el espaciado y el movimiento. ---
+    // --- Apariencia (T50 y T158): una vista previa arriba, el tema y sus
+    // tonos, el color principal (también uno a elección), la forma de los
+    // botones, el estilo de las tarjetas, el tamaño de los íconos, el fondo
+    // de Inicio, el texto y el espaciado, qué se ve en Inicio (T156) y el
+    // movimiento. Todo cambia variables y atributos de <html>: no se vuelve
+    // a dibujar ninguna pantalla, así no traba en un celular barato. ---
     const TEMAS = [["sistema", "Como el teléfono"], ["claro", "Claro"], ["oscuro", "Oscuro"]];
     const ACENTOS = [
         ["original", "Hielo y lima"], ["verde", "Verde"], ["violeta", "Violeta"],
-        ["naranja", "Naranja"], ["rosa", "Rosa"]
+        ["naranja", "Naranja"], ["rosa", "Rosa"], ["turquesa", "Turquesa"],
+        ["rojo", "Rojo"], ["dorado", "Dorado"], ["oliva", "Oliva"], ["grafito", "Grafito"]
     ];
+    // Tonos del fondo: valor, nombre, color del fondo y de las tarjetas.
+    const TONOS_DIA = [
+        ["hielo", "Hielo", "#EEF3FA", "#FFFFFF"], ["calido", "Cálido", "#F6F0E6", "#FFFDF9"],
+        ["gris", "Gris", "#F1F2F4", "#FFFFFF"], ["blanco", "Blanco", "#FFFFFF", "#F2F4F7"]
+    ];
+    const TONOS_NOCHE = [
+        ["grafito", "Grafito", "#0C0F13", "#151A20"], ["negro", "Negro puro", "#000000", "#0E1013"],
+        ["azul", "Azul noche", "#0B1220", "#14203A"]
+    ];
+
+    // --- Color a elección (T158): con un solo color se arman los tonos del
+    // modo claro y del oscuro, con contraste suficiente para leer. ---
+    const hexARgb = hex => {
+        const n = parseInt(String(hex).slice(1), 16);
+        return [n >> 16 & 255, n >> 8 & 255, n & 255];
+    };
+    const rgbAHex = rgb => "#" + rgb.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+    const rgba = (rgb, alfa) => `rgba(${rgb.map(Math.round).join(",")},${alfa})`;
+    const mezclar = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+    function luminancia(rgb) {
+        const [r, g, b] = rgb.map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contraste(a, b) {
+        const x = luminancia(a), y = luminancia(b);
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    }
+
+    // Lo acerca de a poco al negro (o al blanco) hasta que se lea sobre el fondo.
+    function hastaContraste(rgb, fondo, minimo, haciaBlanco) {
+        let color = rgb;
+        for (let i = 0; i < 20 && contraste(color, fondo) < minimo; i++) {
+            color = mezclar(color, haciaBlanco ? [255, 255, 255] : [0, 0, 0], 0.1);
+        }
+        return color;
+    }
+
+    function variablesDeColor(hex) {
+        const base = hexARgb(hex);
+        const blanco = [255, 255, 255];
+        const textoSobreBase = contraste(base, blanco) >= 3 ? "#FFFFFF" : "#0F1B2D";
+        const noche = hastaContraste(base, hexARgb("#151A20"), 6, true);
+        return {
+            claro: {
+                "--acento": rgbAHex(base),
+                "--acento-oscuro": rgbAHex(hastaContraste(base, blanco, 4.5, false)),
+                "--acento-bg": rgbAHex(mezclar(base, blanco, 0.84)),
+                "--acento-txt": textoSobreBase,
+                "--hero-bg": `linear-gradient(135deg,${rgbAHex(base)} 0%,${rgbAHex(mezclar(base, blanco, 0.14))} 55%,${rgbAHex(mezclar(base, blanco, 0.28))} 100%)`,
+                "--hero-txt": textoSobreBase,
+                "--sombra-acento": `0 6px 16px -4px ${rgba(base, 0.55)}`,
+                "--acento-claro": rgbAHex(base),
+                "--acento-noche": rgbAHex(noche)
+            },
+            oscuro: {
+                "--acento": rgbAHex(noche),
+                "--acento-oscuro": rgbAHex(noche),
+                "--acento-bg": rgbAHex(mezclar(noche, hexARgb("#0C0F13"), 0.8)),
+                "--acento-txt": contraste(noche, hexARgb("#0C0F13")) >= 4.5 ? "#0C0F13" : "#FFFFFF",
+                "--hero-bg": "var(--superficie)",
+                "--hero-txt": "var(--texto)",
+                "--sombra-acento": `0 6px 18px -4px ${rgba(noche, 0.4)}`,
+                "--acento-claro": rgbAHex(base),
+                "--acento-noche": rgbAHex(noche)
+            }
+        };
+    }
+    const VARIABLES_PROPIAS = Object.keys(variablesDeColor("#1F5FE0").claro);
 
     // Una app en miniatura: barra de arriba, tarjeta principal, dos filas y la
     // barra de abajo con el "+".
@@ -119,7 +217,40 @@
             </span>`;
     }
 
+    // Vista previa (T158): un pedacito de Inicio hecho con las mismas piezas
+    // de la app. Queda arriba al bajar, así se ve cada cambio al tocarlo.
+    function vistaPrevia() {
+        return `
+            <div class="ajVistaPrevia" aria-hidden="true">
+                <small class="ajVistaTitulo">Vista previa</small>
+                <div class="ajVistaFondo">
+                    <div class="ajVistaHero"><small>Vendido hoy</small><strong>$ 38.200</strong><span>2 pedidos</span></div>
+                    <div class="ajVistaTarjeta">
+                        <span class="ajVistaIcono">${ico("tienda", 20)}</span>
+                        <span class="ajVistaTexto"><strong>Almacén Don Pepe</strong><small>San Martín 123</small></span>
+                        <span class="ajVistaBoton">${ico("navegar", 16)}Ir</span>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function filaTonos(icono, tono, titulo, campo, lista) {
+        return `
+            <div class="ajFila ajApilada" role="radiogroup" aria-label="${titulo}">
+                <div class="ajCabeza">${cabezaFila(icono, tono, titulo, "")}</div>
+                <div class="ajTonos">
+                    ${lista.map(([valor, texto, fondo, tarjeta]) => `
+                        <label class="ajTono">
+                            <input type="radio" name="aj-${campo}" value="${valor}" data-campo="${campo}" aria-label="${texto}">
+                            <span class="muestraTono" style="--t-fondo:${fondo};--t-tarjeta:${tarjeta}"><i></i></span>
+                            <small>${texto}</small>
+                        </label>`).join("")}
+                </div>
+            </div>`;
+    }
+
     function htmlApariencia() {
+        const d = leer();
         const temas = TEMAS.map(([valor, texto]) => `
             <label class="ajTema">
                 <input type="radio" name="aj-tema" value="${valor}" data-campo="tema">
@@ -138,11 +269,41 @@
                 <small>${texto}</small>
             </label>`).join("");
 
-        return grupo("Tema",
-                `<div class="ajTemas" role="radiogroup" aria-label="Tema">${temas}</div>`, "ajGrupoTemas") +
+        // El color a elección: al tocarlo se abre el selector del teléfono.
+        const propio = valorDe(d, "acentoPropio");
+        const varsPropias = propio ? variablesDeColor(propio) : null;
+        const colorPropio = `
+            <label class="ajColor ajColorPropio" title="A elección">
+                <input type="color" data-campo="acentoPropio" aria-label="Color a elección">
+                <span class="muestraColor muestraPropia" ${varsPropias ? `data-elegido style="--m-claro:${varsPropias.claro["--acento"]};--m-noche:${varsPropias.oscuro["--acento"]}"` : ""}><i></i><i></i></span>
+                <small>A elección</small>
+            </label>`;
+
+        const tarjetasInicio = TARJETAS_INICIO
+            .map(([campo, , titulo, ayuda, icono, tono]) => filaLlave(icono, tono, titulo, ayuda, campo))
+            .join("");
+
+        return vistaPrevia() +
+            grupo("Tema",
+                `<div class="ajTemas" role="radiogroup" aria-label="Tema">${temas}</div>` +
+                filaTonos("sol", "naranja", "Tono de día", "tonoDia", TONOS_DIA) +
+                filaTonos("luna", "violeta", "Tono de noche", "tonoNoche", TONOS_NOCHE), "ajGrupoTemas") +
             grupo("Color principal",
-                `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}</div>
-                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro.</p>`) +
+                `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}${colorPropio}</div>
+                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre los colores del teléfono.</p>`) +
+            grupo("Forma y estilo",
+                filaSegmento("etiqueta", "azul", "Forma de los botones", "Las tarjetas acompañan", "formaBotones", [
+                    ["redondos", "Redondos"], ["suaves", "Suaves"], ["rectos", "Rectos"]
+                ]) +
+                filaSegmento("documento", "violeta", "Estilo de las tarjetas", "", "tarjetas", [
+                    ["suaves", "Suaves"], ["borde", "Borde"], ["planas", "Planas"], ["elevadas", "Elevadas"]
+                ]) +
+                filaSegmento("estrella", "naranja", "Tamaño de los íconos", "", "iconos", [
+                    ["chicos", "Chicos"], ["normales", "Normales"], ["grandes", "Grandes"]
+                ]) +
+                filaSegmento("casa", "verde", "Fondo de Inicio", "", "fondoInicio", [
+                    ["liso", "Liso"], ["degrade", "Degradé"], ["puntos", "Puntos"], ["color", "Con color"]
+                ])) +
             grupo("Texto y espacio",
                 filaSegmento("texto", "azul", "Tamaño del texto", "", "texto", [
                     ["chico", "Chico"], ["normal", "Normal"], ["grande", "Grande"], ["enorme", "Muy grande"]
@@ -154,6 +315,8 @@
                     <strong>Almacén Don Pepe</strong>
                     <small>San Martín 123 · Pidió 2 helados y 1 palito</small>
                 </div>`) +
+            grupo("Qué se ve en Inicio", tarjetasInicio +
+                `<p class="ajPie">Se guarda en este celular. Lo apagado no se calcula, así Inicio abre más rápido.</p>`, "ajGrupoInicio") +
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
                 filaLlave("etiqueta", "azul", "Nombres en los íconos de arriba", "Asistente, Avisos, Ayuda y Más", "nombresArriba") +
@@ -292,17 +455,76 @@
         raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
         raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
+        // T158: tonos, formas, íconos y fondo de Inicio.
+        raiz.dataset.tonoDia = valorDe(d, "tonoDia");
+        raiz.dataset.tonoNoche = valorDe(d, "tonoNoche");
+        raiz.dataset.forma = valorDe(d, "formaBotones");
+        raiz.dataset.tarjetas = valorDe(d, "tarjetas");
+        raiz.dataset.iconos = valorDe(d, "iconos");
+        raiz.dataset.fondoInicio = valorDe(d, "fondoInicio");
+        // T156: las tarjetas apagadas de Inicio.
+        raiz.dataset.inicioSin = TARJETAS_INICIO
+            .filter(([campo]) => valorDe(d, campo) !== true)
+            .map(tarjeta => tarjeta[1]).join(" ");
+        ponerColorPropio(d.acento === "propio" && d.acentoPropio ? variablesDeColor(d.acentoPropio)[temaVisual] : null);
+        // La barra del teléfono, del mismo color que el fondo.
+        const fondo = getComputedStyle(raiz).getPropertyValue("--fondo").trim();
+        if (fondo) document.querySelectorAll('meta[name="theme-color"]').forEach(meta => { meta.content = fondo; });
+    }
+
+    function ponerColorPropio(variables) {
+        const estilo = document.documentElement.style;
+        VARIABLES_PROPIAS.forEach(nombre => {
+            if (variables) estilo.setProperty(nombre, variables[nombre]);
+            else estilo.removeProperty(nombre);
+        });
     }
 
     function guardarCampo(campo, valor) {
         const d = leer();
         d[campo] = valor;
+        // El color a elección (T158) pasa a ser el color principal. Se guardan
+        // sus tonos ya calculados para pintarlos al abrir, antes que este archivo.
+        if (campo === "acentoPropio") {
+            d.acento = "propio";
+            d.acentoPropioVars = variablesDeColor(valor);
+        }
         guardar(d);
         aplicar();
         actualizarMas();
         const caja = document.getElementById("configDetalle");
         if (caja) dibujarMuestraTexto(caja);
+        if (campo === "acentoPropio" && caja) marcarColorPropio(caja, d);
+        // Una tarjeta de Inicio que se prende se calcula recién ahora (T156).
+        if (campo.startsWith("inicioVer") && valor === true) window.actualizarDashboard?.();
     }
+
+    // El círculo de "A elección" muestra el color elegido y queda marcado.
+    function marcarColorPropio(caja, d) {
+        const muestra = caja.querySelector(".muestraPropia");
+        if (!muestra || !d.acentoPropio) return;
+        const variables = variablesDeColor(d.acentoPropio);
+        muestra.dataset.elegido = "";
+        muestra.style.setProperty("--m-claro", variables.claro["--acento"]);
+        muestra.style.setProperty("--m-noche", variables.oscuro["--acento"]);
+        caja.querySelectorAll('input[name="aj-acento"]').forEach(radio => { radio.checked = false; });
+    }
+
+    // Mientras se arrastra en el selector de color, se ve en vivo (una vez
+    // por cuadro); se guarda al soltarlo, con el "change" de siempre.
+    let colorEnVivo = null;
+    document.addEventListener("input", event => {
+        if (event.target.dataset?.campo !== "acentoPropio") return;
+        const pedir = colorEnVivo === null;
+        colorEnVivo = event.target.value;
+        if (!pedir) return;
+        requestAnimationFrame(() => {
+            const tema = document.documentElement.dataset.tema === "oscuro" ? "oscuro" : "claro";
+            document.documentElement.dataset.acento = "propio";
+            ponerColorPropio(variablesDeColor(colorEnVivo)[tema]);
+            colorEnVivo = null;
+        });
+    });
 
     function abrir() {
         crear();
@@ -1907,6 +2129,7 @@
 
             if (control.type === "checkbox") control.checked = valor === true;
             else if (control.type === "radio") control.checked = control.value === String(valor);
+            else if (control.type === "color") control.value = valor || "#E0457B";
             else control.value = valor;
         });
         dibujarMuestraTexto(caja);
@@ -2814,6 +3037,11 @@
         abrir();
         detalle(seccion);
     };
+
+    // Inicio vacío (T156): "Elegir qué ver" lleva a Apariencia.
+    document.addEventListener("click", event => {
+        if (event.target.closest?.("#inicioVacioElegir")) window.abrirConfiguracionEn("apariencia");
+    });
 
     document.addEventListener("change", event => {
         const casilla = event.target.closest?.(".casillaAviso");

@@ -589,10 +589,24 @@ function comerciosQueSuelenPedirHoy(pedidos, cargadosHoy) {
         .sort((a, b) => b.veces - a.veces);
 }
 
+function tarjetaInicioPrendida(campo, porDefecto) {
+    try {
+        const valor = (JSON.parse(localStorage.getItem("vendefrio_preferencias")) || {})[campo];
+        return valor === undefined ? porDefecto : valor === true;
+    } catch (error) {
+        return porDefecto;
+    }
+}
+
 function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
     const seccion = document.getElementById("dashVisitarHoy");
     const lista = document.getElementById("dashListaVisitarHoy");
     if (!seccion || !lista) return;
+    // T156: arranca apagada; si está apagada en Más > Apariencia, ni se calcula.
+    if (!tarjetaInicioPrendida("inicioVerSuelenPedir", false)) {
+        seccion.classList.add("oculto");
+        return;
+    }
     const sugeridos = comerciosQueSuelenPedirHoy(pedidos, cargadosHoy)
         .map(item => ({ ...item, comercio: comercios.find(comercio => String(comercio.nombre || "").trim().toLocaleLowerCase("es") === item.clave) }))
         .filter(item => item.comercio)

@@ -48,7 +48,7 @@
       <div class="kpisHoy" id="dashKpis"></div>
     </section>
 
-    <h2 class="seccionTitulo">Próxima parada</h2>
+    <h2 class="seccionTitulo" id="tituloProximaParada">Próxima parada</h2>
     <div id="dashProximaParada" class="card cardProximaParada"></div>
 
     <section id="dashVisitarHoy" class="oculto" aria-labelledby="tituloVisitarHoy">
@@ -56,13 +56,13 @@
       <div class="card listaInicio" id="dashListaVisitarHoy"></div>
     </section>
 
-    <div class="bloqueCabecera">
+    <div class="bloqueCabecera" id="cabeceraPedidosHoy">
       <h2 class="seccionTitulo">Pedidos de hoy</h2>
       <button type="button" class="enlaceVerTodos" id="dashVerTodos">Ver todos</button>
     </div>
     <div id="dashPedidosDeHoy" class="card listaInicio" aria-live="polite"></div>
 
-    <h2 class="seccionTitulo">Esta semana</h2>
+    <h2 class="seccionTitulo" id="tituloSemana">Esta semana</h2>
     <div class="card semanaInicio" id="dashSemana">
       <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
       <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
@@ -71,6 +71,13 @@
         <button type="button" data-dashboard-accion="vendidoSemana" class="clickeableDashboard"><strong id="dashVendidoSemana">$ 0</strong><small id="dashEtiquetaVendidoSemana">vendido</small></button>
         <button type="button" data-dashboard-accion="pendientesSemana" class="clickeableDashboard"><strong id="dashPendientesSemana">0</strong><small>sin visitar</small></button>
       </div>
+    </div>
+
+    <!-- T156: si se apagaron todas las tarjetas en Más > Apariencia. -->
+    <div class="card inicioVacio" id="inicioVacio">
+      <strong>Inicio está vacío</strong>
+      <small>Apagaste todas las tarjetas. Elegí cuáles ver en Más › Apariencia.</small>
+      <button type="button" class="btnAccion principal" id="inicioVacioElegir">Elegir qué ver</button>
     </div>
 
     <section class="card cardRespaldo">
@@ -611,6 +618,23 @@
       document.documentElement.dataset.temaPreferido = preferencia;
       document.documentElement.dataset.texto = d.texto || "normal";
       document.documentElement.dataset.densidad = d.densidad || "compacto";
+      // T156 y T158: color, tonos, formas, íconos, fondo y tarjetas de Inicio
+      // (los mismos valores de fábrica que configuracion.js).
+      const raiz = document.documentElement.dataset;
+      raiz.acento = d.acento || "original";
+      raiz.tonoDia = d.tonoDia || "hielo";
+      raiz.tonoNoche = d.tonoNoche || "grafito";
+      raiz.forma = d.formaBotones || "redondos";
+      raiz.tarjetas = d.tarjetas || "suaves";
+      raiz.iconos = d.iconos || "normales";
+      raiz.fondoInicio = d.fondoInicio || "liso";
+      const tarjetas = { inicioVerAvisos: "avisos", inicioVerResumen: "resumen", inicioVerQueHacer: "queHacer", inicioVerProxima: "proxima",
+        inicioVerSuelenPedir: "suelenPedir", inicioVerPedidosHoy: "pedidosHoy", inicioVerSemana: "semana" };
+      raiz.inicioSin = Object.keys(tarjetas)
+        .filter(campo => campo === "inicioVerSuelenPedir" ? d[campo] !== true : d[campo] === false)
+        .map(campo => tarjetas[campo]).join(" ");
+      const propias = d.acento === "propio" && d.acentoPropioVars && d.acentoPropioVars[temaVisual];
+      if (propias) Object.keys(propias).forEach(nombre => document.documentElement.style.setProperty(nombre, propias[nombre]));
     } catch (e) {}
   })();
 </script>

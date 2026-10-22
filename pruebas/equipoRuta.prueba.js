@@ -188,15 +188,15 @@ test("avisar: una calle cortada en el camino te desvía", async ({ page }) => {
     await expect(tarjeta.locator(".inicialEquipoNav")).toHaveText("LU");
     await expect(navegacion.locator(".pinAvisoCalle")).toHaveAttribute("title", "Calle cortada · avisó Lucas");
 
-    // La tarjeta no tapa la maniobra ni los créditos del mapa (se espera a
-    // que la tarjeta termine de acomodarse: recién aparecida, a veces se mide
-    // unos píxeles más arriba).
-    await expect.poll(async () => {
+    // La tarjeta no tapa la maniobra ni los créditos del mapa. Se espera a
+    // que terminen de acomodarse (a veces la tarjeta todavía está entrando).
+    const separacion = async () => {
         const cajaTarjeta = await tarjeta.boundingBox();
         const cajaCartel = await navegacion.locator(".cartelManiobra").boundingBox();
         const cajaCreditos = await navegacion.locator(".leaflet-control-attribution").boundingBox();
-        return cajaTarjeta.y >= cajaCartel.y + cajaCartel.height && cajaTarjeta.y >= cajaCreditos.y + cajaCreditos.height;
-    }).toBe(true);
+        return Math.min(cajaTarjeta.y - (cajaCartel.y + cajaCartel.height), cajaTarjeta.y - (cajaCreditos.y + cajaCreditos.height));
+    };
+    await expect.poll(separacion).toBeGreaterThanOrEqual(0);
     await page.waitForTimeout(300);
     await capturar(page, "equipo-02-desvio");
 
