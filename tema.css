@@ -2304,3 +2304,11 @@ html.volverConBarra #pantallaRutas .barraVolver::before{
   -webkit-backdrop-filter:none;backdrop-filter:none;
   background:color-mix(in srgb, var(--fondo) 97%, transparent);
 }
+
+/* T153: en modo oscuro, lo que va sobre el color de acento (lima) usa el
+   texto oscuro del acento: la regla general de texto claro lo dejaba casi
+   invisible ("Cargar un pedido", "Para armar"). */
+html[data-tema="oscuro"] :is(.queHacerOpcion.principal, .filtroEtapa.activo, .chipMarca.activo, .btnAccion.pasoSiguientePedido) :is(strong, span, small, b, p, h3){
+  color:var(--acento-txt) !important;
+}
+html[data-tema="oscuro"] .pasoFichaNumero{color:var(--acento-txt) !important;}
