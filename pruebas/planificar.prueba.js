@@ -203,8 +203,13 @@ test("planificar: carrusel de paradas", async ({ page }) => {
     await expect(page.locator("#destinoRutas")).toHaveText("2 paradas · última: Kiosco 1");
 
     // ⋯ de la próxima: Ya pasé. La siguiente queda primera.
-    await tarjetas.first().getByRole("button", { name: "Opciones de Kiosco 3" }).click();
-    await page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" }).getByRole("button", { name: "Ya pasé" }).click();
+    // Como arriba: si el carrusel se redibuja justo, el toque se reintenta.
+    const opcionesKiosco3 = page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" });
+    await expect(async () => {
+        await tarjetas.first().getByRole("button", { name: "Opciones de Kiosco 3" }).click();
+        await expect(opcionesKiosco3).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
+    await opcionesKiosco3.getByRole("button", { name: "Ya pasé" }).click();
     await expect(tarjetas).toHaveCount(1);
     await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 2 de 2: Kiosco 1");
 });

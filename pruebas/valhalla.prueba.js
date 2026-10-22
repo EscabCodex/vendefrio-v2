@@ -103,6 +103,8 @@ async function irAlComercio(page) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
     await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
     await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    // T154: la primera vez se elige cómo ir.
+    await page.getByRole("dialog", { name: "¿Cómo querés ir?" }).getByRole("button", { name: "Navegación de VendeFrío" }).click();
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
     return navegacion;
