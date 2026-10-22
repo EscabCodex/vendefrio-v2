@@ -42,6 +42,13 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     await expect(page.locator("#pedidoDetalle")).toContainText("Unidades totales");
     await expect(page.locator("#pedidoDetalle")).toContainText("Frío Sur");
     await capturar(page, "errores-02-pedido-de-ejemplo");
+
+    // T153: los comercios de ejemplo tienen su última visita (la ficha decía
+    // "Nunca" con 6 pedidos) y en Más no hay dos botones "Avisos": el de los
+    // ajustes dice "Qué avisos recibir".
+    const kiosco = await page.evaluate(() => obtenerComercios().find(comercio => comercio.nombre === "Kiosco Luna"));
+    expect(kiosco.ultimaVisita).toMatch(/^\d{1,2}\/\d{1,2}\/\d{4}$/);
+    await expect(page.locator("#configFilaAvisos strong")).toHaveText("Qué avisos recibir");
 });
 
 test("errores: en un celular chico los botones de arriba no se salen de la pantalla", async ({ page }) => {

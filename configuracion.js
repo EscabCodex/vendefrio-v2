@@ -227,7 +227,7 @@
 
                     <h2 class="configGrupoTitulo">Trabajo diario</h2>
                     <div class="configLista">
-                        ${fila("avisos", "campana", "Avisos", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("avisos", "campana", "Qué avisos recibir", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
                         ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
                         ${fila("navegacion", "bicicleta", "Recorrido")}
                         ${fila("trabajo", "maletin", "Preferencias de trabajo")}

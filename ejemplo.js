@@ -96,6 +96,14 @@
         });
         pedidos.sort((a, b) => b.timestamp - a.timestamp);
         guardarHistorial(pedidos.concat(obtenerHistorial()));
+        // La última visita y la cuenta de pedidos, como si se hubieran cargado
+        // en la app (antes la ficha decía "Nunca" con 6 pedidos, T153).
+        agregadosComercios.forEach(nombre => {
+            const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombre) : null;
+            const suyos = pedidos.filter(pedido => pedido.comercio === nombre);
+            if (!comercio || !suyos.length) return;
+            actualizarComercioPorId(comercio.id, { pedidosRealizados: suyos.length, ultimaVisita: suyos[0].fecha, pendienteSemana: false });
+        });
 
         p.lsGuardar(CLAVE, {
             marca: marcaNueva ? MARCA : "",
