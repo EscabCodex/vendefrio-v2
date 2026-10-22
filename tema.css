@@ -1266,20 +1266,8 @@ html .botonNavegarRuta{background:var(--superficie-2) !important;color:var(--tex
   border:0;border-radius:50%;background:var(--superficie);color:var(--acento-oscuro);box-shadow:var(--sombra);cursor:pointer;
 }
 html[data-tema="oscuro"] .botonVozInicio{color:var(--acento);}
-.ventanaVoz .contenidoVoz{display:grid;justify-items:center;gap:10px;text-align:center;}
-.botonMicrofonoGrande{
-  display:grid;place-items:center;width:84px;height:84px;padding:0;margin:6px 0;border:0;border-radius:50%;
-  background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);cursor:pointer;
-}
-.ventanaVoz.escuchando .botonMicrofonoGrande,
-.ventanaVoz.pensando .botonMicrofonoGrande,
 .ventanaDictado.escuchando .botonDictar{animation:latidoVoz 1.2s ease-in-out infinite;}
 @keyframes latidoVoz{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--acento) 55%, transparent);}50%{box-shadow:0 0 0 16px color-mix(in srgb, var(--acento) 0%, transparent);}}
-.contenidoVoz h2{margin:0;font-size:20px;}
-.textoVoz{margin:0;min-height:22px;font-size:16px;font-weight:600;color:var(--texto);}
-.ejemplosVoz{display:grid;gap:4px;width:100%;padding:12px;border-radius:16px;background:var(--superficie-2);text-align:left;}
-.ejemplosVoz small{color:var(--texto-sec);font-weight:600;}
-.ejemplosVoz span{font-size:14px;color:var(--texto);}
 
 .filaAccionesRapidasPedido{display:flex;gap:8px;flex-wrap:wrap;}
 .contenidoDictado{display:grid;gap:10px;}
@@ -1302,10 +1290,9 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 .ventanaDictado .productoDictado span{font-weight:600;}
 .ventanaDictado .productoDictado small{grid-column:3;color:var(--texto-sec);font-size:12px;}
 .sinEntenderDictado{margin:0;font-size:13px;color:var(--pendiente);}
-/* T54: IA para la voz */
+/* T54 y T155: el Asistente lee lo que faltó */
 .botonEntenderIA{align-self:flex-start;margin-top:8px;}
 .cambiosDictado{margin:0;font-size:13px;color:var(--texto-sec);}
-.ventanaVoz.pensando .textoVoz{opacity:.75;}
 
 /* ---------- Primeros pasos y "Suelen pedir hoy" (Etapa 6, T45 y T46) ---------- */
 

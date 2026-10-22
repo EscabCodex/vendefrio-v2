@@ -7,9 +7,12 @@
 //    las contesta con los datos de este celular, sin esperar. La plata solo
 //    para quien tiene permiso de verla (T93).
 // 3. "¿Cómo hago…?" lo explica en pasos (ayuda.js).
-// 4. Lo que no sabe, con la IA prendida (Más > Trabajo > Voz con IA), se lo
-//    pregunta a la IA en la nube (api/preguntar.js) con los números y la guía.
+// 4. Lo que no sabe se lo pregunta a Claude (api/entender.js) con los
+//    números y la guía, en una sola pregunta: Claude devuelve una orden o la
+//    respuesta. Hace falta internet y la cuenta de la distribuidora.
 // Reemplaza al micrófono suelto y a la pantalla "Preguntale a VendeFrío".
+// T155: es el único asistente de la app. Los comandos por voz (también
+// navegando) abren esta misma charla; sin internet contesta lo fácil.
 (function () {
     "use strict";
 
@@ -40,10 +43,6 @@
             localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias(), asistenteCalla: !prendida }));
         } catch (error) { /* sin lugar: queda como estaba */ }
         if (!prendida) callar();
-    }
-
-    function iaNube() {
-        return preferencias().iaNube === true;
     }
 
     // ---------- Voz ----------
@@ -271,34 +270,29 @@
 
         const noEncontrado = voz?.interpretar?.(pedido);
 
-        // 4. La IA, si está prendida.
-        if (window.vozVendeFrio && (preferencias().iaNube || preferencias().iaCelular)) {
+        // 4. Claude, en una sola pregunta: una orden o la respuesta.
+        let motivo = "";
+        if (voz?.claudeDisponible?.()) {
             esperando = true;
             dibujar();
-            try {
-                const orden = !comoHago ? await voz.interpretarConIA?.(pedido) : null;
-                if (orden) {
-                    esperando = false;
-                    return hacer(orden);
-                }
-                if (iaNube() && window.preguntaleVendeFrio?.preguntarALaNube) {
-                    const resultado = await window.preguntaleVendeFrio.preguntarALaNube(pedido, datosParaLaIA(), charla.slice(0, -1));
-                    esperando = false;
-                    return contestar({ texto: resultado.respuesta, destacado: resultado.destacado, barras: resultado.barras });
-                }
-            } catch (error) {
-                esperando = false;
-                return contestar({ texto: error.message || "No pude contestar. Probá de nuevo.", error: true });
-            }
+            const abierta = hoja;
+            const resultado = await voz.preguntarAlAsistente(pedido, datosParaLaIA(), charla.slice(0, -1));
             esperando = false;
+            // Si cerraron la charla mientras pensaba, no hace nada.
+            if (!hoja || hoja !== abierta) return;
+            if (resultado?.orden) return hacer(resultado.orden);
+            if (resultado) return contestar({ texto: resultado.texto, destacado: resultado.destacado, barras: resultado.barras });
+            // Claude no contestó: sigue con lo que sabe el celular, y dice por qué.
+            motivo = voz.porQueFallo?.() || "";
+        } else if (enLaNube() && preferencias().asistenteClaude === false) {
+            motivo = "Con Claude prendido (Más › Preferencias de trabajo › Asistente) entiendo mucho más.";
         }
 
         if (noEncontrado && noEncontrado.accion === "noEncontrado") {
-            return contestar({ texto: "No encontré el comercio «" + noEncontrado.texto + "». Fijate cómo está escrito en Comercios." });
+            return contestar({ texto: "No encontré el comercio «" + noEncontrado.texto + "». Fijate cómo está escrito en Comercios." + (motivo ? " " + motivo : "") });
         }
         contestar({
-            texto: "No entendí «" + pedido + "». Probá con «nuevo pedido para…», «¿cuánto vendí hoy?» o «¿cómo registro un cobro?»."
-                + (iaNube() ? "" : " Con la IA prendida (Más › Preferencias de trabajo › Voz con IA) entiendo mucho más."),
+            texto: "No entendí «" + pedido + "». Probá con «nuevo pedido para…», «¿cuánto vendí hoy?» o «¿cómo registro un cobro?»." + (motivo ? " " + motivo : ""),
             decir: "No entendí. Probá de nuevo"
         });
     }

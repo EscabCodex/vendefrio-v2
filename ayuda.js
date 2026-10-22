@@ -103,7 +103,7 @@
         {
             id: "asistente", titulo: "Qué puede hacer el Asistente",
             claves: /que (podes|sabes|puedo) (hacer|decir|preguntar)|ayuda|como funciona|para que sirve/,
-            pasos: ["Dale órdenes: «nuevo pedido para Don Pepe», «llevame a Super Norte», «llegué».", "Preguntale por tus números: «¿cuánto vendí hoy?», «¿quién me debe?».", "Preguntale cómo se usa algo: «¿cómo registro un cobro?»."]
+            pasos: ["Dale órdenes: «nuevo pedido para Don Pepe», «llevame a Super Norte», «llegué».", "Preguntale por tus números: «¿cuánto vendí hoy?», «¿quién me debe?».", "Preguntale cómo se usa algo: «¿cómo registro un cobro?».", "Lo fácil lo contesto al toque, también sin internet. Lo demás se lo pregunto a Claude, con internet."]
         }
     ];
 

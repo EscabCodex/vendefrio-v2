@@ -1,8 +1,8 @@
 // VendeFrío - Los números para el Asistente (T91, Etapa 8).
 // Arma un resumen corto de ventas por mes, por producto, por comercio y por
-// vendedor, lo que deben y el stock bajo, y se lo pasa a la IA en la nube
-// (api/preguntar.js) cuando el Asistente (asistente.js) no sabe contestar
-// solo. Antes era la pantalla "Preguntale a VendeFrío".
+// vendedor, lo que deben y el stock bajo. El Asistente (asistente.js) se lo
+// manda a Claude (api/entender.js, T155) cuando no sabe contestar solo.
+// Antes era la pantalla "Preguntale a VendeFrío".
 (function () {
     "use strict";
 
@@ -95,23 +95,5 @@
         return lineas.join("\n");
     }
 
-    async function preguntarALaNube(pregunta, datos = resumen(), charla = []) {
-        const usuario = window.firebase?.auth?.().currentUser;
-        if (!usuario) throw new Error("Entrá con la cuenta de la distribuidora para preguntar.");
-        const respuesta = await fetch("/api/preguntar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: "Bearer " + await usuario.getIdToken() },
-            body: JSON.stringify({ pregunta, datos, charla: charla.slice(-6).map(({ quien, texto }) => ({ quien, texto })) })
-        });
-        const cuerpo = await respuesta.json().catch(() => ({}));
-        if (!respuesta.ok || !cuerpo.resultado) {
-            throw new Error(cuerpo.codigo === "sinConfigurar" ? "Falta configurar la IA en Vercel."
-                : respuesta.status === 429 ? "Muchas preguntas seguidas. Esperá un minuto."
-                    : respuesta.status === 401 ? "Tu sesión venció: salí de la cuenta y volvé a entrar."
-                        : "La IA no pudo contestar. Probá de nuevo.");
-        }
-        return cuerpo.resultado;
-    }
-
-    window.preguntaleVendeFrio = { resumen, preguntarALaNube };
+    window.preguntaleVendeFrio = { resumen };
 }());

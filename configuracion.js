@@ -87,7 +87,7 @@
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
         movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
-        vibrar: true, precios: true, iaCelular: false, iaNube: false,
+        vibrar: true, precios: true, asistenteClaude: true,
         vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
         resumenNoche: true, nombresArriba: true, hablarAlGuardar: false,
@@ -2046,22 +2046,13 @@
                 // T79: el resumen del día a la noche (dueño y quien cobra).
                 grupo("A la noche",
                     filaLlave("luna", "violeta", "Resumen de la noche", "A las 20:30: vendido, entregado, cobrado y lo que falta", "resumenNoche")) +
-                // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
-                grupo("Voz con IA",
-                    filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
-                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube") +
-                    filaAccion("chispa", "violeta", "Probar la IA en la nube", "Dice si anda o qué le falta", 'data-accion="probarIA"')) +
+                // T155: un solo asistente, el de Claude. Lo fácil lo contesta
+                // el celular; lo demás va a Claude (api/entender.js).
+                grupo("Asistente",
+                    filaLlave("chispa", "violeta", "Asistente con Claude", "Entiende cualquier frase, pedidos largos y preguntas", "asistenteClaude") +
+                    filaAccion("nube", "azul", "Probar el asistente", "Dice si Claude anda o qué le falta", 'data-accion="probarIA"')) +
                 `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
-                nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
-            window.vozVendeFrio?.estadoIACelular?.().then(estado => {
-                const texto = document.getElementById("estadoIACelular");
-                if (!texto) return;
-                texto.textContent = {
-                    available: "Este celular tiene IA y está lista.",
-                    downloadable: "Este celular tiene IA: se descarga la primera vez que la uses, con wifi.",
-                    downloading: "Este celular está descargando su IA."
-                }[estado] || "Este celular todavía no tiene IA propia para páginas.";
-            });
+                nota("El asistente es uno solo: el botón de Inicio, la voz (también navegando) y «Dictar o pegar pedido». Lo fácil lo contesta el celular al toque, sin internet y sin gastar; lo demás se lo pregunta a Claude. Claude necesita internet y la cuenta de la distribuidora; cada pregunta cuesta una fracción de centavo de dólar.");
         }
 
         if (seccion === "navegacion") {

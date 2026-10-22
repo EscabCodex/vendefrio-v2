@@ -300,101 +300,61 @@
     }
 
     // -------------------------------------------------
-    // IA (T54): solo si la voz gratis no entendió y el dueño la prendió en
-    // Más > Trabajo. Primero la del celular (gratis y privada, Chrome con
-    // Gemini Nano), después la de la nube (api/entender.js, con Claude).
+    // Claude (T54; un solo asistente desde T155). Lo que el celular no
+    // entiende solo (lo de arriba, gratis y sin internet) se lo pregunta a
+    // Claude en la nube (api/entender.js). Lo usan el Asistente
+    // (asistente.js), el pedido dictado o pegado y los mensajes de WhatsApp.
+    // Necesita internet y la cuenta de la distribuidora. Viene prendido y se
+    // apaga en Más > Preferencias de trabajo > Asistente. La IA del celular
+    // (la de Chrome) ya no se usa.
     // -------------------------------------------------
 
     const PANTALLAS_IA = ["pedido", "menu", "comercios", "catalogo", "rutas", "estadisticas", "cierre"];
-    const ESQUEMAS_IA = {
-        comando: {
-            type: "object",
-            properties: {
-                accion: { type: "string", enum: ["nuevoPedido", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue", "nada"] },
-                comercio: { type: "string" },
-                pantalla: { type: "string", enum: [...PANTALLAS_IA, ""] }
-            },
-            required: ["accion", "comercio", "pantalla"],
-            additionalProperties: false
-        },
-        pedido: {
-            type: "object",
-            properties: {
-                comercio: { type: "string" },
-                productos: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: { marca: { type: "string" }, producto: { type: "string" }, cantidad: { type: "integer" } },
-                        required: ["marca", "producto", "cantidad"],
-                        additionalProperties: false
-                    }
-                },
-                sinEntender: { type: "array", items: { type: "string" } }
-            },
-            required: ["comercio", "productos", "sinEntender"],
-            additionalProperties: false
-        }
-    };
-    const INSTRUCCIONES_IA = {
-        comando: "Sos el asistente de voz de VendeFrío, una app de una distribuidora que vende y reparte a comercios. Te llega lo que dijo un vendedor, en español rioplatense. Elegí una acción: nuevoPedido (cargar un pedido), ir (que lo guíe hasta un comercio), visitado (ya pasó por un comercio), ficha (ver datos de un comercio), pantalla (abrir: pedido, menu, comercios, catalogo, rutas, estadisticas o cierre), proximaParada (a dónde ir ahora), llegue (llegó al comercio) o nada (no es para la app). En comercio poné el nombre exacto de la lista, o \"\". En pantalla poné la pantalla solo si la acción es pantalla; si no, \"\".",
-        pedido: "Sos el asistente de VendeFrío. Te llega un pedido dictado o pegado de WhatsApp, en español rioplatense. Sacá cada producto con su cantidad en unidades (una docena son 12), usando solo productos del catálogo, con marca y producto escritos exactamente como en la lista. Si nombra un comercio de la lista, ponelo exacto en comercio; si no, \"\". Lo que no esté en el catálogo va en sinEntender. Los cambios o devoluciones (por ejemplo «tengo 2 cambio de ñoquis») no son productos pedidos: ponelos en sinEntender empezando con «cambio:». Si una palabra encabeza varios productos («Ravioles 3 ricota, 5 pollo»), vale para todos. Ignorá saludos y relleno."
-    };
 
-    function preferenciaIA(campo) {
+    function preferencias() {
         try {
-            return JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}")[campo] === true;
+            return JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}") || {};
         } catch (error) {
-            return false;
+            return {};
         }
     }
 
-    function iaPrendida() {
-        return preferenciaIA("iaCelular") || preferenciaIA("iaNube");
+    function claudePrendido() {
+        return preferencias().asistenteClaude !== false;
     }
 
-    // "available", "downloadable", "downloading" o "unavailable".
-    async function estadoIACelular() {
-        const Modelo = window.LanguageModel;
-        if (!Modelo?.availability) return "unavailable";
+    function usuarioDeLaNube() {
         try {
-            return await Modelo.availability({ expectedInputs: [{ type: "text", languages: ["es"] }], expectedOutputs: [{ type: "text", languages: ["es"] }] });
+            return window.firebase?.auth?.().currentUser || null;
         } catch (error) {
-            return "unavailable";
+            return null;
         }
+    }
+
+    // Si ahora se le puede preguntar a Claude.
+    function claudeDisponible() {
+        return claudePrendido() && Boolean(usuarioDeLaNube());
     }
 
     function conTiempo(promesa, milisegundos) {
         return Promise.race([promesa, new Promise((resolver, rechazar) => setTimeout(() => rechazar(new Error("tiempo")), milisegundos))]);
     }
 
-    async function preguntarAlCelular(tipo, mensaje) {
-        if (!preferenciaIA("iaCelular") || (await estadoIACelular()) === "unavailable") return null;
-        let sesion = null;
-        try {
-            sesion = await conTiempo(window.LanguageModel.create({
-                initialPrompts: [{ role: "system", content: INSTRUCCIONES_IA[tipo] }],
-                expectedInputs: [{ type: "text", languages: ["es"] }],
-                expectedOutputs: [{ type: "text", languages: ["es"] }]
-            }), 20000);
-            const respuesta = await conTiempo(sesion.prompt(mensaje, { responseConstraint: ESQUEMAS_IA[tipo] }), 20000);
-            return JSON.parse(respuesta);
-        } catch (error) {
-            console.warn("La IA del celular no respondió.", error?.message || "");
-            return null;
-        } finally {
-            try { sesion?.destroy?.(); } catch (error) { /* ya cerrada */ }
-        }
-    }
-
-    // Por qué falló la última pregunta a la IA, en palabras simples.
+    // Por qué falló la última pregunta a Claude, en palabras simples.
     let porQueFallo = "";
 
     async function preguntarALaNube(tipo, datos, forzar = false) {
-        if (!forzar && !preferenciaIA("iaNube")) return null;
-        const usuario = window.firebase?.auth?.().currentUser;
+        if (!forzar && !claudePrendido()) {
+            porQueFallo = "El asistente con Claude está apagado (Más › Preferencias de trabajo › Asistente).";
+            return null;
+        }
+        const usuario = usuarioDeLaNube();
         if (!usuario) {
-            porQueFallo = "La IA en la nube necesita que entres con la cuenta de la distribuidora.";
+            porQueFallo = "Claude necesita que entres con la cuenta de la distribuidora.";
+            return null;
+        }
+        if (navigator.onLine === false) {
+            porQueFallo = "Sin internet entiendo lo básico, pero no le puedo preguntar a Claude.";
             return null;
         }
         try {
@@ -405,45 +365,34 @@
             }), 30000);
             const cuerpo = await respuesta.json().catch(() => ({}));
             if (!respuesta.ok) {
-                console.warn("La IA en la nube respondió " + respuesta.status + ".", cuerpo.codigo || "", cuerpo.message || "", cuerpo.detalle || "");
+                console.warn("Claude respondió " + respuesta.status + ".", cuerpo.codigo || "", cuerpo.message || "", cuerpo.detalle || "");
                 porQueFallo = cuerpo.codigo === "sinConfigurar" ? "Falta configurar Vercel: " + (cuerpo.message || "")
                     : respuesta.status === 401 ? "Tu sesión venció: salí de la cuenta y volvé a entrar."
-                        : respuesta.status === 429 ? "Muchos pedidos seguidos a la IA. Esperá un minuto."
-                            : "La IA en la nube falló (error " + respuesta.status + (cuerpo.detalle ? ": " + cuerpo.detalle : "") + ").";
+                        : respuesta.status === 429 ? "Muchas preguntas seguidas a Claude. Esperá un minuto."
+                            : "Claude falló (error " + respuesta.status + (cuerpo.detalle ? ": " + cuerpo.detalle : "") + ").";
                 return null;
             }
-            if (!cuerpo.resultado) porQueFallo = "La IA en la nube no pudo leerlo" + (cuerpo.detalle ? " (" + cuerpo.detalle + ")" : "") + ".";
+            if (!cuerpo.resultado) porQueFallo = "Claude no pudo leerlo" + (cuerpo.detalle ? " (" + cuerpo.detalle + ")" : "") + ".";
             return cuerpo.resultado || null;
         } catch (error) {
-            console.warn("No se pudo usar la IA en la nube.", error?.message || "");
-            porQueFallo = error?.message === "tiempo" ? "La IA en la nube tardó demasiado. Probá de nuevo." : "No hay conexión con la IA en la nube.";
+            console.warn("No se pudo preguntar a Claude.", error?.message || "");
+            porQueFallo = error?.message === "tiempo" ? "Claude tardó demasiado. Probá de nuevo." : "No hay conexión con Claude.";
             return null;
         }
     }
 
-    // Botón «Probar la IA en la nube» (Más > Trabajo): una pregunta corta
-    // que dice si anda o qué falta, aunque la llave esté apagada.
+    // Botón «Probar el asistente» (Más > Preferencias de trabajo): una
+    // pregunta corta que dice si Claude anda o qué falta, aunque esté apagado.
     async function probarIANube() {
         porQueFallo = "";
-        const resultado = await preguntarALaNube("comando", { texto: "abrir los pedidos", comercios: [], productos: [] }, true);
-        if (resultado?.accion === "pantalla") return "Anda bien: la IA en la nube respondió.";
-        if (resultado) return "La IA respondió, pero algo raro: " + JSON.stringify(resultado);
-        return porQueFallo || "La IA en la nube no respondió.";
+        const resultado = await preguntarALaNube("asistente", { texto: "abrir los pedidos", comercios: [], datos: "", charla: [] }, true);
+        if (resultado?.accion === "pantalla") return "Anda bien: Claude respondió.";
+        if (resultado) return "Claude respondió, pero algo raro: " + JSON.stringify(resultado);
+        return porQueFallo || "Claude no respondió.";
     }
 
     function nombresDeComercios() {
         return typeof obtenerComercios === "function" ? obtenerComercios().map(comercio => comercio.nombre) : [];
-    }
-
-    // Pregunta primero al celular y después a la nube.
-    async function preguntarIA(tipo, texto) {
-        const comercios = nombresDeComercios();
-        const productos = tipo === "pedido" ? productosDelCatalogo().map(({ marca, producto }) => ({ marca, producto })) : [];
-        const mensaje = "Comercios:\n" + (comercios.join("\n") || "(ninguno)")
-            + (tipo === "pedido" ? "\n\nCatálogo (marca | producto):\n" + productos.map(item => item.marca + " | " + item.producto).join("\n") : "")
-            + "\n\nLo que dijo:\n" + texto;
-        porQueFallo = preferenciaIA("iaNube") ? "" : "La IA del celular no pudo leerlo. Probá prender «IA en la nube» en Más > Trabajo.";
-        return (await preguntarAlCelular(tipo, mensaje)) || (await preguntarALaNube(tipo, { texto, comercios, productos }));
     }
 
     function comercioPorNombre(nombre) {
@@ -451,21 +400,36 @@
         return obtenerComercios().find(comercio => comercio.nombre === nombre) || buscarComercioEn(nombre, 0.75);
     }
 
-    // Lo que dijo, entendido por la IA: una orden como las de interpretar().
-    async function interpretarConIA(texto) {
-        const resultado = await preguntarIA("comando", texto);
-        if (!resultado || !resultado.accion || resultado.accion === "nada") return null;
+    // El Asistente le pregunta a Claude (T155): vuelve una orden como las de
+    // interpretar() o una respuesta ({ texto, destacado, barras }), o null.
+    async function preguntarAlAsistente(texto, datos = "", charla = []) {
+        porQueFallo = "";
+        const resultado = await preguntarALaNube("asistente", {
+            texto,
+            comercios: nombresDeComercios(),
+            datos,
+            charla: charla.slice(-6).map(item => ({ quien: item.quien, texto: String(item.texto || "") }))
+        });
+        if (!resultado) return null;
         const comercio = comercioPorNombre(resultado.comercio);
-        if (resultado.accion === "pantalla") return PANTALLAS_IA.includes(resultado.pantalla) ? { accion: "pantalla", pantalla: resultado.pantalla } : null;
-        if (resultado.accion === "proximaParada" || resultado.accion === "llegue") return { accion: resultado.accion };
-        if (resultado.accion === "nuevoPedido") return comercio ? { accion: "nuevoPedido", comercio } : { accion: "nuevoPedido" };
-        if (["ir", "visitado", "ficha"].includes(resultado.accion) && comercio) return { accion: resultado.accion, comercio };
-        return null;
+        let orden = null;
+        if (resultado.accion === "pantalla" && PANTALLAS_IA.includes(resultado.pantalla)) orden = { accion: "pantalla", pantalla: resultado.pantalla };
+        else if (resultado.accion === "proximaParada" || resultado.accion === "llegue") orden = { accion: resultado.accion };
+        else if (resultado.accion === "nuevoPedido") orden = comercio ? { accion: "nuevoPedido", comercio } : { accion: "nuevoPedido" };
+        else if (["ir", "visitado", "ficha"].includes(resultado.accion) && comercio) orden = { accion: resultado.accion, comercio };
+        return {
+            orden,
+            texto: String(resultado.respuesta || (orden ? "" : "No te entendí. ¿Me lo decís de otra forma?")),
+            destacado: orden ? "" : String(resultado.destacado || ""),
+            barras: orden ? [] : (Array.isArray(resultado.barras) ? resultado.barras : [])
+        };
     }
 
-    // Un pedido entendido por la IA, con los productos del catálogo.
+    // Un pedido entendido por Claude, con los productos del catálogo.
     async function leerPedidoConIA(texto) {
-        const resultado = await preguntarIA("pedido", texto);
+        porQueFallo = "";
+        const productosLista = productosDelCatalogo().map(({ marca, producto }) => ({ marca, producto }));
+        const resultado = await preguntarALaNube("pedido", { texto, comercios: nombresDeComercios(), productos: productosLista });
         if (!resultado) return null;
         const catalogo = productosDelCatalogo();
         const productos = [];
@@ -546,91 +510,10 @@
         return "";
     }
 
-    // -------------------------------------------------
-    // Ventana "Te escucho" (comandos)
-    // -------------------------------------------------
-
-    let ventana = null;
-
-    function crearVentana() {
-        if (ventana) return ventana;
-        ventana = document.createElement("div");
-        ventana.className = "modal oculto ventanaVoz";
-        ventana.innerHTML = `
-            <div class="modalContenido contenidoVoz" role="dialog" aria-modal="true" aria-labelledby="tituloVoz">
-                <button type="button" class="botonMicrofonoGrande" aria-label="Escuchar de nuevo">${window.icono("microfono", 34)}</button>
-                <h2 id="tituloVoz">Te escucho</h2>
-                <p class="textoVoz" aria-live="polite"></p>
-                <div class="ejemplosVoz">
-                    <small>Hablá normal. Por ejemplo:</small>
-                    <span>«¿A dónde voy ahora?»</span>
-                    <span>«Haceme un pedido para lo de Don Pepe»</span>
-                    <span>«Llevame al kiosco de la esquina»</span>
-                    <span>«Mostrame los pedidos»</span>
-                    <span>«Ya pasé por Super Norte»</span>
-                    <span>«¿Cuánto vendí?»</span>
-                </div>
-                <div class="modalBotones"><button type="button" class="btnModalSecundario cerrarVoz">Cerrar</button></div>
-            </div>`;
-        document.body.appendChild(ventana);
-        ventana.querySelector(".cerrarVoz").addEventListener("click", cerrarVentana);
-        ventana.querySelector(".botonMicrofonoGrande").addEventListener("click", empezarComando);
-        ventana.addEventListener("click", evento => { if (evento.target === ventana) cerrarVentana(); });
-        return ventana;
-    }
-
-    function cerrarVentana() {
-        detener();
-        ventana?.classList.add("oculto");
-    }
-
-    function empezarComando() {
-        crearVentana();
-        ventana.classList.remove("oculto");
-        ventana.classList.add("escuchando");
-        const texto = ventana.querySelector(".textoVoz");
-        texto.textContent = "Hablá ahora…";
-        escuchar({
-            alParcial: parcial => { texto.textContent = "«" + parcial + "»"; },
-            alError: codigo => {
-                const mensaje = textoDeError(codigo);
-                if (mensaje) texto.textContent = mensaje;
-            },
-            alFinal: (final, alternativas = []) => {
-                ventana.classList.remove("escuchando");
-                if (!final) return;
-                texto.textContent = "«" + final + "»";
-                // Si el celular escuchó otra cosa parecida, prueba también esa.
-                const entendido = [final, ...alternativas].find(frase => interpretar(frase)?.accion && interpretar(frase).accion !== "noEncontrado");
-                if (entendido) {
-                    cerrarVentana();
-                    ejecutar(entendido);
-                    return;
-                }
-                const sinIA = () => {
-                    if (interpretar(final)) {
-                        cerrarVentana();
-                        ejecutar(final);
-                    } else {
-                        texto.textContent = "No entendí «" + final + "». Tocá el micrófono y probá de nuevo.";
-                    }
-                };
-                if (!iaPrendida()) return sinIA();
-                // T54: la IA lo intenta antes de rendirse.
-                texto.textContent = "«" + final + "» · Pensando…";
-                ventana.classList.add("pensando");
-                interpretarConIA(final).then(orden => {
-                    ventana.classList.remove("pensando");
-                    if (ventana.classList.contains("oculto")) return;
-                    if (orden) {
-                        cerrarVentana();
-                        ejecutarOrden(orden);
-                    } else {
-                        sinIA();
-                    }
-                });
-            }
-        });
+    // Los comandos por voz (también navegando) son el Asistente (T155): se
+    // abre escuchando, entiende primero lo fácil y lo demás va a Claude.
+    function abrirAsistente() {
+        window.asistenteVendeFrio?.abrir?.();
     }
 
     // -------------------------------------------------
@@ -902,8 +785,12 @@
     }
 
     let hojaDictado = null;
-    // Lo que entendió la IA para un texto (T54); vale mientras el texto no cambie.
+    // Lo que entendió Claude para un texto (T54); vale mientras el texto no cambie.
     let lecturaIA = null;
+    const ESPERA_IA = 1200;
+    let esperaIA = null;
+    let leyendoIA = "";
+    let falloIA = "";
 
     function lecturaDe(texto) {
         return conRespuestas(lecturaIA && lecturaIA.texto === texto ? lecturaIA.lectura : leerPedido(texto));
@@ -974,6 +861,13 @@
     function mostrarLectura(texto) {
         const caja = hojaDictado.querySelector(".resultadoDictado");
         const boton = hojaDictado.querySelector(".agregarDictado");
+        const estado = hojaDictado.querySelector(".estadoDictado");
+        clearTimeout(esperaIA);
+        // Un aviso del Asistente de otro texto ya no vale.
+        if (estado.dataset.deIA && texto !== leyendoIA && texto !== falloIA) {
+            estado.textContent = "";
+            delete estado.dataset.deIA;
+        }
         caja.innerHTML = "";
         const lectura = lecturaDe(texto);
         boton.disabled = lectura.productos.length === 0;
@@ -1006,34 +900,53 @@
             aviso.className = "sinEntenderDictado";
             aviso.innerHTML = lectura.sinEntender.map(tramo => htmlPregunta(tramo, false)).join("");
             caja.appendChild(aviso);
-            if (iaPrendida() && !(lecturaIA && lecturaIA.texto === texto)) {
-                const boton = document.createElement("button");
-                boton.type = "button";
-                boton.className = "botonRepetirPedido botonEntenderIA";
-                boton.innerHTML = window.icono("chispa", 15) + " Entender con IA";
-                boton.addEventListener("click", async () => {
-                    boton.disabled = true;
-                    boton.lastChild.textContent = " Pensando…";
-                    const leida = await leerPedidoConIA(texto);
-                    if (!hojaDictado || hojaDictado.querySelector("#textoDictado").value !== texto) return;
-                    if (leida) {
-                        lecturaIA = { texto, lectura: leida };
-                        mostrarLectura(texto);
-                    } else {
-                        boton.disabled = false;
-                        boton.lastChild.textContent = " Entender con IA";
-                        hojaDictado.querySelector(".estadoDictado").textContent = porQueFallo || "La IA no pudo leerlo. Revisá la conexión o probá de nuevo.";
-                    }
-                });
-                caja.appendChild(boton);
+            if (claudeDisponible() && !(lecturaIA && lecturaIA.texto === texto)) {
+                if (falloIA === texto) {
+                    // Si Claude falló, se puede probar de nuevo a mano.
+                    const boton = document.createElement("button");
+                    boton.type = "button";
+                    boton.className = "botonRepetirPedido botonEntenderIA";
+                    boton.innerHTML = window.icono("chispa", 15) + " Probar de nuevo";
+                    boton.addEventListener("click", () => leerConClaude(texto));
+                    caja.appendChild(boton);
+                } else if (leyendoIA !== texto && !hojaDictado.classList.contains("escuchando")) {
+                    esperaIA = setTimeout(() => leerConClaude(texto), ESPERA_IA);
+                }
             }
         }
+    }
+
+    // T155: lo que el celular no entendió del pedido se lo pregunta solo al
+    // Asistente (Claude), un rato después de dejar de escribir o dictar.
+    function leerConClaude(texto) {
+        clearTimeout(esperaIA);
+        if (!hojaDictado || hojaDictado.classList.contains("oculto")) return;
+        const estado = hojaDictado.querySelector(".estadoDictado");
+        leyendoIA = texto;
+        falloIA = "";
+        estado.textContent = "El Asistente está leyendo lo que faltó…";
+        estado.dataset.deIA = "si";
+        leerPedidoConIA(texto).then(leida => {
+            if (leyendoIA === texto) leyendoIA = "";
+            if (!hojaDictado || hojaDictado.classList.contains("oculto") || hojaDictado.querySelector("#textoDictado").value !== texto) return;
+            if (leida) {
+                lecturaIA = { texto, lectura: leida };
+                estado.textContent = "";
+            } else {
+                falloIA = texto;
+                estado.textContent = porQueFallo || "El Asistente no pudo leerlo. Revisá la conexión o probá de nuevo.";
+            }
+            mostrarLectura(texto);
+        });
     }
 
     function abrirDictado() {
         crearHojaDictado();
         hojaDictado.querySelector("#textoDictado").value = "";
         hojaDictado.querySelector(".estadoDictado").textContent = "";
+        lecturaIA = null;
+        leyendoIA = "";
+        falloIA = "";
         respuestasDictado = {};
         mostrarLectura("");
         hojaDictado.classList.remove("oculto");
@@ -1041,10 +954,11 @@
 
     function cerrarDictado() {
         detener();
+        clearTimeout(esperaIA);
         hojaDictado?.classList.add("oculto");
         hojaDictado?.classList.remove("escuchando");
     }
 
     // Etapa 8: el micrófono de Inicio ahora es el Asistente (asistente.js).
-    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, ejecutarOrden, detener, interpretarConIA, leerPedidoConIA, estadoIACelular, probarIANube, leerPedido, sugerencias, buscarEnCatalogo, htmlPregunta, conectarPreguntas, escuchar, abrirDictado, comando: empezarComando };
+    window.vozVendeFrio = { disponible: Boolean(Reconocimiento), interpretar, ejecutar, ejecutarOrden, detener, claudeDisponible, preguntarAlAsistente, porQueFallo: () => porQueFallo, leerPedidoConIA, probarIANube, leerPedido, sugerencias, buscarEnCatalogo, htmlPregunta, conectarPreguntas, escuchar, abrirDictado, comando: abrirAsistente };
 }());

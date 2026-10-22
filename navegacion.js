@@ -710,12 +710,13 @@
             </div>`;
         document.body.appendChild(pantalla);
 
-        // Comando por voz también navegando ("llegué", "nuevo pedido para…").
+        // El Asistente también navegando ("llegué", "nuevo pedido para…"): el
+        // mismo de Inicio (T155), que se abre escuchando.
         if (window.vozVendeFrio?.disponible) {
             const microfono = document.createElement("button");
             microfono.type = "button";
             microfono.className = "botonFlotanteNav microfonoNavegacion";
-            microfono.setAttribute("aria-label", "Comando por voz");
+            microfono.setAttribute("aria-label", "Asistente");
             microfono.innerHTML = window.icono("microfono", 22);
             microfono.addEventListener("click", () => window.vozVendeFrio.comando());
             const botones = pantalla.querySelector(".botonesNavegacion");
