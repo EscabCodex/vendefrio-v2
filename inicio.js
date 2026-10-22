@@ -713,6 +713,8 @@
 
         empleados.canjearCodigo(codigo)
             .then(resultado => {
+                // T157: quien entra por primera vez con código ve el tutorial.
+                if (resultado.tipo !== "reingreso") window.tutorialVendeFrio?.marcarRecienEntrado("empleado");
                 boton.textContent = resultado.tipo === "reingreso"
                     ? "¡Listo! Volviste a entrar…"
                     : "¡Listo! Entrando…";
@@ -864,6 +866,8 @@
 
         distribuidora.cambiarNombreDueno(nombre)
             .then(guardado => {
+                // T157: cuenta nueva, al llegar a Inicio arranca el tutorial.
+                window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
                 cerrar();
                 mostrarToast("¡Hola, " + escapar(guardado) + "!");
             })

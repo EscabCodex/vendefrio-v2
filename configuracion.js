@@ -2102,6 +2102,14 @@
                         window.nubeVendeFrio?.modoNube?.()
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
+                    // T157: el tutorial, para volver a verlo, y la llave del de cada pantalla.
+                    (window.tutorialVendeFrio
+                        ? filaAccion("chispa", "naranja", "Ver el tutorial", "Lo básico de la app, paso a paso", 'data-accion="verTutorial"') +
+                            `<label class="ajFila">
+                                ${cabezaFila("info", "azul", "Explicar cada pantalla nueva", "La primera vez que entrás, te muestra cómo se usa")}
+                                <input type="checkbox" class="ajLlave" data-tutorial-pantallas role="switch" aria-label="Explicar cada pantalla nueva" ${window.tutorialVendeFrio.pantallasPrendidas() ? "checked" : ""}>
+                            </label>`
+                        : "") +
                     filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
                     // T87: presentación y términos (repaso casero en T159) y el mail de la app.
                     filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
@@ -2705,6 +2713,7 @@
 
         if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
         if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
+        if (accion === "verTutorial") window.tutorialVendeFrio?.abrir();
         if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
         if (accion === "escribirnos") location.href = "mailto:vendefrio.app@gmail.com?subject=" + encodeURIComponent("Consulta sobre VendeFrío");
         if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();

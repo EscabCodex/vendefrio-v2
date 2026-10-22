@@ -548,6 +548,18 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     barra.querySelector("span").style.width = Math.round(hechos / pasos.length * 100) + "%";
     caja.appendChild(barra);
 
+    // Tutorial (T157): primero, la invitación a hacer lo básico con los
+    // botones señalados en la pantalla real.
+    if (window.tutorialVendeFrio) {
+        const recorrido = document.createElement("button");
+        recorrido.type = "button";
+        recorrido.className = "pasoPrimeros recorridoPrimeros";
+        recorrido.innerHTML = '<span class="tildePaso">' + window.icono("chispa", 14) + "</span><span></span>" + window.icono("chevDerecha", 16);
+        recorrido.children[1].textContent = window.tutorialVendeFrio.yaLoVio() ? "Ver de nuevo el tutorial" : "Hacelo con el tutorial, paso a paso";
+        recorrido.addEventListener("click", () => window.tutorialVendeFrio.abrir());
+        caja.appendChild(recorrido);
+    }
+
     pasos.forEach(paso => {
         const fila = document.createElement("button");
         fila.type = "button";
