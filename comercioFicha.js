@@ -146,6 +146,7 @@
         modalFicha.innerHTML = `
             <div class="modalContenido fichaContenido fichaComercioNueva" role="dialog" aria-modal="true" aria-labelledby="tituloFichaComercio">
                 <button type="button" class="fichaCerrar" aria-label="Cerrar ficha">${window.icono("cerrarX", 20)}</button>
+                <button type="button" class="fichaAsistente" aria-label="Asistente" title="Asistente" data-abrir-asistente>${window.icono("chispa", 20)}</button>
                 <div class="fichaEncabezado">
                     <div class="fichaAvatar"></div>
                     <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2><p class="fichaDireccion"></p><span class="chipEstado fichaEstado"></span></div>

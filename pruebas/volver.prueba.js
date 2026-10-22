@@ -56,18 +56,18 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
-    // Las tarjetas de Rutas arrancan plegadas, con el resumen a la vista.
+    // Las tarjetas de Rutas (dentro de «Paradas», T136) arrancan plegadas,
+    // con el resumen a la vista.
+    await page.locator("#btnParadasRutas").click();
     await expect(page.locator(".tarjetaSeleccionRuta")).not.toHaveAttribute("open", "");
     await expect(page.locator(".tarjetaSeleccionRuta .chipResumenRuta").first()).toBeVisible();
     await page.locator(".tarjetaRutasGuardadas").scrollIntoViewIfNeeded();
     await capturar(page, "volver-02-rutas-plegada");
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // Desde las paradas se vuelve al mapa y, desde el mapa, a Más. Rutas
+    // ocupa toda la pantalla como la navegación: sin casita (T136).
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#pantallaRutas").getByRole("button", { name: "Volver a Más" }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
-    // Al lado, la casita lleva directo a Inicio.
-    await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
-    await casita(page).click();
-    await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     for (const acceso of ["Estadísticas", "Cierre del día"]) {
         await abrirMas(page);

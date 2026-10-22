@@ -91,6 +91,11 @@
             "Acá están los problemas que informaron en tu distribuidora.",
             "Cada uno dice quién, cuándo y en qué pantalla estaba.",
             "Para informar uno nuevo, entrá a Más › Seguridad y ayuda."] },
+        pantallaListasPrecios: { titulo: "Listas de precios", pasos: [
+            "Cada lista tiene un precio distinto para cada producto (por ejemplo, Supermercados, Almacenes y Kioscos).",
+            "Tocá una lista para cargar sus precios, o «Lista nueva» para crear otra.",
+            "Con los tres puntitos le cambiás el nombre o la borrás.",
+            "En la ficha de cada comercio elegís qué lista usa. Al armar un pedido podés usar otra."] },
         pantallaPreciosLista: { titulo: "Precios por lista", pasos: [
             "Cada lista puede tener un precio distinto para este producto.",
             "Escribí el precio de cada lista.",
@@ -121,7 +126,7 @@
         const titulo = seccion.querySelector(":scope > header h1")?.textContent?.trim() || "Esta pantalla";
         return { titulo, pasos: [
             "Leé el título de arriba: dice para qué es esta pantalla.",
-            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa en Inicio).",
+            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa, arriba a la derecha).",
             "Volvé con la flecha de arriba o con la barra de abajo."] };
     }
 
@@ -189,9 +194,12 @@
 
     // Algunas pantallas (como Más) se vuelven a dibujar enteras: se mira
     // todo el cuerpo, una vez por cuadro.
+    // Lo que cambia dentro de un mapa o de la navegación (cada posición del
+    // GPS) no agrega pantallas: se ignora, así no se trabaja de más (T141).
     let pendiente = false;
-    new MutationObserver(() => {
+    new MutationObserver(cambios => {
         if (pendiente) return;
+        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
         pendiente = true;
         requestAnimationFrame(() => {
             pendiente = false;

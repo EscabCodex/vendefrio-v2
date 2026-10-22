@@ -59,7 +59,10 @@
             const destino = pantalla.dataset.volverA || (DESDE_MAS.includes(pantalla.id) ? "mas" : "menu");
             const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", DESTINOS[destino] ? "Volver a " + DESTINOS[destino] : "Volver");
             generico.dataset.volver = destino;
-            barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"));
+            // T160: el Asistente, arriba a la derecha de cada pantalla.
+            const asistente = crearBoton("botonAsistentePantalla", "chispa", "Asistente");
+            asistente.dataset.abrirAsistente = "";
+            barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"), asistente);
         }
         // Los que llegan tarde al encabezado (Pedidos agrega su flecha
         // después) también pasan a la barra, antes del genérico.
@@ -90,7 +93,7 @@
         }
         const casita = barra.querySelector(".botonInicioPantalla");
         const propio = [...barra.children].find(boton => {
-            return boton !== generico && boton !== casita && !boton.hidden && !boton.classList.contains("oculto");
+            return boton !== generico && boton !== casita && !boton.matches(".botonAsistentePantalla") && !boton.hidden && !boton.classList.contains("oculto");
         });
         if (generico.hidden !== Boolean(propio)) generico.hidden = Boolean(propio);
         const volver = propio || generico;
@@ -163,7 +166,12 @@
     window.addEventListener("scroll", marcarDespegado, { passive: true });
     window.addEventListener("load", pedirActualizar);
     // Pantallas que se abren o cambian por código.
-    new MutationObserver(pedirActualizar).observe(document.body, {
+    // Lo que cambia dentro de un mapa o de la navegación (cuadraditos del
+    // mapa, cada posición del GPS) no cambia de pantalla: se ignora (T141).
+    new MutationObserver(cambios => {
+        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
+        pedirActualizar();
+    }).observe(document.body, {
         attributes: true, attributeFilter: ["class", "data-vista"], subtree: true
     });
 

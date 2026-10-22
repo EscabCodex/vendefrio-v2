@@ -52,10 +52,13 @@ const cargarListaClientes = actualizarDatalistPedido;
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
 
-// El comercio elegido en Nuevo pedido, o null.
+// El comercio elegido en Nuevo pedido, o null. Si para este pedido se eligió
+// otra lista de precios (T161), viene con esa lista puesta.
 function comercioDelPedidoActual() {
     const nombre = inputCliente ? inputCliente.value.trim() : "";
-    return nombre ? buscarComercioPorNombre(nombre) : null;
+    const comercio = nombre ? buscarComercioPorNombre(nombre) : null;
+    const lista = comercio && window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.listaElegida(comercio) : null;
+    return lista === null ? comercio : { ...comercio, listaPrecios: lista };
 }
 
 function actualizarResumenPedido() {
@@ -110,18 +113,24 @@ function actualizarResumenPedido() {
     if (totalPlata) totalPlata.textContent = "$ " + Math.round(plata).toLocaleString("es-AR");
 }
 
+// Las 41 opciones de cantidad se arman una sola vez y se copian para cada
+// producto: copiar es mucho más rápido que crearlas de nuevo (T151).
+let plantillaSelectCantidad = null;
+
 function crearSelect(marca, producto) {
-    const select = document.createElement("select");
+    if (!plantillaSelectCantidad) {
+        plantillaSelectCantidad = document.createElement("select");
+        for (let cantidad = 0; cantidad <= 40; cantidad++) {
+            const option = document.createElement("option");
+            option.value = cantidad;
+            option.textContent = cantidad;
+            plantillaSelectCantidad.appendChild(option);
+        }
+    }
+    const select = plantillaSelectCantidad.cloneNode(true);
     select.dataset.marca = marca;
     select.dataset.producto = producto.nombre;
     select.setAttribute("aria-label", "Cantidad de " + producto.nombre);
-
-    for (let cantidad = 0; cantidad <= 40; cantidad++) {
-        const option = document.createElement("option");
-        option.value = cantidad;
-        option.textContent = cantidad;
-        select.appendChild(option);
-    }
 
     select.addEventListener("change", () => {
         actualizarEstadoCantidad(select);
@@ -159,6 +168,19 @@ function crearBotonCantidad(clase, texto, titulo) {
     return boton;
 }
 
+// Los íconos de los botones también se copian de uno ya armado (T151).
+const iconosArmados = new Map();
+
+function copiaDeIcono(nombre, tamano) {
+    const clave = nombre + "|" + tamano;
+    if (!iconosArmados.has(clave)) {
+        const caja = document.createElement("template");
+        caja.innerHTML = window.icono(nombre, tamano);
+        iconosArmados.set(clave, caja.content);
+    }
+    return iconosArmados.get(clave).cloneNode(true);
+}
+
 function crearControlesProducto(marca, producto) {
     const controles = document.createElement("div");
     controles.className = "controlesCantidad";
@@ -182,9 +204,9 @@ function crearControlesProducto(marca, producto) {
         "",
         "Volver a cero"
     );
-    botonBorrar.innerHTML = window.icono("tacho", 17);
-    botonMenos.innerHTML = window.icono("menos", 18);
-    botonMas.innerHTML = window.icono("mas", 18);
+    botonBorrar.replaceChildren(copiaDeIcono("tacho", 17));
+    botonMenos.replaceChildren(copiaDeIcono("menos", 18));
+    botonMas.replaceChildren(copiaDeIcono("mas", 18));
 
     botonMenos.addEventListener("click", () => {
         cambiarCantidad(select, -1);
@@ -577,6 +599,8 @@ function dibujarChipsMarcasPedido(marcas, productos) {
 
 function renderizarPedido() {
     if (!contenedorProductos) return;
+    // Con la pantalla oculta no se dibuja: mostrarPantalla("pedido") la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaPedido")?.classList.contains("oculto")) return;
 
     prepararBuscadorProductosPedido();
     contenedorProductos.innerHTML = "";
@@ -937,7 +961,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente, comercioDelPedidoActual());
 
         if (!datosNube) {
             mostrarAviso(

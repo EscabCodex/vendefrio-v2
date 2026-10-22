@@ -602,6 +602,7 @@ function renderizarHistorial() {
 
     if (filtroFechaHistorial) sincronizarSegmentoPeriodo(segmentoPeriodoHistorial, filtroFechaHistorial.value);
     const pedidos = obtenerPedidosFiltrados();
+    window.piezas?.cortarTandas(contenedor);
     contenedor.innerHTML = "";
 
     actualizarResumenHistorial(pedidos);
@@ -646,12 +647,21 @@ function renderizarHistorial() {
         grupo.pedidos.push(registro);
     });
 
+    // Con muchos pedidos se dibujan de a tandas, sin trabar (T151): cada
+    // fecha es un marcador seguido de sus pedidos.
+    const filas = [];
     gruposPorFecha.forEach(grupo => {
+        filas.push({ fecha: grupo.fecha });
+        grupo.pedidos.forEach(registro => filas.push({ registro }));
+    });
+    const dibujarFila = fila => {
+        if (fila.fecha !== undefined) {
         const marcador = document.createElement("div"); marcador.className = "marcadorFechaHistorial";
         marcador.innerHTML = `<span class="indicadorFechaHistorial"></span><strong></strong>`;
-        marcador.querySelector("strong").textContent = grupo.fecha;
-        contenedor.appendChild(marcador);
-        grupo.pedidos.forEach(registro => {
+        marcador.querySelector("strong").textContent = fila.fecha;
+        return marcador;
+        }
+        const registro = fila.registro;
         const pedido = registro.pedido;
         const indice = registro.indice;
         const comercio = String(pedido.comercio || "SIN NOMBRE").trim();
@@ -743,9 +753,10 @@ function renderizarHistorial() {
         acciones.append(botonVer);
         if (puedeEliminar) acciones.append(botonEliminar);
         tarjeta.append(cabecera, acciones);
-        contenedor.appendChild(tarjeta);
-        });
-    });
+        return tarjeta;
+    };
+    if (window.piezas?.dibujarDeATandas) window.piezas.dibujarDeATandas(contenedor, filas, dibujarFila);
+    else filas.forEach(fila => contenedor.appendChild(dibujarFila(fila)));
 }
 
 // -----------------------------------------------------

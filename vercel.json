@@ -17,9 +17,6 @@
     },
     "api/entender.js": {
       "maxDuration": 30
-    },
-    "api/preguntar.js": {
-      "maxDuration": 30
     }
   }
 }

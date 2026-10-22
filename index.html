@@ -12,8 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VendeFrío">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<!-- La letra va dentro de la app: sin señal no se espera a Google Fonts (T150). -->
+<link rel="preload" href="vendor/inter/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="vendor/inter/inter.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="tema.css">
 <!-- Piezas de las ideas para la 1.0 (Etapa 7). -->
@@ -47,7 +48,7 @@
       <div class="kpisHoy" id="dashKpis"></div>
     </section>
 
-    <h2 class="seccionTitulo">Próxima parada</h2>
+    <h2 class="seccionTitulo" id="tituloProximaParada">Próxima parada</h2>
     <div id="dashProximaParada" class="card cardProximaParada"></div>
 
     <section id="dashVisitarHoy" class="oculto" aria-labelledby="tituloVisitarHoy">
@@ -55,13 +56,13 @@
       <div class="card listaInicio" id="dashListaVisitarHoy"></div>
     </section>
 
-    <div class="bloqueCabecera">
+    <div class="bloqueCabecera" id="cabeceraPedidosHoy">
       <h2 class="seccionTitulo">Pedidos de hoy</h2>
       <button type="button" class="enlaceVerTodos" id="dashVerTodos">Ver todos</button>
     </div>
     <div id="dashPedidosDeHoy" class="card listaInicio" aria-live="polite"></div>
 
-    <h2 class="seccionTitulo">Esta semana</h2>
+    <h2 class="seccionTitulo" id="tituloSemana">Esta semana</h2>
     <div class="card semanaInicio" id="dashSemana">
       <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
       <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
@@ -70,6 +71,13 @@
         <button type="button" data-dashboard-accion="vendidoSemana" class="clickeableDashboard"><strong id="dashVendidoSemana">$ 0</strong><small id="dashEtiquetaVendidoSemana">vendido</small></button>
         <button type="button" data-dashboard-accion="pendientesSemana" class="clickeableDashboard"><strong id="dashPendientesSemana">0</strong><small>sin visitar</small></button>
       </div>
+    </div>
+
+    <!-- T156: si se apagaron todas las tarjetas en Más > Apariencia. -->
+    <div class="card inicioVacio" id="inicioVacio">
+      <strong>Inicio está vacío</strong>
+      <small>Apagaste todas las tarjetas. Elegí cuáles ver en Más › Apariencia.</small>
+      <button type="button" class="btnAccion principal" id="inicioVacioElegir">Elegir qué ver</button>
     </div>
 
     <section class="card cardRespaldo">
@@ -201,22 +209,58 @@
     </div>
   </header>
 
-  <main class="container">
-    <div class="card tarjetaMapaRuta">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
-
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
-        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
-        </button>
-
-        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
-        </button>
+  <!-- T136: Rutas como vista previa. El mapa ocupa toda la pantalla; arriba,
+       desde dónde y hasta dónde y cómo se arma el camino; abajo, cuánto
+       tarda, Iniciar y Paradas, y las herramientas. -->
+  <div class="vistaPreviaRutas">
+    <div id="mapaRuta"></div>
+    <div class="cabezaRutas">
+      <button class="volverRutas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <div class="filasCabezaRutas">
+        <div class="filaCabezaRutas"><span class="puntoDesdeRutas" aria-hidden="true"></span>Tu ubicación</div>
+        <div class="filaCabezaRutas"><span class="puntoHastaRutas" aria-hidden="true"></span><span id="destinoRutas">Elegí los comercios de la ruta</span></div>
       </div>
-
-      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
+      <button class="asistenteRutas" type="button" aria-label="Asistente" title="Asistente" data-abrir-asistente><i data-ico="chispa" data-ico-tam="20"></i></button>
     </div>
+    <div class="chipsRutas" role="group" aria-label="Cómo se arma el camino">
+      <button type="button" class="chipRutas" data-vehiculo="auto" aria-pressed="true"><i data-ico="auto" data-ico-tam="15"></i> Auto</button>
+      <button type="button" class="chipRutas" data-vehiculo="moto" aria-pressed="false">Moto</button>
+      <button type="button" class="chipRutas" id="chipSinAutopistas" aria-pressed="false">Sin autopistas</button>
+    </div>
+    <div class="hojaPlanRutas" role="region" aria-label="Resumen de la ruta">
+      <div class="asaPlanRutas" aria-hidden="true"></div>
+      <p class="resumenPlanRutas" aria-live="polite"><strong id="minutosPlanRutas"></strong> <span id="detallePlanRutas">Elegí los comercios y tocá Optimizar.</span></p>
+      <div class="botonesPlanRutas">
+        <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
+        <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="menu" data-ico-tam="18"></i> Paradas</button>
+      </div>
+      <div class="herramientasRutas">
+        <button id="btnOptimizarRuta" type="button">Optimizar</button>
+        <button id="btnElegirRutas" type="button">Elegir</button>
+        <button id="btnGuardadasRutas" type="button">Guardadas</button>
+        <button id="btnGoogleMaps" type="button">Google Maps</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="container panelParadasRutas" aria-label="Paradas">
+    <!-- T138: la lista de paradas del día como línea de tiempo. -->
+    <div class="cabezaPanelParadas">
+      <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <h2>Paradas de hoy</h2>
+      <button id="btnOptimizarOrden" class="optimizarOrden" type="button">Optimizar orden</button>
+    </div>
+    <div id="numerosParadas" class="numerosParadas"></div>
+    <div class="accionesSeleccionRuta filtrosParadas" role="group" aria-label="Elegir comercios">
+      <button id="seleccionarTodosRuta" type="button">Todos</button>
+      <button id="seleccionarPendientesRuta" type="button">Pendientes</button>
+      <button id="limpiarSeleccionRuta" type="button">Ninguno</button>
+      <button id="btnBuscarParadas" class="buscarParadas" type="button" aria-label="Buscar comercio" title="Buscar comercio"><i data-ico="buscar" data-ico-tam="16"></i></button>
+    </div>
+    <div class="card tarjetaMapaRuta">
+      <div id="listaRutaOrdenada" style="font-size: 14px;"></div>
+    </div>
+    <div id="sinUbicacionParadas" class="sinUbicacionParadas"></div>
     <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
       <summary class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
@@ -225,21 +269,7 @@
           <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
         </div>
       </summary>
-      <p class="ayudaDesplegable">Elegí qué paradas querés incluir en la próxima ruta.</p>
-
-      <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
-        <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
-          <i data-ico="check" data-ico-tam="15"></i> Todos
-        </button>
-
-        <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
-          <i data-ico="reloj" data-ico-tam="15"></i> Pendientes
-        </button>
-
-        <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
-          <i data-ico="cerrarX" data-ico-tam="15"></i> Ninguno
-        </button>
-      </div>
+      <p class="ayudaDesplegable">Tildá uno por uno o buscalo por nombre.</p>
 
       <label class="buscadorSeleccionRuta">
         <i data-ico="buscar" data-ico-tam="17"></i>
@@ -285,6 +315,10 @@
         <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
       </button>
     </details>
+    <div class="pieParadas">
+      <button id="btnGuardarRutaParadas" class="pzBtn pzBtnGris" type="button">Guardar ruta</button>
+      <button id="btnListoParadas" class="pzBtn pzBtnPri" type="button">Listo, ver mapa</button>
+    </div>
   </main>
 </section>
 
@@ -525,6 +559,7 @@
 <script src="devoluciones.js"></script>
 <script src="yaLlego.js"></script>
 <script src="repartidores.js"></script>
+<script src="equipoRuta.js"></script>
 <script src="saldos.js"></script>
 <script src="gastos.js"></script>
 <script src="cobrarQr.js"></script>
@@ -546,6 +581,7 @@
 <script src="ayuda.js"></script>
 <script src="asistente.js"></script>
 <script src="ayudaPantallas.js"></script>
+<script src="tutorial.js"></script>
 <script src="volver.js"></script>
 
 <script>
@@ -584,6 +620,23 @@
       document.documentElement.dataset.temaPreferido = preferencia;
       document.documentElement.dataset.texto = d.texto || "normal";
       document.documentElement.dataset.densidad = d.densidad || "compacto";
+      // T156 y T158: color, tonos, formas, íconos, fondo y tarjetas de Inicio
+      // (los mismos valores de fábrica que configuracion.js).
+      const raiz = document.documentElement.dataset;
+      raiz.acento = d.acento || "original";
+      raiz.tonoDia = d.tonoDia || "hielo";
+      raiz.tonoNoche = d.tonoNoche || "grafito";
+      raiz.forma = d.formaBotones || "redondos";
+      raiz.tarjetas = d.tarjetas || "suaves";
+      raiz.iconos = d.iconos || "normales";
+      raiz.fondoInicio = d.fondoInicio || "liso";
+      const tarjetas = { inicioVerAvisos: "avisos", inicioVerResumen: "resumen", inicioVerQueHacer: "queHacer", inicioVerProxima: "proxima",
+        inicioVerSuelenPedir: "suelenPedir", inicioVerPedidosHoy: "pedidosHoy", inicioVerSemana: "semana" };
+      raiz.inicioSin = Object.keys(tarjetas)
+        .filter(campo => campo === "inicioVerSuelenPedir" ? d[campo] !== true : d[campo] === false)
+        .map(campo => tarjetas[campo]).join(" ");
+      const propias = d.acento === "propio" && d.acentoPropioVars && d.acentoPropioVars[temaVisual];
+      if (propias) Object.keys(propias).forEach(nombre => document.documentElement.style.setProperty(nombre, propias[nombre]));
     } catch (e) {}
   })();
 </script>

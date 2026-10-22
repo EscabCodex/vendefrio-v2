@@ -115,6 +115,7 @@
         seccion.classList.remove("oculto");
         document.querySelectorAll(".nav-item").forEach(boton => boton.classList.remove("activo"));
         window.scrollTo(0, 0);
+        pedirAcomodarCabeceras();
     }
 
     function volverDesde(seccion) {
@@ -406,6 +407,73 @@
         return /Mobile/i.test(agente) ? "Celular" : "Computadora";
     }
 
+    // Listas largas (T151): las primeras tarjetas se dibujan enseguida y el
+    // resto de a tandas, sin trabar el celular. Volver a dibujar la lista (o
+    // cortarTandas) frena las tandas que quedaban de antes.
+    function cortarTandas(contenedor) {
+        if (contenedor) contenedor.tandaVendeFrio = null;
+    }
+
+    function dibujarDeATandas(contenedor, items, dibujarUno, opciones) {
+        // Cada tanda dura como mucho unos milisegundos: así el celular sigue
+        // respondiendo al dedo mientras se completa la lista.
+        const { primeros = 8, milisegundos = 10, alTerminar } = opciones || {};
+        const tanda = {};
+        contenedor.tandaVendeFrio = tanda;
+        let siguiente = 0;
+        function dibujar(minimo) {
+            const inicio = performance.now();
+            const fragmento = document.createDocumentFragment();
+            while (siguiente < items.length && (siguiente < minimo || performance.now() - inicio < milisegundos)) {
+                const elemento = dibujarUno(items[siguiente], siguiente);
+                if (elemento) fragmento.appendChild(elemento);
+                siguiente++;
+            }
+            contenedor.appendChild(fragmento);
+            if (siguiente < items.length) {
+                setTimeout(seguir, 0);
+                return;
+            }
+            contenedor.tandaVendeFrio = null;
+            if (alTerminar) alTerminar();
+        }
+        function seguir() {
+            if (contenedor.tandaVendeFrio !== tanda) return;
+            // Si se fue de la pantalla, se corta: al volver se dibuja de nuevo.
+            if (!contenedor.isConnected || contenedor.closest(".oculto")) {
+                contenedor.tandaVendeFrio = null;
+                return;
+            }
+            dibujar(0);
+        }
+        dibujar(primeros);
+    }
+
+    // Cabeceras en un celular chico (T152): si el título no entra al lado de
+    // "Avisos" y "?", pasa a su propio renglón debajo de los botones, en vez
+    // de empujarlos fuera de la pantalla. Se mira después de cada toque (que
+    // es lo que abre las pantallas) y al girar el celular.
+    function acomodarCabeceras() {
+        document.querySelectorAll("body > section:not(.oculto) > header").forEach(cabecera => {
+            const titulo = cabecera.querySelector(":scope > div > h1");
+            if (!titulo) return;
+            cabecera.classList.remove("cabeceraDosFilas");
+            if (titulo.scrollWidth > titulo.clientWidth + 1) cabecera.classList.add("cabeceraDosFilas");
+        });
+    }
+    let cabecerasPendientes = false;
+    function pedirAcomodarCabeceras() {
+        if (cabecerasPendientes) return;
+        cabecerasPendientes = true;
+        requestAnimationFrame(() => setTimeout(() => {
+            cabecerasPendientes = false;
+            acomodarCabeceras();
+        }, 0));
+    }
+    document.addEventListener("click", pedirAcomodarCabeceras, true);
+    window.addEventListener("resize", pedirAcomodarCabeceras);
+    window.addEventListener("load", pedirAcomodarCabeceras);
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
@@ -413,6 +481,6 @@
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
         hoja, modal, preguntar, cerrar, deshacer,
-        avisoInicio
+        avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

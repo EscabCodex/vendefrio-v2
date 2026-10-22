@@ -25,7 +25,7 @@
 
     const CANTIDAD = /\d|\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|docena|media)\b/;
 
-    // Lo que entendió la IA de un mensaje (T54, «Voz con IA»): id → { texto, lectura }.
+    // Lo que entendió el Asistente (Claude) de un mensaje (T54, T155): id → { texto, lectura }.
     const lecturasIA = new Map();
     // Lo que se eligió para lo no entendido (T118): id del mensaje → { tramo: producto o "no" }.
     const respuestasNoEntendido = new Map();
@@ -241,7 +241,8 @@
         return true;
     }
 
-    // «Entender con IA» (T54): la misma IA de «Voz con IA» lee el mensaje.
+    // «Que lo lea el Asistente» (T54, T155): Claude lee el mensaje, como en
+    // «Dictar o pegar pedido».
     async function entenderConIA(id, boton) {
         const mensaje = mensajes.find(item => item.id === id);
         const leer = window.vozVendeFrio?.leerPedidoConIA;
@@ -255,7 +256,7 @@
             console.warn("La IA no pudo leer el mensaje.", error);
         }
         if (lectura) lecturasIA.set(id, { texto: mensaje.texto, lectura });
-        else if (typeof mostrarToast === "function") mostrarToast("La IA no respondió. Revisá que «Voz con IA» esté prendida en Más > Trabajo.", "error");
+        else if (typeof mostrarToast === "function") mostrarToast(window.vozVendeFrio?.porQueFallo?.() || "El Asistente no pudo leerlo. Probá de nuevo.", "error");
         redibujar();
     }
 
@@ -671,8 +672,8 @@
             const etiqueta = lectura.completo
                 ? `<span class="waEtiqueta entendido">Se entendió todo</span>`
                 : `<span class="waEtiqueta revisar">Para revisar</span>`;
-            const conIA = !lectura.completo && mensaje.texto && window.vozVendeFrio?.leerPedidoConIA && !lecturasIA.has(mensaje.id)
-                ? `<button type="button" class="waBotonSecundario waBotonIA" data-wa="ia" data-id="${escapar(mensaje.id)}">${ico("chispa", 16)}<span> Entender con IA</span></button>`
+            const conIA = !lectura.completo && mensaje.texto && window.vozVendeFrio?.claudeDisponible?.() && !lecturasIA.has(mensaje.id)
+                ? `<button type="button" class="waBotonSecundario waBotonIA" data-wa="ia" data-id="${escapar(mensaje.id)}">${ico("chispa", 16)}<span> Que lo lea el Asistente</span></button>`
                 : "";
             return `
                 <article class="waMensaje" data-id="${escapar(mensaje.id)}">

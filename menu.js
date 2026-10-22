@@ -12,6 +12,18 @@ const pantallas = {
     rutas: document.getElementById("pantallaRutas")
 };
 
+// Las listas largas de las pantallas que se dejan se vacían: se vuelven a
+// dibujar al entrar, y miles de tarjetas ocultas hacen más lento todo lo
+// demás (T151).
+function vaciarListasOcultas(nombre) {
+    [["historial", "contenedorHistorial"], ["comercios", "listaComerciosAdmin"]].forEach(([pantalla, id]) => {
+        const lista = document.getElementById(id);
+        if (pantalla === nombre || !lista || !lista.firstChild) return;
+        window.piezas?.cortarTandas(lista);
+        lista.replaceChildren();
+    });
+}
+
 function mostrarPantalla(nombre) {
     if (typeof window.cerrarFichaComercio === "function" && nombre !== "comercios") window.cerrarFichaComercio();
     if (nombre === "mas") {
@@ -26,6 +38,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
         pantalla.classList.add("oculto");
     });
+    vaciarListasOcultas(nombre);
 
     if (pantallas[nombre]) {
         pantallas[nombre].classList.remove("oculto");
@@ -37,6 +50,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.classList.toggle("activo", btn.dataset.pantalla === nombre || btn.dataset.tambien === nombre);
     });
+    window.piezas?.acomodarCabeceras?.();
 
     if (nombre === "menu") actualizarDashboard();
     if (nombre === "pedido") {
@@ -534,6 +548,18 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     barra.querySelector("span").style.width = Math.round(hechos / pasos.length * 100) + "%";
     caja.appendChild(barra);
 
+    // Tutorial (T157): primero, la invitación a hacer lo básico con los
+    // botones señalados en la pantalla real.
+    if (window.tutorialVendeFrio) {
+        const recorrido = document.createElement("button");
+        recorrido.type = "button";
+        recorrido.className = "pasoPrimeros recorridoPrimeros";
+        recorrido.innerHTML = '<span class="tildePaso">' + window.icono("chispa", 14) + "</span><span></span>" + window.icono("chevDerecha", 16);
+        recorrido.children[1].textContent = window.tutorialVendeFrio.yaLoVio() ? "Ver de nuevo el tutorial" : "Hacelo con el tutorial, paso a paso";
+        recorrido.addEventListener("click", () => window.tutorialVendeFrio.abrir());
+        caja.appendChild(recorrido);
+    }
+
     pasos.forEach(paso => {
         const fila = document.createElement("button");
         fila.type = "button";
@@ -575,10 +601,24 @@ function comerciosQueSuelenPedirHoy(pedidos, cargadosHoy) {
         .sort((a, b) => b.veces - a.veces);
 }
 
+function tarjetaInicioPrendida(campo, porDefecto) {
+    try {
+        const valor = (JSON.parse(localStorage.getItem("vendefrio_preferencias")) || {})[campo];
+        return valor === undefined ? porDefecto : valor === true;
+    } catch (error) {
+        return porDefecto;
+    }
+}
+
 function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
     const seccion = document.getElementById("dashVisitarHoy");
     const lista = document.getElementById("dashListaVisitarHoy");
     if (!seccion || !lista) return;
+    // T156: arranca apagada; si está apagada en Más > Apariencia, ni se calcula.
+    if (!tarjetaInicioPrendida("inicioVerSuelenPedir", false)) {
+        seccion.classList.add("oculto");
+        return;
+    }
     const sugeridos = comerciosQueSuelenPedirHoy(pedidos, cargadosHoy)
         .map(item => ({ ...item, comercio: comercios.find(comercio => String(comercio.nombre || "").trim().toLocaleLowerCase("es") === item.clave) }))
         .filter(item => item.comercio)

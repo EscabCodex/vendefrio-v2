@@ -40,6 +40,7 @@
         if (ahora - ultimaRevision < MINUTOS_ENTRE_REVISIONES * 60000) return;
         ultimaRevision = ahora;
         navigator.serviceWorker.getRegistration().then(registro => registro?.update()).catch(() => {});
+        navigator.serviceWorker.controller?.postMessage({ accion: "revisarVersion" });
     }
 
     if ("serviceWorker" in navigator) {
@@ -47,6 +48,10 @@
         navigator.serviceWorker.addEventListener("controllerchange", () => {
             // La primera vez que se instala no hay nada viejo que reemplazar.
             if (habiaControlador) avisarVersionNueva();
+        });
+        // La app abre desde el celular y baja la versión nueva por detrás (T150).
+        navigator.serviceWorker.addEventListener("message", evento => {
+            if (evento.data?.accion === "versionNueva") avisarVersionNueva();
         });
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") revisarVersion();

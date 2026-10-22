@@ -5,11 +5,31 @@
 // lista del comercio (database.js, precioDeLista); si el producto no tiene
 // precio en esa lista, usa el general. Los pedidos ya cargados guardan el
 // precio que tenían.
+// T161: Más > Listas de precios para crear, renombrar y borrar listas, y en
+// Nuevo pedido se elige cualquier lista (nuevoPedido.js, elegirLista).
+// T162: desde el ⋯ de cada lista, «Exportar a planilla» (CSV) y «Folleto para
+// imprimir» (una hoja con los datos de la distribuidora y los precios por marca).
 (function () {
     "use strict";
 
     const p = window.piezas;
-    const nuevas = new Set();
+    // Las listas creadas que todavía no tienen precios (en este celular).
+    const DB_CREADAS = "vendefrio_listas_creadas";
+    const nuevas = {
+        leer: () => {
+            const guardadas = p.lsLeer(DB_CREADAS, []);
+            return Array.isArray(guardadas) ? guardadas.map(String).filter(Boolean) : [];
+        },
+        add(nombre) {
+            const lista = this.leer();
+            if (!lista.includes(nombre)) p.lsGuardar(DB_CREADAS, [...lista, nombre]);
+        },
+        cambiar(viejo, nuevo) {
+            const lista = this.leer().filter(nombre => nombre !== viejo);
+            p.lsGuardar(DB_CREADAS, nuevo ? [...lista, nuevo] : lista);
+        },
+        [Symbol.iterator]() { return this.leer()[Symbol.iterator](); }
+    };
     const COLORES = ["pzIniInfo", "pzIni2", "pzIni1", "pzIni3"];
 
     function todosLosProductos() {
@@ -246,11 +266,312 @@
         dibujar();
     }
 
+    // ---------- Más > Listas de precios (T161) ----------
+    // Todas las listas juntas: crear, cargar precios, renombrar y borrar.
+    const SUGERIDAS = ["Supermercados", "Almacenes", "Kioscos"];
+
+    function puedeEditar() {
+        const enNube = typeof usaNubeReal === "function" && usaNubeReal();
+        return !enNube || p.esDueno() || Boolean(window.empleadosVendeFrio?.puede?.("editaCatalogo"));
+    }
+
+    function productosEn(nombre) {
+        return todosLosProductos().filter(producto => producto.archivado !== true &&
+            producto.precios && Number(producto.precios[nombre]) > 0).length;
+    }
+
+    function nombreLimpio(texto) {
+        return String(texto || "").trim().replace(/\s+/g, " ").slice(0, 30);
+    }
+
+    function yaExiste(nombre, salvo = "") {
+        const buscado = nombre.toLocaleLowerCase("es");
+        return listas().some(otra => otra !== salvo && otra.toLocaleLowerCase("es") === buscado);
+    }
+
+    function pedirNombre({ titulo, boton, actual = "", alGuardar }) {
+        p.hoja({
+            titulo,
+            sub: actual ? "Los comercios y los precios de la lista quedan igual" : "Por ejemplo, Supermercados, Almacenes o Kioscos",
+            html: `<label class="pzCampo"><span>Nombre</span><input id="nombreListaPrecios" maxlength="30" value="${p.esc(actual)}" placeholder="Ej.: Almacenes"></label>`,
+            botones: [{
+                texto: boton,
+                icono: "check",
+                alTocar: caja => {
+                    const nombre = nombreLimpio(caja.querySelector("#nombreListaPrecios").value);
+                    if (!nombre) {
+                        mostrarToast("Escribí el nombre de la lista");
+                        return false;
+                    }
+                    if (nombre === actual) return true;
+                    if (yaExiste(nombre, actual)) {
+                        mostrarToast("Ya hay una lista «" + nombre + "»");
+                        return false;
+                    }
+                    return alGuardar(nombre) !== false;
+                }
+            }]
+        });
+        setTimeout(() => document.getElementById("nombreListaPrecios")?.select(), 200);
+    }
+
+    // Cambia el nombre de la lista en los precios de cada producto y en los
+    // comercios que la usan. Todo de una vez, con un solo guardado.
+    function cambiarLista(viejo, nuevo) {
+        const productos = obtenerProductos();
+        let tocados = 0;
+        Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(producto => {
+            if (!producto || !producto.precios || typeof producto.precios !== "object" || !(viejo in producto.precios)) return;
+            const precios = { ...producto.precios };
+            if (nuevo && Number(precios[viejo]) > 0) precios[nuevo] = precios[viejo];
+            delete precios[viejo];
+            producto.precios = precios;
+            tocados += 1;
+        }));
+        if (tocados && !guardarProductos(productos)) return false;
+        const comercios = obtenerComercios();
+        const usan = comercios.filter(comercio => comercio.listaPrecios === viejo);
+        if (usan.length) {
+            usan.forEach(comercio => { comercio.listaPrecios = nuevo || ""; });
+            if (!guardarComercios(comercios)) return false;
+        }
+        nuevas.cambiar(viejo, nuevo);
+        return true;
+    }
+
+    function crearLista(nombre) {
+        nuevas.add(nombre);
+        abrirLista(nombre, abrirPantalla);
+        mostrarToast("Lista «" + nombre + "» creada: cargá los precios");
+    }
+
+    function opcionesDe(nombre) {
+        const caja = p.hoja({
+            titulo: nombre,
+            sub: productosEn(nombre) + " con precio · " + comerciosEn(nombre) + " " + (comerciosEn(nombre) === 1 ? "comercio" : "comercios"),
+            etiqueta: "Opciones de " + nombre,
+            html: `<div class="pzOpciones">
+                ${puedeEditar() ? `<button type="button" class="pzOpcion" data-opcion-lista="precios">${p.ico("etiqueta", 22)}Cargar o cambiar precios</button>` : ""}
+                <button type="button" class="pzOpcion" data-opcion-lista="planilla">${p.ico("planilla", 22)}Exportar a planilla</button>
+                <button type="button" class="pzOpcion" data-opcion-lista="folleto">${p.ico("impresora", 22)}Folleto para imprimir</button>
+                ${puedeEditar() ? `<button type="button" class="pzOpcion" data-opcion-lista="nombre">${p.ico("lapiz", 22)}Cambiar el nombre</button>
+                <button type="button" class="pzOpcion pzOpcionPeligro" data-opcion-lista="borrar">${p.ico("tacho", 22)}Borrar la lista</button>` : ""}
+            </div>`
+        });
+        caja.addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-opcion-lista]")?.dataset.opcionLista;
+            if (!opcion) return;
+            p.cerrar();
+            setTimeout(() => {
+                if (opcion === "precios") abrirLista(nombre, abrirPantalla);
+                if (opcion === "planilla") exportarPlanilla(nombre);
+                if (opcion === "folleto") abrirFolleto(nombre);
+                if (opcion === "nombre") renombrar(nombre);
+                if (opcion === "borrar") borrar(nombre);
+            }, 0);
+        });
+    }
+
+    function renombrar(nombre) {
+        pedirNombre({
+            titulo: "Cambiar el nombre",
+            boton: "Guardar nombre",
+            actual: nombre,
+            alGuardar: nuevo => {
+                if (!cambiarLista(nombre, nuevo)) {
+                    mostrarAviso("No se guardó", "Revisá el almacenamiento y probá de nuevo.");
+                    return false;
+                }
+                mostrarToast("Ahora se llama «" + nuevo + "»");
+                dibujarPantalla();
+                return true;
+            }
+        });
+    }
+
+    async function borrar(nombre) {
+        const cuantos = comerciosEn(nombre);
+        const si = await p.preguntar({
+            icono: "tacho",
+            color: "peligro",
+            titulo: "¿Borrar la lista «" + nombre + "»?",
+            texto: (cuantos ? (cuantos === 1 ? "El comercio que la usa vuelve" : "Los " + cuantos + " comercios que la usan vuelven") + " a los precios generales. " : "") +
+                "Los pedidos ya cargados no cambian.",
+            si: "Borrar",
+            claseSi: "pzBtnPeligro"
+        });
+        if (!si) return;
+        if (!cambiarLista(nombre, "")) {
+            mostrarAviso("No se borró", "Revisá el almacenamiento y probá de nuevo.");
+            return;
+        }
+        mostrarToast("Lista «" + nombre + "» borrada");
+        dibujarPantalla();
+    }
+
+    // ---------- Exportar una lista (T162) ----------
+    // Los productos de la lista por marca, en el orden del catálogo. El precio
+    // es el de la lista o, si no tiene, el general (lo que paga el comercio).
+    function marcasDeLista(nombre) {
+        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        return Object.keys(productos).map(marca => ({
+            marca,
+            productos: (productos[marca] || []).filter(producto => producto && producto.archivado !== true).map(producto => {
+                const general = Number(producto.precio) || 0;
+                const deLista = Number(producto.precios && producto.precios[nombre]) || 0;
+                return { nombre: String(producto.nombre || ""), general, precio: deLista > 0 ? deLista : general };
+            })
+        })).filter(grupo => grupo.productos.length);
+    }
+
+    function nombreDistribuidora() {
+        return String(window.distribuidoraVendeFrio?.nombreActual?.() || "").trim() || "VendeFrío";
+    }
+
+    function hoyTexto() {
+        return new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
+    function exportarPlanilla(nombre) {
+        const exportar = window.exportarVendeFrio;
+        if (!exportar || typeof exportar.descargarFilas !== "function") return;
+        const lineas = [["Marca", "Producto", "Precio " + nombre, "Precio general"]];
+        let cuantos = 0;
+        marcasDeLista(nombre).forEach(grupo => grupo.productos.forEach(producto => {
+            lineas.push([grupo.marca, producto.nombre, producto.precio || "", producto.general || ""]);
+            cuantos += 1;
+        }));
+        const fecha = new Date().toISOString().slice(0, 10);
+        exportar.descargarFilas(lineas, "Lista " + nombre + " " + fecha);
+        mostrarToast(cuantos === 1 ? "Planilla con 1 producto descargada" : "Planilla con " + cuantos + " productos descargada");
+    }
+
+    // La hoja del folleto: siempre en blanco y negro con un toque de color,
+    // igual en modo claro y oscuro, para que salga bien impresa.
+    function htmlFolleto(nombre) {
+        const datos = window.distribuidoraVendeFrio?.datosTicket?.() || {};
+        const contacto = [datos.direccion, datos.telefono ? "Tel.: " + datos.telefono : "", datos.cuit ? "CUIT: " + datos.cuit : ""]
+            .filter(Boolean).map(p.esc).join(" · ");
+        const marcas = marcasDeLista(nombre).map(grupo => `<div class="folletoMarca">
+                <h2>${p.esc(grupo.marca)}</h2>
+                <ul>${grupo.productos.map(producto => `<li><span>${p.esc(producto.nombre)}</span><i></i><b>${producto.precio ? p.plata(producto.precio) : "Consultar"}</b></li>`).join("")}</ul>
+            </div>`).join("");
+        return `<article class="folletoHoja" aria-label="Folleto de ${p.esc(nombre)}">
+            <div class="folletoCab">
+                <h1>${p.esc(nombreDistribuidora())}</h1>
+                ${contacto ? `<p>${contacto}</p>` : ""}
+            </div>
+            <div class="folletoTitulo"><strong>Lista de precios · ${p.esc(nombre)}</strong><span>Precios al ${hoyTexto()}</span></div>
+            <div class="folletoMarcas">${marcas || `<p class="folletoVacio">Todavía no hay productos en el catálogo.</p>`}</div>
+            <div class="folletoPie">Precios sujetos a cambio sin previo aviso.</div>
+        </article>`;
+    }
+
+    // Imprime solo el folleto: una copia directa en <body> y, al imprimir, se
+    // esconde todo lo demás (ver tema.css, «Folleto»). Desde la ventana de
+    // imprimir también se guarda como PDF para mandarlo.
+    function imprimirFolleto(nombre) {
+        let copia = document.getElementById("folletoImprimir");
+        if (!copia) {
+            copia = document.createElement("div");
+            copia.id = "folletoImprimir";
+            document.body.appendChild(copia);
+        }
+        copia.innerHTML = htmlFolleto(nombre);
+        document.body.classList.add("imprimiendoFolleto");
+        window.addEventListener("afterprint", () => document.body.classList.remove("imprimiendoFolleto"), { once: true });
+        try {
+            window.print();
+        } catch (error) {
+            mostrarAviso("No se pudo imprimir", "Este celular no deja imprimir desde la app. Probá desde Chrome.");
+        }
+    }
+
+    function abrirFolleto(nombre) {
+        const seccion = p.pantalla("pantallaFolleto", {
+            titulo: "Folleto",
+            sub: nombre,
+            volverA: () => abrirPantalla()
+        });
+        p.mostrar(seccion);
+        seccion.querySelector("main").innerHTML = `<div class="pzNota">Así se ve la hoja. Para mandarla por WhatsApp, en la ventana de imprimir elegí «Guardar como PDF».</div>
+            <div class="folletoVista">${htmlFolleto(nombre)}</div>
+            <div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="imprimirFolleto">${p.ico("impresora", 18)}Imprimir o guardar en PDF</button></div>`;
+        seccion.querySelector("#imprimirFolleto").onclick = () => imprimirFolleto(nombre);
+    }
+
+    let seccionMas = null;
+
+    function dibujarPantalla() {
+        if (!seccionMas) return;
+        const nombres = listas();
+        const editar = puedeEditar();
+        const filas = nombres.map((nombre, i) => {
+            const productos = productosEn(nombre);
+            const comercios = comerciosEn(nombre);
+            return `<div class="pzFila filaListaMas">
+                <div class="pzIni ${COLORES[i % COLORES.length]}">${p.ico(/zona/i.test(nombre) ? "ubicacion" : "etiqueta", 20)}</div>
+                <button type="button" class="pzFilaTxt botonTodaLista" data-abrir-lista="${p.esc(nombre)}" aria-label="Precios de ${p.esc(nombre)}"><strong>${p.esc(nombre)}</strong><small>${productos} ${productos === 1 ? "producto" : "productos"} con precio · ${comercios} ${comercios === 1 ? "comercio" : "comercios"}</small></button>
+                <button type="button" class="opcionesListaPrecios" data-opciones-lista="${p.esc(nombre)}" aria-label="Opciones de ${p.esc(nombre)}">${p.ico("puntos", 20)}</button>
+            </div>`;
+        }).join("");
+        const sugeridas = SUGERIDAS.filter(nombre => !yaExiste(nombre));
+        seccionMas.querySelector("main").innerHTML = `<div class="pzBanner pzBanPri">${p.ico("etiqueta", 22)}<div><strong>Un precio para cada tipo de comercio</strong><small>Cada comercio usa su lista (se elige en su ficha). Al armar un pedido podés usar cualquier otra. Si un producto no tiene precio en la lista, va el general.</small></div></div>
+            <section class="pzBloque">
+                <div class="pzBloqueCab"><h2>${nombres.length ? nombres.length + (nombres.length === 1 ? " lista" : " listas") : "Listas"}</h2></div>
+                <div class="pzTarjeta pzLista" id="filasListasPrecios">${filas || `<div class="pzVacio">Todavía no hay listas. Creá la primera abajo.</div>`}</div>
+            </section>
+            ${editar && sugeridas.length ? `<section class="pzBloque">
+                <div class="pzBloqueCab"><span class="pzEtiqueta">Crear rápido</span></div>
+                <div class="pzFiltros chipsListas" role="group" aria-label="Listas sugeridas">${sugeridas.map(nombre => `<button type="button" class="pzFiltro" data-sugerida="${p.esc(nombre)}">${p.ico("mas", 14)} ${p.esc(nombre)}</button>`).join("")}</div>
+            </section>` : ""}
+            ${editar ? `<div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="crearListaPrecios">${p.ico("mas", 18)}Lista nueva</button></div>` : ""}`;
+    }
+
+    function abrirPantalla() {
+        seccionMas = p.pantalla("pantallaListasPrecios", {
+            titulo: "Listas de precios",
+            sub: "Precios distintos por tipo de comercio",
+            icono: "etiqueta",
+            volverA: "mas"
+        });
+        p.mostrar(seccionMas);
+        const main = seccionMas.querySelector("main");
+        main.onclick = evento => {
+            const abrirla = evento.target.closest("[data-abrir-lista]");
+            if (abrirla) {
+                if (puedeEditar()) abrirLista(abrirla.dataset.abrirLista, abrirPantalla);
+                else mostrarToast("Los precios los cambia quien edita el catálogo");
+                return;
+            }
+            const opciones = evento.target.closest("[data-opciones-lista]");
+            if (opciones) {
+                opcionesDe(opciones.dataset.opcionesLista);
+                return;
+            }
+            const sugerida = evento.target.closest("[data-sugerida]");
+            if (sugerida) {
+                crearLista(sugerida.dataset.sugerida);
+                return;
+            }
+            if (evento.target.closest("#crearListaPrecios")) {
+                pedirNombre({ titulo: "Lista nueva", boton: "Crear lista", alGuardar: nombre => { setTimeout(() => crearLista(nombre), 220); } });
+            }
+        };
+        dibujarPantalla();
+    }
+
+    (window.accesosMasExtras = window.accesosMasExtras || []).push({
+        destino: "listasPrecios", icono: "etiqueta", texto: "Listas de precios",
+        mostrar: () => !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer(),
+        abrir: abrirPantalla
+    });
+
     function volverAlCatalogo() {
         if (typeof mostrarPantalla === "function") mostrarPantalla("catalogo");
         if (typeof window.renderizarCatalogo === "function") window.renderizarCatalogo();
     }
 
     window.listasDePrecios = listas;
-    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista };
+    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista, abrirPantalla, cambiarLista, exportarPlanilla, abrirFolleto };
 }());
