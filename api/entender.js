@@ -5,11 +5,15 @@
 // entiende se lo manda acá:
 //   POST /api/entender
 //   Authorization: Bearer <credencial de Firebase de quien habla>
-//   { tipo: "asistente", texto, comercios: [nombres], datos: "<resumen y guía>", charla: [{ quien, texto }] }
+//   { tipo: "asistente", texto, comercios: [nombres], datos: "<resumen, guía y lo que está viendo>", charla: [{ quien, texto }],
+//     productos: [{ marca, producto }], listas: [nombres] }
 //   { tipo: "pedido", texto, comercios: [nombres], productos: [{ marca, producto }] }
 //   { tipo: "comando", texto, comercios } (lo usaban las versiones viejas)
 //
-// "asistente" devuelve una orden para la app o una respuesta; "pedido", los
+// "asistente" devuelve una orden para la app o una respuesta, y desde T160
+// también "pasos": varias órdenes seguidas de una sola frase (anotar un
+// pedido con sus productos, imprimir el ticket, ir primero a un comercio);
+// "pedido", los
 // productos de un pedido dictado o pegado. Siempre en JSON y solo con
 // nombres de las listas que mandó la app: { ok: true, resultado }.
 //
@@ -32,6 +36,11 @@ const ACCIONES = ["nuevoPedido", "ir", "visitado", "ficha", "pantalla", "proxima
 // El Asistente (T155): una orden para la app, o "responder" con texto.
 const ACCIONES_ASISTENTE = ["responder", "nuevoPedido", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
 const CON_COMERCIO = ["ir", "visitado", "ficha"];
+// T160: los pasos de una frase con varias cosas. Guardar un pedido o
+// imprimir lo confirma la persona en el celular antes de hacerlo.
+const ACCIONES_PASO = ["nuevoPedido", "anotarPedido", "imprimir", "primero", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
+const PASO_CON_COMERCIO = ["anotarPedido", "primero", "ir", "visitado", "ficha"];
+const MAXIMO_PASOS = 5;
 
 const ESQUEMAS = {
     comando: {
@@ -82,9 +91,36 @@ const ESQUEMAS = {
                     required: ["etiqueta", "valor"],
                     additionalProperties: false
                 }
+            },
+            pasos: {
+                type: "array",
+                items: {
+                    type: "object",
+                    properties: {
+                        accion: { type: "string", enum: ACCIONES_PASO },
+                        comercio: { type: "string" },
+                        pantalla: { type: "string", enum: [...PANTALLAS, ""] },
+                        lista: { type: "string" },
+                        productos: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    marca: { type: "string" },
+                                    producto: { type: "string" },
+                                    cantidad: { type: "integer" }
+                                },
+                                required: ["marca", "producto", "cantidad"],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ["accion", "comercio", "pantalla", "lista", "productos"],
+                    additionalProperties: false
+                }
             }
         },
-        required: ["accion", "comercio", "pantalla", "respuesta", "destacado", "barras"],
+        required: ["accion", "comercio", "pantalla", "respuesta", "destacado", "barras", "pasos"],
         additionalProperties: false
     }
 };
@@ -115,7 +151,14 @@ En "comercio" poné el nombre exacto de la lista de comercios, o "" si no nombra
 Para responder: corto y claro (2 o 3 oraciones), como un compañero que conoce los números y cómo se usa la app. Para los números usá SOLO los datos que vienen en el mensaje; si no alcanzan, decí qué falta en una oración y sugerí dónde mirarlo en la app (Estadísticas, A cobrar, Cierre del día, Catálogo). Si preguntan cómo hacer algo, explicalo con la guía de uso que viene en los datos. No inventes números, comercios ni botones. Si los datos dicen que no tiene permiso para ver la plata, no des montos. Escribí la plata como "$ 1.284.600" (punto de miles, sin decimales).
 - "respuesta": la respuesta en texto (en una orden, una frase corta que diga lo que hacés). Si hay un número principal, no lo repitas al principio: va en "destacado" y la respuesta arranca con lo que lo explica (por ejemplo: "En septiembre vendiste" + destacado + "en helados: 306 unidades...").
 - "destacado": el número principal de la respuesta (por ejemplo "$ 1.284.600" o "34 comercios"), o "" si no hay uno.
-- "barras": hasta 6 valores para un gráfico chico cuando ayude (por ejemplo, los últimos meses o los 5 comercios que más compran), en orden; si no ayuda, [].`
+- "barras": hasta 6 valores para un gráfico chico cuando ayude (por ejemplo, los últimos meses o los 5 comercios que más compran), en orden; si no ayuda, [].
+Lo que está viendo: los datos dicen en qué pantalla está y qué tiene abierto (la navegación con la parada actual y las que siguen, un pedido, un comercio, una lista). Si dice "este", "acá", "el ticket" o no nombra el comercio, se refiere a eso.
+Varias cosas de una sola frase ("pasos"): si pide más de una cosa, o algo que no es una orden simple, poné cada cosa en "pasos", en el orden en que las dijo, y en "accion" la primera (o responder) con una frase corta en "respuesta" que diga lo que vas a hacer. Si es una sola orden simple o una pregunta, "pasos" va []. Cada paso:
+- anotarPedido: guardar un pedido para "comercio" con sus "productos" (marca y producto exactos del catálogo, cantidad en unidades). Si nombra una lista de precios ("a precio especial", "con la lista mayorista"), poné en "lista" el nombre exacto de la lista de precios; si no, "". Si un producto no está en el catálogo, no lo pongas y decilo en "respuesta".
+- imprimir: imprimir el ticket del pedido que se acaba de anotar en un paso anterior o, si no hay, del pedido que tiene abierto.
+- primero: cambiar el orden del recorrido para ir primero a "comercio" ("vamos a lo de Pepe primero").
+- nuevoPedido, ir, visitado, ficha, pantalla, proximaParada, llegue: como arriba.
+En cada paso, lo que no use va "" o []. Usá solo comercios, productos y listas que estén en las listas que manda la app; nunca los inventes. Elegir una calle para el camino ("agarrá por tal calle") todavía no se puede: usá responder y decilo.`
 };
 
 function appDeVercel() {
@@ -185,7 +228,7 @@ function leerCuerpo(request) {
 const texto = (valor, maximo = 120) => String(valor || "").replace(/\s+/g, " ").trim().slice(0, maximo);
 
 // La respuesta del Asistente: una orden con nombres de la lista, o texto.
-function limpiarAsistente(resultado, comercio) {
+function limpiarAsistente(resultado, comercio, catalogo = {}) {
     const respuesta = String(resultado?.respuesta || "").replace(/[ \t]+/g, " ").trim().slice(0, 900);
     const barras = (Array.isArray(resultado?.barras) ? resultado.barras : [])
         .map(barra => ({ etiqueta: texto(barra?.etiqueta, 30), valor: Number(barra?.valor) }))
@@ -202,14 +245,41 @@ function limpiarAsistente(resultado, comercio) {
         pantalla,
         respuesta: respuesta || (accion === "responder" ? "No te entendí. ¿Me lo decís de otra forma?" : ""),
         destacado: accion === "responder" ? texto(resultado?.destacado, 40) : "",
-        barras: accion === "responder" ? barras : []
+        barras: accion === "responder" ? barras : [],
+        pasos: limpiarPasos(resultado?.pasos, catalogo)
     };
 }
 
+// T160: los pasos, solo con comercios, productos y listas que mandó la app.
+// Un paso que no se puede hacer se saca, nunca se completa con algo inventado.
+function limpiarPasos(pasos, { comercios = [], productos = [], listas = [] }) {
+    const limpios = [];
+    (Array.isArray(pasos) ? pasos : []).forEach(paso => {
+        const accion = ACCIONES_PASO.includes(paso?.accion) ? paso.accion : "";
+        if (!accion) return;
+        const comercio = comercios.includes(paso.comercio) ? paso.comercio : "";
+        if (PASO_CON_COMERCIO.includes(accion) && !comercio) return;
+        const pantalla = accion === "pantalla" && PANTALLAS.includes(paso.pantalla) ? paso.pantalla : "";
+        if (accion === "pantalla" && !pantalla) return;
+        const lista = accion === "anotarPedido" && listas.includes(paso.lista) ? paso.lista : "";
+        const elegidos = [];
+        if (accion === "anotarPedido") {
+            (Array.isArray(paso.productos) ? paso.productos : []).forEach(item => {
+                const elegido = { marca: texto(item?.marca), producto: texto(item?.producto), cantidad: Math.round(Number(item?.cantidad)) };
+                const existe = productos.some(otro => otro.marca === elegido.marca && otro.producto === elegido.producto);
+                if (existe && elegido.cantidad > 0 && elegido.cantidad <= 999) elegidos.push(elegido);
+            });
+            if (!elegidos.length) return;
+        }
+        limpios.push({ accion, comercio: accion === "nuevoPedido" || PASO_CON_COMERCIO.includes(accion) ? comercio : "", pantalla, lista, productos: elegidos });
+    });
+    return limpios.slice(0, MAXIMO_PASOS);
+}
+
 // Lo que respondió la IA, con solo nombres de las listas que mandó la app.
-function limpiarResultado(tipo, resultado, comercios, productos) {
+function limpiarResultado(tipo, resultado, comercios, productos, listas = []) {
     const comercio = comercios.includes(resultado?.comercio) ? resultado.comercio : "";
-    if (tipo === "asistente") return limpiarAsistente(resultado, comercio);
+    if (tipo === "asistente") return limpiarAsistente(resultado, comercio, { comercios, productos, listas });
     if (tipo === "comando") {
         const accion = ACCIONES.includes(resultado?.accion) ? resultado.accion : "nada";
         const pantalla = accion === "pantalla" && PANTALLAS.includes(resultado.pantalla) ? resultado.pantalla : "";
@@ -264,9 +334,11 @@ function crearManejador({ obtenerApp, preguntar }) {
             .map(item => ({ marca: texto(item?.marca), producto: texto(item?.producto) }))
             .filter(item => item.producto)
             .slice(0, MAXIMO_LISTA);
+        const listas = (Array.isArray(cuerpo.listas) ? cuerpo.listas : []).map(nombre => texto(nombre, 60)).filter(Boolean).slice(0, 50);
 
         let mensaje = "Comercios:\n" + (comercios.join("\n") || "(ninguno)")
-            + (tipo === "pedido" ? "\n\nCatálogo (marca | producto):\n" + (productos.map(item => item.marca + " | " + item.producto).join("\n") || "(vacío)") : "");
+            + (tipo === "pedido" || (tipo === "asistente" && productos.length) ? "\n\nCatálogo (marca | producto):\n" + (productos.map(item => item.marca + " | " + item.producto).join("\n") || "(vacío)") : "")
+            + (tipo === "asistente" && listas.length ? "\n\nListas de precios:\n" + listas.join("\n") : "");
         if (tipo === "asistente") {
             // Los números y la guía que arma el celular de quien pregunta, y
             // lo último que se habló (la IA nunca ve la base entera).
@@ -281,7 +353,7 @@ function crearManejador({ obtenerApp, preguntar }) {
         try {
             const resultado = await preguntar({ instrucciones: INSTRUCCIONES[tipo], esquema: ESQUEMAS[tipo], mensaje });
             if (!resultado) return responder(response, 200, { ok: true, resultado: null });
-            return responder(response, 200, { ok: true, resultado: limpiarResultado(tipo, resultado, comercios, productos) });
+            return responder(response, 200, { ok: true, resultado: limpiarResultado(tipo, resultado, comercios, productos, listas) });
         } catch (error) {
             if (error.sinConfigurar) return responder(response, 503, { ok: false, codigo: "sinConfigurar", message: error.message });
             console.warn("La IA no respondió.", error?.status || "", error?.message || "");

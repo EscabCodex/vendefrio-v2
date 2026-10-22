@@ -1351,7 +1351,14 @@
         const botones = crear("div", "modalBotones");
         const cerrar = crear("button", "btnModalSecundario", "Cerrar");
         cerrar.type = "button";
-        botones.appendChild(cerrar);
+        // T160: el Asistente sabe qué pedido está abierto («imprimí el ticket»).
+        const asistente = crear("button", "btnModalSecundario botonAsistenteFicha");
+        asistente.type = "button";
+        asistente.dataset.abrirAsistente = "";
+        asistente.setAttribute("aria-label", "Asistente");
+        asistente.title = "Asistente";
+        asistente.innerHTML = window.icono ? window.icono("chispa", 20) : "";
+        botones.append(asistente, cerrar);
 
         contenido.append(cuerpo, botones);
         modal.appendChild(contenido);

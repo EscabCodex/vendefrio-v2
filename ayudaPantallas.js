@@ -126,7 +126,7 @@
         const titulo = seccion.querySelector(":scope > header h1")?.textContent?.trim() || "Esta pantalla";
         return { titulo, pasos: [
             "Leé el título de arriba: dice para qué es esta pantalla.",
-            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa en Inicio).",
+            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa, arriba a la derecha).",
             "Volvé con la flecha de arriba o con la barra de abajo."] };
     }
 

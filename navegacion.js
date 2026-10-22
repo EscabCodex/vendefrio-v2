@@ -711,14 +711,15 @@
         document.body.appendChild(pantalla);
 
         // El Asistente también navegando ("llegué", "nuevo pedido para…"): el
-        // mismo de Inicio (T155), que se abre escuchando.
-        if (window.vozVendeFrio?.disponible) {
+        // mismo de Inicio (T155), que se abre escuchando. T160: está siempre;
+        // sin reconocimiento de voz se le escribe.
+        if (window.asistenteVendeFrio) {
             const microfono = document.createElement("button");
             microfono.type = "button";
             microfono.className = "botonFlotanteNav microfonoNavegacion";
             microfono.setAttribute("aria-label", "Asistente");
-            microfono.innerHTML = window.icono("microfono", 22);
-            microfono.addEventListener("click", () => window.vozVendeFrio.comando());
+            microfono.innerHTML = window.icono(window.vozVendeFrio?.disponible ? "microfono" : "chispa", 22);
+            microfono.addEventListener("click", () => window.asistenteVendeFrio.abrir());
             const botones = pantalla.querySelector(".botonesNavegacion");
             botones.insertBefore(microfono, botones.querySelector(".cerrarNavegacion"));
         }
@@ -1339,6 +1340,22 @@
         cerrar();
     }
 
+    // T160: «vamos a lo de Pepe primero». Pasa ese comercio a la parada
+    // actual (si ya estaba más adelante, sale de ahí) y busca el camino. Si
+    // no estaba en el recorrido, se suma. Devuelve false si no tiene GPS.
+    function irPrimero(nombre) {
+        if (!abierta()) return false;
+        const comercio = conGps(nombre)[0];
+        if (!comercio) return false;
+        if (paradaActual()?.nombre === comercio.nombre) return true;
+        const resto = paradas.filter((parada, indice) => indice < indiceParada || parada.nombre !== comercio.nombre);
+        resto.splice(indiceParada, 0, comercio);
+        paradas = resto;
+        hablar("Vamos primero a " + comercio.nombre);
+        empezarParada();
+        return true;
+    }
+
     // Abre la navegación a uno o varios comercios (por nombre). Devuelve
     // false si no se puede (sin GPS guardado, sin mapa o con Google Maps
     // elegido): quien llama abre Google Maps como antes.
@@ -1469,6 +1486,8 @@
 
     window.navegacionVendeFrio = {
         abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
+        // El Asistente (T160): las paradas que faltan y cambiar el orden.
+        paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero,
         // Para los avisos y los compañeros del equipo (T139, T140).
         recalcular, pasaCerca, hablar,
         posicion: () => posicion, calle: () => calleActual

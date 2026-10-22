@@ -408,7 +408,10 @@
             texto,
             comercios: nombresDeComercios(),
             datos,
-            charla: charla.slice(-6).map(item => ({ quien: item.quien, texto: String(item.texto || "") }))
+            charla: charla.slice(-6).map(item => ({ quien: item.quien, texto: String(item.texto || "") })),
+            // T160: para anotar un pedido entero de una sola frase.
+            productos: productosDelCatalogo().map(({ marca, producto }) => ({ marca, producto })),
+            listas: typeof window.listasDePrecios === "function" ? window.listasDePrecios() : []
         });
         if (!resultado) return null;
         const comercio = comercioPorNombre(resultado.comercio);
@@ -419,10 +422,34 @@
         else if (["ir", "visitado", "ficha"].includes(resultado.accion) && comercio) orden = { accion: resultado.accion, comercio };
         return {
             orden,
+            pasos: pasosDeClaude(resultado.pasos),
             texto: String(resultado.respuesta || (orden ? "" : "No te entendí. ¿Me lo decís de otra forma?")),
             destacado: orden ? "" : String(resultado.destacado || ""),
             barras: orden ? [] : (Array.isArray(resultado.barras) ? resultado.barras : [])
         };
+    }
+
+    // T160: los pasos de una frase con varias cosas, con los comercios y
+    // productos de este celular (lo que no existe acá se saca).
+    function pasosDeClaude(pasos) {
+        const catalogo = productosDelCatalogo();
+        const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
+        return (Array.isArray(pasos) ? pasos : []).map(paso => {
+            const comercio = paso.comercio ? comercioPorNombre(paso.comercio) : null;
+            if (["anotarPedido", "primero", "ir", "visitado", "ficha"].includes(paso.accion) && !comercio) return null;
+            if (paso.accion === "pantalla") return PANTALLAS_IA.includes(paso.pantalla) ? { accion: "pantalla", pantalla: paso.pantalla } : null;
+            if (paso.accion === "anotarPedido") {
+                const productos = (paso.productos || []).map(item => {
+                    const delCatalogo = catalogo.find(otro => otro.marca === item.marca && otro.producto === item.producto);
+                    const cantidad = Math.round(Number(item.cantidad));
+                    return delCatalogo && cantidad > 0 ? { marca: delCatalogo.marca, producto: delCatalogo.producto, cantidad } : null;
+                }).filter(Boolean);
+                if (!productos.length) return null;
+                return { accion: "anotarPedido", comercio, productos, lista: listas.includes(paso.lista) ? paso.lista : null };
+            }
+            if (["nuevoPedido", "imprimir", "proximaParada", "llegue"].includes(paso.accion)) return comercio ? { accion: paso.accion, comercio } : { accion: paso.accion };
+            return comercio && ["primero", "ir", "visitado", "ficha"].includes(paso.accion) ? { accion: paso.accion, comercio } : null;
+        }).filter(Boolean).slice(0, 5);
     }
 
     // Un pedido entendido por Claude, con los productos del catálogo.
