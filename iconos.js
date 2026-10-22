@@ -109,7 +109,7 @@
     const tamano = tam || 18;
     const trazo = PATHS[nombre];
     if (!trazo) return "";
-    return '<svg viewBox="0 0 24 24" width="' + tamano + '" height="' + tamano +
+    return '<svg class="ico" viewBox="0 0 24 24" width="' + tamano + '" height="' + tamano +
       '" fill="none" stroke="' + (color || "currentColor") +
       '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;flex-shrink:0;">' +
       trazo + '</svg>';

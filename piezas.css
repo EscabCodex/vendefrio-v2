@@ -32,7 +32,7 @@ html[data-tema="oscuro"]{
 /* ---------- Botones ---------- */
 .pzBtn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  min-height:50px;padding:0 18px;border:0;border-radius:999px;
+  min-height:50px;padding:0 18px;border:0;border-radius:var(--radio-pildora);
   font:inherit;font-size:15px;font-weight:650;line-height:1.1;
   cursor:pointer;text-decoration:none;white-space:nowrap;
   -webkit-tap-highlight-color:transparent;transition:transform .12s,opacity .12s;
@@ -111,7 +111,7 @@ button.pzFila{cursor:pointer;}
 /* ---------- Chips ---------- */
 .pzChip{
   display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;
-  border-radius:999px;font-size:12px;font-weight:650;white-space:nowrap;flex-shrink:0;
+  border-radius:var(--radio-pildora);font-size:12px;font-weight:650;white-space:nowrap;flex-shrink:0;
 }
 .pzChip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
 .pzChip.sinPunto::before{display:none;}
@@ -219,7 +219,7 @@ html[data-tema="oscuro"] .pzDeshacer{background:#F2F4F6;color:#0C0F13;}
 .pzDeshacer.visible{opacity:1;transform:none;}
 .pzDeshacer span{flex:1;min-width:0;}
 .pzDeshacer button{
-  display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:0;border-radius:999px;
+  display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:0;border-radius:var(--radio-pildora);
   background:rgba(255,255,255,.14);color:#C8F04A;font:inherit;font-size:14px;font-weight:700;cursor:pointer;
 }
 html[data-tema="oscuro"] .pzDeshacer button{background:rgba(12,15,19,.08);color:#1F5FE0;}
@@ -251,7 +251,7 @@ label.pzCampo,label.pzFotoAgregar{margin:0;color:inherit;font-weight:inherit;}
 /* ---------- Filtros con número (Activos 48 · Archivados 6) ---------- */
 .pzFiltros{display:flex;gap:8px;margin:2px 0 12px;overflow-x:auto;}
 .pzFiltro{
-  display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border-radius:var(--radio-pildora);
   border:1px solid var(--borde);background:var(--superficie);color:var(--texto-sec);
   font:inherit;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;
 }
@@ -340,7 +340,7 @@ button.pzFotoVista{padding:0;border:0;min-height:0;cursor:zoom-in;}
 .seccionPruebaEntrega .pzFotos{padding:4px 0;}
 .hojaDevolucion .pzFila{min-height:66px;}
 .hojaDevolucion .pzFilaTxt strong{white-space:normal;}
-.hojaDevolucion .controlesCantidad{display:flex;align-items:center;flex-shrink:0;height:46px;padding:0 2px;border-radius:999px;background:var(--acento);color:var(--acento-txt);}
+.hojaDevolucion .controlesCantidad{display:flex;align-items:center;flex-shrink:0;height:46px;padding:0 2px;border-radius:var(--radio-pildora);background:var(--acento);color:var(--acento-txt);}
 .hojaDevolucion .botonCantidad{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;margin:0;border:0;border-radius:50%;background:transparent;color:inherit;box-shadow:none;}
 .hojaDevolucion .cantidadEspejo{width:30px;text-align:center;font-size:17px;font-weight:800;}
 .hojaDevolucion .controlesCantidad[data-cantidad="0"]{background:transparent;padding:0;}
@@ -459,7 +459,7 @@ body > section.pzPantalla > header .logo:empty{display:none;}
 .filaMeta{display:grid;gap:6px;}
 .filaMetaCab{display:flex;justify-content:space-between;gap:10px;font-size:15.5px;}
 .filaMetaCab b{font-weight:800;}
-.barraMeta{display:block;height:8px;border-radius:999px;background:var(--superficie-2);overflow:hidden;}
+.barraMeta{display:block;height:8px;border-radius:var(--radio-pildora);background:var(--superficie-2);overflow:hidden;}
 .barraMeta i{display:block;height:100%;border-radius:inherit;background:var(--acento);}
 .barraMeta.cumplida i{background:var(--visitado);}
 .filaMeta small{font-size:13.5px;color:var(--texto-sec);}
@@ -531,7 +531,7 @@ html.conEscaner,html.conEscaner body{overflow:hidden;}
 .productoEscaneado strong{font-size:16px;}
 .productoEscaneado small{font-size:13px;color:var(--texto-sec);}
 .accionesEscaneado{display:grid;grid-template-columns:auto 1fr;gap:8px;}
-.pzStepper{display:flex;align-items:center;height:48px;border-radius:999px;background:var(--acento);color:var(--acento-txt);overflow:hidden;}
+.pzStepper{display:flex;align-items:center;height:48px;border-radius:var(--radio-pildora);background:var(--acento);color:var(--acento-txt);overflow:hidden;}
 .pzStepper button{display:grid;place-items:center;width:44px;height:48px;border:0;background:transparent;color:inherit;font-size:22px;font-weight:600;cursor:pointer;}
 .pzStepper b{min-width:22px;text-align:center;font-size:16px;font-weight:750;}
 .accionesEscaneado .pzBtn{min-height:48px;}
@@ -570,7 +570,7 @@ html.conEscaner,html.conEscaner body{overflow:hidden;}
 @keyframes pensando{0%,80%,100%{opacity:.3;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
 .sugerencias{display:flex;gap:8px;flex-wrap:wrap;}
 .entradaAsistente{display:flex;gap:8px;align-items:center;margin-top:12px;}
-.entradaAsistente input{flex:1;min-width:0;min-height:48px;padding:0 16px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font:inherit;font-size:16px;box-shadow:var(--sombra);}
+.entradaAsistente input{flex:1;min-width:0;min-height:48px;padding:0 16px;border:1px solid var(--borde);border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);font:inherit;font-size:16px;box-shadow:var(--sombra);}
 .botonRedondo{display:grid;place-items:center;width:48px;height:48px;flex:none;border:0;border-radius:50%;background:var(--acento);color:var(--acento-txt);cursor:pointer;box-shadow:var(--sombra);}
 .botonHablarAsistente{background:var(--superficie);color:var(--texto);}
 .botonHablarAsistente.escuchando{background:var(--peligro);color:#fff;}
@@ -593,7 +593,7 @@ html.conEscaner,html.conEscaner body{overflow:hidden;}
 .fotosAnteriores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .fotoAnterior{position:relative;padding:0;border:0;border-radius:14px;overflow:hidden;background:var(--superficie-2);aspect-ratio:1;cursor:pointer;}
 .fotoAnterior img{width:100%;height:100%;object-fit:cover;}
-.fotoAnterior span{position:absolute;left:6px;bottom:6px;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:700;}
+.fotoAnterior span{position:absolute;left:6px;bottom:6px;padding:2px 7px;border-radius:var(--radio-pildora);background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:700;}
 .puntoHeladera{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;background:var(--visitado);}
 .puntoHeladera.mejorar{background:var(--pendiente);} .puntoHeladera.mal{background:var(--peligro);}
 .botonFotoHeladera{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;margin-bottom:12px;border:2px dashed var(--borde-fuerte);border-radius:18px;background:var(--superficie-2) center/cover no-repeat;color:var(--texto-sec);font-weight:700;cursor:pointer;}
