@@ -9,6 +9,9 @@
 //   el precio (lapicito). Queda marcado en el pedido y en el ticket.
 // - T94: manteniendo apretado un producto se marca como favorito (va
 //   primero en su marca, con estrellita).
+// - T161: se elige la lista de precios de este pedido (arranca con la del
+//   comercio). comercioDelPedidoActual (pedidos.js) la devuelve puesta, así
+//   los precios, el total y lo que se guarda usan esa lista.
 // Los cambios y la fecha viajan en `detallesPedido/` (uno por pedido, con el
 // mismo id), así el pedido no cambia de forma. Mientras se carga, todo esto
 // queda en el borrador de este celular.
@@ -49,12 +52,14 @@
         return {
             cambios: Array.isArray(datos && datos.cambios) ? datos.cambios : [],
             fechaEntrega: String(datos && datos.fechaEntrega || ""),
-            precios: datos && datos.precios && typeof datos.precios === "object" ? datos.precios : {}
+            precios: datos && datos.precios && typeof datos.precios === "object" ? datos.precios : {},
+            lista: datos && datos.lista && typeof datos.lista === "object" ? datos.lista : null
         };
     }
 
     function guardar(datos) {
-        if (!datos.cambios.length && !datos.fechaEntrega && !Object.keys(datos.precios).length) {
+        if (!datos.lista) delete datos.lista;
+        if (!datos.cambios.length && !datos.fechaEntrega && !Object.keys(datos.precios).length && !datos.lista) {
             localStorage.removeItem(DB_BORRADOR);
         } else {
             p.lsGuardar(DB_BORRADOR, datos);
@@ -157,6 +162,52 @@
             Object.assign(item, { precio: Number(precio), precioCambiado: true }, lista !== null ? { precioLista: lista } : {});
         });
         return productos;
+    }
+
+    // ---------- Lista de precios de este pedido (T161) ----------
+    function comercioSinLista() {
+        const nombre = input.value.trim();
+        return nombre && typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombre) : null;
+    }
+
+    const idDe = comercio => String(comercio.id || comercio.nombre || "");
+    const listasHechas = () => typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
+
+    // La lista elegida para este comercio, "" para la General, o null si se
+    // usa la del comercio (o la elegida ya no existe).
+    function listaElegida(comercio) {
+        const elegida = leer().lista;
+        if (!elegida || !comercio || elegida.comercio !== idDe(comercio)) return null;
+        const nombre = String(elegida.nombre || "");
+        return nombre && !listasHechas().includes(nombre) ? null : nombre;
+    }
+
+    function hayListas() {
+        return Boolean(comercioSinLista()) && puedeCambiarPrecio() && listasHechas().length > 0;
+    }
+
+    function elegirLista() {
+        const comercio = comercioSinLista();
+        if (!comercio) return;
+        const propia = String(comercio.listaPrecios || "");
+        const elegida = listaElegida(comercio);
+        const actual = elegida !== null ? elegida : propia;
+        const opciones = ["", ...listasHechas()].map(nombre => `<button type="button" class="pzOpcion opcionListaPedido" data-lista-pedido="${p.esc(nombre)}" aria-pressed="${nombre === actual}">${p.ico(nombre === actual ? "check" : "etiqueta", 22)}<span>${p.esc(nombre || "General")}${nombre === propia ? ` <small>la de ${p.esc(comercio.nombre)}</small>` : ""}</span></button>`).join("");
+        const caja = p.hoja({
+            titulo: "Lista de precios",
+            sub: "Solo para este pedido. La ficha del comercio queda igual.",
+            html: `<div class="pzOpciones">${opciones}</div>`
+        });
+        caja.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-lista-pedido]");
+            if (!boton) return;
+            const nombre = boton.dataset.listaPedido;
+            const datos = leer();
+            datos.lista = nombre === propia ? null : { nombre, comercio: idDe(comercio) };
+            p.cerrar();
+            guardar(datos);
+            mostrarToast("Precios de la lista " + (nombre || "General"));
+        });
     }
 
     // ---------- Cambios de mercadería (T96) ----------
@@ -470,6 +521,7 @@
                 ${window.codigoBarrasVendeFrio ? opcion("escanear", "codigo", "Escanear código de barras") : ""}
                 ${opcion("cambio", "deshacer", "Anotar un cambio")}
                 ${opcion("fecha", "calendario", leer().fechaEntrega ? "Cambiar fecha de entrega" : "Elegir fecha de entrega")}
+                ${hayListas() ? opcion("lista", "etiqueta", "Elegir lista de precios") : ""}
                 ${verSaldo ? opcion("saldo", "moneda", "Ver saldo del comercio") : ""}
                 ${hayProductosCargados() ? opcion("duplicar", "copiar", "Duplicar para otro comercio") : ""}
                 ${opcion("vaciar", "tacho", "Vaciar pedido")}
@@ -485,6 +537,7 @@
                 if (elegida === "escanear") window.codigoBarrasVendeFrio.abrir();
                 if (elegida === "cambio") anotarCambio();
                 if (elegida === "fecha") elegirFecha();
+                if (elegida === "lista") elegirLista();
                 if (elegida === "saldo") window.saldosVendeFrio.verCuenta(comercio.nombre);
                 if (elegida === "duplicar") duplicar();
                 if (elegida === "vaciar") document.getElementById("reset")?.click();
@@ -581,6 +634,7 @@
     window.nuevoPedidoVendeFrio = {
         precioCambiado, puedeCambiarPrecio, ajustarProductos, textoParaMensaje, alGuardar,
         anotarCambio, elegirFecha, editarPrecio, abrirOpciones, detalleDe, textoFecha,
+        listaElegida, elegirLista, hayListas,
         leerBorrador: leer, guardarBorrador: guardar
     };
 }());

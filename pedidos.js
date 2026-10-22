@@ -52,10 +52,13 @@ const cargarListaClientes = actualizarDatalistPedido;
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
 
-// El comercio elegido en Nuevo pedido, o null.
+// El comercio elegido en Nuevo pedido, o null. Si para este pedido se eligió
+// otra lista de precios (T161), viene con esa lista puesta.
 function comercioDelPedidoActual() {
     const nombre = inputCliente ? inputCliente.value.trim() : "";
-    return nombre ? buscarComercioPorNombre(nombre) : null;
+    const comercio = nombre ? buscarComercioPorNombre(nombre) : null;
+    const lista = comercio && window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.listaElegida(comercio) : null;
+    return lista === null ? comercio : { ...comercio, listaPrecios: lista };
 }
 
 function actualizarResumenPedido() {
@@ -958,7 +961,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente, comercioDelPedidoActual());
 
         if (!datosNube) {
             mostrarAviso(

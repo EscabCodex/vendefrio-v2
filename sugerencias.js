@@ -118,6 +118,16 @@
     }
 
 
+    // La lista de precios del pedido (T161): se toca para usar otra.
+    function listaDelPedido(comercio) {
+        const extra = window.nuevoPedidoVendeFrio;
+        if (!extra || !extra.hayListas()) return "";
+        const otra = extra.listaElegida(comercio) !== null;
+        return `<button type="button" class="listaDelPedido${otra ? " otraLista" : ""}" id="listaDelPedido" aria-label="Lista de precios: ${p.esc(comercio.listaPrecios || "General")}. Tocá para cambiarla">
+            ${p.ico("etiqueta", 16)}<span>Precios: <b>${p.esc(comercio.listaPrecios || "General")}</b>${otra ? " · solo este pedido" : ""}</span>${p.ico("chevAbajo", 16)}
+        </button>`;
+    }
+
     function dibujarTarjetaComercio(comercio, analisis) {
         const foco = document.activeElement === input;
         const mostrar = Boolean(comercio) && !foco && !tarjetaComercio.dataset.cambiando;
@@ -131,7 +141,7 @@
             <div class="pzIni ${p.colorIni(comercio.nombre)}">${p.esc(p.iniciales(comercio.nombre))}</div>
             <div class="pzFilaTxt"><strong>${p.esc(comercio.nombre)}</strong><small>${p.esc(sub)}</small></div>
             <button type="button" class="pzEnlace" id="cambiarComercioPedido">Cambiar</button>
-        </div>`;
+        </div>${listaDelPedido(comercio)}`;
         if (tarjetaComercio.innerHTML !== html) tarjetaComercio.innerHTML = html;
     }
 
@@ -198,6 +208,10 @@
     });
 
     tarjetaComercio.addEventListener("click", evento => {
+        if (evento.target.closest("#listaDelPedido")) {
+            window.nuevoPedidoVendeFrio.elegirLista();
+            return;
+        }
         if (!evento.target.closest("#cambiarComercioPedido")) return;
         tarjetaComercio.dataset.cambiando = "1";
         dibujar();
