@@ -57,7 +57,7 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     await filaTerminos.evaluate(fila => fila.scrollIntoView({ block: "center" }));
     const [terminos] = await Promise.all([page.waitForEvent("popup"), filaTerminos.click()]);
     await expect(terminos.getByRole("heading", { name: "Términos y privacidad" })).toBeVisible();
-    await expect(terminos.getByText("Borrador.")).toBeVisible();
+    await expect(terminos.getByText("No es asesoramiento legal.")).toBeVisible();
     await terminos.close();
 });
 
