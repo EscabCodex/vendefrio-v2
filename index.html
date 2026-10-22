@@ -202,21 +202,46 @@
     </div>
   </header>
 
-  <main class="container">
-    <div class="card tarjetaMapaRuta">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
-
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
-        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
-        </button>
-
-        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
-        </button>
+  <!-- T136: Rutas como vista previa. El mapa ocupa toda la pantalla; arriba,
+       desde dónde y hasta dónde y cómo se arma el camino; abajo, cuánto
+       tarda, Iniciar y Paradas, y las herramientas. -->
+  <div class="vistaPreviaRutas">
+    <div id="mapaRuta"></div>
+    <div class="cabezaRutas">
+      <button class="volverRutas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <div class="filasCabezaRutas">
+        <div class="filaCabezaRutas"><span class="puntoDesdeRutas" aria-hidden="true"></span>Tu ubicación</div>
+        <div class="filaCabezaRutas"><span class="puntoHastaRutas" aria-hidden="true"></span><span id="destinoRutas">Elegí los comercios de la ruta</span></div>
       </div>
+    </div>
+    <div class="chipsRutas" role="group" aria-label="Cómo se arma el camino">
+      <button type="button" class="chipRutas" data-vehiculo="auto" aria-pressed="true"><i data-ico="auto" data-ico-tam="15"></i> Auto</button>
+      <button type="button" class="chipRutas" data-vehiculo="moto" aria-pressed="false">Moto</button>
+      <button type="button" class="chipRutas" id="chipSinAutopistas" aria-pressed="false">Sin autopistas</button>
+    </div>
+    <div class="hojaPlanRutas" role="region" aria-label="Resumen de la ruta">
+      <div class="asaPlanRutas" aria-hidden="true"></div>
+      <p class="resumenPlanRutas" aria-live="polite"><strong id="minutosPlanRutas"></strong> <span id="detallePlanRutas">Elegí los comercios y tocá Optimizar.</span></p>
+      <div class="botonesPlanRutas">
+        <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
+        <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="menu" data-ico-tam="18"></i> Paradas</button>
+      </div>
+      <div class="herramientasRutas">
+        <button id="btnOptimizarRuta" type="button">Optimizar</button>
+        <button id="btnElegirRutas" type="button">Elegir</button>
+        <button id="btnGuardadasRutas" type="button">Guardadas</button>
+        <button id="btnGoogleMaps" type="button">Google Maps</button>
+      </div>
+    </div>
+  </div>
 
-      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
+  <main class="container panelParadasRutas" aria-label="Paradas">
+    <div class="cabezaPanelParadas">
+      <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <h2>Paradas</h2>
+    </div>
+    <div class="card tarjetaMapaRuta">
+      <div id="listaRutaOrdenada" style="font-size: 14px;"></div>
     </div>
     <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
       <summary class="encabezadoTarjetaRuta">

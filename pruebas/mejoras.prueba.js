@@ -244,9 +244,11 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await expect(page.locator(".pinRuta")).toHaveCount(3);
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
     await expect(page.locator("#resumenPinesMapa")).toContainText("3 en la ruta");
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#btnOptimizarRuta").click();
     await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
 
@@ -262,10 +264,12 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(proxima).toContainText("Próxima parada · 1 de 3");
     await expect(proxima).toContainText("Despensa Mary");
     await expect(proxima.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
-    await page.locator("#listaRutaOrdenada").evaluate(lista => window.scrollBy(0, lista.getBoundingClientRect().top - 200));
-    await capturar(page, "mejoras-12-paradas-de-la-ruta");
     await proxima.getByRole("button", { name: /Ya pasé/ }).click();
     await expect(proxima).toContainText("Próxima parada · 2 de 3");
+    // La lista se abre con «Paradas» (T136).
+    await page.locator("#btnParadasRutas").click();
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
+    await capturar(page, "mejoras-12-paradas-de-la-ruta");
 
     // T126: tocando la parada se carga su pedido y, al volver, queda tildada sola.
     const conPedido = await paradas.nth(1).getAttribute("data-nombre");
@@ -285,6 +289,7 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(proxima).toContainText("Próxima parada · 3 de 3");
 
     // Cambiar el orden con el teclado (con el dedo es arrastrar ≡).
+    await page.locator("#btnParadasRutas").click();
     const segunda = await paradas.nth(1).getAttribute("data-nombre");
     await paradas.nth(1).locator(".agarreParada").focus();
     await page.keyboard.press("ArrowUp");
@@ -292,7 +297,7 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(page.locator(".encabezadoParadas")).toContainText("Orden a tu gusto");
 
     // Tocar un pin: sacarlo de la ruta y moverlo.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator('.pinRuta[title="Despensa Mary"]').click();
     const opciones = page.getByRole("dialog", { name: "Opciones de Despensa Mary" });
     await expect(opciones).toContainText("Parada");

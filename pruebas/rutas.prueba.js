@@ -29,9 +29,11 @@ test("rutas: más de 9 paradas y Google Maps en partes", async ({ page }) => {
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
     await expect(page.locator("#resumenPinesMapa")).toContainText("12 en la ruta");
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
 
     // La app ordena las 12 paradas, sin tope.
     await page.locator("#btnOptimizarRuta").click();
@@ -89,8 +91,10 @@ test("rutas: reoptimizar con un pedido nuevo no saltea la parada", async ({ page
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     const optimizar = async () => {
         await page.locator("#btnOptimizarRuta").click();
         await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();

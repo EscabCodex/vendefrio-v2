@@ -225,12 +225,14 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     const aviso = page.locator("#modalAviso");
-    // "Comercios para esta ruta" es desplegable (T51).
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#btnOptimizarRuta").click();
     await expect(aviso).toContainText("1. Kiosco Luna");
     await aviso.getByRole("button", { name: "Entendido" }).click();
+    await page.locator("#btnParadasRutas").click();
 
     const boton = page.getByRole("button", { name: "Imprimir hoja de reparto" });
     await expect(boton).toBeVisible();

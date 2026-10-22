@@ -135,6 +135,8 @@ function configurarCierreModalAviso() {
 }
 
 function inicializarPantallaRutas() {
+    // Rutas abre siempre en el mapa (T136); la lista se abre con «Paradas».
+    document.getElementById("pantallaRutas")?.classList.remove("conParadasAbiertas");
     actualizarResumenRuta();
     cargarSelectComerciosRuta();
     inicializarSeleccionRuta();
@@ -143,6 +145,7 @@ function inicializarPantallaRutas() {
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
     crearBotonNavegarRuta();
+    prepararVistaPreviaRutas();
     renderizarPines();
     mostrarRutaEnLista();
 }
@@ -347,18 +350,14 @@ function abrirOpcionesRutaGuardada(nombre) {
 // "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
 // en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
 // dependía de una librería de internet).
+// T136: «Iniciar» ya está en la hoja de abajo de la vista previa.
 function crearBotonNavegarRuta() {
-    const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("btnNavegarRuta")) return;
-
-    const boton = document.createElement("button");
-    boton.id = "btnNavegarRuta";
-    boton.type = "button";
-    boton.className = "btnAccion botonNavegarRuta";
-    boton.innerHTML = window.icono("navegar", 16) + " Navegar la ruta";
+    const boton = document.getElementById("btnNavegarRuta");
+    if (!boton || boton.dataset.listo) return;
+    boton.dataset.listo = "1";
     boton.addEventListener("click", () => {
         if (!rutaOrdenada.length) {
-            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar ruta\u00bb y despu\u00e9s \u00abNavegar la ruta\u00bb.");
+            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar\u00bb y despu\u00e9s \u00abIniciar\u00bb.");
             return;
         }
         const nombres = rutaOrdenada.map(parada => parada.nombre);
@@ -366,7 +365,6 @@ function crearBotonNavegarRuta() {
             mostrarAviso("No se pudo navegar", "Las paradas necesitan su ubicaci\u00f3n GPS. Si elegiste Google Maps en M\u00e1s, us\u00e1 el bot\u00f3n de Google Maps.");
         }
     });
-    botonMaps.insertAdjacentElement("afterend", boton);
 }
 
 function actualizarEstadoNavegacionApp(texto) {
@@ -1044,6 +1042,8 @@ function activarModoPinManual() {
 
     modoPinManual = true;
     mapaLeaflet.getContainer().style.cursor = "crosshair";
+    // El pin se pone en el mapa, que está detrás de las paradas (T136).
+    cerrarPanelParadas();
 
     const boton = document.getElementById("btnPinManual");
     if (boton) boton.innerHTML = window.icono("ubicacion", 14) + " Tocá el punto exacto en el mapa";
@@ -1136,6 +1136,7 @@ function guardarPinManual() {
 
 function manejarClickMapaManual(evento) {
     if (!modoPinManual || !mapaLeaflet) return;
+    const select = document.getElementById("selectComercioGps");
 
     const lat = Number(evento.latlng.lat.toFixed(7));
     const lng = Number(evento.latlng.lng.toFixed(7));
@@ -1163,6 +1164,7 @@ function manejarClickMapaManual(evento) {
 
     finalizarModoPinManual();
     mostrarControlesEdicionPin();
+    mostrarBarraMoverPin(select ? select.value : "");
 
     mostrarAviso(
         "Pin colocado",
@@ -1242,7 +1244,9 @@ function iniciarMapa() {
         return;
     }
 
-    mapaLeaflet = L.map("mapaRuta").setView(
+    // T136: sin los botones + y − (se agranda con dos dedos): arriba y abajo
+    // van la cabecera y la hoja de la vista previa.
+    mapaLeaflet = L.map("mapaRuta", { zoomControl: false }).setView(
         [LATITUD_POR_DEFECTO, LONGITUD_POR_DEFECTO],
         13
     );
@@ -1316,11 +1320,8 @@ function renderizarPines(ajustar = true) {
     });
 
     if (ajustar) {
-        // Arriba queda lugar para el resumen, que no tape ningún pin.
-        mapaLeaflet.fitBounds(limites, {
-            paddingTopLeft: [30, 70],
-            paddingBottomRight: [30, 30]
-        });
+        // Arriba la cabecera y abajo la hoja de la vista previa: que no tapen ningún pin.
+        mapaLeaflet.fitBounds(limites, margenesMapaRutas());
     }
 }
 
@@ -1439,8 +1440,19 @@ function cambiarPinEnRuta(nombre) {
 function moverPinDesdeMapa(nombre) {
     editarPinGuardado(nombre, { sinAviso: true });
     if (!coordenadasPinPendientes) return;
+    mostrarBarraMoverPin(nombre);
+    // El pin queda en el centro, un poco arriba, para que la barra no lo tape.
+    const marcador = marcadoresPorNombre.get(nombre);
+    if (marcador && mapaLeaflet) {
+        mapaLeaflet.setView(marcador.getLatLng(), Math.max(mapaLeaflet.getZoom(), 16), { animate: false });
+        mapaLeaflet.panBy([0, 50], { animate: false });
+    }
+}
+
+// Barra de abajo del mapa para guardar o cancelar el pin que se está moviendo.
+function mostrarBarraMoverPin(nombre) {
     const contenedor = document.getElementById("mapaRuta");
-    if (!contenedor) return;
+    if (!contenedor || !nombre) return;
     let barra = document.getElementById("barraMoverPin");
     if (!barra) {
         barra = document.createElement("div");
@@ -1458,13 +1470,6 @@ function moverPinDesdeMapa(nombre) {
     barra.querySelector("#cancelarMoverPin").onclick = () => cancelarEdicionPin();
     barra.querySelector("#guardarMoverPin").onclick = () => guardarPinManual();
     document.getElementById("resumenPinesMapa")?.classList.add("oculto");
-    // El pin queda en el centro, un poco arriba, para que la barra no lo tape.
-    const marcador = marcadoresPorNombre.get(nombre);
-    if (marcador && mapaLeaflet) {
-        mapaLeaflet.setView(marcador.getLatLng(), Math.max(mapaLeaflet.getZoom(), 16), { animate: false });
-        mapaLeaflet.panBy([0, 50], { animate: false });
-    }
-    contenedor.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function guardarGpsActual(boton) {
@@ -2130,6 +2135,7 @@ function mostrarRutaEnLista() {
     contenedor.innerHTML = "";
     contenedor.classList.toggle("conParadas", rutaOrdenada.length > 0);
 
+    dibujarVistaPreviaRutas();
     if (rutaOrdenada.length === 0) {
         dibujarProximaParada();
         return;
@@ -2316,6 +2322,264 @@ function dibujarProximaParada() {
             mostrarRutaEnLista();
         }
     };
+}
+
+// -------------------------------------------------
+// Vista previa (T136): el mapa ocupa toda la pantalla con el camino entero
+// por calles. Arriba, desde dónde y hasta dónde, y cómo se arma el camino
+// (Auto o Moto, Sin autopistas); abajo, cuánto tarda, Iniciar y Paradas, y
+// las herramientas. Paradas abre la lista con todo lo de antes.
+// -------------------------------------------------
+
+const SERVIDOR_CAMINO_RUTAS = "https://routing.openstreetmap.de/routed-car/route/v1/driving/";
+const CLAVE_PREFERENCIAS_RUTAS = "vendefrio_preferencias";
+// Hasta 2 recorridos: el más rápido y, si es distinto, uno sin autopistas.
+let caminoPlanRutas = { clave: "", recorridos: [], recto: false };
+let capaCaminoPlan = null;
+let esperaCaminoPlan = null;
+
+function preferenciasRutas() {
+    try {
+        return JSON.parse(localStorage.getItem(CLAVE_PREFERENCIAS_RUTAS)) || {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function guardarPreferenciaRutas(campo, valor) {
+    const datos = preferenciasRutas();
+    datos[campo] = valor;
+    try {
+        localStorage.setItem(CLAVE_PREFERENCIAS_RUTAS, JSON.stringify(datos));
+    } catch (error) {
+        // Sin lugar: queda para esta vez.
+    }
+}
+
+function prepararVistaPreviaRutas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    const vista = pantalla?.querySelector(".vistaPreviaRutas");
+    if (!vista || vista.dataset.listo) return;
+    vista.dataset.listo = "1";
+    if (window.L?.DomEvent) {
+        vista.querySelectorAll(".cabezaRutas, .chipsRutas, .hojaPlanRutas").forEach(caja => {
+            L.DomEvent.disableClickPropagation(caja);
+            L.DomEvent.disableScrollPropagation(caja);
+        });
+    }
+    vista.querySelector(".cabezaRutas .volverRutas").addEventListener("click", () => mostrarPantalla("mas"));
+    vista.querySelectorAll(".chipRutas[data-vehiculo]").forEach(chip => chip.addEventListener("click", () => {
+        guardarPreferenciaRutas("vehiculo", chip.dataset.vehiculo);
+        dibujarChipsRutas();
+    }));
+    document.getElementById("chipSinAutopistas").addEventListener("click", () => {
+        elegirRecorridoPlan(!preferenciasRutas().sinAutopistas);
+    });
+    document.getElementById("btnParadasRutas").addEventListener("click", () => abrirPanelParadas());
+    document.getElementById("btnElegirRutas").addEventListener("click", () => abrirPanelParadas(".tarjetaSeleccionRuta"));
+    document.getElementById("btnGuardadasRutas").addEventListener("click", () => abrirPanelParadas(".tarjetaRutasGuardadas"));
+    document.getElementById("btnCerrarParadas").addEventListener("click", cerrarPanelParadas);
+
+    // El alto de la hoja de abajo, para el mapa y la tarjeta de la parada.
+    const hoja = vista.querySelector(".hojaPlanRutas");
+    const medir = () => pantalla.style.setProperty("--altoHojaPlan", hoja.offsetHeight + "px");
+    if (window.ResizeObserver) new ResizeObserver(medir).observe(hoja);
+    else medir();
+}
+
+// Lo que el mapa deja libre arriba (cabecera y chips) y abajo (hoja y parada).
+function margenesMapaRutas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    const chips = pantalla?.querySelector(".chipsRutas");
+    const hoja = pantalla?.querySelector(".hojaPlanRutas");
+    const proxima = document.getElementById("proximaParadaRuta");
+    const arriba = chips && chips.offsetHeight ? chips.offsetTop + chips.offsetHeight : 0;
+    const abajo = (hoja?.offsetHeight || 0) + (proxima?.offsetHeight ? proxima.offsetHeight + 10 : 0);
+    return { paddingTopLeft: [30, arriba + 24], paddingBottomRight: [30, abajo + 24] };
+}
+
+function abrirPanelParadas(seccion) {
+    const pantalla = document.getElementById("pantallaRutas");
+    if (!pantalla) return;
+    pantalla.classList.add("conParadasAbiertas");
+    const panel = pantalla.querySelector(".panelParadasRutas");
+    panel.scrollTop = 0;
+    const tarjeta = seccion ? panel.querySelector(seccion) : null;
+    if (tarjeta) {
+        tarjeta.open = true;
+        tarjeta.scrollIntoView({ block: "start" });
+    }
+}
+
+function cerrarPanelParadas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    if (!pantalla?.classList.contains("conParadasAbiertas")) return;
+    pantalla.classList.remove("conParadasAbiertas");
+    if (mapaLeaflet) mapaLeaflet.invalidateSize();
+}
+
+function dibujarChipsRutas() {
+    const preferencias = preferenciasRutas();
+    const vehiculo = preferencias.vehiculo || "auto";
+    document.querySelectorAll("#pantallaRutas .chipRutas[data-vehiculo]").forEach(chip => {
+        const elegido = chip.dataset.vehiculo === vehiculo ? "true" : "false";
+        if (chip.getAttribute("aria-pressed") !== elegido) chip.setAttribute("aria-pressed", elegido);
+    });
+    const sinAutopistas = document.getElementById("chipSinAutopistas");
+    if (sinAutopistas) sinAutopistas.setAttribute("aria-pressed", preferencias.sinAutopistas ? "true" : "false");
+}
+
+// Arriba, hasta dónde va; abajo, cuánto tarda. Se llama con cada cambio de
+// la ruta (no con el GPS): es barato y el camino se pide solo si cambió.
+function dibujarVistaPreviaRutas() {
+    if (!document.querySelector("#pantallaRutas .vistaPreviaRutas")) return;
+    dibujarChipsRutas();
+    const destino = document.getElementById("destinoRutas");
+    let texto;
+    if (rutaOrdenada.length) {
+        texto = rutaOrdenada.length + (rutaOrdenada.length === 1 ? " parada" : " paradas") + " · última: " + rutaOrdenada[rutaOrdenada.length - 1].nombre;
+    } else {
+        // Solo los que tienen ubicación entran a la ruta.
+        const elegidos = comerciosActivos().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
+        texto = elegidos ? elegidos + (elegidos === 1 ? " parada elegida" : " paradas elegidas") : "Elegí los comercios de la ruta";
+    }
+    if (destino && destino.textContent !== texto) destino.textContent = texto;
+    pedirCaminoPlan();
+    dibujarResumenPlan();
+}
+
+function pedirCaminoPlan() {
+    clearTimeout(esperaCaminoPlan);
+    esperaCaminoPlan = setTimeout(calcularCaminoPlan, 250);
+}
+
+function puntosCaminoPlan() {
+    if (!rutaOrdenada.length || !inicioRutaCalculada) return [];
+    return [inicioRutaCalculada, ...rutaOrdenada.map(comercio => ({ lat: Number(comercio.lat), lng: Number(comercio.lng) }))];
+}
+
+async function pedirRecorridoPlan(puntos, sinAutopistas) {
+    const url = SERVIDOR_CAMINO_RUTAS + puntos.map(punto => punto.lng + "," + punto.lat).join(";") +
+        "?overview=simplified&geometries=geojson" + (sinAutopistas ? "&exclude=motorway" : "");
+    try {
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) return null;
+        const datos = await respuesta.json();
+        const ruta = datos && Array.isArray(datos.routes) ? datos.routes[0] : null;
+        if (!ruta || !ruta.geometry || !Array.isArray(ruta.geometry.coordinates)) return null;
+        return {
+            sinAutopistas,
+            puntos: ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+            distancia: Number(ruta.distance) || 0,
+            duracion: Number(ruta.duration) || 0
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
+async function calcularCaminoPlan() {
+    const puntos = puntosCaminoPlan();
+    const clave = puntos.map(punto => punto.lat + "," + punto.lng).join(";");
+    if (clave === caminoPlanRutas.clave) {
+        dibujarCaminoPlan();
+        return;
+    }
+    // Mientras llega el camino por calles, una línea recta entre las paradas.
+    caminoPlanRutas = { clave, recorridos: [], recto: puntos.length > 1 };
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+    if (puntos.length < 2) return;
+    // La ruta nueva entera a la vista, entre la cabecera y la hoja.
+    if (mapaLeaflet) mapaLeaflet.fitBounds(L.latLngBounds(puntos.map(punto => [punto.lat, punto.lng])), margenesMapaRutas());
+    const [rapido, sinAutopistas] = await Promise.all([pedirRecorridoPlan(puntos, false), pedirRecorridoPlan(puntos, true)]);
+    if (clave !== caminoPlanRutas.clave) return;
+    const recorridos = [rapido, sinAutopistas].filter(Boolean);
+    // Si los dos son casi iguales, se muestra uno solo.
+    if (rapido && sinAutopistas && Math.abs(rapido.distancia - sinAutopistas.distancia) <= rapido.distancia * 0.01) recorridos.pop();
+    caminoPlanRutas = { clave, recorridos, recto: !recorridos.length };
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+}
+
+// El recorrido elegido: el sin autopistas si está pedido y existe.
+function recorridoElegidoPlan() {
+    const recorridos = caminoPlanRutas.recorridos;
+    if (!recorridos.length) return null;
+    const quiere = Boolean(preferenciasRutas().sinAutopistas);
+    return recorridos.find(recorrido => recorrido.sinAutopistas === quiere) || recorridos[0];
+}
+
+function elegirRecorridoPlan(sinAutopistas) {
+    guardarPreferenciaRutas("sinAutopistas", Boolean(sinAutopistas));
+    dibujarChipsRutas();
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+}
+
+function textoMinutosPlan(segundos) {
+    const minutos = Math.max(1, Math.round(segundos / 60));
+    if (minutos < 60) return minutos + " min";
+    return Math.floor(minutos / 60) + " h " + String(minutos % 60).padStart(2, "0") + " min";
+}
+
+function dibujarCaminoPlan() {
+    if (!mapaLeaflet || typeof L === "undefined") return;
+    if (capaCaminoPlan) capaCaminoPlan.clearLayers();
+    else capaCaminoPlan = L.layerGroup().addTo(mapaLeaflet);
+    const puntos = puntosCaminoPlan();
+    if (puntos.length < 2) return;
+    const yo = L.circleMarker([puntos[0].lat, puntos[0].lng], { className: "yoPlanRutas", radius: 9, weight: 4, opacity: 1, fillOpacity: 1, interactive: false }).addTo(capaCaminoPlan);
+    if (caminoPlanRutas.recto || !caminoPlanRutas.recorridos.length) {
+        L.polyline(puntos.map(punto => [punto.lat, punto.lng]), { className: "caminoPlan recto", color: "#1F5FE0", weight: 5, opacity: 0.9, dashArray: "2 10", lineCap: "round", interactive: false }).addTo(capaCaminoPlan);
+        yo.bringToFront();
+        return;
+    }
+    const elegido = recorridoElegidoPlan();
+    const otros = caminoPlanRutas.recorridos.filter(recorrido => recorrido !== elegido);
+    otros.forEach(recorrido => {
+        const linea = L.polyline(recorrido.puntos, { className: "caminoPlan otro", color: "#A9B8CC", weight: 8, opacity: 1, lineCap: "round", lineJoin: "round" }).addTo(capaCaminoPlan);
+        linea.on("click", () => elegirRecorridoPlan(recorrido.sinAutopistas));
+    });
+    L.polyline(elegido.puntos, { className: "caminoPlan borde", color: "#0F3E9E", weight: 12, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(capaCaminoPlan);
+    L.polyline(elegido.puntos, { className: "caminoPlan elegido", color: "#1F5FE0", weight: 8, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(capaCaminoPlan);
+    yo.bringToFront();
+    // Con dos recorridos, cada uno con su cartelito de minutos para elegirlo.
+    if (!otros.length) return;
+    caminoPlanRutas.recorridos.forEach(recorrido => {
+        const medio = recorrido.puntos[Math.floor(recorrido.puntos.length * (recorrido === elegido ? 0.4 : 0.6))];
+        const nombre = recorrido.sinAutopistas ? "Sin autopistas" : "Más rápida";
+        const icono = L.divIcon({
+            className: "etiquetaCaminoPlan" + (recorrido === elegido ? " elegida" : ""),
+            html: `<span>${textoMinutosPlan(recorrido.duracion)}</span><small>${nombre}</small>`,
+            iconSize: null
+        });
+        L.marker(medio, { icon: icono, keyboard: true, title: nombre + ", " + textoMinutosPlan(recorrido.duracion), zIndexOffset: 500 })
+            .on("click", () => elegirRecorridoPlan(recorrido.sinAutopistas))
+            .addTo(capaCaminoPlan);
+    });
+}
+
+// Abajo: «48 min (23 km) · terminás 11:02». Sin camino por calles, la cuenta
+// aproximada de la lista.
+function dibujarResumenPlan() {
+    const minutos = document.getElementById("minutosPlanRutas");
+    const detalle = document.getElementById("detallePlanRutas");
+    if (!minutos || !detalle) return;
+    let textoMinutos = "";
+    let textoDetalle = "Elegí los comercios y tocá Optimizar.";
+    if (rutaOrdenada.length) {
+        const elegido = recorridoElegidoPlan();
+        const segundos = elegido ? elegido.duracion : distanciasRuta.reduce((total, metros) => total + minutosAproximados(metros), 0) * 60;
+        const metros = elegido ? elegido.distancia : distanciasRuta.reduce((total, distancia) => total + (Number(distancia) || 0), 0);
+        const fin = new Date(Date.now() + segundos * 1000);
+        textoMinutos = (elegido ? "" : "unos ") + textoMinutosPlan(segundos);
+        textoDetalle = "(" + formatearDistanciaTotal(metros).replace(" totales", "") + ") · terminás " +
+            String(fin.getHours()).padStart(2, "0") + ":" + String(fin.getMinutes()).padStart(2, "0");
+    }
+    if (minutos.textContent !== textoMinutos) minutos.textContent = textoMinutos;
+    if (detalle.textContent !== textoDetalle) detalle.textContent = textoDetalle;
+    document.getElementById("btnNavegarRuta")?.classList.toggle("sinRuta", !rutaOrdenada.length);
 }
 
 configurarCierreModalAviso();

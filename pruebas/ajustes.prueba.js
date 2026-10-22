@@ -91,6 +91,8 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
 
     // Rutas: comercios para esta ruta, con buscador y resumen.
     await page.evaluate(() => mostrarPantalla("rutas"));
+    // Está dentro de «Paradas» (T136).
+    await page.locator("#btnParadasRutas").click();
     const tarjeta = page.locator(".tarjetaSeleccionRuta");
     // Desplegable (T51): cerrada muestra el resumen; se abre al tocarla.
     await expect(tarjeta.locator(".chipResumenRuta").first()).toBeVisible();

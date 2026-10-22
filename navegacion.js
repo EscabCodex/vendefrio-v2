@@ -386,7 +386,11 @@
         const url = SERVIDOR_RUTAS + perfil + "/route/v1/driving/" +
             desde[1] + "," + desde[0] + ";" + hasta[1] + "," + hasta[0] +
             "?overview=full&geometries=geojson&steps=true";
-        const respuesta = await fetch(url);
+        // «Sin autopistas» elegido en la vista previa de Rutas (T136); si el
+        // servidor no lo acepta, va el camino de siempre.
+        const sinAutopistas = preferencias().sinAutopistas === true && perfil === "routed-car";
+        let respuesta = await fetch(url + (sinAutopistas ? "&exclude=motorway" : ""));
+        if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url);
         if (!respuesta.ok) throw new Error("Sin camino");
         const datos = await respuesta.json();
         const ruta = datos && Array.isArray(datos.routes) ? datos.routes[0] : null;

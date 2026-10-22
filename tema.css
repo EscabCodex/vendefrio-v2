@@ -2312,3 +2312,96 @@ html[data-tema="oscuro"] :is(.queHacerOpcion.principal, .filtroEtapa.activo, .ch
   color:var(--acento-txt) !important;
 }
 html[data-tema="oscuro"] .pasoFichaNumero{color:var(--acento-txt) !important;}
+/* ---------- T136: Rutas como vista previa ----------
+   El mapa ocupa toda la pantalla; arriba, desde dónde y hasta dónde y cómo
+   se arma el camino; abajo, la hoja con cuánto tarda, Iniciar y Paradas.
+   Sombras cortas y nada de desenfoque sobre el mapa (T141). La lista de
+   paradas y lo demás de antes se abre encima con «Paradas». */
+html:has(#pantallaRutas:not(.oculto)) nav.bottom-nav,
+html:has(#pantallaRutas:not(.oculto)) .indicadorNube,
+html:has(#pantallaRutas:not(.oculto)) .cartelModoPersonal{display:none !important;}
+html:has(#pantallaRutas:not(.oculto)) body{overflow:hidden;}
+#pantallaRutas{min-height:100vh;}
+#pantallaRutas > header,
+#pantallaRutas > .barraVolver{display:none !important;}
+.vistaPreviaRutas{position:fixed;inset:0;z-index:700;background:var(--superficie-2);overflow:hidden;}
+#pantallaRutas #mapaRuta{position:absolute;inset:0;width:100%;height:100%;background:var(--superficie-2);}
+.cabezaRutas{
+  position:absolute;z-index:1000;display:flex;align-items:center;gap:6px;padding:8px 10px 8px 4px;
+  top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+  border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+.volverRutas{
+  display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;margin:0;min-height:0;
+  border:0;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;
+}
+.filasCabezaRutas{flex:1;min-width:0;display:grid;gap:5px;}
+.filaCabezaRutas{
+  display:flex;align-items:center;gap:8px;min-width:0;padding:7px 10px;border-radius:10px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;white-space:nowrap;
+}
+.filaCabezaRutas > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.puntoDesdeRutas{flex:none;width:9px;height:9px;box-sizing:border-box;border-radius:50%;border:2px solid var(--acento);}
+.puntoHastaRutas{flex:none;width:9px;height:9px;border-radius:3px;background:var(--peligro);}
+.chipsRutas{
+  position:absolute;z-index:1000;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  top:calc(116px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+}
+.chipsRutas::-webkit-scrollbar{display:none;}
+.chipRutas{
+  display:inline-flex;align-items:center;gap:6px;flex:none;min-height:36px;margin:0;padding:0 13px;border:0;border-radius:999px;
+  background:var(--superficie);color:var(--texto);font:inherit;font-size:13px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer;
+}
+.chipRutas[aria-pressed="true"]{background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font-weight:800;}
+html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
+/* Cuántos van en la ruta ya lo dice la cabecera. */
+#pantallaRutas .resumenPinesMapa{display:none;}
+/* Desde dónde sale: tu posición al optimizar. */
+#pantallaRutas .yoPlanRutas{fill:var(--acento);stroke:#fff;}
+.hojaPlanRutas{
+  position:absolute;z-index:1000;left:0;right:0;bottom:0;box-sizing:border-box;
+  padding:10px max(16px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
+}
+.asaPlanRutas{width:44px;height:5px;margin:0 auto 8px;border-radius:3px;background:var(--borde-fuerte);}
+.resumenPlanRutas{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;margin:0;}
+#minutosPlanRutas{font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--visitado);}
+#minutosPlanRutas:empty{display:none;}
+#detallePlanRutas{font-size:16px;font-weight:600;color:var(--texto-sec);}
+.botonesPlanRutas{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px;}
+.botonesPlanRutas .pzBtn{min-height:54px;border-radius:999px;font-size:17px;font-weight:850;}
+.iniciarRutas.sinRuta{opacity:.55;}
+.herramientasRutas{display:flex;gap:6px;margin-top:10px;}
+.herramientasRutas button{
+  flex:1 1 auto;min-width:0;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:999px;background:var(--superficie-2);color:var(--texto);
+  font:inherit;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
+/* La próxima parada, justo arriba de la hoja. */
+#pantallaRutas .proximaParada{bottom:calc(var(--altoHojaPlan, 200px) + 10px);z-index:1001;}
+/* Camino por calles: azul con borde oscuro de día, lima de noche; el otro, gris. */
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.borde{stroke:#4E6112;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.elegido,
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.recto{stroke:#C8F04A;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.otro{stroke:#4A5562;}
+.etiquetaCaminoPlan{
+  display:grid !important;width:max-content !important;height:auto !important;padding:5px 10px;border-radius:12px;
+  background:var(--superficie);color:var(--texto-sec);box-shadow:0 1px 4px rgba(0,0,0,.25);
+  transform-origin:left top;line-height:1.15;white-space:nowrap;
+}
+.etiquetaCaminoPlan span{font-size:14px;font-weight:850;}
+.etiquetaCaminoPlan small{font-size:10px;font-weight:700;}
+.etiquetaCaminoPlan.elegida{background:var(--acento);color:var(--acento-txt, #fff);}
+/* Mover un pin: la barra de guardar va abajo de todo, sin la hoja. */
+.vistaPreviaRutas:has(.barraMoverPin:not(.oculto)) .hojaPlanRutas,
+#pantallaRutas:has(.barraMoverPin:not(.oculto)) .proximaParada{display:none;}
+#pantallaRutas .barraMoverPin{z-index:1002;bottom:calc(12px + env(safe-area-inset-bottom));}
+/* «Paradas»: la lista y todo lo de antes, encima del mapa. */
+#pantallaRutas .panelParadasRutas{display:none;}
+#pantallaRutas.conParadasAbiertas .panelParadasRutas{
+  display:block;position:fixed;inset:0;z-index:1100;margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(10px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background:var(--fondo);
+}
+#pantallaRutas.conParadasAbiertas .proximaParada{display:none;}
+.cabezaPanelParadas{display:flex;align-items:center;gap:6px;margin:0 0 10px;}
+.cabezaPanelParadas h2{margin:0;font-size:22px;font-weight:850;color:var(--texto);}
