@@ -50,6 +50,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.classList.toggle("activo", btn.dataset.pantalla === nombre || btn.dataset.tambien === nombre);
     });
+    window.piezas?.acomodarCabeceras?.();
 
     if (nombre === "menu") actualizarDashboard();
     if (nombre === "pedido") {

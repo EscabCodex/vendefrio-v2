@@ -3761,7 +3761,8 @@ html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:
 .listaRepartoTanda span{flex-shrink:0;color:var(--texto-sec);}
 html[data-tema="oscuro"] .casillaTanda{background:var(--fondo);border-color:var(--borde-fuerte);}
 html[data-tema="oscuro"] .elegidaTanda .casillaTanda{background:var(--acento);border-color:var(--acento);color:var(--acento-txt) !important;}
-html[data-tema="oscuro"] .botonTanda:not(.botonTandaPeligro){color:var(--texto) !important;}
+/* Texto oscuro sobre el verde lima: el claro no se leía (T152). */
+html[data-tema="oscuro"] .botonTanda:not(.botonTandaPeligro){color:var(--acento-txt) !important;}
 html[data-tema="oscuro"] .listaRepartoTanda{background:var(--fondo);border-color:var(--borde);}
 html[data-tema="oscuro"] .listaRepartoTanda li{border-color:var(--borde);}
 html[data-tema="oscuro"] .listaRepartoTanda span{color:var(--texto-sec) !important;}

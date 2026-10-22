@@ -115,6 +115,7 @@
         seccion.classList.remove("oculto");
         document.querySelectorAll(".nav-item").forEach(boton => boton.classList.remove("activo"));
         window.scrollTo(0, 0);
+        pedirAcomodarCabeceras();
     }
 
     function volverDesde(seccion) {
@@ -448,6 +449,31 @@
         dibujar(primeros);
     }
 
+    // Cabeceras en un celular chico (T152): si el título no entra al lado de
+    // "Avisos" y "?", pasa a su propio renglón debajo de los botones, en vez
+    // de empujarlos fuera de la pantalla. Se mira después de cada toque (que
+    // es lo que abre las pantallas) y al girar el celular.
+    function acomodarCabeceras() {
+        document.querySelectorAll("body > section:not(.oculto) > header").forEach(cabecera => {
+            const titulo = cabecera.querySelector(":scope > div > h1");
+            if (!titulo) return;
+            cabecera.classList.remove("cabeceraDosFilas");
+            if (titulo.scrollWidth > titulo.clientWidth + 1) cabecera.classList.add("cabeceraDosFilas");
+        });
+    }
+    let cabecerasPendientes = false;
+    function pedirAcomodarCabeceras() {
+        if (cabecerasPendientes) return;
+        cabecerasPendientes = true;
+        requestAnimationFrame(() => setTimeout(() => {
+            cabecerasPendientes = false;
+            acomodarCabeceras();
+        }, 0));
+    }
+    document.addEventListener("click", pedirAcomodarCabeceras, true);
+    window.addEventListener("resize", pedirAcomodarCabeceras);
+    window.addEventListener("load", pedirAcomodarCabeceras);
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
@@ -455,6 +481,6 @@
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
         hoja, modal, preguntar, cerrar, deshacer,
-        avisoInicio, dibujarDeATandas, cortarTandas
+        avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();
