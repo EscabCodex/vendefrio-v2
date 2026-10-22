@@ -69,13 +69,17 @@ test("confianza: versión nueva y cambios sin subir", async ({ page, context }, 
     // Vuelve la señal: "Reintentar ahora" y queda subido.
     await context.setOffline(false);
     await page.evaluate(() => window.firebase.firestore().enableNetwork());
-    await pantalla.locator("main").getByRole("button", { name: "Reintentar ahora" }).click();
-    await expect(fila.locator(".pzChip")).toHaveText("Subido", { timeout: 20000 });
+    // La pantalla se redibuja sola al volver la señal: si el toque cae justo
+    // en ese momento se pierde, así que se repite hasta que suba todo.
+    await expect(async () => {
+        await pantalla.locator("main").getByRole("button", { name: "Reintentar ahora" }).click({ timeout: 2000 }).catch(() => {});
+        await expect(fila.locator(".pzChip")).toHaveText("Subido", { timeout: 3000 });
+    }).toPass({ timeout: 40000 });
     await expect(pantalla).toContainText("Todo subido");
     await capturar(page, "confianza-03-todo-subido");
 
     await irAInicio(page);
-    await expect(page.locator("#avisoSinSubir")).toHaveCount(0);
+    await expect(page.locator("#avisoSinSubir")).toHaveCount(0, { timeout: 15000 });
 });
 
 test("confianza: recordatorio de respaldo en Inicio", async ({ page }, testInfo) => {

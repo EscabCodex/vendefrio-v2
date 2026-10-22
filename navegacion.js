@@ -17,6 +17,7 @@
     const PERFILES = { bicicleta: "routed-bike", moto: "routed-car", auto: "routed-car", pie: "routed-foot" };
     const VELOCIDAD_SIN_RUTA = { bicicleta: 4.2, moto: 8.3, auto: 8.3, pie: 1.3 }; // m/s, para estimar sin camino
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
+    const DISTANCIA_LLEGANDO = 150;   // m: se agranda la hoja (T135)
     const DISTANCIA_FUERA = 35;       // m: te saliste del camino
     const ESPERA_RECALCULO = 5000;    // ms entre dos cálculos del camino
     const ADELANTO_GPS = 1.5;         // s: el GPS llega tarde; se adelanta según la velocidad
@@ -43,6 +44,8 @@
     let fueraDelCamino = 0;
     let seguir = true;
     let llego = false;
+    let llegandoAvisado = false; // la hoja se agrandó sola en esta parada (T135)
+    let desplazoHoja = 0;        // px: con la hoja abierta, tu posición va más arriba
     const pasosAnunciados = new Map();
     let proximaManiobra = -1;    // índice del paso que viene (para la voz)
 
@@ -484,10 +487,16 @@
                     <button type="button" class="botonChicoNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 20)}</button>
                 </div>
                 <div class="hojaResumen">
-                    <div class="hojaTiempo"><strong class="tiempoNavegacion"></strong><small class="detalleTiempo"></small></div>
                     <div class="hojaComercio"><div class="hojaAvatar"></div><div><h2 class="nombreNavegacion"></h2><p class="direccionNavegacion"></p></div></div>
+                    <div class="hojaTiempo"><strong class="tiempoNavegacion"></strong><small class="detalleTiempo"></small></div>
+                    <div class="chipsHoja"></div>
                 </div>
                 <div class="hojaAcciones"></div>
+                <div class="llegueHoja"></div>
+                <div class="pieHoja">
+                    <button type="button" class="botonPieHoja saltearNavegacion">Saltear parada</button>
+                    <button type="button" class="botonPieHoja salirNavegacion">Salir</button>
+                </div>
                 <div class="hojaMas">
                     <div class="hojaPedidos"></div>
                     <div class="hojaParadas"></div>
@@ -511,10 +520,12 @@
         // Voz y salir están flotando y, con la hoja abierta, arriba de la hoja.
         pantalla.querySelectorAll(".cerrarNavegacion").forEach(boton => boton.addEventListener("click", () => cerrar()));
         pantalla.querySelectorAll(".vozNavegacion").forEach(boton => boton.addEventListener("click", alternarVoz));
+        pantalla.querySelector(".saltearNavegacion").addEventListener("click", saltearParada);
+        pantalla.querySelector(".salirNavegacion").addEventListener("click", () => cerrar());
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
             seguir = true;
             pantalla.querySelector(".centrarNavegacion").classList.add("oculto");
-            if (posicion && mapa) mapa.setView(posicion, Math.max(mapa.getZoom(), zoomPreferido()));
+            if (posicion && mapa) mapa.setView(puntoParaCentrar(), Math.max(mapa.getZoom(), zoomPreferido()));
         });
 
         // La atribución del mapa (© OpenStreetMap) va siempre justo debajo de
@@ -561,6 +572,32 @@
         pantalla.classList.toggle("conHojaAbierta", abierta);
         pantalla.querySelector(".asaHoja").setAttribute("aria-expanded", abierta ? "true" : "false");
         pantalla.querySelector(".paradaActualNavegacion").setAttribute("aria-expanded", abierta ? "true" : "false");
+        // Con la hoja abierta, tu posición va en el pedazo de mapa que queda
+        // entre la tarjeta de arriba y la hoja (T135). Se mide una vez, al
+        // abrirla, y no con cada lectura del GPS.
+        desplazoHoja = 0;
+        if (!mapa) return;
+        if (abierta) {
+            // La hoja llega hasta «Salir» y asoma lo que sigue (pedidos y
+            // paradas, deslizando la hoja): así queda mapa a la vista.
+            const pie = hoja.querySelector(".pieHoja");
+            hoja.style.maxHeight = "";
+            const hasta = pie.offsetTop + pie.offsetHeight + 34;
+            if (hasta < hoja.offsetHeight) hoja.style.maxHeight = hasta + "px";
+            const arriba = pantalla.querySelector(".cartelManiobra").getBoundingClientRect().bottom;
+            const abajo = hoja.getBoundingClientRect().top;
+            if (abajo > arriba) desplazoHoja = Math.round(mapa.getSize().y / 2 - (arriba + abajo) / 2);
+        }
+        if (seguir && posicion) {
+            mapa.stop();
+            mapa.panTo(puntoParaCentrar(), { animate: false });
+        }
+    }
+
+    // Dónde va el centro del mapa para que tu posición se vea.
+    function puntoParaCentrar() {
+        if (!desplazoHoja || !mapa) return posicion;
+        return mapa.containerPointToLatLng(mapa.latLngToContainerPoint(posicion).add([0, desplazoHoja]));
     }
 
     function dibujarBotonVoz() {
@@ -639,21 +676,26 @@
         const comercio = paradaActual();
         if (!comercio) return;
         pantalla.querySelector(".nombreNavegacion").textContent = comercio.nombre;
-        pantalla.querySelector(".direccionNavegacion").textContent = comercio.direccion || "Sin dirección cargada";
+        pantalla.querySelector(".direccionNavegacion").textContent = (comercio.direccion || "Sin dirección cargada") +
+            (paradas.length > 1 ? " · parada " + (indiceParada + 1) + " de " + paradas.length : "");
         const avatar = pantalla.querySelector(".hojaAvatar");
         avatar.textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
         if (typeof colorAvatar === "function") avatar.style.background = colorAvatar(comercio.nombre);
         const google = pantalla.querySelector(".abrirEnGoogle");
         google.href = enlaceGoogle(comercio);
 
-        // Accesos: llamar, WhatsApp, cargar pedido y "Llegué".
+        // Lo que hay para entregar y para cobrar acá (T135), si podés ver la plata.
+        const pendientes = pedidosParaEntregar(comercio);
+        dibujarChips(comercio, pendientes);
+
+        // Accesos: llamar, WhatsApp, ya llego y cargar pedido.
         const acciones = pantalla.querySelector(".hojaAcciones");
         acciones.innerHTML = "";
         const acceso = (icono, texto, etiqueta) => {
             const elemento = document.createElement(etiqueta || "button");
             elemento.className = "accesoNavegacion";
             if (elemento.tagName === "BUTTON") elemento.type = "button";
-            elemento.innerHTML = '<span class="accesoNavegacionIcono">' + window.icono(icono, 22) + "</span><small></small>";
+            elemento.innerHTML = '<span class="accesoNavegacionIcono">' + window.icono(icono, 20) + "</span><small></small>";
             elemento.querySelector("small").textContent = texto;
             acciones.appendChild(elemento);
             return elemento;
@@ -685,11 +727,23 @@
             cerrar();
             if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
         });
-        const llegue = acceso("check", "Llegué");
-        llegue.classList.add("accesoNavegacionPrincipal");
-        llegue.addEventListener("click", marcarLlegada);
 
-        dibujarPedidosPendientes(comercio);
+        // "Llegué" se desliza, para no marcarlo sin querer manejando (T135).
+        const llegue = pantalla.querySelector(".llegueHoja");
+        llegue.innerHTML = "";
+        if (typeof window.seguimientoVendeFrio?.crearDeslizador === "function") {
+            llegue.appendChild(window.seguimientoVendeFrio.crearDeslizador("Deslizá para marcar Llegué", marcarLlegada));
+        } else {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "btnAccion llegueNavegacion";
+            boton.textContent = "Llegué";
+            boton.addEventListener("click", marcarLlegada);
+            llegue.appendChild(boton);
+        }
+        pantalla.querySelector(".pieHoja").classList.toggle("unaSola", paradas.length < 2);
+
+        dibujarPedidosPendientes(pendientes);
         dibujarParadas();
         dibujarTarjetasParada();
         dibujarBarraDelDia();
@@ -754,17 +808,39 @@
     }
 
     // Pedidos de este comercio que todavía no se entregaron (en la nube).
-    function dibujarPedidosPendientes(comercio) {
-        const caja = pantalla.querySelector(".hojaPedidos");
-        caja.innerHTML = "";
+    function pedidosParaEntregar(comercio) {
         const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
         const normalizar = texto => String(texto || "").trim().toLocaleLowerCase("es");
-        const pendientes = historial.filter(pedido => {
+        return historial.filter(pedido => {
             if (pedido.eliminado === true) return false;
             if (normalizar(pedido.comercio) !== normalizar(comercio.nombre)) return false;
             const estado = typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : "";
             return estado && !["entregado", "cancelado"].includes(estado);
         });
+    }
+
+    // "Pedido $ …" y "Cobrar saldo $ …", solo si podés ver la plata.
+    function dibujarChips(comercio, pendientes) {
+        const caja = pantalla.querySelector(".chipsHoja");
+        caja.innerHTML = "";
+        if (window.verPlataVendeFrio && !window.verPlataVendeFrio.puedoVer()) return;
+        const plata = valor => window.piezas?.plata ? window.piezas.plata(valor) : "$ " + Math.round(valor);
+        const chip = (clase, texto) => {
+            const elemento = document.createElement("span");
+            elemento.className = "chipHoja " + clase;
+            elemento.textContent = texto;
+            caja.appendChild(elemento);
+        };
+        const total = typeof totalDelPedido === "function"
+            ? pendientes.reduce((suma, pedido) => suma + (Number(totalDelPedido(pedido)?.total) || 0), 0) : 0;
+        if (total > 0) chip("chipPedido", "Pedido " + plata(total));
+        const saldo = Number(window.saldosVendeFrio?.cuentaDe?.(comercio.nombre)?.total) || 0;
+        if (saldo > 0) chip("chipSaldo", "Cobrar saldo " + plata(saldo));
+    }
+
+    function dibujarPedidosPendientes(pendientes) {
+        const caja = pantalla.querySelector(".hojaPedidos");
+        caja.innerHTML = "";
         const titulo = document.createElement("strong");
         titulo.textContent = pendientes.length ? "Para entregar acá" : "Sin pedidos para entregar acá";
         caja.appendChild(titulo);
@@ -832,6 +908,7 @@
         if (!llego && alDestino <= DISTANCIA_LLEGADA) {
             llego = true;
             pantalla.classList.add("llego");
+            pantalla.classList.remove("llegando");
             dibujarManiobra({ maniobra: { tipo: "arrive", lado: "" } }, 0);
             hablar("Llegaste a " + comercio.nombre);
             abrirHoja(true);
@@ -856,6 +933,28 @@
 
         // Próxima maniobra.
         const proximo = camino.pasos.find((paso, indice) => indice > 0 && paso.metro > recorrido + 8);
+
+        // «Llegando» (T135): sin más giros y a menos de 150 m, la tarjeta de
+        // arriba dice de qué lado queda y la hoja se agranda sola, una vez
+        // por parada (si la cerrás, no vuelve). Por distancia y no al frenar,
+        // para que no salte en cada semáforo.
+        const llegando = (!proximo || proximo.maniobra.tipo === "arrive") && falta <= DISTANCIA_LLEGANDO;
+        pantalla.classList.toggle("llegando", llegando);
+        if (llegando) {
+            const lado = ladoDeLlegada(proximo || camino.pasos[camino.pasos.length - 1]);
+            dibujarManiobra({ maniobra: { tipo: "arrive", lado: "" } }, falta, null, {
+                distancia: "Llegando · " + textoDistancia(falta),
+                texto: lado ? "El comercio queda " + lado : "Llegás a " + comercio.nombre
+            });
+            if (!llegandoAvisado) {
+                llegandoAvisado = true;
+                const deEstaParada = comercio;
+                hablar("Llegando a " + comercio.nombre + (lado ? ". Queda " + lado : ""),
+                    { clave: "llegando", vigente: () => paradaActual() === deEstaParada && !llego });
+                abrirHoja(true);
+            }
+            return;
+        }
         if (!proximo) {
             dibujarManiobra({ maniobra: { tipo: "arrive", lado: "" } }, falta);
             return;
@@ -875,6 +974,8 @@
         if (recienCalculado && !dichos.has("inicio")) {
             dichos.add("inicio");
             hablar((hasta > 40 ? "En " + textoDistanciaHablada(hasta) + ", " : "") + texto.charAt(0).toLowerCase() + texto.slice(1), voz);
+        } else if (proximo.maniobra.tipo === "arrive") {
+            // La llegada la avisa «Llegando» (T135).
         } else if (hasta <= Math.max(220, velocidad * 18) && hasta > Math.max(60, velocidad * 7) && !dichos.has("lejos")) {
             dichos.add("lejos");
             hablar("En " + textoDistanciaHablada(hasta) + ", " + texto.charAt(0).toLowerCase() + texto.slice(1), voz);
@@ -885,8 +986,17 @@
         pasosAnunciados.set(clave, dichos);
     }
 
+    // De qué lado de la calle queda el comercio, según el mapa.
+    function ladoDeLlegada(paso) {
+        const lado = paso && paso.maniobra ? paso.maniobra.lado : "";
+        if (lado.includes("right")) return "a tu derecha";
+        if (lado.includes("left")) return "a tu izquierda";
+        return "";
+    }
+
     // El dibujo de la flecha se cambia solo cuando cambia la maniobra.
-    function dibujarManiobra(paso, metros, despues) {
+    // "textos" reemplaza la distancia y la indicación («Llegando», T135).
+    function dibujarManiobra(paso, metros, despues, textos) {
         const comercio = paradaActual();
         dibujarCarriles(paso);
         ponerTexto(pantalla.querySelector(".luegoManiobra"), textoLuego(despues));
@@ -897,8 +1007,8 @@
             icono.innerHTML = flecha;
             icono.dataset.flecha = flecha;
         }
-        ponerTexto(pantalla.querySelector(".distanciaManiobra"), paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros));
-        ponerTexto(pantalla.querySelector(".textoManiobra"), indicacion(paso, comercio ? comercio.nombre : ""));
+        ponerTexto(pantalla.querySelector(".distanciaManiobra"), textos ? textos.distancia : paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros));
+        ponerTexto(pantalla.querySelector(".textoManiobra"), textos ? textos.texto : indicacion(paso, comercio ? comercio.nombre : ""));
     }
 
     // -------------------------------------------------
@@ -944,8 +1054,8 @@
         // Mover el mapa por un par de metros no se nota y redibuja el camino
         // entero (T141): se mueve cuando el punto se corrió unos píxeles.
         if (seguir && mapa && camino && !llego) {
-            const corrido = mapa.latLngToContainerPoint(posicion).distanceTo(mapa.getSize().divideBy(2));
-            if (corrido > 4) mapa.panTo(posicion, { animate: velocidad < 8, duration: 0.4 });
+            const corrido = mapa.latLngToContainerPoint(posicion).distanceTo(mapa.getSize().divideBy(2).subtract([0, desplazoHoja]));
+            if (corrido > 4) mapa.panTo(puntoParaCentrar(), { animate: velocidad < 8, duration: 0.4 });
         }
         actualizar(false);
     }
@@ -976,10 +1086,11 @@
         const comercio = paradaActual();
         camino = null;
         llego = false;
+        llegandoAvisado = false;
         seguir = sigueSolo();
         pantalla.querySelector(".centrarNavegacion")?.classList.toggle("oculto", seguir);
         pasosAnunciados.clear();
-        pantalla.classList.remove("llego");
+        pantalla.classList.remove("llego", "llegando");
         abrirHoja(false);
         avisar("");
         if (marcadorDestino) marcadorDestino.remove();
@@ -1007,6 +1118,19 @@
         }
         hablar(paradas.length > 1 ? "Terminaste el recorrido" : "");
         cerrar({ despedida: true });
+    }
+
+    // Saltear parada (T135): pasa a la que sigue sin marcar la visita. En
+    // la última, termina.
+    function saltearParada() {
+        if (!paradaActual()) return;
+        if (indiceParada < paradas.length - 1) {
+            indiceParada++;
+            hablar("Vamos a " + paradaActual().nombre);
+            empezarParada();
+            return;
+        }
+        cerrar();
     }
 
     // Abre la navegación a uno o varios comercios (por nombre). Devuelve
@@ -1086,5 +1210,5 @@
         }
     }, true);
 
-    window.navegacionVendeFrio = { abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, paradaActual };
+    window.navegacionVendeFrio = { abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, saltear: saltearParada, paradaActual };
 }());

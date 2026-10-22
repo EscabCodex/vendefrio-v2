@@ -694,10 +694,6 @@ html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaMasOpciones{mi
 .queHacerOpcion:active{transform:scale(.99);}
 html[data-tema="oscuro"] .queHacerIcono{color:var(--acento);}
 html[data-tema="oscuro"] .queHacerOpcion.principal .queHacerIcono{background:rgba(0,0,0,.12);color:var(--acento-txt);}
-/* La regla general del modo oscuro pinta todo texto claro: sobre el verde
-   lima de "Cargar un pedido" y de la etapa elegida en Pedidos no se leía
-   (T152). */
-html[data-tema="oscuro"] :is(.queHacerOpcion.principal, .filtroEtapa.activo) :is(span,strong,small){color:var(--acento-txt)!important;}
 /* Etapa 8: Más en tres grupos con título. */
 .masGruposAccesos .masGrupoTitulo:first-child{margin-top:4px;}
 /* Etapa 8: la ficha del pedido con los cuatro pasos. */

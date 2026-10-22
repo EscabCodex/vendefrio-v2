@@ -20,6 +20,15 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "diseno-01-inicio");
+    // T153: el texto sobre el color de acento se lee (en oscuro era claro
+    // sobre lima).
+    const contraste = await page.evaluate(() => {
+        const luz = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const boton = document.querySelector(".queHacerOpcion.principal");
+        const a = luz(getComputedStyle(boton.querySelector("strong")).color), b = luz(getComputedStyle(boton).backgroundColor);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    });
+    expect(contraste).toBeGreaterThan(4);
 
     await irAPedidos(page);
     await capturar(page, "diseno-02-pedidos");
