@@ -6,7 +6,8 @@
 // de quien visita). Arriba, la próxima maniobra; con voz si está prendida.
 //
 // Todo gratis y sin claves: mapas de OpenStreetMap (mapa.js), el camino lo
-// calcula el OSRM público de FOSSGIS (routing.openstreetmap.de) y la voz es
+// calcula el OSRM público de FOSSGIS (routing.openstreetmap.de), o su
+// Valhalla si se elige en Más (T163, con OSRM de respaldo), y la voz es
 // la del celular (speechSynthesis). Si algo falla, se ve la línea recta y
 // queda "Abrir en Google Maps".
 // =====================================================
@@ -14,6 +15,9 @@
 (function () {
     const CLAVE_PREFERENCIAS = "vendefrio_preferencias";
     const SERVIDOR_RUTAS = "https://routing.openstreetmap.de/";
+    const SERVIDOR_VALHALLA = "https://valhalla1.openstreetmap.de/"; // T163, mismo grupo (FOSSGIS)
+    const ESPERA_VALHALLA = 6000;     // ms: si no contesta, va el OSRM
+    const PAUSA_VALHALLA = 120000;    // ms: después de una falla, un rato con OSRM
     const PERFILES = { bicicleta: "routed-bike", moto: "routed-car", auto: "routed-car", pie: "routed-foot" };
     const VELOCIDAD_SIN_RUTA = { bicicleta: 4.2, moto: 8.3, auto: 8.3, pie: 1.3 }; // m/s, para estimar sin camino
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
@@ -50,6 +54,7 @@
     const pasosAnunciados = new Map();
     let proximaManiobra = -1;    // índice del paso que viene (para la voz)
     let calleActual = "";        // por dónde vas, para los avisos del equipo (T139)
+    let valhallaEnPausaHasta = 0; // T163: si Valhalla falló, se usa OSRM un rato
 
     // -------------------------------------------------
     // Preferencias (Más > Cómo hacés el recorrido)
@@ -383,7 +388,7 @@
     }
 
     // -------------------------------------------------
-    // Camino (OSRM)
+    // Camino (OSRM, o Valhalla si se eligió en Más: T163)
     // -------------------------------------------------
 
     function caminoRecto(desde, hasta) {
@@ -397,6 +402,11 @@
         const total = acumulado[acumulado.length - 1];
         // Cada maniobra, en qué metro del camino está.
         pasos.forEach(paso => {
+            // Valhalla dice en qué punto de la línea está cada maniobra (T163).
+            if (Number.isInteger(paso.indice) && paso.indice < puntos.length) {
+                paso.metro = acumulado[paso.indice];
+                return;
+            }
             let mejor = 0;
             let menor = Infinity;
             puntos.forEach((p, i) => {
@@ -408,7 +418,48 @@
         return { puntos, acumulado, distancia: total, duracion, pasos, recto: Boolean(recto) };
     }
 
+    // Cada servidor contesta distinto; los dos se pasan a la misma forma:
+    // opciones de camino { puntos, duracion, pasos }, la primera es la mejor.
     async function pedirCamino(desde, hasta) {
+        // T163: Valhalla (con modo moto de verdad), si se eligió en Más; si
+        // no contesta o tarda, va el OSRM de siempre.
+        if (usaValhalla()) {
+            try {
+                return elegirCamino(await opcionesValhalla(desde, hasta));
+            } catch (error) {
+                valhallaEnPausaHasta = Date.now() + PAUSA_VALHALLA;
+            }
+        }
+        return elegirCamino(await opcionesOsrm(desde, hasta));
+    }
+
+    // Calle cortada o choque avisados por el equipo (T139): se piden otros
+    // recorridos y va el primero que no pasa por ahí.
+    function bloqueosEnCalle() {
+        return window.avisosCalleVendeFrio?.bloqueos?.() || [];
+    }
+
+    function elegirCamino(opciones) {
+        if (!opciones.length) throw new Error("Sin camino");
+        let elegida = opciones[0];
+        let desvio = null;
+        const bloqueos = bloqueosEnCalle();
+        if (bloqueos.length) {
+            const corta = opcion => bloqueos.find(aviso => lejosDeLinea([aviso.lat, aviso.lng], opcion.puntos) <= DISTANCIA_AVISO);
+            const enElCamino = corta(opciones[0]);
+            if (enElCamino) {
+                const libre = opciones.find(opcion => !corta(opcion));
+                if (libre) elegida = libre;
+                desvio = { aviso: enElCamino, otro: Boolean(libre), extra: libre ? libre.duracion - opciones[0].duracion : 0 };
+            }
+        }
+        const armado = armarCamino(elegida.puntos, elegida.duracion, elegida.pasos, false);
+        armado.desvio = desvio;
+        armado.servidor = elegida.servidor;
+        return armado;
+    }
+
+    async function opcionesOsrm(desde, hasta) {
         const perfil = PERFILES[vehiculo()];
         const url = SERVIDOR_RUTAS + perfil + "/route/v1/driving/" +
             desde[1] + "," + desde[0] + ";" + hasta[1] + "," + hasta[0] +
@@ -416,50 +467,146 @@
         // «Sin autopistas» elegido en la vista previa de Rutas (T136); si el
         // servidor no lo acepta, va el camino de siempre.
         const sinAutopistas = preferencias().sinAutopistas === true && perfil === "routed-car";
-        // Calle cortada o choque avisados por el equipo (T139): se piden otros
-        // recorridos y va el primero que no pasa por ahí.
-        const bloqueos = window.avisosCalleVendeFrio?.bloqueos?.() || [];
-        const conOtros = bloqueos.length ? "&alternatives=3" : "";
+        const conOtros = bloqueosEnCalle().length ? "&alternatives=3" : "";
         let respuesta = await fetch(url + conOtros + (sinAutopistas ? "&exclude=motorway" : ""));
         if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url + conOtros);
         if (!respuesta.ok) throw new Error("Sin camino");
         const datos = await respuesta.json();
         const rutas = datos && Array.isArray(datos.routes)
             ? datos.routes.filter(ruta => ruta && ruta.geometry && Array.isArray(ruta.geometry.coordinates)) : [];
-        if (!rutas.length) throw new Error("Sin camino");
-        let ruta = rutas[0];
-        let desvio = null;
-        if (bloqueos.length) {
-            const lineaDe = opcion => opcion.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-            const corta = opcion => bloqueos.find(aviso => lejosDeLinea([aviso.lat, aviso.lng], lineaDe(opcion)) <= DISTANCIA_AVISO);
-            const enElCamino = corta(rutas[0]);
-            if (enElCamino) {
-                const libre = rutas.find(opcion => !corta(opcion));
-                if (libre) ruta = libre;
-                desvio = { aviso: enElCamino, otro: Boolean(libre), extra: libre ? (Number(libre.duration) || 0) - (Number(rutas[0].duration) || 0) : 0 };
+        return rutas.map(ruta => {
+            const pasos = [];
+            (ruta.legs || []).forEach(tramo => (tramo.steps || []).forEach(paso => {
+                const maniobra = paso.maneuver || {};
+                if (!Array.isArray(maniobra.location)) return;
+                // Carriles (T134): solo donde el mapa los tiene cargados.
+                const cruce = Array.isArray(paso.intersections) ? paso.intersections[0] : null;
+                const carriles = cruce && Array.isArray(cruce.lanes) ? cruce.lanes.map(carril => ({
+                    sirve: carril.valid === true,
+                    hacia: Array.isArray(carril.indications) ? String(carril.indications[0] || "straight") : "straight"
+                })) : [];
+                pasos.push({
+                    lugar: [maniobra.location[1], maniobra.location[0]],
+                    calle: String(paso.name || "").trim(),
+                    maniobra: { tipo: String(maniobra.type || ""), lado: String(maniobra.modifier || ""), salida: Number(maniobra.exit) || 0 },
+                    carriles: carriles.length >= 2 && carriles.some(carril => carril.sirve) ? carriles : []
+                });
+            }));
+            return {
+                puntos: ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+                duracion: Number(ruta.duration) || 0,
+                pasos,
+                servidor: "osrm"
+            };
+        });
+    }
+
+    // -------------------------------------------------
+    // Camino con Valhalla (T163)
+    // -------------------------------------------------
+
+    function usaValhalla() {
+        return preferencias().servidorCaminos === "valhalla" && Date.now() >= valhallaEnPausaHasta;
+    }
+
+    // La línea viene comprimida (polyline con 6 decimales).
+    function decodificarLinea(texto) {
+        const puntos = [];
+        let indice = 0;
+        let lat = 0;
+        let lng = 0;
+        while (indice < texto.length) {
+            for (const eje of [0, 1]) {
+                let resultado = 0;
+                let corrimiento = 0;
+                let byte;
+                do {
+                    byte = texto.charCodeAt(indice++) - 63;
+                    resultado |= (byte & 0x1f) << corrimiento;
+                    corrimiento += 5;
+                } while (byte >= 0x20 && indice < texto.length);
+                const cambio = resultado & 1 ? ~(resultado >> 1) : resultado >> 1;
+                if (eje === 0) lat += cambio; else lng += cambio;
             }
+            puntos.push([lat / 1e6, lng / 1e6]);
         }
-        const puntos = ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        return puntos;
+    }
+
+    // Las maniobras de Valhalla vienen numeradas; se pasan a las mismas del
+    // OSRM, así las indicaciones salen con las frases de siempre.
+    const MANIOBRAS_VALHALLA = {
+        1: ["depart", ""], 2: ["depart", ""], 3: ["depart", ""],
+        4: ["arrive", ""], 5: ["arrive", ""], 6: ["arrive", ""],
+        7: ["new name", "straight"], 8: ["continue", "straight"],
+        9: ["turn", "slight right"], 10: ["turn", "right"], 11: ["turn", "sharp right"],
+        12: ["turn", "uturn"], 13: ["turn", "uturn"],
+        14: ["turn", "sharp left"], 15: ["turn", "left"], 16: ["turn", "slight left"],
+        17: ["on ramp", "straight"], 18: ["on ramp", "right"], 19: ["on ramp", "left"],
+        20: ["off ramp", "right"], 21: ["off ramp", "left"],
+        22: ["fork", "straight"], 23: ["fork", "right"], 24: ["fork", "left"],
+        25: ["merge", "straight"], 26: ["roundabout", ""],
+        28: ["continue", "straight"], 29: ["continue", "straight"],
+        37: ["merge", "right"], 38: ["merge", "left"]
+    };
+    const COSTOS_VALHALLA = { moto: "motorcycle", auto: "auto", bicicleta: "bicycle", pie: "pedestrian" };
+
+    function pasosValhalla(maniobras, puntos) {
         const pasos = [];
-        (ruta.legs || []).forEach(tramo => (tramo.steps || []).forEach(paso => {
-            const maniobra = paso.maneuver || {};
-            if (!Array.isArray(maniobra.location)) return;
-            // Carriles (T134): solo donde el mapa los tiene cargados.
-            const cruce = Array.isArray(paso.intersections) ? paso.intersections[0] : null;
-            const carriles = cruce && Array.isArray(cruce.lanes) ? cruce.lanes.map(carril => ({
-                sirve: carril.valid === true,
-                hacia: Array.isArray(carril.indications) ? String(carril.indications[0] || "straight") : "straight"
-            })) : [];
+        maniobras.forEach((maniobra, i) => {
+            const tipo = MANIOBRAS_VALHALLA[maniobra.type];
+            // Salir de la rotonda ya se dijo al entrar ("tomá la segunda salida").
+            if (!tipo) return;
+            const indice = Math.min(Math.max(Number(maniobra.begin_shape_index) || 0, 0), puntos.length - 1);
+            const calles = Array.isArray(maniobra.street_names) && maniobra.street_names.length ? maniobra.street_names
+                : tipo[0] === "roundabout" && Array.isArray(maniobras[i + 1]?.street_names) ? maniobras[i + 1].street_names : [];
             pasos.push({
-                lugar: [maniobra.location[1], maniobra.location[0]],
-                calle: String(paso.name || "").trim(),
-                maniobra: { tipo: String(maniobra.type || ""), lado: String(maniobra.modifier || ""), salida: Number(maniobra.exit) || 0 },
-                carriles: carriles.length >= 2 && carriles.some(carril => carril.sirve) ? carriles : []
+                lugar: puntos[indice],
+                indice,
+                calle: String(calles[0] || "").trim(),
+                maniobra: { tipo: tipo[0], lado: tipo[1], salida: Number(maniobra.roundabout_exit_count) || 0 },
+                carriles: []
             });
-        }));
-        const armado = armarCamino(puntos, Number(ruta.duration) || 0, pasos, false);
-        armado.desvio = desvio;
-        return armado;
+        });
+        return pasos;
+    }
+
+    async function opcionesValhalla(desde, hasta) {
+        const costo = COSTOS_VALHALLA[vehiculo()];
+        const pedido = {
+            locations: [{ lat: desde[0], lon: desde[1] }, { lat: hasta[0], lon: hasta[1] }],
+            costing: costo,
+            directions_options: { units: "kilometers", language: "es-ES" }
+        };
+        if (preferencias().sinAutopistas === true && (costo === "auto" || costo === "motorcycle")) {
+            pedido.costing_options = { [costo]: { use_highways: 0 } };
+        }
+        if (bloqueosEnCalle().length) pedido.alternates = 2;
+        // Si tarda mucho, se corta y va el OSRM (la navegación no se queda esperando).
+        const corte = typeof AbortController === "function" ? new AbortController() : null;
+        const reloj = corte ? setTimeout(() => corte.abort(), ESPERA_VALHALLA) : 0;
+        try {
+            const respuesta = await fetch(SERVIDOR_VALHALLA + "route?json=" + encodeURIComponent(JSON.stringify(pedido)),
+                corte ? { signal: corte.signal } : undefined);
+            if (!respuesta.ok) throw new Error("Sin camino");
+            const datos = await respuesta.json();
+            const viajes = [datos && datos.trip].concat((datos && Array.isArray(datos.alternates) ? datos.alternates : []).map(otro => otro && otro.trip));
+            return viajes.filter(viaje => viaje && Array.isArray(viaje.legs) && viaje.legs.length).map(viaje => {
+                const puntos = [];
+                const pasos = [];
+                viaje.legs.forEach(tramo => {
+                    const linea = decodificarLinea(String(tramo.shape || ""));
+                    const base = puntos.length;
+                    pasosValhalla(Array.isArray(tramo.maneuvers) ? tramo.maneuvers : [], linea)
+                        .forEach(paso => pasos.push({ ...paso, indice: paso.indice + base }));
+                    linea.forEach(punto => puntos.push(punto));
+                });
+                if (puntos.length < 2) return null;
+                return { puntos, duracion: Number(viaje.summary && viaje.summary.time) || 0, pasos, servidor: "valhalla" };
+            }).filter(Boolean);
+        } finally {
+            clearTimeout(reloj);
+        }
     }
 
     async function calcularCamino() {

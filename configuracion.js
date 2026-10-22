@@ -88,7 +88,7 @@
         movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
         vibrar: true, precios: true, iaCelular: false, iaNube: false,
-        vehiculo: "auto", navegador: "app", voz: "si", velocidadVoz: "normal",
+        vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
         resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
     };
@@ -1850,6 +1850,9 @@
                     ]) +
                     filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
                         ["app", "VendeFrío"], ["google", "Google Maps"]
+                    ]) +
+                    filaSegmento("mapa", "violeta", "Servidor de caminos", "Valhalla tiene modo moto de verdad. Si no contesta, va OSRM", "servidorCaminos", [
+                        ["osrm", "OSRM"], ["valhalla", "Valhalla"]
                     ])) +
                 grupo("Voz",
                     filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [
