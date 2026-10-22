@@ -60,6 +60,14 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     await expect(terminos.getByText("No es asesoramiento legal.")).toBeVisible();
     await expect(terminos.getByRole("link", { name: "vendefrio.app@gmail.com" }).first()).toHaveAttribute("href", "mailto:vendefrio.app@gmail.com");
     await terminos.close();
+
+    // Escribinos: el mail de la app.
+    const filaMail = page.getByRole("button", { name: "Escribinos" });
+    await filaMail.evaluate(fila => fila.scrollIntoView({ block: "center" }));
+    await expect(filaMail).toContainText("vendefrio.app@gmail.com");
+    await capturar(page, "bienvenida-05-escribinos");
+    await filaMail.click();
+    await expect(filaMail).toBeVisible();
 });
 
 test("bienvenida: la presentación", async ({ page }) => {

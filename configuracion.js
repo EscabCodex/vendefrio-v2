@@ -2103,9 +2103,10 @@
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
                     filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
-                    // T87: presentación y términos (borrador hasta que lo revise un abogado, M19).
+                    // T87: presentación y términos (repaso casero en T159) y el mail de la app.
                     filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
-                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"')) +
+                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"') +
+                    filaAccion("correo", "azul", "Escribinos", "vendefrio.app@gmail.com", 'data-accion="escribirnos"')) +
                 // T62: informar un problema (y, el dueño, ver los informados).
                 grupo("Problemas",
                     filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
@@ -2705,6 +2706,7 @@
         if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
         if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
         if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
+        if (accion === "escribirnos") location.href = "mailto:vendefrio.app@gmail.com?subject=" + encodeURIComponent("Consulta sobre VendeFrío");
         if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
