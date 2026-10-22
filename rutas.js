@@ -2101,6 +2101,21 @@ function cargaParaParada(nombre) {
     return carga ? { pedidos: carga.pedidos.slice(), unidades: carga.unidades, total: carga.total } : { pedidos: [], unidades: 0, total: 0 };
 }
 
+// Lo que debe cada comercio (saldos.js). Pedirlo por parada leía el historial
+// entero cada vez: con 80 paradas, optimizar tardaba 12 s en un celular
+// barato. Se arma una vez por dibujo, como los pedidos (T141).
+let indiceSaldosRuta = null;
+
+function saldoParaParada(nombre) {
+    if (!indiceSaldosRuta) {
+        indiceSaldosRuta = new Map();
+        const cuentas = window.saldosVendeFrio?.cuentas?.() || [];
+        cuentas.forEach(grupo => indiceSaldosRuta.set(String(grupo.nombre || "").trim().toLocaleLowerCase("es"), Number(grupo.total) || 0));
+        setTimeout(() => { indiceSaldosRuta = null; }, 0);
+    }
+    return indiceSaldosRuta.get(String(nombre || "").trim().toLocaleLowerCase("es")) || 0;
+}
+
 // Minutos aproximados en auto (línea recta: más lento en la ciudad).
 function minutosAproximados(metros) {
     const km = (Number(metros) || 0) / 1000;
@@ -2179,7 +2194,7 @@ function mostrarRutaEnLista() {
     rutaOrdenada.forEach((comercio, indice) => {
         const carga = cargaParaParada(comercio.nombre);
         const hecha = paradaHecha(comercio);
-        const saldo = verPlata ? Number(window.saldosVendeFrio?.cuentaDe?.(comercio.nombre)?.total) || 0 : 0;
+        const saldo = verPlata ? saldoParaParada(comercio.nombre) : 0;
         const fila = document.createElement("li");
         fila.className = "paradaOrden" + (indice === proxima ? " proxima" : "") + (hecha ? " hecha" : "");
         fila.dataset.nombre = comercio.nombre;
@@ -2229,7 +2244,7 @@ function dibujarNumerosParadas() {
         horas = Math.floor(minutos / 60) + ":" + String(minutos % 60).padStart(2, "0");
         if (verPlata) {
             rutaOrdenada.forEach(comercio => {
-                cobrar += cargaParaParada(comercio.nombre).total + (Number(window.saldosVendeFrio?.cuentaDe?.(comercio.nombre)?.total) || 0);
+                cobrar += cargaParaParada(comercio.nombre).total + (saldoParaParada(comercio.nombre));
             });
         }
     } else {
@@ -2367,7 +2382,7 @@ function dibujarProximaParada() {
         const comercio = rutaOrdenada[i];
         if (paradaHecha(comercio)) continue;
         const carga = cargaParaParada(comercio.nombre);
-        const saldo = verPlata ? Number(window.saldosVendeFrio?.cuentaDe?.(comercio.nombre)?.total) || 0 : 0;
+        const saldo = verPlata ? saldoParaParada(comercio.nombre) : 0;
         const detalle = [comercio.direccion || "Sin dirección", horas[i]];
         if (carga.pedidos.length) detalle.push("lleva " + carga.unidades + " u");
         if (saldo > 0) detalle.push("cobrar " + window.piezas.plata(saldo));

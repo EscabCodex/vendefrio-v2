@@ -154,7 +154,7 @@ test("planificar: carrusel de paradas", async ({ page }) => {
             productos: [{ marca: "Pastas", producto: "Ravioles", cantidad: 4, precio: 3000 }],
             estados: { e1: { estado: "enReparto", horaCelular: Date.now() } }
         }]);
-        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentaDe: nombre => (nombre === "Kiosco 1" ? { total: 12000 } : null) };
+        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentas: () => [{ nombre: "Kiosco 1", total: 12000 }] };
         mostrarPantalla("rutas");
     });
     const pantalla = page.locator("#pantallaRutas");
@@ -209,7 +209,7 @@ test("planificar: lista de paradas como línea de tiempo", async ({ page }) => {
     // Kiosco 2 debe un saldo; un cuarto comercio, elegido, no tiene ubicación.
     await page.evaluate(() => {
         agregarComercio({ nombre: "Almacén Sin Pin", direccion: "Calle 9" });
-        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentaDe: nombre => (nombre === "Kiosco 2" ? { total: 412000 } : null) };
+        window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentas: () => [{ nombre: "Kiosco 2", total: 412000 }] };
         mostrarPantalla("rutas");
     });
     const pantalla = page.locator("#pantallaRutas");

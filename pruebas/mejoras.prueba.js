@@ -301,6 +301,12 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
 
     // Tocar un pin: sacarlo de la ruta y moverlo.
     await page.getByRole("button", { name: "Volver al mapa" }).click();
+    // El carrusel mueve el mapa: el pin puede quedar debajo de la cabecera.
+    const centrarEnPin = () => page.evaluate(() => {
+        const comercio = buscarComercioPorNombre("Despensa Mary");
+        mapaLeaflet.setView([Number(comercio.lat), Number(comercio.lng)], mapaLeaflet.getZoom(), { animate: false });
+    });
+    await centrarEnPin();
     await page.locator('.pinRuta[title="Despensa Mary"]').click();
     const opciones = page.getByRole("dialog", { name: "Opciones de Despensa Mary" });
     await expect(opciones).toContainText("Parada");
@@ -308,6 +314,7 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await opciones.getByRole("button", { name: "Sacar de la ruta" }).click();
     await expect(paradas).toHaveCount(2);
     await expect(page.locator("#resumenPinesMapa")).toContainText("2 en la ruta");
+    await centrarEnPin();
     await page.locator('.pinRuta[title="Despensa Mary"]').click();
     await page.getByRole("dialog", { name: "Opciones de Despensa Mary" }).getByRole("button", { name: "Sumar a la ruta" }).click();
     await expect(paradas).toHaveCount(3);
