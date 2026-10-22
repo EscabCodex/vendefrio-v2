@@ -139,7 +139,7 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     const tiempos = {};
     tiempos.abrirRutas = await medir("mostrarPantalla('rutas')");
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    await page.locator("#btnElegirRutas").click();
     tiempos.elegirTodos = await medir("document.getElementById('seleccionarTodosRuta').click()");
     await expect(page.locator("#resumenPinesMapa")).toContainText(COMERCIOS + " en la ruta");
     tiempos.tildarUno = await medir("document.querySelector('#listaSeleccionRuta input').click()");
@@ -147,6 +147,7 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     await page.locator("#listaSeleccionRuta input").first().check();
     await expect(page.locator("#resumenPinesMapa")).toContainText(COMERCIOS + " en la ruta");
 
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     // Optimizar: la respuesta del GPS llega aparte, así que se espera la lista.
     tiempos.optimizar = await page.evaluate(async () => {
         const inicio = performance.now();
@@ -160,29 +161,32 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     // Los pines muestran el número de cada parada.
     await expect(page.locator(".globoPinRuta b", { hasText: /^80$/ })).toHaveCount(1);
     const primera = await page.locator(".paradaOrden").first().getAttribute("data-nombre");
-    tiempos.saltearParada = await medir("document.querySelector('#proximaParadaRuta [data-parada=\"saltear\"]').click()");
+    // «Ya pasé» está en el ⋯ de la tarjeta de la próxima (T137).
+    await page.locator("#proximaParadaRuta .paradaCarrusel.actual .masCarrusel").click();
+    tiempos.saltearParada = await medir("document.querySelector('[data-carrusel=\"saltear\"]').click()");
     await expect(page.locator(".paradaOrden").first()).toHaveClass(/hecha/);
-    await expect(page.locator("#proximaParadaRuta")).not.toContainText(primera);
+    await expect(page.locator("#proximaParadaRuta .paradaCarrusel.actual")).not.toHaveAttribute("data-nombre", primera);
 
-    // Mover el mapa con el dedo y bajar por la lista de paradas.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // Mover el mapa con el dedo (entre la cabecera y la parada de abajo) y
+    // bajar por la lista de paradas.
     const mapa = await page.locator("#mapaRuta").boundingBox();
     await medirCuadros("moverMapa", async () => {
         const x = mapa.x + mapa.width / 2;
-        const y = mapa.y + mapa.height / 2;
+        const y = mapa.y + 230;
         await page.mouse.move(x, y);
         await page.mouse.down();
         for (let i = 1; i <= 15; i++) await page.mouse.move(x - i * 8, y - i * 5);
         await page.mouse.up();
     });
+    await capturar(page, "rendimiento-01-rutas-lento");
+    await page.locator("#btnParadasRutas").click();
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
     await medirCuadros("bajarLista", async () => {
-        // Con el puntero debajo del mapa: sobre el mapa, la ruedita lo acerca.
-        await page.mouse.move(mapa.x + mapa.width / 2, mapa.y + mapa.height + 60);
+        await page.mouse.move(mapa.x + mapa.width / 2, mapa.y + mapa.height / 2);
         for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 250);
         await page.waitForTimeout(300);
     });
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await capturar(page, "rendimiento-01-rutas-lento");
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
 
     // Navegar la ruta: abrir y después 40 posiciones del GPS por el camino.
     tiempos.abrirNavegacion = await medir("document.getElementById('btnNavegarRuta').click()");

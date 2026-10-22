@@ -202,22 +202,57 @@
     </div>
   </header>
 
-  <main class="container">
-    <div class="card tarjetaMapaRuta">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
-
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
-        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
-        </button>
-
-        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
-        </button>
+  <!-- T136: Rutas como vista previa. El mapa ocupa toda la pantalla; arriba,
+       desde dónde y hasta dónde y cómo se arma el camino; abajo, cuánto
+       tarda, Iniciar y Paradas, y las herramientas. -->
+  <div class="vistaPreviaRutas">
+    <div id="mapaRuta"></div>
+    <div class="cabezaRutas">
+      <button class="volverRutas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <div class="filasCabezaRutas">
+        <div class="filaCabezaRutas"><span class="puntoDesdeRutas" aria-hidden="true"></span>Tu ubicación</div>
+        <div class="filaCabezaRutas"><span class="puntoHastaRutas" aria-hidden="true"></span><span id="destinoRutas">Elegí los comercios de la ruta</span></div>
       </div>
-
-      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
     </div>
+    <div class="chipsRutas" role="group" aria-label="Cómo se arma el camino">
+      <button type="button" class="chipRutas" data-vehiculo="auto" aria-pressed="true"><i data-ico="auto" data-ico-tam="15"></i> Auto</button>
+      <button type="button" class="chipRutas" data-vehiculo="moto" aria-pressed="false">Moto</button>
+      <button type="button" class="chipRutas" id="chipSinAutopistas" aria-pressed="false">Sin autopistas</button>
+    </div>
+    <div class="hojaPlanRutas" role="region" aria-label="Resumen de la ruta">
+      <div class="asaPlanRutas" aria-hidden="true"></div>
+      <p class="resumenPlanRutas" aria-live="polite"><strong id="minutosPlanRutas"></strong> <span id="detallePlanRutas">Elegí los comercios y tocá Optimizar.</span></p>
+      <div class="botonesPlanRutas">
+        <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
+        <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="menu" data-ico-tam="18"></i> Paradas</button>
+      </div>
+      <div class="herramientasRutas">
+        <button id="btnOptimizarRuta" type="button">Optimizar</button>
+        <button id="btnElegirRutas" type="button">Elegir</button>
+        <button id="btnGuardadasRutas" type="button">Guardadas</button>
+        <button id="btnGoogleMaps" type="button">Google Maps</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="container panelParadasRutas" aria-label="Paradas">
+    <!-- T138: la lista de paradas del día como línea de tiempo. -->
+    <div class="cabezaPanelParadas">
+      <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <h2>Paradas de hoy</h2>
+      <button id="btnOptimizarOrden" class="optimizarOrden" type="button">Optimizar orden</button>
+    </div>
+    <div id="numerosParadas" class="numerosParadas"></div>
+    <div class="accionesSeleccionRuta filtrosParadas" role="group" aria-label="Elegir comercios">
+      <button id="seleccionarTodosRuta" type="button">Todos</button>
+      <button id="seleccionarPendientesRuta" type="button">Pendientes</button>
+      <button id="limpiarSeleccionRuta" type="button">Ninguno</button>
+      <button id="btnBuscarParadas" class="buscarParadas" type="button" aria-label="Buscar comercio" title="Buscar comercio"><i data-ico="buscar" data-ico-tam="16"></i></button>
+    </div>
+    <div class="card tarjetaMapaRuta">
+      <div id="listaRutaOrdenada" style="font-size: 14px;"></div>
+    </div>
+    <div id="sinUbicacionParadas" class="sinUbicacionParadas"></div>
     <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
       <summary class="encabezadoTarjetaRuta">
         <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
@@ -226,21 +261,7 @@
           <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
         </div>
       </summary>
-      <p class="ayudaDesplegable">Elegí qué paradas querés incluir en la próxima ruta.</p>
-
-      <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
-        <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
-          <i data-ico="check" data-ico-tam="15"></i> Todos
-        </button>
-
-        <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
-          <i data-ico="reloj" data-ico-tam="15"></i> Pendientes
-        </button>
-
-        <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
-          <i data-ico="cerrarX" data-ico-tam="15"></i> Ninguno
-        </button>
-      </div>
+      <p class="ayudaDesplegable">Tildá uno por uno o buscalo por nombre.</p>
 
       <label class="buscadorSeleccionRuta">
         <i data-ico="buscar" data-ico-tam="17"></i>
@@ -286,6 +307,10 @@
         <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
       </button>
     </details>
+    <div class="pieParadas">
+      <button id="btnGuardarRutaParadas" class="pzBtn pzBtnGris" type="button">Guardar ruta</button>
+      <button id="btnListoParadas" class="pzBtn pzBtnPri" type="button">Listo, ver mapa</button>
+    </div>
   </main>
 </section>
 
@@ -526,6 +551,7 @@
 <script src="devoluciones.js"></script>
 <script src="yaLlego.js"></script>
 <script src="repartidores.js"></script>
+<script src="equipoRuta.js"></script>
 <script src="saldos.js"></script>
 <script src="gastos.js"></script>
 <script src="cobrarQr.js"></script>

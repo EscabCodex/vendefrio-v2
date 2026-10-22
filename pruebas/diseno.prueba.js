@@ -88,6 +88,9 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await expect(page.locator("#pantallaRutas")).toBeVisible();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await capturar(page, "diseno-08-rutas");
+    // Rutas ocupa toda la pantalla, sin la barra de abajo (T136): se sale
+    // con su flecha.
+    await page.locator(".vistaPreviaRutas").getByRole("button", { name: "Volver a Más" }).click();
 
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: "Estadísticas" }).click();

@@ -155,6 +155,18 @@
         [/\b(cierre|cerrar (el )?dia|cerrar (la )?caja|caja del dia|rendicion|rendir)\b/, "cierre"]
     ];
 
+    // Avisos de la calle para el equipo (T139): «avisar calle cortada», «hay
+    // un control», «reportá un choque». Sin «avisar» solo valen los claros.
+    const AVISAR = /\b(avisa|avisar|avisale|avisales|avisemos|reporta|reportar|hay|ojo)\b/;
+    const AVISOS_DICHOS = [
+        [/\b((calle|esquina|paso) cortad[ao]|cortad[ao] (la calle|el paso)|corte de calle)\b/, "cortada", true],
+        [/\b(choque|accidente|chocaron)\b/, "choque", false],
+        [/\b(control|controles|operativo|reten|alcoholemia|zorros|policia)\b/, "control", false],
+        [/\b((transito|trafico) (lento|pesado|parado)|mucho (transito|trafico)|embotellamiento|atasco)\b/, "lento", true],
+        [/\b(pozo|bache|calle rota)\b/, "pozo", false],
+        [/\b((comercio|negocio|local|kiosco|almacen) cerrado|esta cerrado|estaba cerrado)\b/, "cerrado", true]
+    ];
+
     const DICE = {
         llegue: /\b(llegue|llegamos|(ya )?(estoy|estamos) (aca|ahi|en la puerta)|marca(r|me)? (la )?llegada)\b/,
         visitado: /\b(marca(r|me|lo|la|le)? (como )?visitad[oa]|visitad[oa]|ya (pase|fui|estuve|visite)( por| en| a| al)?|visite|pase por)\b/,
@@ -178,6 +190,11 @@
         let partes;
 
         if (DICE.llegue.test(dicho)) return { accion: "llegue" };
+
+        const conAvisar = AVISAR.test(dicho);
+        for (const [patron, tipo, soloAlcanza] of AVISOS_DICHOS) {
+            if (patron.test(dicho) && (conAvisar || soloAlcanza)) return { accion: "avisar", tipo };
+        }
 
         partes = dicho.match(DICE.visitado);
         if (partes) {
@@ -269,6 +286,10 @@
                 else if (orden.pantalla === "cierre" && window.cierreVendeFrio?.abrir) window.cierreVendeFrio.abrir();
                 else if (orden.pantalla === "pedido") document.querySelector('.bottom-nav [data-pantalla="pedido"]')?.click();
                 else if (typeof mostrarPantalla === "function") mostrarPantalla(orden.pantalla);
+                return true;
+            case "avisar":
+                if (!window.avisosCalleVendeFrio) return false;
+                window.avisosCalleVendeFrio.crear(orden.tipo);
                 return true;
             case "noEncontrado":
                 decir("No encontré el comercio «" + orden.texto + "».");

@@ -2312,3 +2312,248 @@ html[data-tema="oscuro"] :is(.queHacerOpcion.principal, .filtroEtapa.activo, .ch
   color:var(--acento-txt) !important;
 }
 html[data-tema="oscuro"] .pasoFichaNumero{color:var(--acento-txt) !important;}
+/* ---------- T136: Rutas como vista previa ----------
+   El mapa ocupa toda la pantalla; arriba, desde dónde y hasta dónde y cómo
+   se arma el camino; abajo, la hoja con cuánto tarda, Iniciar y Paradas.
+   Sombras cortas y nada de desenfoque sobre el mapa (T141). La lista de
+   paradas y lo demás de antes se abre encima con «Paradas». */
+html:has(#pantallaRutas:not(.oculto)) nav.bottom-nav,
+html:has(#pantallaRutas:not(.oculto)) .indicadorNube,
+html:has(#pantallaRutas:not(.oculto)) .cartelModoPersonal{display:none !important;}
+html:has(#pantallaRutas:not(.oculto)) body{overflow:hidden;}
+#pantallaRutas{min-height:100vh;}
+#pantallaRutas > header,
+#pantallaRutas > .barraVolver{display:none !important;}
+.vistaPreviaRutas{position:fixed;inset:0;z-index:700;background:var(--superficie-2);overflow:hidden;}
+#pantallaRutas #mapaRuta{position:absolute;inset:0;width:100%;height:100%;background:var(--superficie-2);}
+.cabezaRutas{
+  position:absolute;z-index:1000;display:flex;align-items:center;gap:6px;padding:8px 10px 8px 4px;
+  top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+  border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+.volverRutas{
+  display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;margin:0;min-height:0;
+  border:0;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;
+}
+.filasCabezaRutas{flex:1;min-width:0;display:grid;gap:5px;}
+.filaCabezaRutas{
+  display:flex;align-items:center;gap:8px;min-width:0;padding:7px 10px;border-radius:10px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;white-space:nowrap;
+}
+.filaCabezaRutas > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.puntoDesdeRutas{flex:none;width:9px;height:9px;box-sizing:border-box;border-radius:50%;border:2px solid var(--acento);}
+.puntoHastaRutas{flex:none;width:9px;height:9px;border-radius:3px;background:var(--peligro);}
+.chipsRutas{
+  position:absolute;z-index:1000;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  top:calc(116px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+}
+.chipsRutas::-webkit-scrollbar{display:none;}
+.chipRutas{
+  display:inline-flex;align-items:center;gap:6px;flex:none;min-height:36px;margin:0;padding:0 13px;border:0;border-radius:999px;
+  background:var(--superficie);color:var(--texto);font:inherit;font-size:13px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer;
+}
+.chipRutas[aria-pressed="true"]{background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font-weight:800;}
+html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
+/* Cuántos van en la ruta ya lo dice la cabecera. */
+#pantallaRutas .resumenPinesMapa{display:none;}
+/* Desde dónde sale: tu posición al optimizar. */
+#pantallaRutas .yoPlanRutas{fill:var(--acento);stroke:#fff;}
+.hojaPlanRutas{
+  position:absolute;z-index:1000;left:0;right:0;bottom:0;box-sizing:border-box;
+  padding:10px max(16px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
+}
+.asaPlanRutas{width:44px;height:5px;margin:0 auto 8px;border-radius:3px;background:var(--borde-fuerte);}
+.resumenPlanRutas{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;margin:0;}
+#minutosPlanRutas{font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--visitado);}
+#minutosPlanRutas:empty{display:none;}
+#detallePlanRutas{font-size:16px;font-weight:600;color:var(--texto-sec);}
+.botonesPlanRutas{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px;}
+.botonesPlanRutas .pzBtn{min-height:54px;border-radius:999px;font-size:17px;font-weight:850;}
+.iniciarRutas.sinRuta{opacity:.55;}
+.herramientasRutas{display:flex;gap:6px;margin-top:10px;}
+.herramientasRutas button{
+  flex:1 1 auto;min-width:0;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:999px;background:var(--superficie-2);color:var(--texto);
+  font:inherit;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
+/* T137: carrusel de paradas, justo arriba de la hoja. Se desliza de costado
+   y cada tarjeta se frena en su lugar. */
+.carruselParadas{position:absolute;z-index:1001;left:0;right:0;bottom:calc(var(--altoHojaPlan, 200px) + 10px);}
+.pistaCarrusel{
+  display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;
+  padding:2px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left));scroll-padding-left:max(14px, env(safe-area-inset-left));
+}
+.pistaCarrusel::-webkit-scrollbar{display:none;}
+.paradaCarrusel{
+  flex:0 0 min(304px, calc(100% - 44px));box-sizing:border-box;display:flex;align-items:center;gap:10px;
+  padding:10px 10px 10px 14px;border-radius:22px;background:var(--superficie);color:var(--texto);
+  box-shadow:0 1px 5px rgba(0,0,0,.2);scroll-snap-align:start;
+}
+.paradaCarrusel:not(.actual){opacity:.8;}
+.numeroCarrusel{
+  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;
+  background:var(--superficie-2);color:var(--texto);font-size:15px;font-weight:900;
+}
+.paradaCarrusel.actual .numeroCarrusel{background:var(--acento);color:var(--acento-txt, #fff);}
+.datosCarrusel{
+  flex:1;min-width:0;display:grid;gap:1px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;
+}
+.datosCarrusel strong{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.datosCarrusel small{
+  font-size:12px;line-height:1.3;color:var(--texto-sec);overflow:hidden;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+.masCarrusel{
+  display:grid;place-items:center;flex:none;width:40px;height:40px;margin:0;padding:0;min-height:0;border:0;border-radius:50%;
+  background:var(--superficie-2);color:var(--texto);cursor:pointer;
+}
+.paradaCarrusel.terminada{flex-basis:calc(100% - 28px);justify-content:space-between;opacity:1;}
+.paradaCarrusel.terminada strong{display:inline-flex;align-items:center;gap:6px;color:var(--visitado);}
+.paradaCarrusel.terminada .pzBtn{width:auto;min-height:42px;padding:0 14px;}
+/* El pin de la tarjeta que se ve, más grande. */
+.pinDestacado .globoPinRuta{transform:rotate(-45deg) scale(1.3);}
+/* Camino por calles: azul con borde oscuro de día, lima de noche; el otro, gris. */
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.borde{stroke:#4E6112;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.elegido,
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.recto{stroke:#C8F04A;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.otro{stroke:#4A5562;}
+/* El cartelito queda arriba del punto del camino, sin tapar los pines. */
+.etiquetaCaminoPlan{width:0 !important;height:0 !important;background:none;border:0;}
+.globoEtiquetaPlan{
+  display:grid;width:max-content;padding:5px 10px;border-radius:12px;transform:translate(-50%, calc(-100% - 10px));
+  background:var(--superficie);color:var(--texto-sec);box-shadow:0 1px 4px rgba(0,0,0,.25);line-height:1.15;white-space:nowrap;
+}
+.globoEtiquetaPlan span{font-size:14px;font-weight:850;}
+.globoEtiquetaPlan small{font-size:10px;font-weight:700;}
+.etiquetaCaminoPlan.elegida .globoEtiquetaPlan{background:var(--acento);color:var(--acento-txt, #fff);}
+/* Mover un pin: la barra de guardar va abajo de todo, sin la hoja. */
+.vistaPreviaRutas:has(.barraMoverPin:not(.oculto)) .hojaPlanRutas,
+#pantallaRutas:has(.barraMoverPin:not(.oculto)) .carruselParadas{display:none;}
+#pantallaRutas .barraMoverPin{z-index:1002;bottom:calc(12px + env(safe-area-inset-bottom));}
+/* «Paradas»: la lista y todo lo de antes, encima del mapa. */
+#pantallaRutas .panelParadasRutas{display:none;}
+/* T138: una hoja alta sobre el mapa oscurecido (sin desenfoque). */
+#pantallaRutas.conParadasAbiertas .panelParadasRutas{
+  display:block;position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1100;
+  margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
+  padding:10px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--fondo);box-shadow:0 0 0 100vmax rgba(0,0,0,.35);
+}
+/* Sin relleno abajo: el pie con «Listo, ver mapa» queda pegado al borde. */
+html #pantallaRutas.conParadasAbiertas main.panelParadasRutas{padding-bottom:0 !important;}
+#pantallaRutas.conParadasAbiertas .carruselParadas{display:none;}
+.cabezaPanelParadas{display:flex;align-items:center;gap:2px;margin:0 0 10px -8px;}
+.cabezaPanelParadas .volverRutas{width:40px;height:40px;}
+.cabezaPanelParadas h2{flex:1;min-width:0;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.optimizarOrden{
+  flex:none;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:999px;
+  background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font:inherit;font-size:13px;font-weight:800;cursor:pointer;
+}
+html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
+.numerosParadas{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:6px;}
+.numeroParadas{display:grid;gap:5px;padding:9px 8px;border-radius:16px;background:var(--superficie);min-width:0;}
+.numeroParadas strong{font-size:20px;font-weight:900;letter-spacing:-0.03em;line-height:1;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.numeroParadas small{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+#pantallaRutas .filtrosParadas{display:flex;align-items:center;gap:6px;margin:12px 0 0;padding:0;border-radius:0;background:none;}
+#pantallaRutas .filtrosParadas button{
+  min-height:36px;margin:0;padding:0 12px;border:0;border-radius:999px;background:var(--superficie);color:var(--texto);
+  font:inherit;font-size:13px;font-weight:650;cursor:pointer;
+}
+#pantallaRutas .filtrosParadas button:first-child{background:var(--texto);color:var(--fondo);font-weight:800;}
+#pantallaRutas .filtrosParadas .buscarParadas{display:grid;place-items:center;width:36px;padding:0;margin-left:auto;}
+/* La línea de tiempo: hora, número sobre la línea y la tarjeta de la parada. */
+#pantallaRutas .tarjetaMapaRuta{margin:8px 0 0;padding:0;overflow:visible;background:none !important;box-shadow:none !important;border:0 !important;}
+#pantallaRutas .ayudaParadas{padding:0 4px;}
+#pantallaRutas .encabezadoParadas{margin:0 0 2px;padding:0 4px;}
+#pantallaRutas .paradaOrden{align-items:stretch;gap:10px;padding:0;border:0;background:none;}
+.horaParada{flex:none;width:40px;padding-top:16px;font-size:13px;font-weight:700;color:var(--texto-sec);text-align:right;}
+.lineaParada{position:relative;flex:none;display:flex;justify-content:center;width:26px;padding-top:12px;}
+.lineaParada::before{content:"";position:absolute;top:0;bottom:0;left:12px;width:2px;background:var(--borde);}
+.paradaOrden:first-child .lineaParada::before{top:12px;}
+.paradaOrden:last-child .lineaParada::before{bottom:auto;height:12px;}
+#pantallaRutas .numeroParada{position:relative;width:26px;height:26px;font-size:11px;font-weight:900;border:0;background:var(--superficie-2);color:var(--texto);}
+#pantallaRutas .paradaOrden.proxima .numeroParada{background:var(--acento);color:var(--acento-txt, #fff);}
+#pantallaRutas .paradaOrden.hecha .numeroParada{background:var(--visitado-bg);color:var(--visitado);}
+.cajaParada{flex:1;min-width:0;display:flex;align-items:center;gap:8px;margin:4px 0;padding:9px 6px 9px 12px;border-radius:16px;background:var(--superficie);}
+#pantallaRutas .paradaOrden.arrastrando{box-shadow:none;}
+#pantallaRutas .paradaOrden.arrastrando .cajaParada{box-shadow:var(--sombra-flotante);}
+.chipCobrarParada{background:var(--pendiente-bg);color:var(--pendiente);}
+.llevaParada{display:flex;flex-wrap:wrap;gap:6px;}
+.vacioParadas{margin:12px 2px;font-size:14px;color:var(--texto-sec);}
+.sinUbicacionParadas{margin:12px 0 0;padding:12px;border-radius:18px;background:var(--superficie);}
+.sinUbicacionParadas.oculto{display:none;}
+.sinUbicacionParadas h3{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:14px;font-weight:800;color:var(--pendiente);}
+.filaSinUbicacion{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--borde);}
+.filaSinUbicacion > span{flex:1;min-width:0;display:grid;}
+.filaSinUbicacion strong{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.filaSinUbicacion small{font-size:12px;color:var(--texto-sec);}
+.filaSinUbicacion .pzBtn{width:auto;flex:none;min-height:40px;padding:0 12px;font-size:13px;}
+#pantallaRutas .panelParadasRutas > details{margin:12px 0 0;}
+.pieParadas{
+  position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:12px calc(-1 * max(14px, env(safe-area-inset-left))) 0;
+  padding:12px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:var(--fondo);box-shadow:0 -8px 14px -10px rgba(0,0,0,.3);
+}
+.pieParadas .pzBtn{min-height:56px;border-radius:999px;}
+.pieParadas .pzBtn:first-child{flex:1;font-size:14px;}
+.pieParadas .pzBtn:last-child{flex:1.4;font-size:17px;font-weight:900;}
+
+/* ---------- T139 y T140: el equipo en los mapas ----------
+   Avisos de la calle y compañeros, con los colores de la maqueta
+   (H-avisar, H-nav, H-plan). Sombras cortas, sin desenfoque (T141). */
+:root{--equipo:#7B4DDB;--avisar:#E8590C;--lento-bg:#FFEBD3;--lento-txt:#9A4D00;}
+html[data-tema="oscuro"]{--equipo:#8B6CF0;--lento-bg:#2E2412;--lento-txt:#FFB547;}
+.pinAvisoCalle,.pinCompanero{background:none;border:0;}
+.cabezaAvisoCalle{
+  display:grid;place-items:center;width:40px;height:40px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.cabezaCompanero{
+  display:grid;place-items:center;width:38px;height:38px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;background:var(--equipo);color:#fff;font-size:12px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+/* Navegando: el botón grande naranja abajo a la derecha, al lado de la
+   columna de voz y salir (así la columna no crece y no llega a la maniobra). */
+.avisarNavegacion{
+  position:absolute;z-index:1100;right:calc(max(14px, env(safe-area-inset-right)) + 62px);bottom:calc(128px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;align-content:center;gap:2px;width:72px;height:72px;box-sizing:border-box;padding:0;margin:0;min-height:0;
+  border:4px solid #fff;border-radius:50%;background:var(--avisar);color:#fff;font:inherit;font-size:11px;font-weight:800;line-height:1;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;
+}
+/* «Lucas avisó…» debajo de la maniobra, sin tapar los créditos del mapa. */
+.tarjetaEquipoNav{
+  position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
+  top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 34px);
+  display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:0;border-radius:18px;text-align:left;
+  background:var(--superficie);color:var(--texto);font:inherit;box-shadow:0 2px 6px rgba(0,0,0,.22);cursor:pointer;
+}
+.tarjetaEquipoNav.oculto{display:none;}
+.pantallaNavegacion.conHojaAbierta .avisarNavegacion{display:none;}
+.pantallaNavegacion.conHojaAbierta .tarjetaEquipoNav{display:none;}
+.inicialEquipoNav{
+  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;
+  background:var(--equipo);color:#fff;font-size:12px;font-weight:900;
+}
+.textoEquipoNav{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.3;}
+/* Vista previa de Rutas: el aviso más nuevo, arriba de Iniciar. */
+.avisoEquipoRutas{
+  display:flex;align-items:center;gap:8px;width:100%;margin:8px 0 0;padding:8px 11px;min-height:0;border:0;border-radius:14px;
+  background:var(--lento-bg);color:var(--lento-txt);font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer;
+}
+.avisoEquipoRutas[hidden]{display:none;}
+.avisoEquipoRutas svg{flex:none;}
+.avisoEquipoRutas span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* La hoja «¿Qué querés avisar?». */
+.hojaAvisar .pzHojaTit{font-size:24px;font-weight:900;letter-spacing:-0.02em;}
+.tiposAvisar{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-top:6px;}
+.tipoAvisar{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;margin:0;padding:6px;
+  border:0;border-radius:22px;background:var(--superficie-2);color:var(--texto);font:inherit;font-size:13px;font-weight:800;
+  line-height:1.15;text-align:center;cursor:pointer;
+}
+.circuloAvisar{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#fff;}
+.vozAvisar{
+  display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:18px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;
+}
+.vozAvisar em{font-style:normal;color:var(--texto-sec);}
