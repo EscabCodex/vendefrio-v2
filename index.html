@@ -182,17 +182,17 @@
     <div class="logo" data-ico="paquete" data-ico-tam="22"></div>
     <div>
       <h1>Catálogo</h1>
-      <p>Editar marcas y productos</p>
+      <p>Marcas y productos</p>
     </div>
   </header>
 
   <main class="container">
-    <div class="card">
-      <input id="buscarProducto" type="text" placeholder="Buscar marca o producto">
+    <div class="herramientasMarcas">
+      <input id="buscarProducto" class="buscadorMarcas" type="search" placeholder="Buscar marca o producto" aria-label="Buscar marca o producto">
 
-      <div class="filaBotones">
-        <button id="agregarMarca" class="btnAccion agregar">Agregar marca</button>
-        <button id="agregarProducto" class="btnAccion agregar">Agregar producto</button>
+      <div class="pzBotones">
+        <button id="agregarMarca" class="pzBtn pzBtnSec" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar marca</button>
+        <button id="agregarProducto" class="pzBtn pzBtnPri" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar producto</button>
       </div>
     </div>
 
@@ -403,21 +403,21 @@
   </div>
 </div>
 
-<div id="modal" class="modal oculto">
-  <div class="modalContenido">
+<div id="modal" class="modal modalHoja oculto">
+  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
     <h2 id="modalTitulo">Comercio</h2>
 
-    <label>Nombre</label>
-    <input id="modalNombre" type="text">
+    <label for="modalNombre">Nombre</label>
+    <input id="modalNombre" type="text" placeholder="Por ejemplo, Almacén Don Pepe">
 
-    <label>Dirección</label>
+    <label for="modalDireccion">Dirección</label>
     <input id="modalDireccion" type="text" placeholder="Pegá la dirección de Google Maps">
 
-    <label>Enlace de Google Maps (opcional)</label>
+    <label for="modalEnlaceMaps">Enlace de Google Maps (opcional)</label>
     <input id="modalEnlaceMaps" type="url" placeholder="Pegá el enlace de Google Maps">
 
-    <label>Teléfono</label>
-    <input id="modalTelefono" type="text">
+    <label for="modalTelefono">Teléfono</label>
+    <input id="modalTelefono" type="tel" inputmode="tel" placeholder="Por ejemplo, 11 5555-1234">
 
     <div class="modalBotones">
       <button id="cancelarModal" class="btnModalCancelar">
@@ -451,18 +451,18 @@
   </div>
 </div>
 
-<div id="modalProducto" class="modal oculto">
-  <div class="modalContenido">
+<div id="modalProducto" class="modal modalHoja oculto">
+  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="modalProductoTitulo">
     <h2 id="modalProductoTitulo">Producto</h2>
 
-    <label id="labelMarca">Marca</label>
+    <label id="labelMarca" for="productoMarca">Marca</label>
     <select id="productoMarca"></select>
 
-    <label>Nombre</label>
-    <input id="productoNombre" type="text" placeholder="Nombre">
+    <label for="productoNombre">Nombre</label>
+    <input id="productoNombre" type="text" placeholder="Por ejemplo, Helado 1 kg">
 
-    <label id="labelPrecio">Precio</label>
-    <input id="productoPrecio" type="number" placeholder="0">
+    <label id="labelPrecio" for="productoPrecio">Precio</label>
+    <input id="productoPrecio" type="number" inputmode="decimal" placeholder="0">
 
     <div class="modalBotones">
       <button id="cancelarProducto" class="btnModalCancelar">
@@ -473,39 +473,41 @@
         Guardar
       </button>
     </div>
+
+    <button id="archivarDesdeModal" class="botonArchivarModal oculto" type="button"><i data-ico="archivo" data-ico-tam="18"></i>Archivar producto</button>
   </div>
 </div>
 
-<div id="modalPedido" class="modal oculto">
-  <div class="modalContenido">
-    <h2>Pedido generado</h2>
+<div id="modalPedido" class="modal modalHoja oculto">
+  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="tituloPedidoGenerado">
+    <!-- T166: "Pedido generado" con el estilo nuevo: el comercio y los
+         productos arriba, el mensaje que se copió en una burbuja y los
+         botones grandes abajo. -->
+    <div class="cabezaPedidoGenerado">
+      <span class="iconoPedidoGenerado" data-ico="check" data-ico-tam="26"></span>
+      <div>
+        <h2 id="tituloPedidoGenerado">Pedido generado</h2>
+        <p><span id="pedidoCliente"></span> · <span id="pedidoCantidad"></span> <span id="pedidoCantidadTexto">productos</span></p>
+      </div>
+    </div>
 
-    <p>
-      <strong>Cliente:</strong>
-      <span id="pedidoCliente"></span>
-    </p>
-
-    <p>
-      <strong>Productos:</strong>
-      <span id="pedidoCantidad"></span>
-    </p>
-
+    <p class="etiquetaPedidoGenerado"><i data-ico="copiar" data-ico-tam="14"></i> Mensaje copiado</p>
     <div id="pedidoDetalle" class="detallePedido"></div>
-
-    <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
-    <button id="imprimirPedidoGenerado" class="btnAccion secundario botonImprimirGenerado oculto" type="button">
-      Imprimir ticket
-    </button>
 
     <div class="modalBotones">
       <button id="whatsappPedido" class="btnModalWhatsapp">
-        Enviar por WhatsApp
+        <i data-ico="whatsapp" data-ico-tam="20"></i>Enviar por WhatsApp
       </button>
 
       <button id="copiarPedido" class="btnModalSecundario">
-        Copiar nuevamente
+        <i data-ico="copiar" data-ico-tam="18"></i>Copiar nuevamente
       </button>
     </div>
+
+    <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
+    <button id="imprimirPedidoGenerado" class="btnAccion secundario botonImprimirGenerado oculto" type="button">
+      <i data-ico="impresora" data-ico-tam="18"></i>Imprimir ticket
+    </button>
   </div>
 </div>
 

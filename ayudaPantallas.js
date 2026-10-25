@@ -25,7 +25,8 @@
             "Para sumar uno nuevo, tocá «Agregar comercio»."] },
         pantallaProductos: { titulo: "Productos y marcas", pasos: [
             "Acá sumás productos y marcas nuevos.",
-            "Tocá los tres puntos de un producto para editarlo o archivarlo.",
+            "Tocá un producto para cambiarle el nombre o el precio, o archivarlo.",
+            "Con las flechas de cada marca cambiás el orden; con sus tres puntos, el nombre.",
             "Lo archivado deja de salir en Nuevo pedido, pero se puede recuperar."] },
         pantallaCatalogo: { titulo: "Catálogo", pasos: [
             "Acá ves todo lo que vendés, con su precio.",

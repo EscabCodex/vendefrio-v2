@@ -525,7 +525,7 @@ if (filtroEstadoComercios) {
 
 function abrirModalNuevo() {
     comercioSeleccionado = null;
-    modalTitulo.textContent = "Nuevo Comercio";
+    modalTitulo.textContent = "Nuevo comercio";
     modalNombre.value = "";
     modalDireccion.value = "";
     if (modalEnlaceMaps) modalEnlaceMaps.value = "";
@@ -535,7 +535,7 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(comercio) {
     comercioSeleccionado = comercio;
-    modalTitulo.textContent = "Editar Comercio";
+    modalTitulo.textContent = "Editar comercio";
     modalNombre.value = comercio.nombre;
     modalDireccion.value = comercio.direccion || "";
     if (modalEnlaceMaps) modalEnlaceMaps.value = comercio.enlaceMaps || "";

@@ -761,3 +761,211 @@ input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable 
   html body > nav.bottom-nav .nav-item.nav-nuevo{flex-basis:54px;}
   html body > nav.bottom-nav .nav-item{padding-left:2px;padding-right:2px;font-size:10px;letter-spacing:-.2px;}
 }
+
+/* =====================================================
+   T166 · Catálogo nuevo (opción A que eligió el dueño, 2026-10-25)
+   Cada marca tiene su color (tono0…tono5, en el orden de las marcas):
+   cuadros de color en Productos, tarjetas con sus iniciales en Editar
+   marcas, y la hoja de editar. Sin sombras ni efectos caros: un degradé
+   fijo por tarjeta, para que ande fluido en un celular barato.
+   ===================================================== */
+:root{
+  --tono0:linear-gradient(135deg,#86BCF7,#3D7FE6);--tono1:linear-gradient(135deg,#F6B3C8,#E06C93);
+  --tono2:linear-gradient(135deg,#F6CF92,#E39342);--tono3:linear-gradient(135deg,#9FE0BA,#2FA36B);
+  --tono4:linear-gradient(135deg,#C3B5F7,#7B61E0);--tono5:linear-gradient(135deg,#B3BECB,#7C8B9E);
+}
+.tono0{--tono:var(--tono0);--tono-punto:#3D7FE6;}
+.tono1{--tono:var(--tono1);--tono-punto:#E06C93;}
+.tono2{--tono:var(--tono2);--tono-punto:#E39342;}
+.tono3{--tono:var(--tono3);--tono-punto:#2FA36B;}
+.tono4{--tono:var(--tono4);--tono-punto:#7B61E0;}
+.tono5{--tono:var(--tono5);--tono-punto:#7C8B9E;}
+
+/* ---------- Productos: chips con el punto de la marca ---------- */
+.chipMarca.conTono::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--tono-punto);flex-shrink:0;}
+.chipMarca.conTono{gap:7px;}
+#avisoSinPrecio{cursor:pointer;}
+#avisoSinPrecio .avisoSinPrecioVer{flex-shrink:0;font-weight:750;font-size:14.5px;color:var(--pz-pri-fuerte);}
+
+/* ---------- Productos: cuadros ---------- */
+html[data-tema] .grillaCatalogo:not(.vistaLista){gap:12px;}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .itemCatalogo{
+  position:relative;display:flex;flex-direction:column;gap:2px;padding:0 0 12px;overflow:hidden;
+  border:var(--borde-tarjeta);border-radius:24px;background:var(--superficie);box-shadow:var(--sombra);
+}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .fotoCatalogo{
+  display:grid;place-items:center;aspect-ratio:1.15;margin:0 0 8px;border-radius:0;
+  background:var(--tono,var(--tono0));color:#fff;
+}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .fotoCatalogo.conFoto{background:var(--superficie-2);}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .itemCatalogo > :not(.fotoCatalogo):not(.btnCatalogoEditar){margin-left:12px;margin-right:12px;}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .itemCatalogo > small{font-size:12px;font-weight:600;color:var(--texto-sec);}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .itemCatalogo > strong{font-size:15px;font-weight:650;line-height:1.25;min-height:2.5em;}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .pieItemCatalogo{margin-top:auto;padding-top:6px;min-height:40px;}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .itemCatalogo b{font-size:17px;font-weight:800;}
+html[data-tema] .grillaCatalogo .btnCatalogoPedido{flex:0 0 40px;width:40px;height:40px;}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .btnCatalogoEditar{
+  top:10px;right:10px;width:36px;height:36px;border:0;box-shadow:none;
+  background:rgba(255,255,255,.3);color:#fff;
+}
+html[data-tema] .grillaCatalogo:not(.vistaLista) .fotoCatalogo.conFoto + .btnCatalogoEditar{background:rgba(15,27,45,.45);}
+/* "Sin precio": chip naranja en vez de texto suelto. */
+html[data-tema] .itemCatalogo b.sinPrecioCatalogo{
+  display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:var(--radio-pildora);
+  background:var(--pendiente-bg);color:var(--pendiente);font-size:12.5px;font-weight:700;
+}
+html[data-tema] .itemCatalogo.archivado .fotoCatalogo{filter:grayscale(1);}
+
+/* ---------- Productos: lista ---------- */
+html[data-tema] .grillaCatalogo.vistaLista .fotoCatalogo{background:var(--tono,var(--tono0));color:#fff;}
+html[data-tema] .grillaCatalogo.vistaLista .fotoCatalogo.conFoto{background:var(--superficie-2);}
+html[data-tema] .grillaCatalogo.vistaLista .fotoCatalogo svg{width:22px;height:22px;}
+
+/* ---------- Editar marcas ---------- */
+#pantallaProductos .herramientasMarcas{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;}
+html[data-tema] #pantallaProductos input.buscadorMarcas{
+  width:100%;min-height:52px;margin:0;padding:0 16px 0 46px;border-radius:var(--radio-pildora);
+  border:var(--borde-tarjeta);box-shadow:var(--sombra);color:var(--texto);font-size:15.5px;
+  background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px;
+}
+html[data-tema="oscuro"] #pantallaProductos input.buscadorMarcas{border:1px solid var(--borde);background-color:var(--superficie) !important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:16px center !important;background-size:20px 20px !important;padding-left:46px !important;}
+#pantallaProductos .herramientasMarcas .pzBtn{min-height:50px;padding:0 10px;}
+html[data-tema] .tarjetaMarca{
+  margin:0 0 12px;padding:0;overflow:hidden;border:var(--borde-tarjeta);border-radius:24px;
+  background:var(--superficie);box-shadow:var(--sombra);
+}
+html[data-tema] .cabeceraMarca{
+  display:flex;align-items:center;gap:12px;padding:14px 12px 12px 14px;margin:0;
+  background:transparent;border:0;color:var(--texto);
+}
+html[data-tema] .cabeceraMarca .inicialesMarca{
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--tono,var(--superficie-2));color:#fff;font-size:15px;font-weight:800;letter-spacing:-.01em;
+}
+html[data-tema] .tarjetaArchivados .inicialesMarca{background:var(--superficie-2);color:var(--texto-sec);}
+.cabeceraMarca .textosMarca{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+html[data-tema] .cabeceraMarca h2{display:block;margin:0;font-size:16.5px;font-weight:750;line-height:1.2;color:var(--texto);overflow-wrap:anywhere;}
+html[data-tema] .cabeceraMarca h2::before{display:none;}
+.cabeceraMarca .textosMarca small{font-size:13px;color:var(--texto-sec);}
+html[data-tema] .accionesMarca{display:flex;gap:6px;flex-shrink:0;}
+html[data-tema] .accionesMarca .btnIcono{
+  width:38px;height:38px;min-height:0;padding:0;display:grid;place-items:center;
+  border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto-sec);
+}
+html[data-tema] .cuerpoMarca{padding:0;margin:0;}
+html[data-tema] .filaProducto{
+  display:flex;align-items:center;gap:10px;width:100%;min-height:58px;margin:0;padding:8px 12px 8px 14px;
+  border:0;border-top:1px solid var(--borde);border-radius:0;background:transparent;
+  color:var(--texto);font:inherit;text-align:left;cursor:pointer;
+}
+html[data-tema] button.filaProducto:active{background:var(--superficie-2);}
+html[data-tema] .filaProducto strong{flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--texto);overflow-wrap:anywhere;}
+html[data-tema] .filaProducto .precioAdmin{flex-shrink:0;font-size:15px;font-weight:750;color:var(--texto);}
+.filaProducto .flechaFilaProducto{display:grid;place-items:center;color:var(--texto-ter);flex-shrink:0;}
+.filaProducto .pzChip{height:26px;font-size:12.5px;}
+html[data-tema] .cuerpoMarca .subtitulo{margin:0;padding:12px 14px;border-top:1px solid var(--borde);color:var(--texto-sec);font-size:14px;}
+.agregarEnMarca{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:0 14px;
+  border:0;border-top:1px solid var(--borde);background:transparent;
+  color:var(--pz-pri-fuerte);font:inherit;font-size:14.5px;font-weight:650;text-align:left;cursor:pointer;
+}
+.agregarEnMarca svg{flex-shrink:0;}
+html[data-tema] .filaArchivado{cursor:default;}
+.filaArchivado .textosArchivado{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.filaArchivado .textosArchivado small{font-size:13px;color:var(--texto-sec);}
+html[data-tema] .filaArchivado .pzBtn{min-height:38px;gap:6px;}
+html[data-tema] .filaArchivado .eliminarProducto{
+  width:38px;height:38px;min-height:0;padding:0;display:grid;place-items:center;flex-shrink:0;
+  border:0;border-radius:50%;background:var(--peligro-bg);color:var(--peligro);
+}
+.pzMotivo.opcionPeligro{color:var(--peligro);}
+
+/* ---------- Ventanas viejas como hoja que sube desde abajo ----------
+   Producto y marca, comercio y "Pedido generado": mismo aspecto que las
+   hojas nuevas (.pzHoja). Los campos y botones siguen con sus id. */
+html[data-tema] .modal.modalHoja{
+  z-index:10040;align-items:flex-end;padding:0;background:rgba(5,10,20,.45);overflow:hidden;
+}
+html[data-tema] .modal.modalHoja .modalContenido{
+  width:100%;max-width:560px;max-height:calc(100dvh - 40px - env(safe-area-inset-top));overflow-y:auto;
+  margin:0;padding:24px 16px calc(18px + env(safe-area-inset-bottom));
+  border-radius:28px 28px 0 0;border:0;background:var(--superficie);color:var(--texto);box-shadow:none;
+}
+html[data-tema] .modal.modalHoja .modalContenido::before{top:8px;width:40px;height:5px;background:var(--borde-fuerte);}
+html[data-tema] .modal.modalHoja .modalContenido > h2{margin:6px 4px 10px;text-align:left;font-size:19px;font-weight:750;letter-spacing:-.01em;}
+html[data-tema] .modal.modalHoja .modalContenido > label{display:block;margin:14px 4px 6px;font-size:13px;font-weight:650;color:var(--texto-sec);}
+html[data-tema] .modal.modalHoja .modalContenido > input,
+html[data-tema] .modal.modalHoja .modalContenido > select{
+  display:block;width:100%;min-height:50px;margin:0;padding:12px 14px;
+  border-radius:var(--radius-md);border:1px solid var(--borde);background:var(--pz-campo);color:var(--texto);font-size:16px;
+}
+html[data-tema] .modal.modalHoja .modalContenido > input:focus,
+html[data-tema] .modal.modalHoja .modalContenido > select:focus{outline:2px solid var(--acento);outline-offset:1px;}
+html[data-tema] .modal.modalHoja .modalBotones{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0;}
+html[data-tema] .modal.modalHoja .modalBotones button{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;margin:0;padding:0 14px;
+  border:0;border-radius:var(--radio-pildora);font-size:15px;font-weight:650;
+}
+html[data-tema] .modal.modalHoja .btnModalCancelar{background:var(--superficie-2);color:var(--texto);}
+html[data-tema] .modal.modalHoja .btnModalConfirmar{background:var(--acento);color:var(--acento-txt);}
+.botonArchivarModal{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:8px;
+  border:0;background:transparent;color:var(--peligro);font:inherit;font-size:14.5px;font-weight:650;cursor:pointer;
+}
+.botonArchivarModal.oculto{display:none;}
+
+/* "Pedido generado" */
+#modalPedido .cabezaPedidoGenerado{display:flex;align-items:center;gap:12px;margin:6px 4px 14px;}
+#modalPedido .iconoPedidoGenerado{
+  width:48px;height:48px;border-radius:16px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--visitado-bg);color:var(--visitado);
+}
+html[data-tema] #modalPedido .cabezaPedidoGenerado h2{margin:0;text-align:left;font-size:19px;font-weight:750;}
+html[data-tema] #modalPedido .cabezaPedidoGenerado p{margin:2px 0 0;font-size:14px;color:var(--texto-sec);}
+html[data-tema] #modalPedido .etiquetaPedidoGenerado{
+  display:flex;align-items:center;gap:6px;margin:0 4px 8px;
+  font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--texto-ter);
+}
+html[data-tema] #modalPedido .detallePedido{
+  max-height:38dvh;overflow-y:auto;margin:0;padding:14px 16px;
+  border:0;border-radius:20px 20px 20px 6px;background:var(--superficie-2);color:var(--texto);
+  font-size:14px;line-height:1.5;white-space:normal;
+}
+html[data-tema] #modalPedido .detallePedido strong{color:var(--texto);}
+html[data-tema] #modalPedido .modalBotones{grid-template-columns:1fr;margin-top:16px;}
+html[data-tema] #modalPedido .btnModalWhatsapp{background:var(--pz-wa);color:#fff;}
+html[data-tema="oscuro"] #modalPedido .btnModalWhatsapp{background:var(--pz-wa-bg);color:var(--pz-wa);}
+html[data-tema] #modalPedido .btnModalSecundario{background:var(--superficie-2);color:var(--texto);}
+html[data-tema] #modalPedido .botonImprimirGenerado{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin:8px 0 0;
+  border:0;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--pz-pri-fuerte);font-size:15px;font-weight:650;
+}
+html[data-tema="oscuro"] #modalPedido .botonImprimirGenerado{background:var(--superficie-2);color:var(--texto);}
+html[data-tema] #modalPedido .botonImprimirGenerado.oculto{display:none;}
+
+/* ---------- Hoja "Editar producto" del catálogo ---------- */
+.hojaEditarCatalogo .fotoEdicionCatalogo{display:flex;align-items:center;gap:14px;padding:6px 8px 8px;}
+.hojaEditarCatalogo .muestraFotoCatalogo{
+  width:84px;height:84px;border-radius:20px;display:flex;place-items:center;flex-shrink:0;overflow:hidden;
+  background:var(--tono,var(--tono0));color:#fff;
+}
+.hojaEditarCatalogo .muestraFotoCatalogo > .pzIco{margin:auto;}
+.hojaEditarCatalogo .muestraFotoCatalogo img{width:100%;height:100%;object-fit:cover;}
+.hojaEditarCatalogo .fotoEdicionCatalogo > div{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;}
+.hojaEditarCatalogo .botonFotoCatalogo{position:relative;overflow:hidden;}
+.hojaEditarCatalogo .botonFotoCatalogo input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.hojaEditarCatalogo .estadoFotoCatalogo{margin:0;font-size:13px;color:var(--texto-sec);}
+.hojaEditarCatalogo .campoPrecioCatalogo{position:relative;}
+.hojaEditarCatalogo .campoPrecioCatalogo::after{content:"$";position:absolute;left:24px;bottom:20px;font-size:17px;font-weight:700;color:var(--texto-sec);pointer-events:none;}
+html[data-tema] .hojaEditarCatalogo .campoPrecioCatalogo input{padding-left:36px !important;font-size:17px;font-weight:700;}
+/* El ajuste de la foto se abre arriba de la hoja. */
+html[data-tema] .modalCatalogo.modalEditorFoto{z-index:10060;background:rgba(5,10,20,.55);}
+html[data-tema] .modalEditorFoto .modalCatalogoContenido{border-radius:28px;padding:18px;background:var(--superficie);color:var(--texto);box-shadow:none;}
+html[data-tema] .modalEditorFoto .canvasEditorFoto{width:100%;height:auto;border-radius:20px;}
+html[data-tema] .modalEditorFoto .accionesModalCatalogo{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+html[data-tema] .modalEditorFoto .accionesModalCatalogo button{min-height:50px;border:0;border-radius:var(--radio-pildora);font:inherit;font-size:15px;font-weight:650;background:var(--superficie-2);color:var(--texto);}
+html[data-tema] .modalEditorFoto .accionesModalCatalogo .guardarEdicionCatalogo{background:var(--acento);color:var(--acento-txt);}
+html[data-tema] .modalEditorFoto .zoomEditorFoto{width:100%;accent-color:var(--acento);}
+/* Con el globo del tutorial abajo (mientras se completa un paso), la hoja
+   deja lugar para que no tape "Guardar". */
+html[data-tema] body:has(.tutorialCapa[data-modo="mientras"]) .modal.modalHoja .modalContenido{padding-bottom:calc(200px + env(safe-area-inset-bottom));}

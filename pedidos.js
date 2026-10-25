@@ -881,10 +881,14 @@ function escaparHtmlPedido(texto) {
 function mostrarVistaPreviaPedido(texto) {
     if (!pedidoDetalle) return;
 
-    const seguro = escaparHtmlPedido(texto);
+    // T166: en la ventana los emojis del mensaje no se muestran (el mensaje
+    // copiado para WhatsApp los sigue teniendo).
+    const seguro = escaparHtmlPedido(String(texto || "").replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}]\uFE0F?\s?/gu, ""));
     pedidoDetalle.innerHTML = seguro
         .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
         .replace(/\n/g, "<br>");
+    const textoCantidad = document.getElementById("pedidoCantidadTexto");
+    if (textoCantidad && pedidoCantidad) textoCantidad.textContent = pedidoCantidad.textContent.trim() === "1" ? "producto" : "productos";
 }
 
 // -----------------------------------------------------

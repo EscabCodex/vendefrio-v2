@@ -51,6 +51,20 @@ function crearBoton(clase, texto, titulo, datos = {}) {
     return boton;
 }
 
+// T166: las iniciales de la marca, para su cuadrito de color.
+function inicialesMarca(nombre) {
+    const palabras = String(nombre || "").split(/\s+/).filter(palabra => /^[\p{L}\d]/u.test(palabra));
+    return (palabras.length > 1 ? palabras[0][0] + palabras[1][0] : (palabras[0] || "?").slice(0, 2)).toUpperCase();
+}
+
+function textoPrecioAdmin(precio) {
+    const valor = Number(precio) || 0;
+    const caja = document.createElement(valor > 0 ? "b" : "span");
+    caja.className = valor > 0 ? "precioAdmin" : "pzChip pzChipAviso sinPunto";
+    caja.textContent = valor > 0 ? "$ " + valor.toLocaleString("es-AR") : "Sin precio";
+    return caja;
+}
+
 function renderizarProductosAdmin(filtro = "") {
     if (!listaProductosAdmin) return;
     // Con Productos y marcas oculta no se dibuja: mostrarPantalla la dibuja al abrirla (T150).
@@ -59,9 +73,10 @@ function renderizarProductosAdmin(filtro = "") {
     listaProductosAdmin.innerHTML = "";
     const productos = obtenerProductos();
     const filtroNormalizado = normalizarTexto(filtro);
+    const tono = marca => typeof window.tonoDeMarca === "function" ? window.tonoDeMarca(marca) : "tono0";
 
     obtenerMarcasOrdenadas(productos)
-        .forEach((nombreMarca, indiceMarca) => {
+        .forEach(nombreMarca => {
             // Los archivados (T63) van aparte, al final.
             const lista = (Array.isArray(productos[nombreMarca]) ? productos[nombreMarca] : [])
                 .filter(producto => !productoArchivado(producto));
@@ -72,25 +87,36 @@ function renderizarProductosAdmin(filtro = "") {
 
             if (filtroNormalizado && visibles.length === 0) return;
 
-            const card = document.createElement("div");
-            card.className = "tarjetaMarca";
+            const card = document.createElement("section");
+            card.className = "tarjetaMarca " + tono(nombreMarca);
 
             const cabecera = document.createElement("div");
             cabecera.className = "cabeceraMarca";
-            cabecera.style.setProperty("--acento", colorMarca(indiceMarca));
 
+            const iniciales = document.createElement("span");
+            iniciales.className = "inicialesMarca";
+            iniciales.setAttribute("aria-hidden", "true");
+            iniciales.textContent = inicialesMarca(nombreMarca);
+
+            const textos = document.createElement("div");
+            textos.className = "textosMarca";
             const titulo = document.createElement("h2");
             titulo.textContent = nombreMarca;
+            const detalle = document.createElement("small");
+            const sinPrecio = lista.filter(producto => !(Number(producto.precio) > 0)).length;
+            detalle.textContent = (lista.length === 1 ? "1 producto" : lista.length + " productos") +
+                (sinPrecio ? " · " + (sinPrecio === 1 ? "1 sin precio" : sinPrecio + " sin precio") : "");
+            textos.append(titulo, detalle);
 
             const accionesMarca = document.createElement("div");
             accionesMarca.className = "accionesMarca";
             accionesMarca.append(
-                crearBoton("ghost subirMarca", window.icono("chevArriba",15), "Subir marca", { marca: nombreMarca }),
-                crearBoton("ghost bajarMarca", window.icono("chevAbajo",15), "Bajar marca", { marca: nombreMarca }),
-                crearBoton("ghost editarMarca", window.icono("lapiz",15), "Editar marca", { marca: nombreMarca }),
-                crearBoton("ghost eliminarMarca", window.icono("tacho",15), "Eliminar marca", { marca: nombreMarca })
+                crearBoton("ghost subirMarca", window.icono("chevArriba",16), "Subir marca", { marca: nombreMarca }),
+                crearBoton("ghost bajarMarca", window.icono("chevAbajo",16), "Bajar marca", { marca: nombreMarca }),
+                crearBoton("ghost opcionesMarca", window.icono("puntos",18), "Opciones de " + nombreMarca, { marca: nombreMarca })
             );
-            cabecera.append(titulo, accionesMarca);
+            accionesMarca.querySelectorAll("button").forEach(boton => boton.setAttribute("aria-label", boton.title));
+            cabecera.append(iniciales, textos, accionesMarca);
 
             const cuerpo = document.createElement("div");
             cuerpo.className = "cuerpoMarca";
@@ -102,32 +128,30 @@ function renderizarProductosAdmin(filtro = "") {
                 cuerpo.appendChild(vacio);
             }
 
+            // Cada producto es una fila: se toca para editarlo (nombre,
+            // precio o archivarlo).
             visibles.forEach(producto => {
-                const fila = document.createElement("div");
-                fila.className = "filaProducto";
-
-                const informacion = document.createElement("div");
+                const fila = document.createElement("button");
+                fila.type = "button";
+                fila.className = "filaProducto editarProducto";
+                fila.dataset.id = producto.id;
+                fila.setAttribute("aria-label", "Editar " + producto.nombre);
                 const nombre = document.createElement("strong");
                 nombre.textContent = producto.nombre;
-                const salto = document.createElement("br");
-                const precio = document.createElement("small");
-                precio.textContent = "$" + (Number(producto.precio) || 0);
-                informacion.append(nombre, salto, precio);
-
-                const botones = document.createElement("div");
-                botones.className = "filaBotones";
-                botones.append(
-                    crearBoton("tinteAmbar editarProducto", window.icono("lapiz",14), "Editar producto", {
-                        id: producto.id
-                    }),
-                    crearBoton("tinteRojo archivarProducto", window.icono("archivo",14), "Archivar producto", {
-                        id: producto.id
-                    })
-                );
-
-                fila.append(informacion, botones);
+                const flecha = document.createElement("span");
+                flecha.className = "flechaFilaProducto";
+                flecha.innerHTML = window.icono("chevDerecha", 18);
+                fila.append(nombre, textoPrecioAdmin(producto.precio), flecha);
                 cuerpo.appendChild(fila);
             });
+
+            const agregar = document.createElement("button");
+            agregar.type = "button";
+            agregar.className = "agregarEnMarca";
+            agregar.dataset.marca = nombreMarca;
+            agregar.innerHTML = window.icono("mas", 18);
+            agregar.append(document.createTextNode("Agregar producto a " + nombreMarca));
+            cuerpo.appendChild(agregar);
 
             card.append(cabecera, cuerpo);
             listaProductosAdmin.appendChild(card);
@@ -148,31 +172,38 @@ function dibujarProductosArchivados(productos, filtroNormalizado) {
     });
     if (!archivados.length) return;
 
-    const card = document.createElement("div");
+    const card = document.createElement("section");
     card.className = "tarjetaMarca tarjetaArchivados";
     const cabecera = document.createElement("div");
     cabecera.className = "cabeceraMarca";
+    const iniciales = document.createElement("span");
+    iniciales.className = "inicialesMarca";
+    iniciales.innerHTML = window.icono("archivo", 20);
+    const textos = document.createElement("div");
+    textos.className = "textosMarca";
     const titulo = document.createElement("h2");
     titulo.textContent = "Archivados (" + archivados.length + ")";
-    cabecera.appendChild(titulo);
+    const detalle = document.createElement("small");
+    detalle.textContent = "No se ofrecen para vender";
+    textos.append(titulo, detalle);
+    cabecera.append(iniciales, textos);
     const cuerpo = document.createElement("div");
     cuerpo.className = "cuerpoMarca";
     archivados.forEach(producto => {
         const fila = document.createElement("div");
-        fila.className = "filaProducto";
+        fila.className = "filaProducto filaArchivado";
         const informacion = document.createElement("div");
+        informacion.className = "textosArchivado";
         const nombre = document.createElement("strong");
         nombre.textContent = producto.nombre;
-        const detalle = document.createElement("small");
-        detalle.textContent = producto.marca + " · no se ofrece para vender";
-        informacion.append(nombre, document.createElement("br"), detalle);
-        const botones = document.createElement("div");
-        botones.className = "filaBotones";
-        botones.append(
-            crearBoton("tinteAmbar recuperarProducto", window.icono("deshacer", 14), "Recuperar producto", { id: producto.id }),
-            crearBoton("tinteRojo eliminarProducto", window.icono("tacho", 14), "Eliminar para siempre", { id: producto.id })
-        );
-        fila.append(informacion, botones);
+        const marca = document.createElement("small");
+        marca.textContent = producto.marca;
+        informacion.append(nombre, marca);
+        const recuperar = crearBoton("recuperarProducto", window.icono("deshacer", 16) + "Recuperar", "Recuperar producto", { id: producto.id });
+        recuperar.className = "pzBtn pzBtnSec pzBtnChico recuperarProducto";
+        const eliminar = crearBoton("eliminarProducto", window.icono("tacho", 16), "Eliminar para siempre", { id: producto.id });
+        eliminar.setAttribute("aria-label", "Eliminar para siempre");
+        fila.append(informacion, recuperar, eliminar);
         cuerpo.appendChild(fila);
     });
     card.append(cabecera, cuerpo);
@@ -222,10 +253,41 @@ function abrirModalNuevaMarca() {
     mostrarCampo(productoPrecio, false);
     productoNombre.value = "";
     productoPrecio.value = "";
+    mostrarArchivarEnModal(false);
     modalProducto.classList.remove("oculto");
 }
 
-function abrirModalNuevoProducto() {
+function confirmarEliminarMarca(marca) {
+    abrirConfirmacion("Eliminar marca", `\u00bfEliminar "${marca}"?`, () => {
+        eliminarMarca(marca);
+        renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
+        if (typeof renderizarPedido === "function") renderizarPedido();
+    });
+}
+
+// T166: lo que se hace con una marca, en una hoja (con una mano).
+function abrirOpcionesMarca(marca) {
+    const pz = window.piezas;
+    if (!pz) return abrirModalEditarMarca(marca);
+    pz.hoja({
+        titulo: marca,
+        sub: "Marca",
+        html: `<div class="pzMotivos">
+            <button type="button" class="pzMotivo" data-opcion="producto">${pz.ico("mas", 20)}Agregar producto</button>
+            <button type="button" class="pzMotivo" data-opcion="nombre">${pz.ico("lapiz", 20)}Cambiar el nombre</button>
+            <button type="button" class="pzMotivo opcionPeligro" data-opcion="eliminar">${pz.ico("tacho", 20)}Eliminar marca</button>
+        </div>`
+    }).addEventListener("click", evento => {
+        const opcion = evento.target.closest("[data-opcion]")?.dataset.opcion;
+        if (!opcion) return;
+        pz.cerrar();
+        if (opcion === "producto") abrirModalNuevoProducto(marca);
+        if (opcion === "nombre") abrirModalEditarMarca(marca);
+        if (opcion === "eliminar") confirmarEliminarMarca(marca);
+    });
+}
+
+function abrirModalNuevoProducto(marcaElegida) {
     const marcas = Object.keys(obtenerProductos());
     if (marcas.length === 0) {
         mostrarAviso(
@@ -248,6 +310,8 @@ function abrirModalNuevoProducto() {
     productoNombre.value = "";
     productoPrecio.value = "";
     cargarSelectMarcas();
+    if (typeof marcaElegida === "string" && marcas.includes(marcaElegida)) productoMarca.value = marcaElegida;
+    mostrarArchivarEnModal(false);
     modalProducto.classList.remove("oculto");
 }
 
@@ -262,6 +326,7 @@ function abrirModalEditarMarca(nombre) {
     mostrarCampo(labelPrecio, false);
     mostrarCampo(productoPrecio, false);
     productoNombre.value = nombre;
+    mostrarArchivarEnModal(false);
     modalProducto.classList.remove("oculto");
 }
 
@@ -281,7 +346,22 @@ function abrirModalEditarProducto(id) {
     mostrarCampo(productoPrecio, true);
     productoNombre.value = producto.nombre;
     productoPrecio.value = producto.precio;
+    mostrarArchivarEnModal(true);
     modalProducto.classList.remove("oculto");
+}
+
+// Al editar un producto, "Archivar producto" va abajo de la ventana (T166).
+function mostrarArchivarEnModal(mostrar) {
+    const boton = document.getElementById("archivarDesdeModal");
+    if (boton) boton.classList.toggle("oculto", !mostrar);
+}
+const botonArchivarDesdeModal = document.getElementById("archivarDesdeModal");
+if (botonArchivarDesdeModal) {
+    botonArchivarDesdeModal.onclick = () => {
+        const id = idProductoActual;
+        cerrarModalProducto();
+        if (id) archivarProductoConDeshacer(id);
+    };
 }
 
 function cerrarModalProducto() {
@@ -376,7 +456,18 @@ if (guardarProducto) {
 
 if (listaProductosAdmin) {
     listaProductosAdmin.addEventListener("click", event => {
-        const elemento = event.target;
+        const elemento = event.target.closest("button");
+        if (!elemento) return;
+
+        if (elemento.classList.contains("agregarEnMarca")) {
+            abrirModalNuevoProducto(elemento.dataset.marca);
+            return;
+        }
+
+        if (elemento.classList.contains("opcionesMarca")) {
+            abrirOpcionesMarca(elemento.dataset.marca);
+            return;
+        }
 
         if (
             elemento.classList.contains("subirMarca") ||
@@ -413,12 +504,7 @@ if (listaProductosAdmin) {
         }
 
         if (elemento.classList.contains("eliminarMarca")) {
-            const marca = elemento.dataset.marca;
-            abrirConfirmacion("Eliminar marca", `\u00bfEliminar "${marca}"?`, () => {
-                eliminarMarca(marca);
-                renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
-                if (typeof renderizarPedido === "function") renderizarPedido();
-            });
+            confirmarEliminarMarca(elemento.dataset.marca);
             return;
         }
 
