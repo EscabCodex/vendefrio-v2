@@ -63,9 +63,10 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.locator("#datosTicketTelefono").fill("11 4444-5555");
     await page.locator("#datosTicketDireccion").fill("Belgrano 456, Quilmes");
     await page.locator("#datosTicketCuit").fill("20-12345678-9");
+    await expect(page.locator(".hojaDatosTicket .vistaTicket")).toContainText("Belgrano 456, QuilmesTel.: 11 4444-5555CUIT: 20-12345678-9");
     await page.locator("#formDatosTicket").evaluate(form => form.scrollIntoView({ block: "center" }));
     await capturar(page, "impresion-01-cargar-datos-ticket");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     const datos = page.locator("#cuentaDatosTicket");
     await expect(datos).toContainText("Teléfono: 11 4444-5555");
     await expect(datos).toContainText("Dirección: Belgrano 456, Quilmes");
@@ -85,7 +86,7 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.getByRole("button", { name: "Cambiar datos del ticket" }).click();
     await page.locator("#datosTicketDireccion").fill("");
     await page.locator("#datosTicketCuit").fill("");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.locator("#cuentaDatosTicket")).not.toContainText("CUIT");
     await irAPedidos(page);
     ticket = await imprimirTicket(page, "Almacén Don Pepe", "Una copia");

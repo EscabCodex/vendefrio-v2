@@ -37,7 +37,7 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     await expect(tarjeta).toBeVisible();
     await expect(page.locator("#contenedorHistorial")).not.toContainText("Sin fecha");
     await expect(tarjeta).not.toContainText(" 0 unidades");
-    await expect(tarjeta).toContainText("2 productos diferentes");
+    await expect(tarjeta).toContainText(" unidades");
     await tarjeta.getByRole("button", { name: "Ver pedido" }).click();
     await expect(page.locator("#pedidoDetalle")).toContainText("Unidades totales");
     await expect(page.locator("#pedidoDetalle")).toContainText("Frío Sur");

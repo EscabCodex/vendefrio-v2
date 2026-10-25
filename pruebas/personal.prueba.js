@@ -58,7 +58,20 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
     await page.locator("#pantallaHistorial").getByRole("radio", { name: "Mes" }).click();
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
+    await expect(page.locator("#pantallaHistorial .marcadorFechaHistorial").first()).toContainText(/^Hoy · /);
+    await expect(page.locator("#resumenHistorial")).toHaveText(/^1 pedido · \d+ unidad/);
     await capturar(page, "personal-05-historial");
+
+    // T167: "⋯" abre una hoja con Ver pedido y Eliminar pedido.
+    await page.getByRole("button", { name: "Opciones del pedido de Anibal" }).click();
+    const opciones = page.getByRole("dialog", { name: "Opciones del pedido" });
+    await expect(opciones.getByRole("button", { name: "Eliminar pedido" })).toBeVisible();
+    await capturar(page, "personal-06-opciones-del-pedido");
+    await opciones.getByRole("button", { name: "Ver pedido" }).click();
+    await expect(page.locator("#modalPedido")).toBeVisible();
+    await expect(page.locator("#pedidoCliente")).toHaveText("Anibal");
+    await page.locator("#modalPedido").click({ position: { x: 10, y: 10 } });
+    await expect(page.locator("#modalPedido")).toBeHidden();
 
     // Sigue ahí después de cerrar y abrir la app.
     await page.reload();

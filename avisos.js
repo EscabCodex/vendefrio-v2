@@ -677,7 +677,8 @@
         let modal = document.getElementById("modalAvisos");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        // Hoja desde abajo, como las demás ventanas (T167).
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalAvisos";
 
         const contenido = crear("div", "modalContenido listaAvisosContenido");
@@ -794,7 +795,10 @@
 
         if (!visibles.length) {
             const vacio = crear("div", "avisosVacio");
+            const icono = crear("span", "pzIconoGrande pzIconoPri");
+            icono.innerHTML = window.icono ? window.icono("campana", 26) : "";
             vacio.append(
+                icono,
                 crear("strong", "", estado === "cargando" ? "Buscando tus avisos…" : "No tenés avisos"),
                 crear("p", "", "Acá aparecen los pedidos nuevos, los preparados, los faltantes, las incidencias y los pedidos editados. Nunca te llega aviso de lo que hacés vos.")
             );

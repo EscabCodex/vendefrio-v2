@@ -108,7 +108,7 @@
     <button id="cerrarCargaPedido" class="botonCerrarCarga oculto" type="button" aria-label="Cerrar" title="Volver a Inicio"><i data-ico="cerrarX" data-ico-tam="22"></i></button>
     <div class="logo" data-ico="documento" data-ico-tam="22"></div>
     <div>
-      <h1>Nuevo Pedido</h1>
+      <h1>Nuevo pedido</h1>
       <p>VendeFrío</p>
     </div>
   </header>
@@ -328,7 +328,7 @@
     <div class="logo" data-ico="historial" data-ico-tam="22"></div>
     <div>
       <h1>Historial</h1>
-      <p>Pedidos guardados</p>
+      <p>Los pedidos que ya cargaste</p>
     </div>
   </header>
 
@@ -342,9 +342,6 @@
         <option value="semana">Esta semana</option>
       </select>
 
-      <p id="resumenHistorial" class="resumenHistorial" aria-live="polite">
-        Pedidos encontrados: 0 - Unidades: 0
-      </p>
 
       <div id="filtroHistorialActivo" class="filtroHistorialActivo oculto">
         <span id="textoFiltroHistorial"></span>
@@ -354,6 +351,8 @@
         </button>
       </div>
     </div>
+
+    <p id="resumenHistorial" class="resumenHistorial" aria-live="polite">0 pedidos</p>
 
     <div id="contenedorHistorial">
       <div class="card">

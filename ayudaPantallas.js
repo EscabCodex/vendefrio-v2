@@ -39,7 +39,7 @@
         pantallaHistorial: { titulo: "Historial", pasos: [
             "Acá están los pedidos terminados, del más nuevo al más viejo.",
             "Buscá por comercio o filtrá por fecha.",
-            "Tocá uno para ver el detalle."] },
+            "Tocá uno para ver el detalle. Con los tres puntitos lo podés eliminar."] },
         pantallaEstadisticas: { titulo: "Estadísticas", pasos: [
             "Arriba elegí el período: hoy, la semana, el mes o todo.",
             "Ves cuánto vendiste y lo más pedido.",

@@ -27,15 +27,6 @@ function crearTextoHistorial(tag, texto, clase = "") {
     return elemento;
 }
 
-function obtenerTiposDelPedido(pedido) {
-    const texto = String(pedido && pedido.pedido || "");
-
-    return texto
-        .split(/\r?\n/)
-        .filter(linea => / x\d+\s*$/.test(linea.trim()))
-        .length;
-}
-
 function obtenerFechaRegistro(pedido) {
     const timestamp = Number(pedido && pedido.timestamp);
 
@@ -63,25 +54,52 @@ function formatearPrecioHistorial(valor) {
     return "$ " + Number(valor || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
 }
 
-// "Cargado por Jere · $ 12.500" (T20). Si algún producto no tenía precio en
-// el catálogo al cargarlo, lo dice. Entregado (T27): el total a cobrar con
-// lo entregado.
-function textoAutorYTotalHistorial(pedido) {
-    const nombre = String(pedido.autor.nombre || "").trim() ||
-        (pedido.autor.idPersona === "dueno" ? "el dueño" : "un empleado");
+// Total del pedido para la tarjeta (T167): con los precios guardados al
+// cargarlo y, si ya se entregó en la nube, con lo entregado.
+function totalParaHistorial(pedido) {
     const entrega = estadoActualDelPedido(pedido) === "entregado"
         ? window.nubeVendeFrio?.entregaDelPedido?.(pedido)
         : null;
-    const { total, conPrecio, sinPrecio } = entrega ? entrega.total : totalDelPedido(pedido);
-    let precio = "Sin precio";
+    const { total, conPrecio } = entrega ? entrega.total : totalDelPedido(pedido);
+    return conPrecio ? { valor: total, texto: formatearPrecioHistorial(total) } : { valor: 0, texto: "" };
+}
 
-    if (conPrecio && sinPrecio) {
-        precio = formatearPrecioHistorial(total) + " (" + sinPrecio + " sin precio)";
-    } else if (conPrecio) {
-        precio = formatearPrecioHistorial(total);
-    }
+function textoAutorHistorial(pedido) {
+    const nombre = String(pedido.autor.nombre || "").trim() ||
+        (pedido.autor.idPersona === "dueno" ? "el due\u00f1o" : "un empleado");
+    return "Cargado por " + nombre;
+}
 
-    return "Cargado por " + nombre + "  ·  " + precio;
+// "10:42" si el pedido tiene la hora guardada.
+function obtenerHoraHistorial(pedido) {
+    const timestamp = Number(pedido && pedido.timestamp);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
+    const fecha = new Date(timestamp);
+    if (Number.isNaN(fecha.getTime())) return "";
+    return fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+// "Hoy · sábado 25", "Ayer · viernes 24" o "jueves 23 de octubre".
+function nombreDelDiaHistorial(textoFecha) {
+    const partes = String(textoFecha || "").split("/");
+    if (partes.length !== 3) return textoFecha;
+    const fecha = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]));
+    if (Number.isNaN(fecha.getTime())) return textoFecha;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const dias = Math.round((hoy.getTime() - fecha.getTime()) / 86400000);
+    const dia = fecha.toLocaleDateString("es-AR", { weekday: "long" }) + " " + fecha.getDate();
+    if (dias === 0) return "Hoy \u00b7 " + dia;
+    if (dias === 1) return "Ayer \u00b7 " + dia;
+    const conMes = fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }).replace(",", "");
+    return fecha.getFullYear() === hoy.getFullYear() ? conMes : conMes + " de " + fecha.getFullYear();
+}
+
+function claseChipEstadoHistorial(estado) {
+    if (estado === "entregado") return "pzChipOk";
+    if (estado === "cancelado") return "pzChipPeligro";
+    if (estado === "cargado") return "pzChipInfo";
+    return "pzChipAviso";
 }
 
 function coincidePeriodoHistorial(pedido, periodo) {
@@ -290,11 +308,11 @@ function actualizarResumenHistorial(pedidos) {
         return total + obtenerUnidadesAnaliticasHistorial(registro.pedido);
     }, 0);
 
+    const total = pedidos.reduce((suma, registro) => suma + totalParaHistorial(registro.pedido).valor, 0);
     resumenHistorial.textContent =
-        "Pedidos encontrados: " +
-        pedidos.length +
-        "  -  Unidades: " +
-        unidades;
+        pedidos.length + (pedidos.length === 1 ? " pedido" : " pedidos") +
+        " \u00b7 " + unidades + (unidades === 1 ? " unidad" : " unidades") +
+        (total > 0 ? " \u00b7 " + formatearPrecioHistorial(total) : "");
 }
 
 function actualizarFiltroActivoHistorial() {
@@ -643,7 +661,9 @@ function renderizarHistorial() {
     pedidos.forEach(registro => {
         const fechaGrupo = String(registro.pedido.fecha || "Sin fecha");
         let grupo = gruposPorFecha.find(item => item.fecha === fechaGrupo);
-        if (!grupo) { grupo = { fecha: fechaGrupo, pedidos: [] }; gruposPorFecha.push(grupo); }
+        if (!grupo) { grupo = { fecha: fechaGrupo, pedidos: [], total: 0 }; gruposPorFecha.push(grupo); }
+        registro.total = totalParaHistorial(registro.pedido);
+        grupo.total += registro.total.valor;
         grupo.pedidos.push(registro);
     });
 
@@ -651,108 +671,94 @@ function renderizarHistorial() {
     // fecha es un marcador seguido de sus pedidos.
     const filas = [];
     gruposPorFecha.forEach(grupo => {
-        filas.push({ fecha: grupo.fecha });
+        filas.push({ grupo });
         grupo.pedidos.forEach(registro => filas.push({ registro }));
     });
     const dibujarFila = fila => {
-        if (fila.fecha !== undefined) {
-        const marcador = document.createElement("div"); marcador.className = "marcadorFechaHistorial";
-        marcador.innerHTML = `<span class="indicadorFechaHistorial"></span><strong></strong>`;
-        marcador.querySelector("strong").textContent = fila.fecha;
-        return marcador;
+        if (fila.grupo) {
+            const grupo = fila.grupo;
+            const marcador = document.createElement("div");
+            marcador.className = "marcadorFechaHistorial";
+            const cuantos = grupo.pedidos.length + (grupo.pedidos.length === 1 ? " pedido" : " pedidos");
+            marcador.append(
+                crearTextoHistorial("strong", nombreDelDiaHistorial(grupo.fecha)),
+                crearTextoHistorial("small", cuantos + (grupo.total > 0 ? " \u00b7 " + formatearPrecioHistorial(grupo.total) : ""))
+            );
+            return marcador;
         }
+        // Historial con el estilo nuevo (T167, opción A): una tarjeta por
+        // pedido; tocarla abre el pedido y "⋯" tiene Ver y Eliminar.
         const registro = fila.registro;
         const pedido = registro.pedido;
         const indice = registro.indice;
         const comercio = String(pedido.comercio || "SIN NOMBRE").trim();
-        const fecha = String(pedido.fecha || "Sin fecha");
         const cantidad = Number(pedido.cantidad) || 0;
-        const tipos = obtenerTiposDelPedido(pedido);
+        const hora = obtenerHoraHistorial(pedido);
 
         const tarjeta = document.createElement("div");
         tarjeta.className = "card historialCard";
 
-        const cabecera = document.createElement("div");
-        cabecera.className = "cabeceraCard";
+        const ver = document.createElement("button");
+        ver.type = "button";
+        ver.className = "verPedido abrirPedidoHistorial";
+        ver.dataset.indice = String(indice);
+        ver.setAttribute("aria-label", "Ver pedido de " + comercio);
 
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.style.background = colorAvatar(comercio);
+        const avatar = document.createElement("span");
+        avatar.className = "pzIni " + (window.piezas?.colorIni?.(comercio) || "pzIni1");
         avatar.textContent = iniciales(comercio);
 
-        const informacion = document.createElement("div");
+        const informacion = document.createElement("span");
         informacion.className = "infoCard";
+        const partes = [];
+        if (hora) partes.push(hora);
+        partes.push(cantidad + (cantidad === 1 ? " unidad" : " unidades"));
+        informacion.append(
+            crearTextoHistorial("strong", comercio),
+            crearTextoHistorial("small", partes.join(" \u00b7 "))
+        );
 
-        const titulo = crearTextoHistorial("h3", comercio);
-        const resumen = document.createElement("p");
-        resumen.className = "subtitulo";
-        resumen.innerHTML =
-            window.icono("calendario", 13) + " " +
-                fecha +
-                "  \u00b7  " + window.icono("paquete", 13) + " " +
-                cantidad +
-                " unidades  \u00b7  " +
-                window.icono("recibo", 13) +
-                " " +
-                tipos +
-                " productos diferentes";
-
-        informacion.append(titulo, resumen);
-
-        // Pedido completo (T20): quién lo cargó y el total con los precios
-        // guardados al cargarlo.
+        // Pedido completo (T20): quién lo cargó.
         if (pedido.autor && typeof pedido.autor === "object") {
-            informacion.append(crearTextoHistorial("p", textoAutorYTotalHistorial(pedido), "subtitulo autorPedidoHistorial"));
+            informacion.append(crearTextoHistorial("small", textoAutorHistorial(pedido), "autorPedidoHistorial"));
         }
 
         // Pedidos subidos a la nube desde este celular (T11) y, en la nube,
         // los que no tienen historial de estados (T20). Los demás muestran
         // su estado actual.
         const estadoActual = estadoActualDelPedido(pedido);
+        const etiquetas = document.createElement("span");
+        etiquetas.className = "etiquetasHistorial";
 
         if (pedido.estado === "historico" || (!estadoActual && usaNubeReal())) {
-            informacion.append(crearTextoHistorial("span", "Hist\u00f3rico", "badge badgeHistorico"));
+            etiquetas.append(crearTextoHistorial("span", "Hist\u00f3rico", "pzChip pzChipGris badgeHistorico"));
         } else if (estadoActual) {
             const etiqueta = crearTextoHistorial(
                 "span",
                 nombreDeEstadoPedido(estadoActual) || estadoActual,
-                "badge badgeEstadoPedido"
+                "pzChip " + claseChipEstadoHistorial(estadoActual) + " badgeEstadoPedido"
             );
             etiqueta.dataset.estado = estadoActual;
-            informacion.append(etiqueta);
+            etiquetas.append(etiqueta);
         }
 
         // Pedido que todav\u00eda no confirm\u00f3 la nube (T12).
         if (window.nubeVendeFrio?.pedidoSinSubir?.(pedido.id)) {
-            informacion.append(crearTextoHistorial("span", "Pendiente de sincronizar", "badge badgeSinSubir"));
+            etiquetas.append(crearTextoHistorial("span", "Pendiente de sincronizar", "pzChip pzChipAviso badgeSinSubir"));
         }
+        if (etiquetas.childElementCount) informacion.append(etiquetas);
 
-        cabecera.append(avatar, informacion);
+        const total = crearTextoHistorial("b", registro.total.texto, "totalHistorial");
+        ver.append(avatar, informacion, total);
 
-        const acciones = document.createElement("div");
-        acciones.className = "accionesHistorial";
+        const opciones = document.createElement("button");
+        opciones.type = "button";
+        opciones.className = "opcionesPedidoHistorial";
+        opciones.dataset.indice = String(indice);
+        opciones.setAttribute("aria-label", "Opciones del pedido de " + comercio);
+        opciones.innerHTML = window.icono("puntos", 18);
 
-        const botonVer = document.createElement("button");
-        botonVer.type = "button";
-        botonVer.className = "btnAccion ver verPedido";
-        botonVer.dataset.indice = String(indice);
-        botonVer.innerHTML = window.icono("ojo", 14) + " Ver pedido";
-
-        const botonEliminar = document.createElement("button");
-        botonEliminar.type = "button";
-        botonEliminar.className = "btnAccion eliminar eliminarPedidoHistorial";
-        botonEliminar.dataset.id = String(pedido.id || "");
-        botonEliminar.innerHTML = window.icono("tacho", 14) + " Eliminar";
-
-        // Eliminar (T26): en la nube, solo quien cargó el pedido o el dueño
-        // y solo mientras está "Cargado" (un "Histórico", solo el dueño). En
-        // el modo personal, como siempre.
-        const puedeEliminar = !usaNubeReal() ||
-            Boolean(window.nubeVendeFrio?.puedeEliminarElPedido?.(pedido));
-
-        acciones.append(botonVer);
-        if (puedeEliminar) acciones.append(botonEliminar);
-        tarjeta.append(cabecera, acciones);
+        tarjeta.append(ver, opciones);
         return tarjeta;
     };
     if (window.piezas?.dibujarDeATandas) window.piezas.dibujarDeATandas(contenedor, filas, dibujarFila);
@@ -826,50 +832,74 @@ if (pantallaHistorial) {
             return;
         }
 
-        if (boton.classList.contains("eliminarPedidoHistorial")) {
-            const id = boton.dataset.id;
-
-            // En la nube (T26) el pedido no se borra: queda guardado por
-            // dentro como eliminado y desaparece de la app para todos.
-            if (usaNubeReal()) {
-                abrirConfirmacion(
-                    "Eliminar pedido",
-                    "Desaparece de la app para todos, pero queda guardado por dentro. \u00bfLo elimin\u00e1s?",
-                    () => {
-                        try {
-                            window.nubeVendeFrio.eliminarPedido(id);
-                            mostrarToast("Pedido eliminado");
-                        } catch (error) {
-                            console.error("No se pudo eliminar el pedido.", error);
-                            mostrarAviso(
-                                "No se pudo eliminar",
-                                error && error.code === "pedido" ? error.message : "Prob\u00e1 de nuevo en unos segundos."
-                            );
-                        }
-
-                        renderizarHistorial();
-
-                        if (typeof actualizarDashboard === "function") {
-                            actualizarDashboard();
-                        }
-                    }
-                );
-                return;
-            }
-
-            // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos
-            // segundos (en este celular, sin nube).
-            const historialAntes = obtenerHistorial();
-            const redibujar = () => {
-                renderizarHistorial();
-                if (typeof actualizarDashboard === "function") actualizarDashboard();
-            };
-            if (!eliminarPedidoPorId(id)) return;
-            redibujar();
-            window.piezas?.deshacer("Pedido eliminado", () => {
-                guardarHistorial(historialAntes);
-                redibujar();
-            });
+        if (boton.classList.contains("opcionesPedidoHistorial")) {
+            abrirOpcionesPedidoHistorial(Number(boton.dataset.indice));
         }
+    });
+}
+
+// "⋯" de cada pedido (T167): Ver pedido y Eliminar pedido en una hoja.
+function abrirOpcionesPedidoHistorial(indice) {
+    const pedido = obtenerHistorial()[indice];
+    if (!pedido || !window.piezas) return;
+
+    // Eliminar (T26): en la nube, solo quien cargó el pedido o el dueño
+    // y solo mientras está "Cargado" (un "Histórico", solo el dueño). En
+    // el modo personal, como siempre.
+    const puedeEliminar = !usaNubeReal() ||
+        Boolean(window.nubeVendeFrio?.puedeEliminarElPedido?.(pedido));
+    const botones = [{ texto: "Ver pedido", icono: "ojo", clase: "pzBtnSec", alTocar: () => mostrarPedidoGuardado(pedido) }];
+    if (puedeEliminar) {
+        botones.push({ texto: "Eliminar pedido", icono: "tacho", clase: "pzBtnPeligro eliminarPedidoHistorial", alTocar: () => eliminarPedidoDelHistorial(String(pedido.id || "")) });
+    }
+    window.piezas.hoja({
+        titulo: String(pedido.comercio || "SIN NOMBRE").trim(),
+        sub: [pedido.fecha, (Number(pedido.cantidad) || 0) + " unidades"].filter(Boolean).join(" \u00b7 "),
+        botones,
+        etiqueta: "Opciones del pedido"
+    });
+}
+
+function eliminarPedidoDelHistorial(id) {
+    // En la nube (T26) el pedido no se borra: queda guardado por
+    // dentro como eliminado y desaparece de la app para todos.
+    if (usaNubeReal()) {
+        abrirConfirmacion(
+            "Eliminar pedido",
+            "Desaparece de la app para todos, pero queda guardado por dentro. \u00bfLo elimin\u00e1s?",
+            () => {
+                try {
+                    window.nubeVendeFrio.eliminarPedido(id);
+                    mostrarToast("Pedido eliminado");
+                } catch (error) {
+                    console.error("No se pudo eliminar el pedido.", error);
+                    mostrarAviso(
+                        "No se pudo eliminar",
+                        error && error.code === "pedido" ? error.message : "Prob\u00e1 de nuevo en unos segundos."
+                    );
+                }
+
+                renderizarHistorial();
+
+                if (typeof actualizarDashboard === "function") {
+                    actualizarDashboard();
+                }
+            }
+        );
+        return;
+    }
+
+    // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos
+    // segundos (en este celular, sin nube).
+    const historialAntes = obtenerHistorial();
+    const redibujar = () => {
+        renderizarHistorial();
+        if (typeof actualizarDashboard === "function") actualizarDashboard();
+    };
+    if (!eliminarPedidoPorId(id)) return;
+    redibujar();
+    window.piezas?.deshacer("Pedido eliminado", () => {
+        guardarHistorial(historialAntes);
+        redibujar();
     });
 }

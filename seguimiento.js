@@ -40,7 +40,7 @@
     if (!pantalla || !vista || !filtros || !resumen || !lista) return;
 
     const tituloPantalla = pantalla.querySelector("header h1");
-    const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo Pedido";
+    const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo pedido";
 
     // Etapas de la vista. Un pedido que quedó en "Cargado en el vehículo" (ya
     // no existe, T29b) está en "En reparto": así lo da estadoActualDelPedido.

@@ -149,6 +149,31 @@
         return typeof window.icono === "function" ? window.icono(nombre, tamano) : "";
     }
 
+    // Cada rol en una fila con su ícono, qué hace y un círculo para marcarlo
+    // (T167, opción B). Los roles que agregó el dueño van con un ícono de
+    // persona.
+    const DATOS_ROL = {
+        vendedor: { icono: "bolsa", texto: "Carga pedidos" },
+        deposito: { icono: "paquete", texto: "Arma los pedidos" },
+        repartidor: { icono: "camion", texto: "Entrega los pedidos" },
+        cobranza: { icono: "moneda", texto: "Registra los cobros" },
+        administracion: { icono: "engranaje", texto: "Ve y maneja todo" }
+    };
+
+    function htmlRol(rol, posicion, marcado, aclaracion) {
+        const datos = DATOS_ROL[rol.id] || { icono: "persona", texto: "" };
+        const detalle = aclaracion
+            ? `<small class="inicioRolAclaracion">${escapar(aclaracion)}</small>`
+            : datos.texto ? `<small>${escapar(datos.texto)}</small>` : "";
+        return `
+            <label class="inicioRol">
+                <input type="checkbox" value="${escapar(rol.id)}" ${marcado ? "checked" : ""}>
+                <span class="pzIni pzIni${(posicion % 3) + 1}" aria-hidden="true">${icono(datos.icono, 18)}</span>
+                <span class="inicioRolTexto"><strong>${escapar(rol.nombre)}</strong>${detalle}</span>
+                <span class="inicioRolMarca" aria-hidden="true">${icono("check", 16)}</span>
+            </label>`;
+    }
+
     // --- ¿Este celular tiene datos propios? ---
     // Datos propios = cualquier cosa distinta de las listas de ejemplo que la
     // app carga sola la primera vez. Ante la duda (datos dañados) se toma como
@@ -258,14 +283,16 @@
         pantalla.innerHTML = `
             <div class="inicioContenido">
                 <div class="inicioMarca">
-                    <img src="icon.svg" alt="" width="56" height="56">
-                    <h1 id="inicioTitulo">VendeFrío</h1>
-                    <p>Pedidos y reparto desde el celular</p>
+                    <span class="inicioLogo" aria-hidden="true">VF</span>
+                    <div>
+                        <h1 id="inicioTitulo">VendeFrío</h1>
+                        <p>Pedidos y reparto desde el celular</p>
+                    </div>
                 </div>
 
                 <div data-paso="elegir">
                     <div class="inicioHero">
-                        <img src="icon.svg" alt="" width="64" height="64">
+                        <span class="inicioLogo" aria-hidden="true">VF</span>
                         <h2>Tus pedidos, del comercio al camión.</h2>
                         <p>Cargá el pedido una vez desde el celular y seguilo hasta la entrega.</p>
                     </div>
@@ -300,24 +327,21 @@
 
                 <form data-paso="personal" class="inicioFormulario oculto" id="inicioFormPersonal" novalidate>
                     <h2>Usar sin cuenta</h2>
-                    <p class="inicioNota">
-                        Tus datos no están protegidos: quedan solo en este celular
-                        y no se comparten. Si se pierde o se borra el celular, se pierden.
-                        Podés iniciar sesión después para guardarlos en la nube.
-                    </p>
+                    <div class="pzBanner pzBanAviso inicioAvisoPersonal">
+                        <span class="pzIco">${icono("alerta", 22)}</span>
+                        <div>
+                            <strong>Tus datos quedan solo en este celular</strong>
+                            <small>No se comparten. Si se pierde o se borra el celular, se pierden. Después podés guardarlos en la nube.</small>
+                        </div>
+                    </div>
                     <label>Tu nombre
                         <input type="text" id="inicioNombrePersonal" autocomplete="name"
                             maxlength="${LARGO_MAXIMO_NOMBRE_PERSONAL}" placeholder="Por ejemplo: Juan Pérez" required>
                     </label>
                     <fieldset class="inicioRoles">
-                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
-                        <div id="inicioRolesPersonales">
-                            ${ROLES_PERSONALES.map(rol => `
-                                <label class="inicioRol">
-                                    <input type="checkbox" value="${escapar(rol.id)}">
-                                    <span>${escapar(rol.nombre)}</span>
-                                </label>
-                            `).join("")}
+                        <legend>¿Qué hacés? Podés elegir varios o ninguno</legend>
+                        <div id="inicioRolesPersonales" class="inicioListaRoles">
+                            ${ROLES_PERSONALES.map((rol, posicion) => htmlRol(rol, posicion, false, "")).join("")}
                         </div>
                     </fieldset>
                     <p class="inicioError oculto" role="alert"></p>
@@ -398,8 +422,8 @@
                             maxlength="${largoNombreEmpleado()}" placeholder="Por ejemplo: Juan Pérez" required>
                     </label>
                     <fieldset class="inicioRoles">
-                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
-                        <div id="inicioListaRoles"></div>
+                        <legend>¿Qué hacés? Podés elegir varios o ninguno</legend>
+                        <div id="inicioListaRoles" class="inicioListaRoles"></div>
                     </fieldset>
                     <p class="inicioAclaracion oculto" id="inicioNotaCobra">
                         Los roles con «Cobra» quedan pendientes hasta que tu encargado
@@ -752,14 +776,9 @@
             return "";
         };
 
-        caja.innerHTML = empleados.roles().map(rol => `
-            <label class="inicioRol">
-                <input type="checkbox" value="${escapar(rol.id)}" ${marcados.has(rol.id) ? "checked" : ""}>
-                <span>${escapar(rol.nombre)}${aclaracion(rol)
-                    ? `<small class="inicioRolAclaracion">${escapar(aclaracion(rol))}</small>`
-                    : ""}</span>
-            </label>
-        `).join("");
+        caja.innerHTML = empleados.roles().map((rol, posicion) =>
+            htmlRol(rol, posicion, marcados.has(rol.id), aclaracion(rol))
+        ).join("");
 
         document.getElementById("inicioNotaCobra")?.classList.toggle(
             "oculto",

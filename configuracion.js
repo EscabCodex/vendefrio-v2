@@ -650,8 +650,6 @@
     // --- Datos de la distribuidora para el ticket (T28c) ---
     // Solo el dueño: teléfono y, si tiene, dirección y CUIT. En el ticket
     // sale cada dato solo si está cargado.
-    let editandoDatosTicket = false;
-
     function htmlDatosTicket() {
         const distribuidora = window.distribuidoraVendeFrio;
         const usuario = window.cuentaVendeFrio?.usuarioActual();
@@ -660,28 +658,6 @@
 
         const datos = distribuidora.datosTicket();
         const largos = distribuidora.largosDatosTicket;
-
-        if (editandoDatosTicket) {
-            return `
-                <form class="configCuentaFormulario" id="formDatosTicket" novalidate>
-                    <label>${window.icono("telefono",15)} Teléfono de la distribuidora
-                        <input type="tel" id="datosTicketTelefono" autocomplete="tel"
-                            maxlength="${largos.telefono}" value="${escaparTexto(datos.telefono)}">
-                    </label>
-                    <label>${window.icono("ubicacion",15)} Dirección (si tiene local a la calle)
-                        <input type="text" id="datosTicketDireccion" autocomplete="street-address"
-                            maxlength="${largos.direccion}" value="${escaparTexto(datos.direccion)}">
-                    </label>
-                    <label>${window.icono("documento",15)} CUIT (si tiene)
-                        <input type="text" id="datosTicketCuit" inputmode="numeric"
-                            maxlength="${largos.cuit}" value="${escaparTexto(datos.cuit)}">
-                    </label>
-                    <p class="configEstado">Los que dejes vacíos no salen en el ticket.</p>
-                    <button type="submit" class="configCuentaIngresar">Guardar datos del ticket</button>
-                    <button type="button" data-accion="cancelarDatosTicket">Cancelar</button>
-                </form>
-            `;
-        }
 
         const filas = [
             datos.telefono ? "Teléfono: " + escaparTexto(datos.telefono) : "",
@@ -692,6 +668,73 @@
         return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
             filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
             "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
+    }
+
+    // Cargar o cambiar los datos del ticket (T167, opción A): una hoja desde
+    // abajo con los tres campos y cómo van a salir en el ticket.
+    function abrirDatosTicket() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!distribuidora?.datosTicket || !window.piezas) return;
+        const datos = distribuidora.datosTicket();
+        const largos = distribuidora.largosDatosTicket;
+        const campo = (id, icono, titulo, tipo, extra, valor, largo) => `
+            <label class="pzCampo campoDatoTicket"><span>${titulo}</span>
+                <span class="pzIco">${ico(icono, 18)}</span>
+                <input type="${tipo}" id="${id}" ${extra} maxlength="${largo}" value="${escaparTexto(valor)}">
+            </label>`;
+        const caja = window.piezas.hoja({
+            titulo: "Datos para el ticket",
+            sub: "Salen arriba de cada ticket. Los que dejes vacíos no salen.",
+            clase: "hojaDatosTicket",
+            html: `
+                <form id="formDatosTicket" novalidate>
+                    ${campo("datosTicketTelefono", "telefono", "Teléfono", "tel", 'autocomplete="tel"', datos.telefono, largos.telefono)}
+                    ${campo("datosTicketDireccion", "ubicacion", "Dirección (si tiene local a la calle)", "text", 'autocomplete="street-address"', datos.direccion, largos.direccion)}
+                    ${campo("datosTicketCuit", "documento", "CUIT (si tiene)", "text", 'inputmode="numeric"', datos.cuit, largos.cuit)}
+                    <p class="etiquetaVistaTicket">Así sale en el ticket</p>
+                    <div class="vistaTicket" aria-live="polite"></div>
+                </form>`,
+            botones: [
+                { texto: "Cancelar", clase: "pzBtnGris", par: true },
+                { texto: "Guardar", clase: "pzBtnPri", par: true, alTocar: () => guardarDatosTicket(caja) }
+            ]
+        });
+        const valor = id => (caja.querySelector("#" + id)?.value || "").trim();
+        const vista = caja.querySelector(".vistaTicket");
+        const dibujarVista = () => {
+            const lineas = [
+                distribuidora.nombreActual?.() || "Tu distribuidora",
+                valor("datosTicketDireccion"),
+                valor("datosTicketTelefono") ? "Tel.: " + valor("datosTicketTelefono") : "",
+                valor("datosTicketCuit") ? "CUIT: " + valor("datosTicketCuit") : ""
+            ].filter(Boolean);
+            vista.innerHTML = lineas.map((linea, posicion) => posicion ? escaparTexto(linea) : `<b>${escaparTexto(linea)}</b>`).join("<br>");
+        };
+        caja.addEventListener("input", dibujarVista);
+        caja.querySelector("form").addEventListener("submit", evento => {
+            evento.preventDefault();
+            caja.querySelector(".pzBtnPri")?.click();
+        });
+        dibujarVista();
+        setTimeout(() => caja.querySelector("#datosTicketTelefono")?.focus(), 220);
+    }
+
+    function guardarDatosTicket(caja) {
+        const valor = id => (caja.querySelector("#" + id)?.value || "").trim();
+        return window.distribuidoraVendeFrio.cambiarDatosTicket({
+            telefono: valor("datosTicketTelefono"),
+            direccion: valor("datosTicketDireccion"),
+            cuit: valor("datosTicketCuit")
+        })
+            .then(() => {
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
+                return true;
+            })
+            .catch(fallo => {
+                mostrarAviso("No se guardaron los datos", fallo.message);
+                return false;
+            });
     }
 
     // --- Alias y QR para cobrar (T77) ---
@@ -2663,20 +2706,13 @@
         }
 
         if (accion === "editarDatosTicket") {
-            editandoDatosTicket = true;
-            detalle("cuenta");
-            document.getElementById("datosTicketTelefono")?.focus();
+            abrirDatosTicket();
         }
 
         if (accion === "editarCobroTransferencia") {
             window.cobrarQrVendeFrio?.editar(() => {
                 if (seccionAbierta === "cuenta") detalle("cuenta");
             });
-        }
-
-        if (accion === "cancelarDatosTicket") {
-            editandoDatosTicket = false;
-            detalle("cuenta");
         }
 
         if (accion === "editarNombreDueno") {
@@ -2830,26 +2866,6 @@
                     error.classList.remove("oculto");
                 }
             });
-    });
-
-    // Datos del ticket (T28c).
-    document.addEventListener("submit", event => {
-        if (event.target.id !== "formDatosTicket") return;
-
-        event.preventDefault();
-
-        const valor = id => (document.getElementById(id)?.value || "").trim();
-        window.distribuidoraVendeFrio.cambiarDatosTicket({
-            telefono: valor("datosTicketTelefono"),
-            direccion: valor("datosTicketDireccion"),
-            cuit: valor("datosTicketCuit")
-        })
-            .then(() => {
-                editandoDatosTicket = false;
-                if (seccionAbierta === "cuenta") detalle("cuenta");
-                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
-            })
-            .catch(fallo => mostrarAviso("No se guardaron los datos", fallo.message));
     });
 
     // Nombre del dueño (T18).
@@ -3168,7 +3184,7 @@
         window.distribuidoraVendeFrio.escucharDatosTicket?.(() => {
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta !== "cuenta" || !caja || caja.classList.contains("oculto")) return;
-            if (editandoNombre || editandoNombreDueno || editandoDatosTicket) return;
+            if (editandoNombre || editandoNombreDueno) return;
             if (document.getElementById("cuentaDatosTicket")) detalle("cuenta");
         });
     }

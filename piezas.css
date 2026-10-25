@@ -969,3 +969,74 @@ html[data-tema] .modalEditorFoto .zoomEditorFoto{width:100%;accent-color:var(--a
 /* Con el globo del tutorial abajo (mientras se completa un paso), la hoja
    deja lugar para que no tape "Guardar". */
 html[data-tema] body:has(.tutorialCapa[data-modo="mientras"]) .modal.modalHoja .modalContenido{padding-bottom:calc(200px + env(safe-area-inset-bottom));}
+
+/* =====================================================
+   T167: Historial (opción A), "Tus datos" (opción B) y datos del ticket
+   (opción A) con el estilo nuevo.
+   ===================================================== */
+html[data-tema] #pantallaHistorial .resumenHistorial,
+html[data-tema="oscuro"] #pantallaHistorial .resumenHistorial{margin:2px 6px 0;padding:0;border:0 !important;background:none !important;color:var(--texto-sec) !important;font-size:13px;font-weight:600;}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 6px 8px;text-transform:none;letter-spacing:0;}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial strong{font-size:12.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial small{font-size:13px;font-weight:650;color:var(--texto-ter);white-space:nowrap;}
+html[data-tema] #pantallaHistorial .historialCard{position:relative;display:flex;align-items:center;padding:0;margin-bottom:10px;border-radius:24px;overflow:hidden;}
+html[data-tema] .historialCard .abrirPedidoHistorial{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:14px 56px 14px 14px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:76px;}
+html[data-tema] .historialCard .abrirPedidoHistorial:active{background:var(--superficie-2);}
+html[data-tema] .historialCard .pzIni{flex-shrink:0;}
+html[data-tema] .historialCard .infoCard{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+html[data-tema] .historialCard .infoCard strong{font-size:15.5px;font-weight:700;color:var(--texto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+html[data-tema] .historialCard .infoCard small{font-size:13px;color:var(--texto-sec);overflow-wrap:anywhere;}
+html[data-tema] .historialCard .etiquetasHistorial{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+html[data-tema] .historialCard .etiquetasHistorial .pzChip{margin:0;}
+html[data-tema] .historialCard .totalHistorial{position:absolute;top:16px;right:16px;font-size:15px;font-weight:800;color:var(--texto);white-space:nowrap;}
+html[data-tema] .historialCard .totalHistorial:empty{display:none;}
+html[data-tema] .historialCard:has(.totalHistorial:not(:empty)) .abrirPedidoHistorial{padding-right:96px;}
+html[data-tema] .historialCard .opcionesPedidoHistorial{position:absolute;right:12px;bottom:12px;width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--superficie-2);color:var(--texto-sec);cursor:pointer;}
+html[data-tema] .historialCard:not(:has(.totalHistorial:not(:empty))) .opcionesPedidoHistorial{top:50%;bottom:auto;transform:translateY(-50%);}
+html[data-tema] .historialCard .opcionesPedidoHistorial:active{background:var(--borde);}
+/* Pantalla de bienvenida y "Tus datos" (opción B). */
+html[data-tema] .inicioSesion .inicioMarca{display:flex;align-items:center;justify-items:initial;gap:12px;padding:10px 2px 6px;text-align:left;}
+html[data-tema] .inicioSesion .inicioLogo{width:56px;height:56px;border-radius:18px;font-size:19px;}
+html[data-tema] .inicioSesion .inicioMarca h1{font-size:21px;line-height:1.15;}
+html[data-tema] .inicioSesion .inicioMarca p{font-size:13.5px;margin:0;}
+html[data-tema] .inicioSesion .inicioHero .inicioLogo{width:64px;height:64px;border-radius:20px;font-size:22px;}
+html[data-tema] .inicioContenido h2{font-size:24px;letter-spacing:-.02em;line-height:1.15;margin:4px 2px 0;}
+html[data-tema] .inicioContenido .inicioHero h2{font-size:34px;}
+html[data-tema] .inicioSesion .inicioAvisoPersonal{margin:0;border-radius:20px;}
+html[data-tema] .inicioFormulario label:not(.inicioRol){font-size:13px;font-weight:650;color:var(--texto-sec);padding:0 4px;}
+html[data-tema] .inicioSesion input:not([type="checkbox"]){min-height:52px;padding:0 18px;border-radius:var(--radio-pildora);border:1px solid var(--borde-fuerte);background:var(--superficie);color:var(--texto);font-size:16px;}
+html[data-tema] .inicioSesion .inicioClave input{padding-right:52px;}
+html[data-tema] .inicioSesion .inicioVer{right:6px;width:46px;}
+html[data-tema] .inicioSesion .inicioPrincipal{min-height:54px;border:0;border-radius:var(--radio-pildora);background:var(--acento);color:var(--acento-txt);font-weight:750;}
+html[data-tema] .inicioSesion .inicioBoton{border-radius:var(--radio-pildora);}
+html[data-tema] .inicioFormulario .inicioVolver,html[data-tema] .inicioSesion [data-paso] > .inicioVolver{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);font-size:15.5px;font-weight:700;}
+html[data-tema] .inicioSesion [data-paso]:not([data-paso="elegir"]) > .inicioSinSesion{min-height:52px;border-radius:var(--radio-pildora);border:1px solid var(--borde-fuerte);background:transparent;}
+html[data-tema] .inicioSesion .inicioNota{padding:14px 16px;border:0;border-radius:20px;background:var(--superficie);box-shadow:var(--sombra);font-size:14px;}
+html[data-tema] .inicioSesion .inicioError{border-radius:16px;}
+html[data-tema] .inicioSesion .inicioRoles legend{margin:6px 4px 10px;font-size:12.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+html[data-tema] .inicioSesion .inicioListaRoles{display:block;border-radius:24px;background:var(--superficie);border:var(--borde-tarjeta);box-shadow:var(--sombra);overflow:hidden;}
+html[data-tema] .inicioSesion .inicioListaRoles .inicioRol{position:relative;display:flex !important;align-items:center;gap:12px;min-height:64px;margin:0;padding:8px 14px;border:0;border-top:1px solid var(--borde);border-radius:0;background:none;color:var(--texto);cursor:pointer;}
+html[data-tema] .inicioSesion .inicioListaRoles .inicioRol:first-child{border-top:0;}
+html[data-tema] .inicioSesion .inicioListaRoles .inicioRol:active{background:var(--superficie-2);}
+html[data-tema] .inicioSesion .inicioListaRoles .inicioRol input{position:absolute;opacity:0;width:1px;height:1px;min-height:0;margin:0;pointer-events:none;}
+html[data-tema] .inicioSesion .inicioListaRoles .pzIni{width:40px;height:40px;border-radius:13px;flex-shrink:0;}
+html[data-tema] .inicioSesion .inicioRolTexto{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+html[data-tema] .inicioSesion .inicioRolTexto strong{font-size:15.5px;font-weight:650;color:var(--texto);}
+html[data-tema] .inicioSesion .inicioRolTexto small{font-size:12.5px;font-weight:500;color:var(--texto-sec);margin:0;}
+html[data-tema] .inicioSesion .inicioRolMarca{width:28px;height:28px;flex-shrink:0;border-radius:50%;border:2px solid var(--borde-fuerte);display:grid;place-items:center;color:transparent;transition:background .15s,border-color .15s;}
+html[data-tema] .inicioSesion .inicioRolMarca svg{opacity:0;}
+html[data-tema] .inicioSesion .inicioRol input:checked ~ .inicioRolMarca{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
+html[data-tema] .inicioSesion .inicioRol input:checked ~ .inicioRolMarca svg{opacity:1;}
+html[data-tema] .inicioSesion .inicioRol input:focus-visible ~ .inicioRolMarca{outline:3px solid var(--acento);outline-offset:2px;}
+html[data-tema] .inicioSesion[data-paso-actual="elegir"] .inicioMarca{display:none;}
+/* Datos para el ticket (opción A): hoja con los campos y la vista previa. */
+html[data-tema] .hojaDatosTicket .campoDatoTicket{position:relative;}
+html[data-tema] .hojaDatosTicket .campoDatoTicket > .pzIco{position:absolute;left:24px;bottom:21px;color:var(--texto-ter);pointer-events:none;}
+html[data-tema] .hojaDatosTicket .campoDatoTicket input{padding-left:48px !important;}
+html[data-tema] .hojaDatosTicket .etiquetaVistaTicket{margin:12px 14px 6px;font-size:12px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--texto-ter);}
+html[data-tema] .hojaDatosTicket .vistaTicket{margin:0 8px 6px;padding:14px;border-radius:16px;border:1px dashed #C9D2DE;background:#fff;color:#111;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;text-align:center;overflow-wrap:anywhere;}
+html[data-tema] .hojaDatosTicket .vistaTicket b{font-size:14px;}
+/* Avisos vacío: con su ícono, como las demás pantallas vacías. */
+html[data-tema] .avisosVacio{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px 8px;}
+html[data-tema] .avisosVacio strong{margin:4px 0 0;font-size:16px;}
+html[data-tema] .modal.modalHoja .btnModalSecundario{background:var(--superficie-2);color:var(--texto);line-height:1.2;}
