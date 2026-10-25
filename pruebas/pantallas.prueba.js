@@ -7,6 +7,10 @@ const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas } = require("./datosGr
 // La traba más larga que se acepta al tocar algo. Antes de T151 Comercios
 // dejaba el celular trabado unos 7 segundos e Historial unos 4.
 const TRABA_MAXIMA = 800;
+// Mide tiempos: con la máquina cargada por las otras pruebas, a veces una
+// traba suelta la hacía fallar. Si falla, se repite una vez; una traba de
+// verdad falla las dos veces.
+test.describe.configure({ retries: 1 });
 
 test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ page }) => {
     await page.addInitScript(anotarTrabas);

@@ -17,7 +17,19 @@
     const clave = (marca, producto) => normal(marca) + "|" + normal(producto);
 
     // ---------- Lo que se sabe del comercio ----------
+    // Se recuerdan los pedidos del último comercio hasta que cambian los
+    // pedidos: cada "+" vuelve a preguntarlos.
+    let pedidosRecordados = null;
+
     function pedidosDe(nombre) {
+        const marca = typeof marcaDeColeccion === "function" ? marcaDeColeccion("historial") : null;
+        if (marca === null || !pedidosRecordados || pedidosRecordados.nombre !== nombre || pedidosRecordados.marca !== marca) {
+            pedidosRecordados = { nombre, marca, pedidos: calcularPedidosDe(nombre) };
+        }
+        return pedidosRecordados.pedidos.slice();
+    }
+
+    function calcularPedidosDe(nombre) {
         const todos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
         return todos.filter(pedido => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)
@@ -247,14 +259,34 @@
     }
 
     // ---------- Precios de la lista (ofertas y listas de precios) ----------
+    // Busca el producto del catálogo como productoDelCatalogo, pero con un
+    // índice armado una vez para toda la lista.
+    function indiceDelCatalogo(catalogo) {
+        const marcas = new Map();
+        const productos = new Map();
+        Object.keys(catalogo).forEach(marca => {
+            if (!marcas.has(normal(marca))) marcas.set(normal(marca), marca);
+            (catalogo[marca] || []).forEach(producto => {
+                const k = marca + "\u0000" + normal(producto && producto.nombre);
+                if (producto && !productos.has(k)) productos.set(k, producto);
+            });
+        });
+        return (marca, nombre) => {
+            const marcaReal = marcas.get(normal(marca));
+            if (marcaReal === undefined) return null;
+            const producto = productos.get(marcaReal + "\u0000" + normal(nombre));
+            return producto ? { marca: marcaReal, producto } : null;
+        };
+    }
+
     function actualizarPreciosDeLaLista() {
         const comercio = comercioDelPedidoActual();
-        const catalogo = obtenerProductos();
+        const buscar = indiceDelCatalogo(obtenerProductos());
         document.querySelectorAll("#productos .marca .fila").forEach(fila => {
             const select = fila.querySelector("select");
             const texto = fila.querySelector(".nombreProductoPedido");
             if (!select || !texto) return;
-            const real = productoDelCatalogo(catalogo, select.dataset.marca, select.dataset.producto);
+            const real = buscar(select.dataset.marca, select.dataset.producto);
             if (!real) return;
             // T98: el precio cambiado solo para este pedido, y el lapicito
             // para cambiarlo (si esta persona ve la plata).
