@@ -748,3 +748,16 @@ html{-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscrol
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior-y:contain;}
 img,svg{-webkit-user-drag:none;}
 input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
+
+/* Celulares chicos (360 px o menos): que nada se corte ni se salga. */
+@media (max-width:360px){
+  html .paradaAcciones.conYaLlego{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;}
+  html .paradaAcciones .paradaYaLlego{padding:0 10px;}
+  html .paradaAcciones .btnAccion{min-width:0;}
+  html .btnUbicacionDashboard{width:auto;max-width:100%;white-space:normal;text-align:left;}
+  html div.pzBanner{flex-wrap:wrap;}
+  html div.pzBanner > div{flex-basis:calc(100% - 40px);}
+  html div.pzBanner > .pzBtn{margin-left:auto;}
+  html body > nav.bottom-nav .nav-item.nav-nuevo{flex-basis:54px;}
+  html body > nav.bottom-nav .nav-item{padding-left:2px;padding-right:2px;font-size:10px;letter-spacing:-.2px;}
+}
