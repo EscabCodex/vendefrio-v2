@@ -314,8 +314,12 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await opciones.getByRole("button", { name: "Sacar de la ruta" }).click();
     await expect(paradas).toHaveCount(2);
     await expect(page.locator("#resumenPinesMapa")).toContainText("2 en la ruta");
-    await centrarEnPin();
-    await page.locator('.pinRuta[title="Despensa Mary"]').click();
+    // Al sacar la parada el mapa vuelve a encuadrar la ruta un rato después:
+    // si se lleva el pin, se vuelve a centrar y se toca de nuevo.
+    await expect(async () => {
+        await centrarEnPin();
+        await page.locator('.pinRuta[title="Despensa Mary"]').click({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
     await page.getByRole("dialog", { name: "Opciones de Despensa Mary" }).getByRole("button", { name: "Sumar a la ruta" }).click();
     await expect(paradas).toHaveCount(3);
     await expect(paradas.last()).toHaveAttribute("data-nombre", "Despensa Mary");

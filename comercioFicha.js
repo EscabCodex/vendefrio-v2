@@ -149,7 +149,7 @@
                 <button type="button" class="fichaAsistente" aria-label="Asistente" title="Asistente" data-abrir-asistente>${window.icono("chispa", 20)}</button>
                 <div class="fichaEncabezado">
                     <div class="fichaAvatar"></div>
-                    <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2><p class="fichaDireccion"></p><span class="chipEstado fichaEstado"></span></div>
+                    <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2><p class="fichaDireccion copiable"></p><span class="chipEstado fichaEstado"></span></div>
                 </div>
                 <div class="fichaAccesos"></div>
                 <div class="fichaDebe"></div>

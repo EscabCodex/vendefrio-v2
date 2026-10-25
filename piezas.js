@@ -474,6 +474,19 @@
     window.addEventListener("resize", pedirAcomodarCabeceras);
     window.addEventListener("load", pedirAcomodarCabeceras);
 
+    // Que mantener apretado no abra el menú de Chrome (abrir imagen, copiar
+    // link) ni se puedan arrastrar las imágenes. Donde se escribe o en lo que
+    // tiene .copiable el menú sigue, para poder copiar y pegar.
+    function dejaMenu(elemento) {
+        return !!(elemento && elemento.closest && elemento.closest("input, textarea, select, [contenteditable], .copiable"));
+    }
+    document.addEventListener("contextmenu", evento => {
+        if (!dejaMenu(evento.target)) evento.preventDefault();
+    });
+    document.addEventListener("dragstart", evento => {
+        if (evento.target && evento.target.closest && evento.target.closest("img, svg, a")) evento.preventDefault();
+    });
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,

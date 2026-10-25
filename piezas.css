@@ -738,3 +738,13 @@ html[data-nombres-arriba="si"] .conNombre::after{
   content:attr(data-nombre);position:absolute;top:calc(100% + 3px);left:50%;transform:translateX(-50%);
   font-size:11px;font-weight:700;line-height:1;letter-spacing:0;color:var(--texto-sec);white-space:nowrap;pointer-events:none;
 }
+
+/* ---- Que se sienta como app propia y no como página de Chrome ----
+   Mantener apretado no selecciona texto ni abre el menú del navegador, tocar
+   no deja el cuadrado azul y el doble toque no hace zoom (pellizcar sí).
+   Se puede seguir seleccionando y copiando en lo que se escribe y en lo que
+   tenga la clase .copiable (por ejemplo la dirección de la ficha). */
+html{-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:contain;}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior-y:contain;}
+img,svg{-webkit-user-drag:none;}
+input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
