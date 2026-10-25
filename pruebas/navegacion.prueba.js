@@ -145,7 +145,8 @@ test("navegación: elegir Google Maps la primera vez que se toca Ir", async ({ p
         page.waitForEvent("popup"),
         eleccion.getByRole("button", { name: "Google Maps" }).click()
     ]);
-    expect(googleMaps.url()).toContain("google.com/maps/dir/");
+    // La ventana nueva abre en blanco y recién después va a Google Maps.
+    await googleMaps.waitForURL(/google\.com\/maps\/dir\//);
     await googleMaps.close();
     await expect(eleccion).toBeHidden();
     await expect(page.locator("#pantallaNavegacion")).toBeHidden();

@@ -18,9 +18,21 @@
 
     const normal = texto => String(texto || "").trim().toLocaleLowerCase("es");
 
+    // Lo pagado de cada pedido, recordado hasta que cambian los pagos: "A
+    // cobrar" lo pregunta por cada pedido entregado.
+    let pagadoRecordado = null;
+
     function pagadoDe(idPedido) {
-        return extras.lista("pagos").filter(pago => String(pago.idPedido) === String(idPedido))
-            .reduce((suma, pago) => suma + (Number(pago.monto) || 0), 0);
+        const marca = extras.marca ? extras.marca("pagos") : null;
+        if (!pagadoRecordado || marca === null || pagadoRecordado.marca !== marca) {
+            const sumas = new Map();
+            extras.lista("pagos").forEach(pago => {
+                const id = String(pago.idPedido);
+                sumas.set(id, (sumas.get(id) || 0) + (Number(pago.monto) || 0));
+            });
+            pagadoRecordado = { marca, sumas };
+        }
+        return pagadoRecordado.sumas.get(String(idPedido)) || 0;
     }
 
     function nube() {
@@ -31,10 +43,26 @@
         return Number(pedido && pedido.entrega && pedido.entrega.horaCelular) || Number(pedido && pedido.timestamp) || 0;
     }
 
-    // Los pedidos entregados sin cobrar, agrupados por comercio.
+    // Los pedidos entregados sin cobrar, agrupados por comercio. Se recuerdan
+    // hasta que cambian los pedidos, los comercios o los pagos: Inicio, la
+    // ficha y cada "+" de Nuevo pedido las preguntan (en un celular barato,
+    // rehacerlas cada vez trababa la pantalla).
+    let cuentasRecordadas = null;
+
     function cuentas() {
         if (!nube() || typeof obtenerHistorial !== "function") return [];
+        const marca = typeof marcaDeColeccion === "function" && extras.marca
+            ? [marcaDeColeccion("historial"), marcaDeColeccion("comercios"), extras.marca("pagos")]
+            : null;
+        const sirve = marca && cuentasRecordadas && marca[2] !== null &&
+            marca.every((parte, i) => parte === cuentasRecordadas.marca[i]);
+        if (!sirve) cuentasRecordadas = { marca, lista: calcularCuentas() };
+        return cuentasRecordadas.lista.map(grupo => ({ ...grupo, pedidos: grupo.pedidos.slice() }));
+    }
+
+    function calcularCuentas() {
         const grupos = {};
+        const comercios = typeof obtenerComercios === "function" ? obtenerComercios() : [];
         obtenerHistorial().forEach(pedido => {
             if (!nube().cobroPendiente(pedido)) return;
             const falta = Math.max(0, nube().montoACobrar(pedido));
@@ -46,7 +74,7 @@
         });
         return Object.values(grupos).map(grupo => {
             grupo.pedidos.sort((a, b) => horaEntrega(a) - horaEntrega(b));
-            grupo.comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre) : null;
+            grupo.comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre, comercios) : null;
             grupo.tope = Number(grupo.comercio && grupo.comercio.topeDeuda) || 0;
             grupo.pasoTope = grupo.tope > 0 && grupo.total > grupo.tope;
             grupo.desde = horaEntrega(grupo.pedidos[0]);
@@ -462,7 +490,8 @@
     function refrescar() {
         dibujarPantalla();
         window.seguimientoVendeFrio?.redibujarFicha?.();
-        if (typeof actualizarDashboard === "function") actualizarDashboard();
+        if (typeof window.pedirActualizarDashboard === "function") window.pedirActualizarDashboard();
+        else if (typeof actualizarDashboard === "function") actualizarDashboard();
     }
 
     (window.accionesPedidoExtras = window.accionesPedidoExtras || []).push((pedido, estado) => {

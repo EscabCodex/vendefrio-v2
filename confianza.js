@@ -152,8 +152,7 @@
             if (preferencia === "nunca") return null;
             if (valido && dias < (DIAS_SEGUN_PREFERENCIA[preferencia] || 7)) return null;
             // Sin datos no hay nada que guardar.
-            const total = contarRegistrosRespaldo(crearDatosRespaldo());
-            if (!total.comercios && !total.productos && !total.pedidos) return null;
+            if (!hayDatosParaRespaldar()) return null;
             return dias;
         } catch (error) {
             return null;

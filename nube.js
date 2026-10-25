@@ -1986,7 +1986,9 @@
         const pedidos = Array.from(idsSinSubir.pedidos || []).sort().join(",");
         if (pedidos !== textoPedidosSinSubir) {
             textoPedidosSinSubir = pedidos;
-            if (typeof renderizarHistorial === "function") intentar(renderizarHistorial);
+            // Solo si se ve: al abrir Historial se dibuja de nuevo.
+            const historial = document.getElementById("pantallaHistorial");
+            if (typeof renderizarHistorial === "function" && historial && !historial.classList.contains("oculto")) intentar(renderizarHistorial);
         }
     }
 
@@ -1997,6 +1999,25 @@
 
         documentosDeLaFoto.forEach(documento => {
             if (documento.metadata.hasPendingWrites) ids.add(documento.id);
+        });
+
+        idsSinSubir[parte] = ids;
+
+        if (foto.metadata.fromCache) {
+            partesDesdeCache.add(parte);
+        } else {
+            partesDesdeCache.delete(parte);
+        }
+    }
+
+    // Lo mismo, mirando solo los documentos que cambiaron desde la foto
+    // anterior (incluye los que solo cambiaron de "sin subir" a subido).
+    function anotarCambiosDeSincronizacion(parte, foto, cambios) {
+        const ids = new Set(idsSinSubir[parte] || []);
+
+        cambios.forEach(cambio => {
+            if (cambio.type !== "removed" && cambio.doc.metadata.hasPendingWrites) ids.add(cambio.doc.id);
+            else ids.delete(cambio.doc.id);
         });
 
         idsSinSubir[parte] = ids;
@@ -2044,19 +2065,34 @@
         Object.keys(SUBCOLECCIONES).forEach(coleccion => {
             const subcoleccion = SUBCOLECCIONES[coleccion];
             let primera = true;
+            // Lo que trajo la última foto. Después de la primera, solo se leen
+            // los documentos que cambiaron: con cientos de pedidos, volver a
+            // leerlos todos en cada cambio trababa un celular barato.
+            let deLaFoto = new Map();
 
             desuscripciones.push(
                 refDistribuidora.collection(subcoleccion).onSnapshot(opciones, foto => {
-                    // Si solo cambió el estado de sincronización, los datos son los mismos.
-                    if (primera || foto.docChanges().length) {
-                        const mapa = new Map();
-                        foto.forEach(documento => mapa.set(documento.id, documento.data()));
-                        documentos[subcoleccion] = mapa;
-                        avisarSiCambio([coleccion]);
-                        primera = false;
+                    const cambios = primera ? [] : foto.docChanges({ includeMetadataChanges: true });
+
+                    if (primera) {
+                        deLaFoto = new Map();
+                        foto.forEach(documento => deLaFoto.set(documento.id, documento.data()));
+                    } else {
+                        cambios.forEach(cambio => {
+                            if (cambio.type === "removed") deLaFoto.delete(cambio.doc.id);
+                            else deLaFoto.set(cambio.doc.id, cambio.doc.data());
+                        });
                     }
 
-                    anotarSincronizacion(subcoleccion, foto, foto.docs);
+                    // Si solo cambió el estado de sincronización, los datos son los mismos.
+                    if (primera || foto.docChanges().length) {
+                        documentos[subcoleccion] = new Map(deLaFoto);
+                        avisarSiCambio([coleccion]);
+                    }
+
+                    if (primera) anotarSincronizacion(subcoleccion, foto, foto.docs);
+                    else anotarCambiosDeSincronizacion(subcoleccion, foto, cambios);
+                    primera = false;
                     llego(subcoleccion);
                 }, alFallarEscucha)
             );
@@ -2116,7 +2152,8 @@
             }
         }
 
-        if (cambio("historial") && typeof renderizarHistorial === "function") {
+        // Historial se dibuja al abrirlo: oculto, no hace falta.
+        if (cambio("historial") && typeof renderizarHistorial === "function" && pantallaVisible("pantallaHistorial")) {
             intentar(renderizarHistorial);
         }
 
@@ -2131,7 +2168,8 @@
             intentar(window.abrirEstadisticas);
         }
 
-        if (typeof actualizarDashboard === "function") intentar(actualizarDashboard);
+        if (typeof window.pedirActualizarDashboard === "function") window.pedirActualizarDashboard();
+        else if (typeof actualizarDashboard === "function") intentar(actualizarDashboard);
     }
 
     // -------------------------------------------------

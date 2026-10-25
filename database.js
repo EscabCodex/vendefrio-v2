@@ -393,6 +393,35 @@ function existeColeccion(coleccion) {
     return cargarColeccion(coleccion).existe;
 }
 
+// Marca de una colección en memoria: cambia cada vez que se guarda o llega
+// cambiada de la nube. Sirve para recordar cuentas hechas sobre esos datos
+// (por ejemplo, lo que debe cada comercio) y no rehacerlas en cada toque.
+const marcasDeColecciones = new WeakMap();
+let ultimaMarcaDeColeccion = 0;
+
+function marcaDeColeccion(coleccion) {
+    const entrada = cargarColeccion(coleccion);
+    if (!marcasDeColecciones.has(entrada)) marcasDeColecciones.set(entrada, ++ultimaMarcaDeColeccion);
+    return marcasDeColecciones.get(entrada);
+}
+
+// Hay algo para guardar en un respaldo. Se recuerda hasta que cambian los
+// datos: lo pregunta el aviso de Inicio cada vez que se dibuja.
+let hayDatosRecordado = null;
+
+function hayDatosParaRespaldar() {
+    const marca = ["comercios", "productos", "historial"].map(marcaDeColeccion).join("|");
+    if (!hayDatosRecordado || hayDatosRecordado.marca !== marca) {
+        const total = {
+            comercios: obtenerComercios().length,
+            productos: listarProductosDeTodasLasMarcas(obtenerProductos()).length,
+            pedidos: obtenerHistorial().length
+        };
+        hayDatosRecordado = { marca, hay: Boolean(total.comercios || total.productos || total.pedidos) };
+    }
+    return hayDatosRecordado.hay;
+}
+
 // Devuelve una copia: cambiarla no cambia los datos guardados.
 function leerColeccion(coleccion, valorInicial) {
     const entrada = cargarColeccion(coleccion);

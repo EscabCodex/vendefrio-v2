@@ -819,6 +819,21 @@ if (window.distribuidoraVendeFrio?.escucharNombre) {
 }
 
 window.actualizarDashboard = actualizarDashboard;
+
+// Para los cambios que llegan solos (de la nube o de otro celular): Inicio se
+// redibuja una sola vez aunque lleguen varios juntos. Al abrir la app llegan
+// por separado los comercios, los productos, los pedidos y los pagos, y
+// redibujar Inicio con cada uno trababa un celular barato.
+let relojInicio = null;
+function pedirActualizarDashboard() {
+    if (relojInicio) return;
+    relojInicio = setTimeout(() => {
+        relojInicio = null;
+        window.actualizarDashboard();
+    }, 100);
+}
+window.pedirActualizarDashboard = pedirActualizarDashboard;
+
 window.addEventListener("DOMContentLoaded", actualizarDashboard);
 window.addEventListener("load", actualizarDashboard);
 // Carga la pantalla de Configuración del rework sin inflar index.html.

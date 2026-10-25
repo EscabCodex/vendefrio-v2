@@ -9,6 +9,10 @@ const { test, expect, capturar } = require("./ayudas");
 
 // Sin grabar la prueba: la grabación copia la pantalla a cada rato y frena todo.
 test.use({ viewport: { width: 360, height: 640 }, trace: "off" });
+// Mide tiempos: con la máquina cargada por las otras pruebas, a veces una
+// traba suelta la hacía fallar. Si falla, se repite una vez; una traba de
+// verdad falla las dos veces.
+test.describe.configure({ retries: 1 });
 
 const SALIDA = { latitude: -34.600, longitude: -58.400 };
 const COMERCIOS = 80;
