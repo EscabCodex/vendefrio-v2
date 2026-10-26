@@ -28,7 +28,9 @@
 
     function pedidosDelMes() {
         const inicio = new Date(); inicio.setDate(1); inicio.setHours(0, 0, 0, 0);
-        const lista = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        // Solo se lee (T168): la lista compartida, sin volver a leer el historial.
+        const lista = typeof pedidosDelHistorialParaLeer === "function" ? pedidosDelHistorialParaLeer()
+            : typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
         return lista.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio; });
     }
 
@@ -58,7 +60,8 @@
     function tarjetaEnfriando(historial, completo) {
         const estadisticas = window.estadisticasVendeFrio;
         if (!estadisticas || typeof obtenerPerfilesComerciales !== "function") return null;
-        const enfriando = obtenerPerfilesComerciales(completo || historial)
+        const lista = completo || historial;
+        const enfriando = (estadisticas.perfilesDe ? estadisticas.perfilesDe(lista) : obtenerPerfilesComerciales(lista))
             .filter(perfil => perfil.atrasado && perfil.nombre !== "Sin comercio")
             .sort((a, b) => (b.diasDesdeUltimo / b.promedioDias) - (a.diasDesdeUltimo / a.promedioDias));
         if (!enfriando.length) return null;

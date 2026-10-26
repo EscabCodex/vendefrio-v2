@@ -2537,6 +2537,20 @@ function obtenerPedidosDelHistorial() {
     return obtenerHistorial().filter(pedidoEstaEnHistorial);
 }
 
+// La misma lista, para leer sin cambiar nada (T168): se arma una sola vez
+// hasta que cambia el historial, así que es compartida y quien la usa no
+// tiene que modificar ni la lista ni los pedidos. Estadísticas la leía unas
+// ocho veces al abrir y con muchos pedidos tardaba segundos.
+let pedidosDelHistorialRecordados = null;
+
+function pedidosDelHistorialParaLeer() {
+    const marca = marcaDeColeccion("historial") + "|" + usaNubeReal();
+    if (!pedidosDelHistorialRecordados || pedidosDelHistorialRecordados.marca !== marca) {
+        pedidosDelHistorialRecordados = { marca, lista: obtenerPedidosDelHistorial() };
+    }
+    return pedidosDelHistorialRecordados.lista;
+}
+
 // --- Rutas guardadas ---
 // Cada ruta guarda dos listas paralelas: "comercios" (nombres, para mostrar)
 // e "idsComercios" (el id de cada uno, en la misma posición; "" si ese
