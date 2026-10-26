@@ -66,6 +66,12 @@ test("nube: cobrar varios pedidos seguidos", async ({ page }, testInfo) => {
     const etapas = page.locator("#filtrosEtapaPedidos");
     await etapas.getByRole("tab", { name: /Terminados/ }).click();
     await expect(tarjetas).toHaveCount(3);
+    // T167: Terminados agrupado por día, con cuánto suma.
+    const dia = page.locator("#listaVistaPedidos .marcadorFechaHistorial");
+    await expect(dia).toHaveCount(1);
+    await expect(dia).toContainText(/^Hoy · .*3 pedidos · \$ 29\.400$/);
+    await expect(page.locator("#resumenVistaPedidos")).toContainText("3 pedidos  ·  9 unidades  ·  $ 29.400");
+    await capturar(page, "cobroTanda-04a-terminados-por-dia");
     await mantenerApretada(page, tarjetas.first());
     await page.getByRole("button", { name: "Marcar todos" }).click();
     await expect(pie.getByRole("button", { name: "Cobrar (1)" })).toBeVisible();
