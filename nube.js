@@ -2195,7 +2195,9 @@
 
         if (cambioProductos) {
             // El borrador del pedido se guarda en cada cambio y se vuelve a cargar al redibujar.
-            if (typeof renderizarPedido === "function") intentar(renderizarPedido);
+            // Con la lista de Pedidos a la vista, se redibuja al volver al formulario (repasada).
+            if (typeof renderizarPedidoSiSeVe === "function") intentar(renderizarPedidoSiSeVe);
+            else if (typeof renderizarPedido === "function") intentar(renderizarPedido);
 
             if (typeof renderizarProductosAdmin === "function") {
                 const buscador = document.getElementById("buscarProducto");

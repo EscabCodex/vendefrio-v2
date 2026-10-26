@@ -708,8 +708,13 @@ function ejecutarAccionTarjetaDashboard(accion) {
         abrirComerciosConFiltroDashboard("pendientes");
     }
 
+    // Repasada: Estadísticas abre en el período del número que se tocó.
     if (accion === "vendidoSemana" && typeof window.abrirEstadisticas === "function") {
-        window.abrirEstadisticas();
+        window.abrirEstadisticas("semana");
+    }
+
+    if (accion === "vendidoHoy" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas("hoy");
     }
 }
 
@@ -731,6 +736,13 @@ function prepararTarjetasDashboard() {
 
         tarjeta.dataset.dashboardConfigurada = "true";
     });
+
+    // Repasada: "Vendido hoy" lleva a Estadísticas de hoy y "23 de 80
+    // comercios visitados" a la lista de los visitados.
+    const tocable = window.piezas && window.piezas.tocable;
+    if (!tocable) return;
+    tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
+    tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
 }
 
 prepararTarjetasDashboard();
@@ -838,13 +850,19 @@ window.actualizarDashboard = actualizarDashboard;
 // redibuja una sola vez aunque lleguen varios juntos. Al abrir la app llegan
 // por separado los comercios, los productos, los pedidos y los pagos, y
 // redibujar Inicio con cada uno trababa un celular barato.
+// Con Inicio escondido se espera más (repasada): lo que llega de la nube en
+// tandas se junta en menos redibujos mientras se usa otra pantalla. No se
+// saltea, porque de este redibujo cuelgan avisos que trabajan aunque no se
+// vea Inicio (por ejemplo, apagar la ubicación al terminar el reparto). Al
+// volver a Inicio se dibuja enseguida (mostrarPantalla).
 let relojInicio = null;
 function pedirActualizarDashboard() {
     if (relojInicio) return;
+    const escondido = Boolean(pantallas.menu && pantallas.menu.classList.contains("oculto"));
     relojInicio = setTimeout(() => {
         relojInicio = null;
         window.actualizarDashboard();
-    }, 100);
+    }, escondido ? 1500 : 100);
 }
 window.pedirActualizarDashboard = pedirActualizarDashboard;
 

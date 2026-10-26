@@ -235,7 +235,34 @@
                 <div><span class="statsNumIcono">${ico("paquete", 17)}</span><strong>${numero(unidades)}</strong><small>unidades</small></div>
                 <div><span class="statsNumIcono">${ico("ordenar", 17)}</span><strong>${promedio}</strong><small>por pedido</small></div>
             </div>`;
+        // Repasada: cada número lleva a su detalle, más abajo en la misma
+        // pantalla: los pedidos y lo vendido al gráfico por día, los
+        // comercios y las unidades a "Lo más pedido".
+        const tocable = window.piezas?.tocable;
+        if (tocable) {
+            const [pedidos, vendidoCaja] = card.querySelectorAll(".statsResumenTop > div");
+            const [comerciosCaja, unidadesCaja, promedioCaja] = card.querySelectorAll(".statsNumeros > div");
+            tocable(pedidos, () => irAlGrafico("pedidos"));
+            tocable(vendidoCaja, () => irAlGrafico("plata"));
+            tocable(comerciosCaja, () => irAlRanking("comercios"));
+            tocable(unidadesCaja, () => irAlRanking("productos"));
+            tocable(promedioCaja, () => irAlGrafico("unidades"));
+        }
         return card;
+    }
+
+    function irAlGrafico(medida) {
+        const destino = document.getElementById("contenidoEstadisticas");
+        destino?.querySelector(`.statsGrafico [data-medida="${medida}"][aria-pressed="false"]`)?.click();
+        destino?.querySelector(".statsGrafico")?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    function irAlRanking(pestana) {
+        terminarTanda();
+        const card = document.querySelector("#contenidoEstadisticas .statsRanking");
+        if (!card) return;
+        card.querySelector(`[role=tab][data-ranking="${pestana}"]`)?.click();
+        card.scrollIntoView({ block: "center", behavior: "smooth" });
     }
 
     // Por día en barras redondeadas, con el día de hoy marcado (T116): se
@@ -334,7 +361,7 @@
                 const nombreVisible = clave === "productos" ? String(nombre).split(" - ").slice(1).join(" - ") || nombre : nombre;
                 const marca = clave === "productos" ? String(nombre).split(" - ")[0] : "";
                 const avatar = clave === "comercios" ? esc(iniciales(nombreVisible)) : ico(icono, 16);
-                return `<div class="statsFilaRanking" data-puesto="${puesto + 1}">
+                return `<div class="statsFilaRanking" data-puesto="${puesto + 1}" data-tipo="${clave}" data-nombre="${esc(nombreVisible)}" data-marca="${esc(marca)}">
                     <span class="statsAvatar">${avatar}</span>
                     <div class="statsFilaTexto">
                         <div><strong>${esc(nombreVisible)}</strong><b>${numero(valor)} <small>${sufijo}</small></b></div>
@@ -351,6 +378,16 @@
             if (!boton) return;
             card.querySelectorAll("[role=tab]").forEach(b => b.setAttribute("aria-selected", String(b === boton)));
             card.querySelectorAll(".statsListaRanking").forEach(l => { l.hidden = l.dataset.ranking !== boton.dataset.ranking; });
+        });
+        // Repasada: un comercio lleva a sus pedidos; un producto o una marca,
+        // al Catálogo en esa marca.
+        const tocable = window.piezas?.tocable;
+        if (tocable) card.querySelectorAll(".statsFilaRanking").forEach(fila => {
+            const { tipo, nombre, marca } = fila.dataset;
+            if (!nombre || /^Sin (comercio|marca|producto)$/i.test(nombre)) return;
+            if (tipo === "comercios" && typeof abrirHistorialDeComercio === "function") tocable(fila, () => abrirHistorialDeComercio(nombre));
+            if (tipo === "productos" && window.abrirCatalogoEn) tocable(fila, () => window.abrirCatalogoEn({ marca, producto: nombre }));
+            if (tipo === "marcas" && window.abrirCatalogoEn) tocable(fila, () => window.abrirCatalogoEn({ marca: nombre }));
         });
         return card;
     }
@@ -382,6 +419,11 @@
             <b class="statsFilaValor">${numero(a)}</b>${variacion(a, b)}
         </div>`).join("");
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div>`);
+        // Repasada: cada fila lleva a los pedidos de esta semana.
+        const tocable = window.piezas?.tocable;
+        if (tocable && typeof abrirHistorialPorPeriodo === "function") {
+            card.querySelectorAll(".statsFila").forEach(fila => tocable(fila, () => abrirHistorialPorPeriodo("semana")));
+        }
         return card;
     }
 
@@ -496,6 +538,8 @@
     // al tocar aunque haya muchos pedidos. Si nada cambió desde la última vez
     // (mismos pedidos, período y día), al volver a entrar no se rehace.
     let tandaPendiente = null;
+    // Pone ya las tarjetas que faltaban (para ir a una que todavía no llegó).
+    let terminarTanda = () => {};
     let firmaDibujada = "";
     const idsDeListas = new WeakMap();
     let ultimoIdDeLista = 0;
@@ -541,11 +585,27 @@
             while (partes.length && performance.now() - inicio < 40) poner(partes.shift());
             if (partes.length) tandaPendiente = setTimeout(seguir, 0);
         };
+        terminarTanda = () => {
+            if (tandaPendiente) { clearTimeout(tandaPendiente); tandaPendiente = null; }
+            while (partes.length) poner(partes.shift());
+        };
         tandaPendiente = setTimeout(seguir, 0);
     }
 
-    function abrir() {
-        const s=document.getElementById("pantallaEstadisticas")||crearPantalla(); ocultarPantallas(); s.classList.remove("oculto");
+    // Repasada: desde un número (por ejemplo "Vendido hoy" en Inicio) abre
+    // en ese período.
+    function abrir(periodo) {
+        const s=document.getElementById("pantallaEstadisticas")||crearPantalla();
+        // Al entrar, desde arriba (antes quedaba a la altura de la pantalla de
+        // antes). Si ya estaba abierta y llegan datos nuevos, no se mueve.
+        const entrando = s.classList.contains("oculto");
+        ocultarPantallas(); s.classList.remove("oculto");
+        if (entrando) window.scrollTo(0, 0);
+        const elegido = document.getElementById("filtroPeriodoEstadisticas");
+        if (elegido && typeof periodo === "string" && NOMBRE_PERIODO[periodo]) {
+            elegido.value = periodo;
+            s.querySelectorAll("[data-periodo]").forEach(b => b.classList.toggle("activo", b.dataset.periodo === periodo));
+        }
         if (tandaPendiente || firmaDibujada !== firmaActual()) renderizar();
         const filtro=document.getElementById("filtroPeriodoEstadisticas");
         if(filtro && !filtro.dataset.conectado){

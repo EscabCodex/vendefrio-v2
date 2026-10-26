@@ -92,7 +92,10 @@ function nombreDelDiaHistorial(textoFecha) {
 function nombreDelDiaDeFecha(fecha) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const dias = Math.round((hoy.getTime() - fecha.getTime()) / 86400000);
+    // Repasada: se cuenta desde la medianoche de ese día. Con la hora del
+    // pedido, a la tarde lo de hoy salía con la fecha y lo de ayer, "Hoy".
+    const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+    const dias = Math.round((hoy.getTime() - inicio.getTime()) / 86400000);
     const dia = fecha.toLocaleDateString("es-AR", { weekday: "long" }) + " " + fecha.getDate();
     if (dias === 0) return "Hoy \u00b7 " + dia;
     if (dias === 1) return "Ayer \u00b7 " + dia;

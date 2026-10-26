@@ -43,9 +43,11 @@
 
     <section class="resumenHoy" id="resumenHoy" aria-label="Resumen de hoy">
       <p class="resumenHoyFecha" id="dashFechaHoy">Hoy</p>
-      <small id="dashTituloHoy">Vendido hoy</small>
-      <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
-      <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+      <div class="resumenHoyVendido" id="dashHoyVendido">
+        <small id="dashTituloHoy">Vendido hoy</small>
+        <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
+        <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+      </div>
       <div class="kpisHoy" id="dashKpis"></div>
     </section>
 
@@ -65,8 +67,10 @@
 
     <h2 class="seccionTitulo" id="tituloSemana">Esta semana</h2>
     <div class="card semanaInicio" id="dashSemana">
-      <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
-      <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
+      <div class="semanaVisitados" id="dashSemanaVisitados">
+        <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
+        <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
+      </div>
       <div class="miniSemana">
         <button type="button" data-dashboard-accion="pedidosSemana" class="clickeableDashboard"><strong id="dashPedidosSemana">0</strong><small>pedidos</small></button>
         <button type="button" data-dashboard-accion="vendidoSemana" class="clickeableDashboard"><strong id="dashVendidoSemana">$ 0</strong><small id="dashEtiquetaVendidoSemana">vendido</small></button>
@@ -585,6 +589,7 @@
 <script src="ayudaPantallas.js"></script>
 <script src="tutorial.js"></script>
 <script src="volver.js"></script>
+<script src="lugar.js"></script>
 
 <script>
   // Hidrata todos los placeholders de íconos (data-ico) presentes en el HTML estático.

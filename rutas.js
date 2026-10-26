@@ -2251,6 +2251,18 @@ function dibujarNumerosParadas() {
     const plata = !verPlata || !rutaOrdenada.length ? "—" : cobrar < 1000 ? String(Math.round(cobrar)) : cobrar < 1e6 ? Math.round(cobrar / 1000) + "k" : (cobrar / 1e6).toFixed(1).replace(".", ",") + "M";
     caja.innerHTML = [[paradas, "Paradas"], [km, "Km"], [horas, "Horas"], [plata, "$ Cobrar"]]
         .map(([valor, nombre]) => `<div class="numeroParadas"><strong>${valor}</strong><small>${nombre}</small></div>`).join("");
+    // Repasada: las paradas llevan a la próxima de la lista, y los km y las
+    // horas al mapa con el recorrido.
+    const tocable = window.piezas && window.piezas.tocable;
+    if (!tocable || !rutaOrdenada.length) return;
+    const [numeroParadas, numeroKm, numeroHoras] = caja.querySelectorAll(".numeroParadas");
+    tocable(numeroParadas, () => {
+        const parada = document.querySelector("#listaRutaOrdenada .paradaOrden.proxima") || document.querySelector("#listaRutaOrdenada .paradaOrden");
+        if (parada) parada.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    const verMapa = () => document.getElementById("btnCerrarParadas")?.click();
+    tocable(numeroKm, verMapa);
+    tocable(numeroHoras, verMapa);
 }
 
 // Los elegidos sin ubicación no entran a la ruta: «Poner pin» los ubica a mano.

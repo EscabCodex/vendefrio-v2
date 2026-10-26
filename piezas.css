@@ -39,6 +39,13 @@ html[data-tema="oscuro"]{
 }
 .pzBtn:active{transform:scale(.97);}
 .pzBtn:disabled{opacity:.45;cursor:default;transform:none;}
+/* Repasada: números y tarjetas que llevan a su detalle (piezas.tocable).
+   En reposo se ven igual; al apretarlos se achican apenas. Si lo que se
+   aprieta es un botón o enlace de adentro, la tarjeta no se mueve. */
+.pzTocable{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s;}
+.pzTocable:active{transform:scale(.98);}
+.pzTocable:has(a:active, button:active){transform:none;}
+@media (prefers-reduced-motion:reduce){.pzTocable{transition:none;}}
 .pzBtnPri{background:var(--acento);color:var(--acento-txt);}
 .pzBtnSec{background:var(--acento-bg);color:var(--pz-pri-fuerte);}
 html[data-tema="oscuro"] .pzBtnSec{background:var(--superficie-2);color:var(--texto);}

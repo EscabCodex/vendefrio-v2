@@ -85,7 +85,7 @@
 
     function calcular(inicio) {
         const nube = window.nubeVendeFrio;
-        const pedidos = historialParaLeer().filter(pedido =>
+        const pedidos = obtenerHistorial().filter(pedido =>
             pedido && pedido.eliminado !== true && pedido.estados && typeof pedido.estados === "object"
         );
 
@@ -264,7 +264,7 @@
             } else if (boton.id === "descargarPlanillaCierre") {
                 // Planilla del día (T47): los pedidos cargados ese día.
                 const fin = diaElegido + DIA;
-                const pedidos = historialParaLeer().filter(pedido => {
+                const pedidos = obtenerHistorial().filter(pedido => {
                     if (!pedido || pedido.eliminado === true) return false;
                     const hora = Number(pedido.timestamp) || 0;
                     return hora >= diaElegido && hora < fin;

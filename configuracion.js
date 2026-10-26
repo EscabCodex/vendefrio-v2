@@ -1989,6 +1989,8 @@
         const menu = document.querySelector(".configMenuPrincipal");
 
         if (!caja || !menu) return;
+        // Para volver a abrir la misma sección si Android cierra la app (lugar.js).
+        caja.dataset.seccion = seccion;
 
         const titulos = {
             cuenta: ["Cuenta", window.empleadosVendeFrio?.esEmpleado()

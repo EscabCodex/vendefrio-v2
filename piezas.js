@@ -534,6 +534,40 @@
         dibujar(primeros);
     }
 
+    // Repasada: lo que parece solo información (un número, una tarjeta) se
+    // puede tocar y lleva a su detalle. Se ve igual que antes; al apretarlo
+    // se achica apenas, como los botones. Un solo oyente para toda la app.
+    // Si adentro tiene su propio botón o enlace, ese sigue haciendo lo suyo.
+    const alTocarDe = new WeakMap();
+    function tocable(elemento, alTocar, { etiqueta = "", rol = true } = {}) {
+        if (!elemento || typeof alTocar !== "function") return elemento;
+        alTocarDe.set(elemento, alTocar);
+        elemento.classList.add("pzTocable");
+        if (rol && elemento.tagName !== "BUTTON" && elemento.tagName !== "A") {
+            elemento.setAttribute("role", "button");
+            elemento.tabIndex = 0;
+        }
+        if (etiqueta) elemento.setAttribute("aria-label", etiqueta);
+        return elemento;
+    }
+    function tocadoEn(evento) {
+        const elemento = evento.target.closest?.(".pzTocable");
+        if (!elemento || !alTocarDe.has(elemento)) return null;
+        const propio = evento.target.closest("button, a[href], input, select, textarea, label, [role='button']");
+        return propio && propio !== elemento && elemento.contains(propio) ? null : elemento;
+    }
+    document.addEventListener("click", evento => {
+        const elemento = tocadoEn(evento);
+        if (elemento) alTocarDe.get(elemento)(evento);
+    });
+    document.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        const elemento = evento.target;
+        if (!alTocarDe.has(elemento) || elemento.tagName === "BUTTON" || elemento.tagName === "A") return;
+        evento.preventDefault();
+        alTocarDe.get(elemento)(evento);
+    });
+
     // Cabeceras en un celular chico (T152): si el título no entra al lado de
     // "Avisos" y "?", pasa a su propio renglón debajo de los botones, en vez
     // de empujarlos fuera de la pantalla. Se mira después de cada toque (que
@@ -578,7 +612,7 @@
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer,
+        hoja, modal, preguntar, cerrar, deshacer, tocable,
         avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

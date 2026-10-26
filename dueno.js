@@ -70,7 +70,7 @@
         const distribuidora = window.distribuidoraVendeFrio?.nombreActual?.() || "";
         const filas = mostrar.map(perfil => {
             const enlace = enlaceWhatsapp(perfil.nombre, "¡Hola! " + (distribuidora ? "Te escribo de " + distribuidora + ". " : "") + "Hace unos días que no te vemos, ¿te preparo un pedido?");
-            return `<div class="statsFila filaEnfriando">
+            return `<div class="statsFila filaEnfriando" data-ficha="${p.esc(perfil.nombre)}">
                 <span class="pzIni ${p.colorIni(perfil.nombre)}">${p.esc(p.iniciales(perfil.nombre))}</span>
                 <div class="statsFilaTexto"><strong>${p.esc(perfil.nombre)}</strong><small>Pedía ${cadaCuanto(perfil.promedioDias)} · hace ${perfil.diasDesdeUltimo} días que no</small></div>
                 ${enlace ? `<a class="botonWaEnfriando" href="${enlace}" target="_blank" rel="noopener" aria-label="WhatsApp a ${p.esc(perfil.nombre)}">${p.ico("whatsapp", 20)}</a>` : ""}
@@ -79,6 +79,10 @@
         const verTodos = enfriando.length > 3 && !verTodosEnfriando
             ? `<button type="button" class="pzEnlace verTodosEnfriando">Ver los ${enfriando.length}</button>` : "";
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div>${verTodos}`);
+        // Repasada: tocar el comercio abre su ficha (el WhatsApp sigue aparte).
+        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
+            p.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha), { rol: false });
+        });
         card.querySelector(".verTodosEnfriando")?.addEventListener("click", () => {
             verTodosEnfriando = true;
             estadisticas.redibujar();

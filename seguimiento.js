@@ -260,20 +260,47 @@
     // eliminados. Cada uno con su estado actual.
     // Para leer, sin copiar los pedidos en cada dibujo (repasada): esta
     // pantalla nunca cambia los pedidos a mano, todo pasa por la nube.
+    // Las dos listas se arman una sola vez hasta que cambian los pedidos: al
+    // abrir la app con miles, la lista se dibujaba varias veces seguidas y
+    // las rehacía cada vez (repasada). Nadie cambia las listas ni sus registros.
+    const listasDe = { historial: null, nube: null, trabajo: null, terminados: null };
+    // El redibujo de la lista que quedó pedido (ver pedirDibujarLista).
+    let relojLista = null;
+
+    function listasDePedidos() {
+        const historial = historialParaLeer();
+        const nube = usaNubeReal();
+        if (listasDe.historial !== historial || listasDe.nube !== nube) {
+            listasDe.historial = historial;
+            listasDe.nube = nube;
+            listasDe.trabajo = null;
+            listasDe.terminados = null;
+        }
+        return listasDe;
+    }
+
     function pedidosDeTrabajo() {
-        return historialParaLeer()
-            .filter(pedido => pedido.estado !== "historico" && pedido.eliminado !== true)
-            .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) }))
-            .filter(registro => registro.estado !== "");
+        const listas = listasDePedidos();
+        if (!listas.trabajo) {
+            listas.trabajo = listas.historial
+                .filter(pedido => pedido.estado !== "historico" && pedido.eliminado !== true)
+                .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) }))
+                .filter(registro => registro.estado !== "");
+        }
+        return listas.trabajo;
     }
 
     // Historial (T27b): los mismos pedidos que la sección Historial de antes
     // (pedidoEstaEnHistorial). Los "Histórico" no tienen estado: se marcan
     // como "historico".
     function pedidosDelHistorial() {
-        return historialParaLeer()
-            .filter(pedidoEstaEnHistorial)
-            .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
+        const listas = listasDePedidos();
+        if (!listas.terminados) {
+            listas.terminados = listas.historial
+                .filter(pedidoEstaEnHistorial)
+                .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
+        }
+        return listas.terminados;
     }
 
     function hayFiltrosDelHistorial() {
@@ -815,6 +842,10 @@
     }
 
     function dibujarLista() {
+        if (relojLista) {
+            clearTimeout(relojLista);
+            relojLista = null;
+        }
         const registros = pedidosDeTrabajo();
         const historial = pedidosDelHistorial();
         // Si a esta persona le sacaron "Cobra" mientras miraba "A cobrar",
@@ -1763,6 +1794,9 @@
         const enfoque = activo && cuerpo.contains(activo) && activo.dataset && activo.dataset.accion
             ? { accion: activo.dataset.accion, linea: activo.dataset.linea || "" }
             : null;
+        // Repasada: "Más opciones" abierto sigue abierto (se cerraba solo si
+        // llegaba un cambio justo al tocarlo, como la confirmación de la nube).
+        const menuAbierto = Boolean(cuerpo.querySelector(".menuFichaPedido:not(.oculto)"));
 
         cuerpo.innerHTML = "";
 
@@ -1878,6 +1912,12 @@
                 (enfoque.linea ? '[data-linea="' + enfoque.linea.replace(/["\\]/g, "") + '"]' : "");
             const igual = cuerpo.querySelector(selector);
             if (igual) igual.focus({ preventScroll: true });
+        }
+        const menu = menuAbierto ? cuerpo.querySelector(".menuFichaPedido") : null;
+        const abrirMenu = menu ? cuerpo.querySelector(".botonMenuFicha") : null;
+        if (menu && abrirMenu) {
+            menu.classList.remove("oculto");
+            abrirMenu.setAttribute("aria-expanded", "true");
         }
     }
 
@@ -2199,6 +2239,13 @@
                 const abierto = menu.classList.toggle("oculto") === false;
                 abrir.setAttribute("aria-expanded", String(abierto));
             });
+            // Al elegir una opción, el menú se cierra antes de hacerla (así
+            // no vuelve a quedar abierto cuando la ficha se redibuja).
+            menu.addEventListener("click", evento => {
+                if (!evento.target.closest(".opcionMenuFicha")) return;
+                menu.classList.add("oculto");
+                abrir.setAttribute("aria-expanded", "false");
+            }, true);
             acciones.append(abrir, menu);
         }
 
@@ -4431,8 +4478,23 @@
         return vistaActual === "pedidos" && !pantalla.classList.contains("oculto");
     }
 
-    function dibujar() {
-        if (vistaVisible()) dibujarLista();
+    // Lo que llega de la nube (cambios y "ya se subió") redibuja la lista una
+    // sola vez cada tanto: al abrir la app con miles de pedidos llegaban
+    // varios avisos seguidos y la lista se rehacía con cada uno (repasada).
+    // Lo demás (la ficha abierta, la entrega y el cobro) sigue al instante.
+    function pedirDibujarLista() {
+        if (relojLista) return;
+        relojLista = setTimeout(() => {
+            relojLista = null;
+            if (vistaVisible()) dibujarLista();
+        }, 80);
+    }
+
+    function dibujar({ listaEnUnRato = false } = {}) {
+        if (vistaVisible()) {
+            if (listaEnUnRato) pedirDibujarLista();
+            else dibujarLista();
+        }
         if (idFichaAbierta) dibujarFicha();
         if (idResumenAbierto) dibujarResumen();
         if (entregaAbierta) revisarEntrega();
@@ -4444,12 +4506,12 @@
     // Un pedido cargado en otro celular (o en este) aparece al instante.
     if (typeof escucharCambiosDatos === "function") {
         escucharCambiosDatos(aviso => {
-            if (aviso && Array.isArray(aviso.colecciones) && aviso.colecciones.includes("historial")) dibujar();
+            if (aviso && Array.isArray(aviso.colecciones) && aviso.colecciones.includes("historial")) dibujar({ listaEnUnRato: true });
         });
     }
 
     // "Pendiente de sincronizar" se va cuando la nube confirma el pedido.
-    window.nubeVendeFrio?.escucharSincronizacion?.(() => dibujar());
+    window.nubeVendeFrio?.escucharSincronizacion?.(() => dibujar({ listaEnUnRato: true }));
 
     // Si el dueño cambia los permisos o los roles, los botones de la ficha
     // cambian al instante (T22).
@@ -4465,6 +4527,10 @@
     window.seguimientoVendeFrio = {
         redibujarFicha: () => dibujarFicha(),
         pedidoAbierto: () => idFichaAbierta,
+        // Dónde está la sección (lugar.js la vuelve a abrir igual si
+        // Android cierra la app de fondo).
+        vista: () => vistaActual,
+        etapa: () => etapaActual,
         // La navegación (T135) usa el mismo "Deslizá para marcar Llegué".
         crearDeslizador,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).

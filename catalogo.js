@@ -228,6 +228,24 @@
         });
     }
     function abrir() { const s = crear(); document.querySelectorAll('body > section[id^="pantalla"]').forEach(item => item.classList.add("oculto")); s.classList.remove("oculto"); renderizar(); }
+    // Repasada: desde Estadísticas ("Lo más pedido") abre en esa marca y,
+    // si es un producto, lo deja a la vista.
+    function abrirEn({ marca = "", producto = "" } = {}) {
+        crear();
+        const filtro = document.getElementById("filtroMarcaCatalogo");
+        const buscar = document.getElementById("buscarCatalogo");
+        if (buscar) buscar.value = "";
+        if (filtro && marca) {
+            if (![...filtro.options].some(opcion => opcion.value === marca)) filtro.add(new Option(marca, marca));
+            filtro.value = marca;
+        }
+        if (typeof mostrarPantalla === "function") mostrarPantalla("catalogo"); else abrir();
+        if (!producto) return;
+        const tarjeta = [...document.querySelectorAll("#grillaCatalogo .itemCatalogo")]
+            .find(item => item.querySelector("strong")?.textContent === producto);
+        if (tarjeta) tarjeta.scrollIntoView({ block: "center" });
+    }
     window.abrirCatalogo = abrir;
+    window.abrirCatalogoEn = abrirEn;
     window.renderizarCatalogo = renderizar;
 }());

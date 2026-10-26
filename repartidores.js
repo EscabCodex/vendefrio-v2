@@ -169,6 +169,13 @@
         seccion.querySelector("#listaRepartidores").innerHTML = filas || `<div class="pzVacio">Nadie está compartiendo su ubicación ahora.</div>`;
 
         const caja = seccion.querySelector("#mapaRepartidores");
+        // Repasada: tocar a alguien de la lista lo muestra en el mapa.
+        if (window.mapaVendeFrio?.disponible?.()) seccion.querySelectorAll("#listaRepartidores .pzFila").forEach((fila, indice) => p.tocable(fila, () => {
+            const item = lista[indice];
+            if (!mapa || !item) return;
+            caja.scrollIntoView({ block: "center", behavior: "smooth" });
+            mapa.setView([item.lat, item.lng], 16);
+        }));
         if (!window.mapaVendeFrio?.disponible?.()) {
             caja.classList.add("pzOcultar");
             return;

@@ -26,6 +26,9 @@ const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;
 let mensajeSinResultadosPedido = null;
+// El último pedido guardado, mientras el formulario no se toca (ver
+// generarPedidoSinRepetir).
+let ultimoPedidoGenerado = null;
 
 // -----------------------------------------------------
 // COMERCIOS
@@ -260,6 +263,8 @@ function obtenerDatosBorradorPedido() {
 }
 
 function guardarBorradorPedido() {
+    // Se tocó el formulario: ya no es "el mismo pedido sin tocar".
+    ultimoPedidoGenerado = null;
     const datos = obtenerDatosBorradorPedido();
 
     if (
@@ -609,6 +614,7 @@ function renderizarPedido() {
     if (!contenedorProductos) return;
     // Con la pantalla oculta no se dibuja: mostrarPantalla("pedido") la dibuja al abrirla (T150).
     if (document.getElementById("pantallaPedido")?.classList.contains("oculto")) return;
+    formularioPorRedibujar = false;
 
     prepararBuscadorProductosPedido();
     contenedorProductos.innerHTML = "";
@@ -691,6 +697,27 @@ function aplicarProductoPendienteCatalogo() {
 
 // Alias usado por menu.js.
 const renderizarProductosPedido = renderizarPedido;
+
+// Repasada: en la nube, con la lista de Pedidos a la vista, el formulario
+// de Nuevo pedido está escondido en la misma pantalla. Los cambios que
+// llegan de la nube no lo redibujan ahí (al abrir la app con miles de
+// pedidos eso trababa): se dibuja al volver al formulario.
+let formularioPorRedibujar = false;
+const pantallaDelPedido = document.getElementById("pantallaPedido");
+
+function renderizarPedidoSiSeVe() {
+    if (pantallaDelPedido && pantallaDelPedido.dataset.vista === "pedidos") {
+        formularioPorRedibujar = true;
+        return;
+    }
+    renderizarPedido();
+}
+
+if (pantallaDelPedido) {
+    new MutationObserver(() => {
+        if (formularioPorRedibujar && pantallaDelPedido.dataset.vista !== "pedidos") renderizarPedido();
+    }).observe(pantallaDelPedido, { attributes: true, attributeFilter: ["class", "data-vista"] });
+}
 
 actualizarDatalistPedido();
 renderizarPedido();
@@ -1064,8 +1091,48 @@ function generarPedido() {
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
     if (modalPedido) modalPedido.classList.remove("oculto");
     if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
+    ultimoPedidoGenerado = { firma: firmaDelPedidoActual(), hora: Date.now() };
 
     return true;
+}
+
+// Repasada: después de "Generar Pedido" el formulario queda lleno (para
+// copiarlo de nuevo o mandarlo por WhatsApp). Si se cerraba la ventana y se
+// volvía a tocar "Generar Pedido" sin cambiar nada, quedaba el mismo pedido
+// dos veces. Ahora, si no se tocó nada desde entonces, pregunta antes. Si se
+// cambió algo (o se volvió a cargar a mano), es a propósito: no pregunta.
+const MINUTOS_PEDIDO_REPETIDO = 15;
+
+function firmaDelPedidoActual() {
+    const cliente = inputCliente ? inputCliente.value.trim().toLocaleLowerCase("es") : "";
+    const observaciones = inputObs ? inputObs.value.trim() : "";
+    const cantidades = Array.from(document.querySelectorAll(".marca select"))
+        .filter(select => Number(select.value) > 0)
+        .map(select => {
+            const titulo = select.closest(".marca")?.querySelector(".tituloMarca span");
+            return (titulo ? titulo.textContent.trim() : "") + "/" + (select.dataset.producto || "") + "=" + select.value;
+        })
+        .sort();
+    return cliente + "|" + cantidades.join(",") + "|" + observaciones;
+}
+
+function generarPedidoSinRepetir() {
+    const repetido = ultimoPedidoGenerado &&
+        Date.now() - ultimoPedidoGenerado.hora < MINUTOS_PEDIDO_REPETIDO * 60000 &&
+        ultimoPedidoGenerado.firma === firmaDelPedidoActual();
+
+    if (!repetido || !window.piezas) return generarPedido();
+
+    const cliente = inputCliente ? inputCliente.value.trim() : "";
+    window.piezas.preguntar({
+        titulo: "\u00bfCargar otro pedido igual?",
+        texto: "Este mismo pedido para " + cliente + " ya se guard\u00f3 hace un momento. Si lo carg\u00e1s de nuevo, va a quedar dos veces.",
+        si: "Cargar otro igual",
+        no: "No, ya est\u00e1"
+    }).then(cargar => {
+        if (cargar) generarPedido();
+    });
+    return false;
 }
 
 // -----------------------------------------------------
@@ -1116,6 +1183,7 @@ function recordarPedidoActual() {
 }
 
 function limpiarPedido() {
+    ultimoPedidoGenerado = null;
     if (inputCliente) inputCliente.value = "";
     if (inputObs) inputObs.value = "";
 
@@ -1161,7 +1229,7 @@ function abrirPedidoNuevoParaComercio(nombreComercio) {
 // -----------------------------------------------------
 
 if (botonGenerar) {
-    botonGenerar.addEventListener("click", generarPedido);
+    botonGenerar.addEventListener("click", generarPedidoSinRepetir);
 }
 
 if (botonReset) {
@@ -1196,7 +1264,7 @@ if (inputObs) {
     inputObs.addEventListener("input", guardarBorradorPedido);
 
     inputObs.addEventListener("keydown", event => {
-        if (event.ctrlKey && event.key === "Enter") generarPedido();
+        if (event.ctrlKey && event.key === "Enter") generarPedidoSinRepetir();
     });
 }
 
