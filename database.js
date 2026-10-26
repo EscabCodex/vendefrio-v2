@@ -548,7 +548,7 @@ function mostrarAviso(titulo, mensaje) {
     if (!modalAviso) {
         modalAviso = document.createElement("div");
         modalAviso.id = "modalAviso";
-        modalAviso.className = "modal oculto";
+        modalAviso.className = "modal modalHoja oculto";
         modalAviso.innerHTML = `
             <div class="modalContenido">
                 <h2 id="tituloAviso"></h2>
@@ -1351,7 +1351,7 @@ function mostrarRecordatorioRespaldoNube(ultimo) {
     if (!modal) {
         modal = document.createElement("div");
         modal.id = "modalRecordatorioRespaldo";
-        modal.className = "modal oculto";
+        modal.className = "modal modalHoja oculto";
         modal.innerHTML = `
             <div class="modalContenido">
                 <h2>Descargá un respaldo</h2>

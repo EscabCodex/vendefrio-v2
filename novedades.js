@@ -62,7 +62,7 @@
     function abrir() {
         if (!ventana) {
             ventana = document.createElement("div");
-            ventana.className = "modal oculto ventanaNovedades";
+            ventana.className = "modal modalHoja oculto ventanaNovedades";
             ventana.innerHTML = `
                 <div class="modalContenido contenidoNovedades" role="dialog" aria-modal="true" aria-labelledby="tituloNovedades">
                     <span class="etiquetaVersion"></span>

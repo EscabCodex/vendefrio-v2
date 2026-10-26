@@ -826,7 +826,7 @@
     function crearHojaDictado() {
         if (hojaDictado) return hojaDictado;
         hojaDictado = document.createElement("div");
-        hojaDictado.className = "modal oculto ventanaDictado";
+        hojaDictado.className = "modal modalHoja oculto ventanaDictado";
         hojaDictado.innerHTML = `
             <div class="modalContenido contenidoDictado" role="dialog" aria-modal="true" aria-labelledby="tituloDictado">
                 <h2 id="tituloDictado">Pedido por voz o mensaje</h2>

@@ -1248,7 +1248,7 @@
         let modal = document.getElementById("modalRepartoTanda");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalRepartoTanda";
 
         const contenido = crear("div", "modalContenido repartoTanda");
@@ -2278,7 +2278,7 @@
         let modal = document.getElementById("modalTextoPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalTextoPedido";
 
         const contenido = crear("div", "modalContenido textoPedido");
@@ -2733,7 +2733,7 @@
         let modal = document.getElementById("modalConfirmarPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalConfirmarPedido";
 
         const contenido = crear("div", "modalContenido confirmarPedido");
@@ -2816,7 +2816,7 @@
         let modal = document.getElementById("modalFaltantePedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalFaltantePedido";
 
         const contenido = crear("div", "modalContenido faltantePedido");
@@ -3125,7 +3125,7 @@
         let modal = document.getElementById("modalResumenPreparacion");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalResumenPreparacion";
 
         const contenido = crear("div", "modalContenido resumenPreparacion");
@@ -3366,7 +3366,7 @@
         let modal = document.getElementById("modalEntregaPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalEntregaPedido";
 
         const contenido = crear("div", "modalContenido entregaPedido");
@@ -3723,7 +3723,7 @@
         let modal = document.getElementById("modalCobroPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalCobroPedido";
 
         const contenido = crear("div", "modalContenido cobroPedido");
@@ -4344,7 +4344,7 @@
         let modal = document.getElementById("modalComprobantePedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalComprobantePedido";
 
         const contenido = crear("div", "modalContenido comprobantePedido");

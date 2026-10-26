@@ -524,7 +524,7 @@ function crearModalAccionesComercioSeguimiento() {
 
     const modal = document.createElement("div");
     modal.id = "modalAccionesSeguimiento";
-    modal.className = "modal oculto";
+    modal.className = "modal modalHoja oculto";
 
     const contenido = document.createElement("div");
     contenido.className = "modalContenido";

@@ -142,7 +142,7 @@
     function confirmar(titulo, texto, botonSi) {
         return new Promise(resolver => {
             const ventana = document.createElement("div");
-            ventana.className = "modal waConfirmar";
+            ventana.className = "modal modalHoja waConfirmar";
             ventana.innerHTML = `
                 <div class="modalContenido" role="dialog" aria-modal="true">
                     <h2></h2>

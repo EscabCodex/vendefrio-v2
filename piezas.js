@@ -487,6 +487,105 @@
         if (evento.target && evento.target.closest && evento.target.closest("img, svg, a")) evento.preventDefault();
     });
 
+    // Deslizar hacia abajo para cerrar (T168): cualquier hoja que sube desde
+    // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
+    // hacia abajo, como en las apps del celular. Solo mueve la hoja con
+    // transform, para que ande fluido en celulares baratos.
+    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido";
+    let arrastre = null;
+    const BOTONES_CERRAR = /^(Cancelar|Cerrar|Volver|Ahora no|Entendido)$/;
+
+    function subioAlgo(desde, hasta) {
+        for (let elemento = desde; elemento && elemento !== hasta.parentElement; elemento = elemento.parentElement) {
+            if (elemento.scrollTop > 0) return true;
+        }
+        return false;
+    }
+
+    function fondoDe(hoja) {
+        return hoja.closest(".pzFondo") || hoja.closest(".modal");
+    }
+
+    function sigueAbierta(fondo) {
+        if (!fondo.isConnected || fondo.classList.contains("oculto")) return false;
+        return !fondo.classList.contains("pzFondo") || fondo.classList.contains("visible");
+    }
+
+    function soltarHoja(hoja, hasta) {
+        hoja.classList.remove("hojaArrastrando");
+        hoja.classList.add("hojaSoltando");
+        hoja.style.transform = hasta || "";
+        setTimeout(() => hoja.classList.remove("hojaSoltando"), 220);
+    }
+
+    function cerrarArrastrada(hoja) {
+        const fondo = fondoDe(hoja);
+        soltarHoja(hoja, "translateY(100%)");
+        setTimeout(() => {
+            // Igual que tocar afuera: cada ventana decide qué pasa al cerrarla.
+            if (fondo) fondo.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            setTimeout(() => {
+                // Si tocar afuera no la cierra, se usa su botón de cancelar.
+                if (fondo && sigueAbierta(fondo)) {
+                    const cancelar = Array.from(hoja.querySelectorAll("button"))
+                        .find(boton => boton.offsetParent && (BOTONES_CERRAR.test(boton.textContent.trim()) ||
+                            /^Cerrar/.test(boton.getAttribute("aria-label") || "")));
+                    if (cancelar) cancelar.click();
+                }
+                setTimeout(() => {
+                    if (fondo && sigueAbierta(fondo)) soltarHoja(hoja, "");
+                    else hoja.style.transform = "";
+                }, 60);
+            }, 60);
+        }, 160);
+    }
+
+    document.addEventListener("touchstart", evento => {
+        arrastre = null;
+        if (evento.touches.length !== 1 || !evento.target.closest) return;
+        const hoja = evento.target.closest(HOJAS);
+        if (!hoja || evento.target.closest("input, textarea, select, [contenteditable], .sinArrastre")) return;
+        if (subioAlgo(evento.target, hoja)) return;
+        const toque = evento.touches[0];
+        arrastre = { hoja, x: toque.clientX, y: toque.clientY, hora: Date.now(), activo: false, dy: 0, cuadro: 0 };
+    }, { passive: true });
+
+    document.addEventListener("touchmove", evento => {
+        if (!arrastre) return;
+        const toque = evento.touches[0];
+        const dx = toque.clientX - arrastre.x;
+        const dy = toque.clientY - arrastre.y;
+        if (!arrastre.activo) {
+            if (dy < -6 || Math.abs(dx) > Math.abs(dy) + 4) { arrastre = null; return; }
+            if (dy < 10 || arrastre.hoja.scrollTop > 0) return;
+            arrastre.activo = true;
+            arrastre.hoja.classList.add("hojaArrastrando");
+        }
+        arrastre.dy = Math.max(0, dy - 10);
+        if (!arrastre.cuadro) {
+            const actual = arrastre;
+            actual.cuadro = requestAnimationFrame(() => {
+                actual.cuadro = 0;
+                actual.hoja.style.transform = "translateY(" + actual.dy + "px)";
+            });
+        }
+    }, { passive: true });
+
+    function terminarArrastre() {
+        const actual = arrastre;
+        arrastre = null;
+        if (!actual || !actual.activo) return;
+        if (actual.cuadro) cancelAnimationFrame(actual.cuadro);
+        const rapido = actual.dy / Math.max(1, Date.now() - actual.hora);
+        if (actual.dy > Math.max(90, actual.hoja.offsetHeight * 0.25) || (rapido > 0.6 && actual.dy > 40)) {
+            cerrarArrastrada(actual.hoja);
+        } else {
+            soltarHoja(actual.hoja, "");
+        }
+    }
+    document.addEventListener("touchend", terminarArrastre, { passive: true });
+    document.addEventListener("touchcancel", terminarArrastre, { passive: true });
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,

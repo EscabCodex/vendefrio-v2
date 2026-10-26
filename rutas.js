@@ -207,7 +207,7 @@ function crearModalOpcionesRutaGuardada() {
 
     const modal = document.createElement("div");
     modal.id = "modalOpcionesRutaGuardada";
-    modal.className = "modal oculto";
+    modal.className = "modal modalHoja oculto";
 
     const contenido = document.createElement("div");
     contenido.className = "modalContenido";

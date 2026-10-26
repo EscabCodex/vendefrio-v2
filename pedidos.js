@@ -1334,7 +1334,7 @@ function crearModalEdicionPedido() {
 
     modal = document.createElement("div");
     modal.id = "modalEditarPedido";
-    modal.className = "modal oculto";
+    modal.className = "modal modalHoja oculto";
     modal.innerHTML = `
         <div class="modalContenido editarPedido" role="dialog" aria-modal="true" aria-labelledby="tituloEditarPedido">
             <h2 id="tituloEditarPedido">Editar pedido</h2>

@@ -1041,3 +1041,16 @@ html[data-tema] .avisosVacio{display:flex;flex-direction:column;align-items:cent
 html[data-tema] .avisosVacio strong{margin:4px 0 0;font-size:16px;}
 html[data-tema] .modal.modalHoja .btnModalSecundario{background:var(--superficie-2);color:var(--texto);line-height:1.2;}
 html[data-tema] #listaVistaPedidos .marcadorFechaHistorial:first-child{margin-top:4px;}
+
+/* =====================================================
+   T168: todas las ventanas suben desde abajo y se cierran deslizándolas
+   hacia abajo; el aviso "Tus datos no están protegidos" va en Inicio.
+   ===================================================== */
+@keyframes subirHoja{from{transform:translateY(48px);opacity:.7;}to{transform:none;opacity:1;}}
+html[data-tema] .modal.modalHoja:not(.oculto) .modalContenido{animation:subirHoja .22s ease-out;}
+html[data-tema] .modal.modalHoja .modalContenido > p{text-align:left;}
+html[data-tema] .modal.modalHoja .modalBotones:has(> :nth-child(3)){grid-template-columns:1fr;}
+html[data-tema] #modalAviso.modalHoja,html[data-tema] #modalConfirmacion.modalHoja,html[data-tema] .modal.modalHoja.waConfirmar{z-index:10070 !important;}
+/* Mientras se arrastra la hoja, sin transición; al soltar, vuelve suave. */
+.hojaArrastrando{transition:none !important;animation:none !important;}
+.hojaSoltando{transition:transform .2s ease-out !important;}

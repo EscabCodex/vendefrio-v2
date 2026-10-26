@@ -35,7 +35,6 @@
         { id: "cobranza", nombre: "Cobranza" },
         { id: "administracion", nombre: "Administración" }
     ];
-    const TEXTO_CARTEL_PERSONAL = "Tus datos no están protegidos: están solo en este celular. Iniciá sesión para guardarlos en la nube";
 
     let pantalla = null;
     let quitarOyenteDistribuidora = null;
@@ -95,28 +94,32 @@
         return true;
     }
 
-    // Cartel fijo, arriba de la barra de abajo. Al tocarlo abre la pantalla
-    // de inicio, para ingresar o registrarse (o entrar como empleado).
-    function mostrarCartelPersonal() {
-        if (!document.body || document.getElementById("cartelModoPersonal")) return;
+    // Aviso en Inicio (T168, opción B que eligió el dueño): una tarjeta
+    // arriba de todo, que se va al bajar la pantalla y no tapa nada. "Guardar"
+    // abre la pantalla de inicio, para ingresar o registrarse.
+    let esperaCartel = 0;
 
-        const cartel = document.createElement("button");
-        cartel.type = "button";
-        cartel.id = "cartelModoPersonal";
-        cartel.className = "cartelModoPersonal";
-        cartel.textContent = TEXTO_CARTEL_PERSONAL;
-        cartel.addEventListener("click", () => {
-            crear();
-            mostrarPaso("elegir");
-        });
-
-        document.body.appendChild(cartel);
-        document.documentElement.classList.add("conCartelPersonal");
+    function mostrarCartelPersonal(intento = 0) {
+        clearTimeout(esperaCartel);
+        const aviso = window.piezas?.avisoInicio?.("avisoModoPersonal", {
+            color: "Aviso",
+            icono: "alerta",
+            titulo: "Tus datos no están protegidos",
+            texto: "Están solo en este celular. Creá una cuenta gratis para guardarlos en la nube.",
+            boton: "Guardar",
+            etiqueta: "Guardar tus datos en la nube",
+            alTocar: () => {
+                crear();
+                mostrarPaso("elegir");
+            }
+        }, "arriba");
+        // Inicio todavía no está armado: se prueba de nuevo enseguida.
+        if (!aviso && intento < 20) esperaCartel = setTimeout(() => mostrarCartelPersonal(intento + 1), 300);
     }
 
     function quitarCartelPersonal() {
-        document.getElementById("cartelModoPersonal")?.remove();
-        document.documentElement.classList.remove("conCartelPersonal");
+        clearTimeout(esperaCartel);
+        window.piezas?.avisoInicio?.("avisoModoPersonal", null);
     }
 
     function horasCodigo() {
