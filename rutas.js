@@ -32,7 +32,7 @@ function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
     if (!resumen) return;
 
-    const comercios = comerciosActivos();
+    const comercios = comerciosActivosParaLeer();
     const conGps = comercios.filter(comercioTieneGps).length;
     const sinGps = comercios.length - conGps;
 
@@ -278,7 +278,7 @@ function crearModalOpcionesRutaGuardada() {
         const nuevoNombre = entradaEdicion
             ? entradaEdicion.value.trim()
             : "";
-        const ruta = obtenerRutasGuardadas().find(item => {
+        const ruta = rutasGuardadasParaLeer().find(item => {
             return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
         });
 
@@ -316,7 +316,7 @@ function crearModalOpcionesRutaGuardada() {
         cargarRutaGuardada(nombreOriginal, false);
         const entrada = document.getElementById("nombreRutaGuardada");
         const selectorDia = document.getElementById("diaRutaGuardada");
-        const ruta = obtenerRutasGuardadas().find(item => {
+        const ruta = rutasGuardadasParaLeer().find(item => {
             return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
         });
         if (entrada) entrada.value = nuevoNombre;
@@ -332,7 +332,7 @@ function abrirOpcionesRutaGuardada(nombre) {
     const titulo = document.getElementById("tituloOpcionesRutaGuardada");
     const mensaje = document.getElementById("mensajeOpcionesRutaGuardada");
     const entradaNombre = document.getElementById("nombreRutaEnEdicion");
-    const ruta = obtenerRutasGuardadas().find(item => {
+    const ruta = rutasGuardadasParaLeer().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
 
@@ -594,7 +594,7 @@ function crearControlesRutasGuardadas() {
     renderizarRutasGuardadas();
 }
 
-function buscarRutaGuardadaPorNombre(nombre, rutas = obtenerRutasGuardadas()) {
+function buscarRutaGuardadaPorNombre(nombre, rutas = rutasGuardadasParaLeer()) {
     if (!nombre) return null;
     return rutas.find(ruta => {
         return normalizarTexto(ruta.nombre) === normalizarTexto(nombre);
@@ -606,7 +606,7 @@ function buscarRutaGuardadaPorNombre(nombre, rutas = obtenerRutasGuardadas()) {
 // el nombre. Si el nombre ya es de otra ruta, esa otra se reemplaza y la
 // editada se borra, igual que antes.
 function guardarRutaRegistro(nombreOriginal, nombre, comercios, dia) {
-    const rutas = obtenerRutasGuardadas();
+    const rutas = rutasGuardadasParaLeer();
     const editada = buscarRutaGuardadaPorNombre(nombreOriginal, rutas);
     const destino = buscarRutaGuardadaPorNombre(nombre, rutas) || editada;
 
@@ -649,7 +649,7 @@ function guardarRutaActual() {
     if (selectorDia) selectorDia.value = "";
     renderizarRutasGuardadas();
 
-    const comerciosSinGps = obtenerComercios()
+    const comerciosSinGps = comerciosParaLeer()
         .filter(comercio => {
             return comercios.includes(comercio.nombre) && !comercioTieneGps(comercio);
         })
@@ -669,7 +669,7 @@ function guardarRutaActual() {
 }
 
 function cargarRutaGuardada(nombre, mostrarMensaje = true) {
-    const ruta = obtenerRutasGuardadas().find(item => {
+    const ruta = rutasGuardadasParaLeer().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
 
@@ -719,7 +719,7 @@ function renderizarRutasGuardadas() {
     if (!lista) return;
 
     lista.innerHTML = "";
-    const rutas = obtenerRutasGuardadas();
+    const rutas = rutasGuardadasParaLeer();
     const resumen = document.getElementById("resumenRutasGuardadas");
     if (resumen) {
         resumen.textContent = rutas.length === 0
@@ -756,7 +756,7 @@ function renderizarRutasGuardadas() {
         const datos = document.createElement("div");
         const nombre = document.createElement("strong");
         nombre.textContent = ruta.nombre;
-        const comerciosRuta = obtenerComercios().filter(comercio => {
+        const comerciosRuta = comerciosParaLeer().filter(comercio => {
             return ruta.comercios.includes(comercio.nombre);
         });
         const conUbicacion = comerciosRuta.filter(comercioTieneGps).length;
@@ -817,8 +817,7 @@ function cargarSelectComerciosRuta() {
     opcionInicial.textContent = "Eleg\u00ed un comercio...";
     select.appendChild(opcionInicial);
 
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+    comerciosActivosOrdenadosParaLeer()
         .forEach(comercio => {
             const opcion = document.createElement("option");
             opcion.value = comercio.nombre;
@@ -840,8 +839,7 @@ function cargarSelectComerciosRuta() {
 }
 
 function obtenerComerciosSeleccionRuta() {
-    return comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    return comerciosActivosOrdenadosParaLeer().slice();
 }
 
 function actualizarEstadoSeleccionRuta() {
@@ -1287,7 +1285,7 @@ function renderizarPines(ajustar = true) {
     capaMarcadores.clearLayers();
     marcadoresPorNombre.clear();
 
-    const comerciosConGps = comerciosActivos().filter(
+    const comerciosConGps = comerciosActivosParaLeer().filter(
         comercioTieneGps
     );
 
@@ -1333,7 +1331,7 @@ function renderizarPines(ajustar = true) {
 // rearman todos como antes.
 function refrescarPines() {
     if (!mapaLeaflet || !capaMarcadores) return;
-    const comerciosConGps = comerciosActivos().filter(comercioTieneGps);
+    const comerciosConGps = comerciosActivosParaLeer().filter(comercioTieneGps);
     const igual = !coordenadasPinPendientes && comerciosConGps.length === marcadoresPorNombre.size &&
         comerciosConGps.every(comercio => {
             const marcador = marcadoresPorNombre.get(comercio.nombre);
@@ -2057,8 +2055,8 @@ let rutaReordenadaAMano = false;
 let pedidosAlArmarRuta = null;
 
 function idsDePedidosRuta() {
-    if (typeof obtenerHistorial !== "function") return new Set();
-    return new Set(obtenerHistorial().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
+    if (typeof historialParaLeer !== "function") return new Set();
+    return new Set(historialParaLeer().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
 }
 
 // T141: leer el historial es caro (cientos de pedidos) y la lista de paradas
@@ -2070,7 +2068,7 @@ let indicePedidosRuta = null;
 function pedidosRutaPorComercio() {
     if (indicePedidosRuta) return indicePedidosRuta;
     const indice = { carga: new Map(), nuevos: new Set() };
-    const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+    const historial = typeof historialParaLeer === "function" ? historialParaLeer() : [];
     historial.forEach(pedido => {
         if (!pedido || pedido.eliminado === true) return;
         const clave = String(pedido.comercio || "").trim().toLocaleLowerCase("es");
@@ -2248,7 +2246,7 @@ function dibujarNumerosParadas() {
             });
         }
     } else {
-        paradas = comerciosActivos().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
+        paradas = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
     }
     const plata = !verPlata || !rutaOrdenada.length ? "—" : cobrar < 1000 ? String(Math.round(cobrar)) : cobrar < 1e6 ? Math.round(cobrar / 1000) + "k" : (cobrar / 1e6).toFixed(1).replace(".", ",") + "M";
     caja.innerHTML = [[paradas, "Paradas"], [km, "Km"], [horas, "Horas"], [plata, "$ Cobrar"]]
@@ -2259,7 +2257,7 @@ function dibujarNumerosParadas() {
 function dibujarSinUbicacionParadas() {
     const caja = document.getElementById("sinUbicacionParadas");
     if (!caja) return;
-    const sinUbicacion = comerciosActivos().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && !comercioTieneGps(comercio));
+    const sinUbicacion = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && !comercioTieneGps(comercio));
     caja.classList.toggle("oculto", !sinUbicacion.length);
     if (!sinUbicacion.length) {
         caja.innerHTML = "";
@@ -2649,7 +2647,7 @@ function dibujarVistaPreviaRutas() {
         texto = rutaOrdenada.length + (rutaOrdenada.length === 1 ? " parada" : " paradas") + " · última: " + rutaOrdenada[rutaOrdenada.length - 1].nombre;
     } else {
         // Solo los que tienen ubicación entran a la ruta.
-        const elegidos = comerciosActivos().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
+        const elegidos = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
         texto = elegidos ? elegidos + (elegidos === 1 ? " parada elegida" : " paradas elegidas") : "Elegí los comercios de la ruta";
     }
     if (destino && destino.textContent !== texto) destino.textContent = texto;

@@ -32,16 +32,21 @@
     }
 
     // Lo que esta persona lleva: { enReparto, hechas, total, siguiente }.
+    // Se recuerda hasta que cambian los pedidos, la persona o el día: Inicio
+    // lo pregunta en cada dibujo (repasada).
     function miReparto() {
         const yo = p.persona();
-        const pedidos = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
-        const vivos = pedidos.filter(pedido => pedido && pedido.eliminado !== true && typeof estadoActualDelPedido === "function");
-        const enReparto = vivos.filter(pedido => estadoActualDelPedido(pedido) === "enReparto" &&
-            (!yo || !ultimaEntrada(pedido, "enReparto") || (ultimaEntrada(pedido, "enReparto").persona || {}).idPersona === yo.idPersona));
-        const hechas = vivos.filter(pedido => estadoActualDelPedido(pedido) === "entregado" &&
-            pedido.entrega && pedido.entrega.persona && yo && pedido.entrega.persona.idPersona === yo.idPersona &&
-            Number(pedido.entrega.horaCelular) >= hoy()).length;
-        return { enReparto, hechas, total: hechas + enReparto.length, siguiente: enReparto[0] || null };
+        const cuenta = recordarHastaQueCambie("miReparto", ["historial"], () => {
+            const vivos = historialParaLeer().filter(pedido => pedido && pedido.eliminado !== true && typeof estadoActualDelPedido === "function");
+            const enReparto = vivos.filter(pedido => estadoActualDelPedido(pedido) === "enReparto" &&
+                (!yo || !ultimaEntrada(pedido, "enReparto") || (ultimaEntrada(pedido, "enReparto").persona || {}).idPersona === yo.idPersona));
+            const hechas = vivos.filter(pedido => estadoActualDelPedido(pedido) === "entregado" &&
+                pedido.entrega && pedido.entrega.persona && yo && pedido.entrega.persona.idPersona === yo.idPersona &&
+                Number(pedido.entrega.horaCelular) >= hoy()).length;
+            return { enReparto, hechas };
+        }, (yo ? String(yo.idPersona || "") : "") + "|" + hoy());
+        const enReparto = cuenta.enReparto.slice();
+        return { enReparto, hechas: cuenta.hechas, total: cuenta.hechas + enReparto.length, siguiente: enReparto[0] || null };
     }
 
     // ---------- Compartir (el repartidor) ----------

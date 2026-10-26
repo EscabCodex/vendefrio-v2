@@ -1015,7 +1015,7 @@
 
     // Pedidos de este comercio que todavía no se entregaron (en la nube).
     function pedidosParaEntregar(comercio) {
-        const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+        const historial = typeof historialParaLeer === "function" ? historialParaLeer() : [];
         const normalizar = texto => String(texto || "").trim().toLocaleLowerCase("es");
         return historial.filter(pedido => {
             if (pedido.eliminado === true) return false;

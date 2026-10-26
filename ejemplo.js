@@ -45,7 +45,7 @@
 
     // Los comercios de fábrica no cuentan: cuenta haber cargado pedidos.
     function hayDatosPropios() {
-        const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+        const historial = typeof historialParaLeer === "function" ? historialParaLeer() : [];
         return historial.length > 0;
     }
 

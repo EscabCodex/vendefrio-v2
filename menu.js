@@ -218,7 +218,7 @@ function pedidosDeHoyInicio(pedidos) {
 function abrirPedidoDesdeInicio(pedido) {
     if (usaNubeReal() && window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) return;
     if (typeof abrirHistorialDePedido === "function") {
-        const indice = obtenerHistorial().findIndex(item => item.id === pedido.id);
+        const indice = historialParaLeer().findIndex(item => item.id === pedido.id);
         if (indice >= 0) abrirHistorialDePedido(indice);
     }
 }
@@ -445,17 +445,31 @@ function actualizarEncabezadoInicio() {
     }
 }
 
+// Las cuentas de Inicio, recordadas hasta que cambian los pedidos, los
+// comercios o el día (repasada): Inicio se dibuja muchas veces seguidas y
+// con miles de pedidos recorrerlos todos cada vez trababa el celular.
+function cuentasDeInicio() {
+    return recordarHastaQueCambie("cuentasDeInicio", ["historial", "comercios"], () => {
+        const comercios = comerciosActivosParaLeer();
+        const pedidos = pedidosQueCuentanParaLeer();
+        return Object.freeze({
+            comercios,
+            pedidos,
+            pedidosHoy: Object.freeze(pedidosDeHoyInicio(pedidos)),
+            cargadosHoy: Object.freeze(pedidos.filter(esDeHoyInicio)),
+            pedidosSemana: Object.freeze(pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)))),
+            visitadosSemana: comercios.filter(comercioVisitadoRecientemente).length
+        });
+    }, new Date().toDateString() + "|" + usaNubeReal());
+}
+
 function actualizarDashboard() {
     actualizarUbicacionDashboard();
     actualizarEncabezadoInicio();
 
     const nube = usaNubeReal();
-    const comercios = comerciosActivos();
-    const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
-    const pedidosHoy = pedidosDeHoyInicio(pedidos);
-    const cargadosHoy = pedidos.filter(esDeHoyInicio);
-    const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
-    const visitadosSemana = comercios.filter(comercioVisitadoRecientemente).length;
+    // Para leer, sin copiar los datos en cada dibujo (repasada).
+    const { comercios, pedidos, pedidosHoy, cargadosHoy, pedidosSemana, visitadosSemana } = cuentasDeInicio();
     const sinVisitar = comercios.length - visitadosSemana;
 
     // Resumen de hoy.
@@ -512,7 +526,7 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     let cerrado = false;
     try { cerrado = localStorage.getItem(CLAVE_PRIMEROS_PASOS) === "cerrado"; } catch (error) { cerrado = false; }
 
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const hayProductos = Object.values(productos).some(lista => Array.isArray(lista) && lista.length > 0);
     const pasos = [
         { hecho: hayProductos, texto: "Cargá tus productos y precios", accion: () => mostrarPantalla("productos") },

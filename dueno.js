@@ -111,7 +111,7 @@
         const personas = {};
         const yo = p.persona();
         if (yo && yo.idPersona) personas[yo.idPersona] = yo.nombre;
-        (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).forEach(pedido => {
+        (typeof historialParaLeer === "function" ? historialParaLeer() : []).forEach(pedido => {
             const autor = pedido && pedido.autor;
             const fecha = fechaPedido(pedido);
             if (autor && autor.idPersona && fecha && fecha.getTime() >= desde) personas[autor.idPersona] = autor.nombre || personas[autor.idPersona];
@@ -193,7 +193,7 @@
             const nombre = String(pedido.comercio || "").trim().toLocaleLowerCase("es");
             porComercio[nombre] = (porComercio[nombre] || 0) + totalPedido(pedido);
         });
-        const comercios = typeof obtenerComercios === "function" ? obtenerComercios() : [];
+        const comercios = typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [];
         return comercios
             .filter(comercio => comercio.archivado !== true && comercio.lat !== "" && comercio.lng !== "" &&
                 Number.isFinite(Number(comercio.lat)) && Number.isFinite(Number(comercio.lng)) && comercio.lat !== null)

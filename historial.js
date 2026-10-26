@@ -150,7 +150,7 @@ function obtenerMarcaPorProductoHistorial(nombreProducto) {
     const buscado = normalizarTexto(nombreProducto);
     if (!buscado || buscado === "sin producto") return "Sin marca";
 
-    const productosDisponibles = obtenerProductos();
+    const productosDisponibles = productosParaLeer();
     const coincidencias = Object.entries(productosDisponibles)
         .filter(([, productos]) => {
             return Array.isArray(productos) && productos.some(producto => {
@@ -178,7 +178,7 @@ function obtenerMarcaDesdeLineaHistorial(lineaOriginal) {
     ];
     if (excluidos.some(texto => normalizarTexto(linea).startsWith(texto))) return "";
 
-    const marcaCatalogo = Object.keys(obtenerProductos()).find(marca => {
+    const marcaCatalogo = Object.keys(productosParaLeer()).find(marca => {
         return normalizarTexto(marca) === normalizarTexto(linea);
     });
     if (marcaCatalogo) return marcaCatalogo;
@@ -272,7 +272,7 @@ function obtenerPedidosFiltrados() {
     // Eliminados y cancelados no cuentan (T26) y, en la nube, solo los
     // entregados y los "Histórico" (T27). El índice es el de la lista
     // completa, como antes.
-    return obtenerHistorial()
+    return historialParaLeer()
         .map((pedido, indice) => ({ pedido, indice }))
         .filter(registro => pedidoEstaEnHistorial(registro.pedido))
         .filter(registro => {
@@ -391,7 +391,7 @@ function abrirHistorialPorPeriodo(periodo) {
 
 function abrirHistorialDePedido(indice) {
     const indiceNumerico = Number(indice);
-    const historial = obtenerHistorial();
+    const historial = historialParaLeer();
 
     if (!Number.isInteger(indiceNumerico) || !historial[indiceNumerico]) return;
     if (abrirHistorialEnPedidos({ idPedido: historial[indiceNumerico].id })) return;
@@ -619,6 +619,9 @@ function abrirAccionesComercioSeguimiento(nombre) {
 
 function renderizarHistorial() {
     if (!pantallaHistorial) return;
+    // Con Historial oculta no se dibuja: mostrarPantalla la dibuja al abrirla
+    // (como las otras pantallas desde T150; repasada).
+    if (pantallaHistorial.classList.contains("oculto")) return;
 
     const contenedor = document.getElementById("contenedorHistorial");
     if (!contenedor) return;
@@ -828,7 +831,7 @@ if (pantallaHistorial) {
 
         if (boton.classList.contains("verPedido")) {
             const indice = Number(boton.dataset.indice);
-            const historial = obtenerHistorial();
+            const historial = historialParaLeer();
             const pedido = historial[indice];
 
             if (!pedido) return;
@@ -845,7 +848,7 @@ if (pantallaHistorial) {
 
 // "⋯" de cada pedido (T167): Ver pedido y Eliminar pedido en una hoja.
 function abrirOpcionesPedidoHistorial(indice) {
-    const pedido = obtenerHistorial()[indice];
+    const pedido = historialParaLeer()[indice];
     if (!pedido || !window.piezas) return;
 
     // Eliminar (T26): en la nube, solo quien cargó el pedido o el dueño
@@ -896,7 +899,7 @@ function eliminarPedidoDelHistorial(id) {
 
     // Etapa 8: sin "¿Seguro?". Se borra y queda "Deshacer" unos
     // segundos (en este celular, sin nube).
-    const historialAntes = obtenerHistorial();
+    const historialAntes = historialParaLeer().slice();
     const redibujar = () => {
         renderizarHistorial();
         if (typeof actualizarDashboard === "function") actualizarDashboard();

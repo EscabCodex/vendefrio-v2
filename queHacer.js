@@ -16,8 +16,8 @@
     }
 
     function cuantosDeHoy() {
-        const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : (typeof obtenerHistorial === "function" ? obtenerHistorial() : []);
-        const deHoy = typeof pedidosDeHoyInicio === "function" ? pedidosDeHoyInicio(pedidos) : [];
+        // Los mismos "Pedidos de hoy" que Inicio, ya contados (repasada).
+        const deHoy = typeof cuentasDeInicio === "function" ? cuentasDeInicio().pedidosHoy : [];
         const estado = pedido => (typeof estadoInicio === "function" ? estadoInicio(pedido) : "");
         return {
             todos: deHoy.length,
@@ -56,13 +56,19 @@
                 ? deben.length + (deben.length === 1 ? " comercio te debe" : " comercios te deben")
                 : "Nadie te debe", false);
         }
-        bloque.innerHTML = `<h2 class="seccionTitulo" id="tituloQueHacer">¿Qué querés hacer?</h2>
+        const html = `<h2 class="seccionTitulo" id="tituloQueHacer">¿Qué querés hacer?</h2>
             <div class="queHacerLista">
                 ${opcion("pedido", "lapiz", "Cargar un pedido", "Elegís el comercio y los productos", true)}
                 ${opcion("pedidosHoy", "camion", "Ver los pedidos de hoy", subPedidos, false)}
                 ${cobrar}
             </div>`;
+        // Igual que antes: no se rehace (Inicio se dibuja muchas veces seguidas).
+        if (dibujado.bloque !== bloque || dibujado.html !== html) {
+            bloque.innerHTML = html;
+            dibujado = { bloque, html };
+        }
     }
+    let dibujado = { bloque: null, html: "" };
 
     function alTocar(evento) {
         const boton = evento.target.closest("[data-que-hacer]");

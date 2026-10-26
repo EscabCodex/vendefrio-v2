@@ -43,9 +43,14 @@
     };
     let configMarcas = {};
 
-    // Texto de lo último entregado a la app por colección, para avisar
-    // solo cuando algo cambió de verdad.
-    const textos = {};
+    // Lo que se le da a la app de cada documento, congelado y recordado
+    // mientras el documento no cambie (repasada): con miles de pedidos ya no
+    // se arma, se copia ni se compara todo de nuevo en cada cambio. Los
+    // documentos guardados en "documentos" también quedan congelados.
+    const registrosDeDocumentos = new WeakMap();
+    const documentosDeRegistros = new WeakMap();
+    // Las partes que ya llegaron alguna vez: la primera vez siempre se avisa.
+    const partesQueLlegaron = new Set();
 
     // Sincronización visible (T12). Por cada parte que se escucha
     // (comercios, productos, pedidos, rutas, config): ids con cambios que
@@ -151,7 +156,8 @@
     // marca de cada producto. Si el registro tiene listas dentro de listas,
     // se guarda entero como texto en "_json".
     function aDocumento(registro, extras) {
-        const limpio = JSON.parse(JSON.stringify(registro));
+        // Lo congelado ya tiene la forma de JSON: no hace falta copiarlo.
+        const limpio = Object.isFrozen(registro) ? registro : JSON.parse(JSON.stringify(registro));
 
         if (tieneListasAnidadas(limpio, false)) {
             return { _json: JSON.stringify(limpio), ...extras };
@@ -170,13 +176,35 @@
                 console.error("Un registro de la nube estaba dañado: " + id, error);
             }
         } else {
-            registro = { ...datos };
+            // Una copia que se puede cambiar: el documento guardado está congelado.
+            registro = Object.isFrozen(datos) ? JSON.parse(JSON.stringify(datos)) : { ...datos };
         }
 
         delete registro._orden;
         delete registro._marca;
         delete registro._json;
         registro.id = id;
+        return registro;
+    }
+
+    // El registro de un documento para la app, congelado y compartido: el
+    // mismo objeto mientras el documento no cambie.
+    function registroParaLeer(id, datos) {
+        let registro = registrosDeDocumentos.get(datos);
+        if (!registro) {
+            if (typeof datos._json === "string") {
+                registro = deDocumento(id, datos);
+            } else {
+                registro = { ...datos };
+                delete registro._orden;
+                delete registro._marca;
+                delete registro._json;
+                registro.id = id;
+            }
+            congelarHondo(registro);
+            registrosDeDocumentos.set(datos, registro);
+            documentosDeRegistros.set(registro, datos);
+        }
         return registro;
     }
 
@@ -268,7 +296,7 @@
                 resultado.push({ ruta: rutaCampo, borrar: true });
             } else if (tiene(antes, clave) && esMapa(antes[clave]) && esMapa(despues[clave])) {
                 camposCambiados(antes[clave], despues[clave], rutaCampo, resultado);
-            } else if (!tiene(antes, clave) || textoComparable(antes[clave]) !== textoComparable(despues[clave])) {
+            } else if (!tiene(antes, clave) || !igualesComoJson(despues[clave], antes[clave])) {
                 resultado.push({ ruta: rutaCampo, valor: despues[clave] });
             }
         });
@@ -309,7 +337,7 @@
             documentosOrdenados(documentos.productos).forEach(([id, datos]) => {
                 const marca = String(datos._marca || "").trim() || "Sin marca";
                 if (!productos[marca]) productos[marca] = [];
-                productos[marca].push(deDocumento(id, datos));
+                productos[marca].push(registroParaLeer(id, datos));
             });
 
             return productos;
@@ -319,22 +347,12 @@
         if (!subcoleccion) return undefined;
 
         return documentosOrdenados(documentos[subcoleccion])
-            .map(([id, datos]) => deDocumento(id, datos));
+            .map(([id, datos]) => registroParaLeer(id, datos));
     }
 
-    // Devuelve true si lo que ve la app de esa colección cambió.
-    function actualizarTexto(coleccion) {
-        const texto = textoComparable(leerDatos(coleccion));
-        const cambio = textos[coleccion] !== texto;
-        textos[coleccion] = texto;
-        return cambio;
-    }
-
-    function avisarSiCambio(colecciones) {
+    function avisarCambio(colecciones) {
         colecciones.forEach(coleccion => {
-            if (actualizarTexto(coleccion) && alCambiarDatos) {
-                alCambiarDatos(coleccion);
-            }
+            if (alCambiarDatos) alCambiarDatos(coleccion);
         });
     }
 
@@ -391,15 +409,28 @@
 
         validos.forEach((item, posicion) => {
             const id = item.registro.id;
-            const datos = aDocumento(item.registro, { ...item.extras, _orden: ordenes[posicion] });
             const anterior = anteriores.get(id);
+
+            // Sin cambios (repasada): el mismo registro que salió de este
+            // documento, en el mismo lugar, ni se arma ni se compara.
+            if (anterior && documentosDeRegistros.get(item.registro) === anterior && anterior._orden === ordenes[posicion] &&
+                Object.keys(item.extras).every(campo => anterior[campo] === item.extras[campo])) {
+                nuevos.set(id, anterior);
+                return;
+            }
+
+            const datos = congelarHondo(aDocumento(item.registro, { ...item.extras, _orden: ordenes[posicion] }));
             const ref = refDistribuidora.collection(subcoleccion).doc(id);
 
             nuevos.set(id, datos);
+            if (Object.isFrozen(item.registro)) {
+                registrosDeDocumentos.set(datos, item.registro);
+                documentosDeRegistros.set(item.registro, datos);
+            }
 
             if (!anterior) {
                 escrituras.push({ tipo: "guardar", ref, datos });
-            } else if (textoComparable(anterior) !== textoComparable(datos)) {
+            } else if (!igualesComoJson(datos, anterior)) {
                 // Un pedido que ya está en la nube nunca se reescribe entero
                 // (T20): se mandan solo los campos que cambiaron.
                 if (subcoleccion === "pedidos") {
@@ -523,7 +554,7 @@
             if (coleccion === "ordenMarcas") {
                 const orden = (Array.isArray(datos) ? datos : []).map(marca => String(marca));
 
-                if (textoComparable(orden) !== textoComparable(configMarcas.orden || [])) {
+                if (!igualesComoJson(orden, configMarcas.orden || [])) {
                     configMarcas = { ...configMarcas, orden };
                     escrituras.push({ tipo: "guardar", ref: refMarcas, datos: { orden }, combinar: true });
                 }
@@ -542,7 +573,7 @@
 
                 compararRegistros("productos", items, escrituras);
 
-                if (textoComparable(marcas) !== textoComparable(configMarcas.marcas || [])) {
+                if (!igualesComoJson(marcas, configMarcas.marcas || [])) {
                     configMarcas = { ...configMarcas, marcas };
                     escrituras.push({ tipo: "guardar", ref: refMarcas, datos: { marcas }, combinar: true });
                 }
@@ -565,7 +596,6 @@
                 throw new Error("Colección desconocida: " + coleccion);
             }
 
-            actualizarTexto(coleccion);
             if (escrituras.length) enviarEscrituras(escrituras);
 
             pedidosCreados.forEach(pedido => avisarAccionDePedido({ accion: "pedidoNuevo", pedido: JSON.parse(JSON.stringify(pedido)) }));
@@ -2065,33 +2095,52 @@
         Object.keys(SUBCOLECCIONES).forEach(coleccion => {
             const subcoleccion = SUBCOLECCIONES[coleccion];
             let primera = true;
-            // Lo que trajo la última foto. Después de la primera, solo se leen
-            // los documentos que cambiaron: con cientos de pedidos, volver a
-            // leerlos todos en cada cambio trababa un celular barato.
-            let deLaFoto = new Map();
 
             desuscripciones.push(
                 refDistribuidora.collection(subcoleccion).onSnapshot(opciones, foto => {
-                    const cambios = primera ? [] : foto.docChanges({ includeMetadataChanges: true });
+                    // Después de la primera foto solo se leen los documentos que
+                    // cambiaron, y se avisa solo si cambió algo de verdad (no
+                    // cuando vuelve lo que este celular acaba de guardar): con
+                    // miles de pedidos, rehacer todo en cada cambio trababa un
+                    // celular barato (repasada).
+                    let cambio = !partesQueLlegaron.has(subcoleccion);
+                    partesQueLlegaron.add(subcoleccion);
 
                     if (primera) {
-                        deLaFoto = new Map();
-                        foto.forEach(documento => deLaFoto.set(documento.id, documento.data()));
+                        const anteriores = documentos[subcoleccion];
+                        const nuevos = new Map();
+                        foto.forEach(documento => {
+                            const datos = documento.data();
+                            const anterior = anteriores.get(documento.id);
+                            if (anterior && igualesComoJson(datos, anterior)) {
+                                nuevos.set(documento.id, anterior);
+                            } else {
+                                nuevos.set(documento.id, congelarHondo(datos));
+                                cambio = true;
+                            }
+                        });
+                        if (nuevos.size !== anteriores.size) cambio = true;
+                        documentos[subcoleccion] = nuevos;
                     } else {
-                        cambios.forEach(cambio => {
-                            if (cambio.type === "removed") deLaFoto.delete(cambio.doc.id);
-                            else deLaFoto.set(cambio.doc.id, cambio.doc.data());
+                        // Si solo cambió el estado de sincronización, los datos son los mismos.
+                        const mapa = documentos[subcoleccion];
+                        foto.docChanges().forEach(({ type, doc }) => {
+                            if (type === "removed") {
+                                if (mapa.delete(doc.id)) cambio = true;
+                                return;
+                            }
+                            const datos = doc.data();
+                            const anterior = mapa.get(doc.id);
+                            if (anterior && igualesComoJson(datos, anterior)) return;
+                            mapa.set(doc.id, congelarHondo(datos));
+                            cambio = true;
                         });
                     }
 
-                    // Si solo cambió el estado de sincronización, los datos son los mismos.
-                    if (primera || foto.docChanges().length) {
-                        documentos[subcoleccion] = new Map(deLaFoto);
-                        avisarSiCambio([coleccion]);
-                    }
+                    if (cambio) avisarCambio([coleccion]);
 
                     if (primera) anotarSincronizacion(subcoleccion, foto, foto.docs);
-                    else anotarCambiosDeSincronizacion(subcoleccion, foto, cambios);
+                    else anotarCambiosDeSincronizacion(subcoleccion, foto, foto.docChanges({ includeMetadataChanges: true }));
                     primera = false;
                     llego(subcoleccion);
                 }, alFallarEscucha)
@@ -2100,8 +2149,14 @@
 
         desuscripciones.push(
             refDistribuidora.collection("config").doc("marcas").onSnapshot(opciones, foto => {
+                const anterior = configMarcas;
                 configMarcas = foto.exists ? (foto.data() || {}) : {};
-                avisarSiCambio(["productos", "ordenMarcas"]);
+                const primeraVez = !partesQueLlegaron.has("config");
+                partesQueLlegaron.add("config");
+                const cambiaron = [];
+                if (primeraVez || !igualesComoJson(configMarcas.marcas || [], anterior.marcas || [])) cambiaron.push("productos");
+                if (primeraVez || !igualesComoJson(configMarcas.orden || [], anterior.orden || [])) cambiaron.push("ordenMarcas");
+                if (cambiaron.length) avisarCambio(cambiaron);
                 anotarSincronizacion("config", foto, foto.exists ? [foto] : []);
                 llego("config");
             }, alFallarEscucha)

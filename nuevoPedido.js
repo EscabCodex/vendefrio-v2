@@ -100,7 +100,7 @@
     }
 
     function productoDelCatalogo(marca, nombre) {
-        const catalogo = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const catalogo = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         const marcaReal = Object.keys(catalogo).find(item => normal(item) === normal(marca));
         const producto = marcaReal ? (catalogo[marcaReal] || []).find(item => item && normal(item.nombre) === normal(nombre)) : null;
         return producto ? { marca: marcaReal, producto } : null;
@@ -508,7 +508,7 @@
 
     function abrirOpciones() {
         const comercio = comercioDelPedidoActual();
-        const hayPedidos = typeof obtenerPedidosQueCuentan === "function" && obtenerPedidosQueCuentan().length > 0;
+        const hayPedidos = typeof pedidosQueCuentanParaLeer === "function" && pedidosQueCuentanParaLeer().length > 0;
         const voz = window.vozVendeFrio;
         const opcion = (clave, icono, texto) => `<button type="button" class="pzOpcion" data-opcion="${clave}">${p.ico(icono, 22)}${texto}</button>`;
         const verSaldo = comercio && window.saldosVendeFrio && puedeCambiarPrecio() && window.saldosVendeFrio.cuentaDe(comercio.nombre);

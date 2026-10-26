@@ -45,6 +45,131 @@ function clonarDatos(datos) {
     return JSON.parse(JSON.stringify(datos));
 }
 
+// --- Datos congelados (repasada) ---
+// Los datos guardados se tienen en memoria una sola vez, congelados (nadie
+// los puede cambiar), y todas las pantallas que solo leen comparten esa
+// misma copia: con miles de pedidos, copiarlos enteros en cada lectura
+// tardaba casi un segundo en un celular barato y llenaba la memoria.
+// Quien quiere cambiar algo sigue pidiendo su copia (obtenerHistorial(),
+// obtenerComercios()...), como siempre.
+// En la app solo esta parte congela: lo congelado ya tiene la forma de JSON
+// (sin undefined ni funciones, NaN como null) y se usa tal cual.
+
+// Congela en el lugar algo recién armado (lo que trae el adaptador).
+function congelarHondo(valor) {
+    if (valor && typeof valor === "object" && !Object.isFrozen(valor)) {
+        for (const clave in valor) congelarHondo(valor[clave]);
+        Object.freeze(valor);
+    }
+    return valor;
+}
+
+// Copia congelada con las mismas reglas que JSON.stringify. Lo que ya está
+// congelado se usa sin copiar.
+function congelarDatos(valor) {
+    if (valor === null) return null;
+    const tipo = typeof valor;
+    if (tipo === "string" || tipo === "boolean") return valor;
+    if (tipo === "number") return Number.isFinite(valor) ? valor : null;
+    if (tipo !== "object") return undefined;
+    if (Object.isFrozen(valor)) return valor;
+    if (typeof valor.toJSON === "function") return congelarDatos(valor.toJSON());
+    if (Array.isArray(valor)) {
+        const lista = new Array(valor.length);
+        for (let i = 0; i < valor.length; i++) {
+            const item = congelarDatos(valor[i]);
+            lista[i] = item === undefined ? null : item;
+        }
+        return Object.freeze(lista);
+    }
+    const copia = {};
+    for (const clave of Object.keys(valor)) {
+        const item = congelarDatos(valor[clave]);
+        if (item === undefined) continue;
+        if (clave === "__proto__") {
+            Object.defineProperty(copia, clave, { value: item, enumerable: true, writable: true, configurable: true });
+        } else {
+            copia[clave] = item;
+        }
+    }
+    return Object.freeze(copia);
+}
+
+// ¿"a" (lo que armó la app) queda igual a "b" (ya congelado) al pasarlo a
+// JSON? Sin importar el orden de los campos y sin armar ningún texto.
+function igualesComoJson(a, b) {
+    if (a === b) return true;
+    if (a === null || typeof a !== "object") {
+        if (typeof a === "number" && !Number.isFinite(a)) return b === null;
+        return false;
+    }
+    if (typeof a.toJSON === "function") return igualesComoJson(a.toJSON(), b);
+    if (b === null || typeof b !== "object") return false;
+    if (Array.isArray(a)) {
+        if (!Array.isArray(b) || a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            const item = a[i];
+            const sinValor = item === undefined || typeof item === "function" || typeof item === "symbol";
+            if (!igualesComoJson(sinValor ? null : item, b[i])) return false;
+        }
+        return true;
+    }
+    if (Array.isArray(b)) return false;
+    let campos = 0;
+    for (const clave of Object.keys(a)) {
+        const item = a[clave];
+        if (item === undefined || typeof item === "function" || typeof item === "symbol") continue;
+        campos++;
+        if (!Object.prototype.hasOwnProperty.call(b, clave) || !igualesComoJson(item, b[clave])) return false;
+    }
+    return campos === Object.keys(b).length;
+}
+
+// Una lista guardada, congelada: cada registro que no cambió (mismo id y
+// mismo contenido) se toma de la lista anterior en vez de copiarlo.
+function congelarListaGuardada(lista, anterior) {
+    const anteriores = new Map();
+    if (Array.isArray(anterior)) {
+        anterior.forEach(registro => {
+            if (registro && typeof registro === "object" && typeof registro.id === "string") anteriores.set(registro.id, registro);
+        });
+    }
+    const resultado = new Array(lista.length);
+    for (let i = 0; i < lista.length; i++) {
+        const item = lista[i];
+        const igual = item && typeof item === "object" && typeof item.id === "string" ? anteriores.get(item.id) : undefined;
+        if (igual !== undefined && igualesComoJson(item, igual)) {
+            resultado[i] = igual;
+        } else {
+            const congelado = congelarDatos(item);
+            resultado[i] = congelado === undefined ? null : congelado;
+        }
+    }
+    return Object.freeze(resultado);
+}
+
+function congelarGuardado(datos, anterior) {
+    if (Array.isArray(datos)) return congelarListaGuardada(datos, anterior);
+    if (datos && typeof datos === "object" && !Object.isFrozen(datos) && typeof datos.toJSON !== "function") {
+        // Productos: { marca: [productos] }, cada marca con su lista.
+        const copia = {};
+        Object.keys(datos).forEach(clave => {
+            const valor = datos[clave];
+            const congelado = Array.isArray(valor)
+                ? congelarListaGuardada(valor, anterior && typeof anterior === "object" ? anterior[clave] : null)
+                : congelarDatos(valor);
+            if (congelado === undefined) return;
+            if (clave === "__proto__") {
+                Object.defineProperty(copia, clave, { value: congelado, enumerable: true, writable: true, configurable: true });
+            } else {
+                copia[clave] = congelado;
+            }
+        });
+        return Object.freeze(copia);
+    }
+    return congelarDatos(datos);
+}
+
 // Se usa miles de veces por pantalla (comparar nombres de comercios y
 // productos): se recuerda el resultado de cada texto (T151).
 const textosNormalizados = new Map();
@@ -246,9 +371,10 @@ const adaptadorLocal = {
 let adaptadorDatos = adaptadorLocal;
 let dejarDeEscucharAdaptador = null;
 
-// Una entrada por colecci\u00f3n: { existe, texto }. "texto" es null si no hay
-// datos o si estaban da\u00f1ados. Se guarda como texto para que cada lectura
-// devuelva una copia nueva, igual que antes al leer de localStorage.
+// Una entrada por colecci\u00f3n: { existe, datos }. "datos" es la copia
+// congelada que comparten las lecturas, o undefined si no hay datos o si
+// estaban da\u00f1ados. Las copias para cambiar salen de su texto, que se arma
+// solo cuando se pide una y se suelta al rato para no ocupar memoria.
 let memoriaDatos = {};
 
 function esAdaptadorValido(adaptador) {
@@ -296,19 +422,33 @@ function obtenerNombreAdaptadorDatos() {
 // (Solo nube, T16c). Los datos de este celular (localStorage) no se borran:
 // quedan guardados, sin usarse, y vuelven solo en el modo sin sesi\u00f3n.
 
+// Se consulta muchas veces por segundo (Inicio, avisos, la ficha): el texto
+// guardado se lee siempre, pero solo se vuelve a armar cuando cambia.
+let modoNubeLeido = { texto: undefined, modo: null };
+
 function obtenerModoNubeGuardado() {
+    let texto = null;
     try {
-        const guardado = JSON.parse(localStorage.getItem(DB_MODO_NUBE) || "null");
+        texto = localStorage.getItem(DB_MODO_NUBE);
+    } catch (error) {
+        return null;
+    }
+    if (texto === modoNubeLeido.texto) return modoNubeLeido.modo;
+
+    let modo = null;
+    try {
+        const guardado = JSON.parse(texto || "null");
 
         if (guardado && typeof guardado.uid === "string" && guardado.uid &&
             typeof guardado.distribuidora === "string" && guardado.distribuidora) {
-            return { uid: guardado.uid, distribuidora: guardado.distribuidora };
+            modo = Object.freeze({ uid: guardado.uid, distribuidora: guardado.distribuidora });
         }
     } catch (error) {
         console.warn("El modo nube guardado no es v\u00e1lido.", error);
     }
 
-    return null;
+    modoNubeLeido = { texto, modo };
+    return modo;
 }
 
 // Modo nube: los datos no salen de este celular sino de la nube (T10).
@@ -374,19 +514,38 @@ function cargarColeccion(coleccion) {
         let entrada;
 
         try {
+            // Lo que trae el adaptador es nuevo (o ya congelado): se congela
+            // ah\u00ed mismo, sin copiarlo.
             const datos = adaptadorDatos.leer(coleccion);
             entrada = datos === undefined
-                ? { existe: false, texto: null }
-                : { existe: true, texto: JSON.stringify(datos) };
+                ? { existe: false, datos: undefined }
+                : { existe: true, datos: congelarHondo(datos) };
         } catch (error) {
             console.warn(`Los datos de ${coleccion} estaban da\u00f1ados. Se usar\u00e1n datos de respaldo.`, error);
-            entrada = { existe: true, texto: null };
+            entrada = { existe: true, datos: undefined };
         }
 
         memoriaDatos[coleccion] = entrada;
     }
 
     return memoriaDatos[coleccion];
+}
+
+// El texto de una entrada, para sacar copias que se pueden cambiar. Se
+// arma cuando hace falta y se suelta a los pocos segundos sin usarse.
+let olvidoDeTextos = null;
+
+function soltarTextosLuego() {
+    clearTimeout(olvidoDeTextos);
+    olvidoDeTextos = setTimeout(() => {
+        Object.values(memoriaDatos).forEach(guardada => { delete guardada.texto; });
+    }, 8000);
+}
+
+function textoDeEntrada(entrada) {
+    if (entrada.texto === undefined) entrada.texto = JSON.stringify(entrada.datos);
+    soltarTextosLuego();
+    return entrada.texto;
 }
 
 function existeColeccion(coleccion) {
@@ -413,9 +572,9 @@ function hayDatosParaRespaldar() {
     const marca = ["comercios", "productos", "historial"].map(marcaDeColeccion).join("|");
     if (!hayDatosRecordado || hayDatosRecordado.marca !== marca) {
         const total = {
-            comercios: obtenerComercios().length,
-            productos: listarProductosDeTodasLasMarcas(obtenerProductos()).length,
-            pedidos: obtenerHistorial().length
+            comercios: comerciosParaLeer().length,
+            productos: listarProductosDeTodasLasMarcas(productosParaLeer()).length,
+            pedidos: historialParaLeer().length
         };
         hayDatosRecordado = { marca, hay: Boolean(total.comercios || total.productos || total.pedidos) };
     }
@@ -426,15 +585,43 @@ function hayDatosParaRespaldar() {
 function leerColeccion(coleccion, valorInicial) {
     const entrada = cargarColeccion(coleccion);
 
-    if (entrada.texto === null) return clonarDatos(valorInicial);
-    return JSON.parse(entrada.texto);
+    if (entrada.datos === undefined) return clonarDatos(valorInicial);
+    return JSON.parse(textoDeEntrada(entrada));
+}
+
+// Devuelve la copia congelada que comparten todos: para leer, sin copiar.
+const valoresInicialesCongelados = new Map();
+
+function leerColeccionParaLeer(coleccion, valorInicial) {
+    const entrada = cargarColeccion(coleccion);
+    if (entrada.datos !== undefined) return entrada.datos;
+    if (!valoresInicialesCongelados.has(coleccion)) valoresInicialesCongelados.set(coleccion, congelarDatos(clonarDatos(valorInicial)));
+    return valoresInicialesCongelados.get(coleccion);
+}
+
+// Recuerda una cuenta hecha sobre los datos hasta que cambia alguna de sus
+// colecciones (o la clave que se le pasa).
+const cuentasRecordadas = new Map();
+
+function recordarHastaQueCambie(nombre, colecciones, armar, clave = "") {
+    const marca = colecciones.map(marcaDeColeccion).join("|") + "|" + clave;
+    const recordada = cuentasRecordadas.get(nombre);
+    if (recordada && recordada.marca === marca) return recordada.valor;
+    const valor = armar();
+    cuentasRecordadas.set(nombre, { marca, valor });
+    return valor;
 }
 
 function guardarColeccion(coleccion, datos) {
     try {
-        const texto = JSON.stringify(datos);
-        adaptadorDatos.guardar(coleccion, datos, texto);
-        memoriaDatos[coleccion] = { existe: true, texto };
+        // Se guarda la copia congelada: lo que no cambió se toma de la
+        // anterior y así la nube ni lo compara.
+        const anterior = memoriaDatos[coleccion];
+        const congelados = congelarGuardado(datos, anterior ? anterior.datos : undefined);
+        const texto = adaptadorDatos.nombre === "local" ? JSON.stringify(congelados) : undefined;
+        adaptadorDatos.guardar(coleccion, congelados, texto);
+        memoriaDatos[coleccion] = { existe: true, datos: congelados, texto };
+        if (texto !== undefined) soltarTextosLuego();
     } catch (error) {
         console.error(`No se pudieron guardar los datos de ${coleccion}.`, error);
 
@@ -516,6 +703,16 @@ function enviarAvisoCambioDatos() {
     });
 }
 
+// Algunos avisos llegan con nombres ya escapados (&amp;, &lt;) y otros con el
+// nombre tal cual (de un comercio, de un empleado): se pasa todo a texto sin
+// ejecutar nada (una plantilla no carga imágenes ni corre código), así un
+// nombre con "<img onerror=...>" se ve como texto y no se vuelve código.
+function textoDelToast(mensaje) {
+    const plantilla = document.createElement("template");
+    plantilla.innerHTML = String(mensaje ?? "");
+    return plantilla.content.textContent;
+}
+
 function mostrarToast(mensaje, tipo) {
     let contenedor = document.getElementById("contenedorToasts");
     if (!contenedor) {
@@ -526,9 +723,10 @@ function mostrarToast(mensaje, tipo) {
 
     const toast = document.createElement("div");
     toast.className = "toast" + (tipo ? " toast-" + tipo : "");
-    toast.innerHTML =
-        (window.icono ? window.icono("check", 16) : "") +
-        "<span>" + mensaje + "</span>";
+    toast.innerHTML = window.icono ? window.icono("check", 16) : "";
+    const texto = document.createElement("span");
+    texto.textContent = textoDelToast(mensaje);
+    toast.appendChild(texto);
     contenedor.appendChild(toast);
 
     if (navigator.vibrate) navigator.vibrate(20);
@@ -641,20 +839,26 @@ function asignarIdsFaltantes(registros, prefijo) {
     const usados = new Set();
     const pendientes = [];
 
-    (Array.isArray(registros) ? registros : []).forEach(registro => {
+    (Array.isArray(registros) ? registros : []).forEach((registro, indice) => {
         if (!registro || typeof registro !== "object") return;
 
         if (tieneId(registro) && !usados.has(registro.id)) {
             usados.add(registro.id);
         } else {
-            pendientes.push(registro);
+            pendientes.push(indice);
         }
     });
 
-    pendientes.forEach(registro => {
+    pendientes.forEach(indice => {
         let id = generarId(prefijo);
         while (usados.has(id)) id = generarId(prefijo);
-        registro.id = id;
+        const registro = registros[indice];
+        // Uno congelado (de las listas para leer) no se cambia: va una copia.
+        if (Object.isFrozen(registro)) {
+            if (!Object.isFrozen(registros)) registros[indice] = { ...registro, id };
+        } else {
+            registro.id = id;
+        }
         usados.add(id);
     });
 
@@ -728,8 +932,86 @@ function comerciosActivos() {
     return obtenerComercios().filter(comercio => !comercioArchivado(comercio));
 }
 
+// --- Comercios para leer (repasada) ---
+// Las mismas listas que obtenerComercios() y comerciosActivos(), pero
+// compartidas y congeladas: para dibujar, contar o buscar, sin copiar los
+// mil comercios en cada toque. Se arman una vez por cada cambio.
+function comercioNormalizadoParaLeer(comercio) {
+    const normalizado = {
+        ...comercio,
+        nombre: String(comercio.nombre || "").trim(),
+        direccion: String(comercio.direccion || "").trim(),
+        enlaceMaps: String(comercio.enlaceMaps || "").trim(),
+        origenGps: String(comercio.origenGps || ""),
+        telefono: String(comercio.telefono || "").trim(),
+        pedidosRealizados: Number(comercio.pedidosRealizados) || 0,
+        ultimaVisita: comercio.ultimaVisita || "",
+        pendienteSemana: comercio.pendienteSemana === true
+    };
+    return igualesComoJson(normalizado, comercio) ? comercio : congelarDatos(normalizado);
+}
+
+function comerciosParaLeer() {
+    // La primera vez, obtenerComercios() guarda los de ejemplo.
+    if (!existeColeccion("comercios")) obtenerComercios();
+    return recordarHastaQueCambie("comerciosParaLeer", ["comercios"], () => {
+        let comercios = leerColeccionParaLeer("comercios", COMERCIOS);
+        if (!Array.isArray(comercios)) comercios = congelarDatos(clonarDatos(COMERCIOS));
+        return Object.freeze(comercios
+            .filter(comercio => comercio && typeof comercio === "object")
+            .map(comercioNormalizadoParaLeer)
+            .filter(comercio => comercio.nombre !== ""));
+    });
+}
+
+function comerciosActivosParaLeer() {
+    return recordarHastaQueCambie("comerciosActivosParaLeer", ["comercios"], () => {
+        return Object.freeze(comerciosParaLeer().filter(comercio => !comercioArchivado(comercio)));
+    });
+}
+
+// Los activos de la A a la Z (para las listas para elegir comercio).
+const ordenAlfabeticoEs = new Intl.Collator("es");
+
+function comerciosActivosOrdenadosParaLeer() {
+    return recordarHastaQueCambie("comerciosActivosOrdenados", ["comercios"], () => {
+        return Object.freeze(comerciosActivosParaLeer().slice().sort((a, b) => ordenAlfabeticoEs.compare(a.nombre, b.nombre)));
+    });
+}
+
+// Nombre (normalizado) -> los comercios con ese nombre, en orden.
+function comerciosPorNombre() {
+    return recordarHastaQueCambie("comerciosPorNombre", ["comercios"], () => {
+        const indice = new Map();
+        comerciosParaLeer().forEach(comercio => {
+            const clave = normalizarTexto(comercio.nombre);
+            if (!indice.has(clave)) indice.set(clave, []);
+            indice.get(clave).push(comercio);
+        });
+        return indice;
+    });
+}
+
+// El comercio con ese nombre (sin importar mayúsculas ni tildes), para leer.
+function comercioParaLeerPorNombre(nombre) {
+    const iguales = comerciosPorNombre().get(normalizarTexto(nombre));
+    return iguales ? iguales[0] : undefined;
+}
+
+function comercioParaLeerPorId(id) {
+    if (!id) return undefined;
+    const indice = recordarHastaQueCambie("comerciosPorId", ["comercios"], () => {
+        const porId = new Map();
+        comerciosParaLeer().forEach(comercio => {
+            if (tieneId(comercio) && !porId.has(comercio.id)) porId.set(comercio.id, comercio);
+        });
+        return porId;
+    });
+    return indice.get(id);
+}
+
 // Productos para vender: los mismos, sin los archivados (las marcas quedan).
-function productosParaVender(productos = obtenerProductos()) {
+function productosParaVender(productos = productosParaLeer()) {
     const activos = {};
     Object.keys(productos).forEach(marca => {
         activos[marca] = (productos[marca] || []).filter(producto => !productoArchivado(producto));
@@ -751,7 +1033,12 @@ function guardarComercios(comercios) {
     return guardarColeccion("comercios", lista);
 }
 
-function buscarComercioPorNombre(nombre, comercios = obtenerComercios()) {
+// Sin lista, devuelve una copia del comercio (se puede cambiar), como antes.
+function buscarComercioPorNombre(nombre, comercios) {
+    if (comercios === undefined) {
+        const comercio = comercioParaLeerPorNombre(nombre);
+        return comercio ? clonarDatos(comercio) : undefined;
+    }
     const buscado = normalizarTexto(nombre);
     return comercios.find(comercio => normalizarTexto(comercio.nombre) === buscado);
 }
@@ -760,10 +1047,7 @@ function existeComercioConNombre(nombre, nombreExcluir = "") {
     const buscado = normalizarTexto(nombre);
     const excluir = normalizarTexto(nombreExcluir);
 
-    return obtenerComercios().some(comercio =>
-        normalizarTexto(comercio.nombre) === buscado &&
-        normalizarTexto(comercio.nombre) !== excluir
-    );
+    return buscado !== excluir && comerciosPorNombre().has(buscado);
 }
 
 function agregarComercio(comercio) {
@@ -847,6 +1131,42 @@ function obtenerProductos() {
     return productosLimpios;
 }
 
+// El mismo catálogo que obtenerProductos(), compartido y congelado (repasada):
+// para dibujar y buscar sin copiarlo entero en cada toque.
+function productoNormalizadoParaLeer(producto) {
+    const normalizado = {
+        ...camposExtraDeProducto(producto),
+        ...(tieneId(producto) ? { id: producto.id } : {}),
+        nombre: String(producto.nombre || "").trim(),
+        precio: Number(producto.precio) || 0,
+        imagen: String(producto.imagen || producto.foto || "")
+    };
+    // Igual a obtenerProductos(), también en el orden de los campos.
+    const mismoOrden = Object.keys(normalizado).join("|") === Object.keys(producto).join("|");
+    return mismoOrden && igualesComoJson(normalizado, producto) ? producto : congelarDatos(normalizado);
+}
+
+function productosParaLeer() {
+    // La primera vez, obtenerProductos() guarda los de ejemplo.
+    if (!existeColeccion("productos")) obtenerProductos();
+    return recordarHastaQueCambie("productosParaLeer", ["productos"], () => {
+        let productos = leerColeccionParaLeer("productos", PRODUCTOS);
+        if (!productos || typeof productos !== "object" || Array.isArray(productos)) productos = congelarDatos(clonarDatos(PRODUCTOS));
+        const limpios = {};
+        Object.keys(productos).forEach(marca => {
+            const nombreMarca = String(marca || "").trim();
+            if (!nombreMarca) return;
+            limpios[nombreMarca] = Object.freeze(Array.isArray(productos[marca])
+                ? productos[marca]
+                    .filter(producto => producto && typeof producto === "object")
+                    .map(productoNormalizadoParaLeer)
+                    .filter(producto => producto.nombre !== "")
+                : []);
+        });
+        return Object.freeze(limpios);
+    });
+}
+
 function guardarProductos(productos) {
     const datos = productos && typeof productos === "object" ? productos : {};
     asignarIdsProductos(datos);
@@ -874,8 +1194,16 @@ function guardarOrdenMarcas(orden) {
     );
 }
 
-function obtenerMarcasOrdenadas(productos = obtenerProductos()) {
+function obtenerMarcasOrdenadas(productos = productosParaLeer()) {
     const nombresActuales = Object.keys(productos);
+    // Se pregunta muchas veces por pantalla (una por tarjeta, por ejemplo):
+    // se recuerda hasta que cambian las marcas o su orden (repasada).
+    return recordarHastaQueCambie("marcasOrdenadas", ["ordenMarcas"], () => {
+        return Object.freeze(ordenarMarcas(nombresActuales));
+    }, nombresActuales.join("\u0000")).slice();
+}
+
+function ordenarMarcas(nombresActuales) {
     const ordenGuardado = obtenerOrdenMarcas();
     const ordenFinal = [];
 
@@ -927,7 +1255,7 @@ function moverMarcaOrden(nombreMarca, direccion) {
     return guardarOrdenMarcas(orden);
 }
 
-function buscarMarca(nombre, productos = obtenerProductos()) {
+function buscarMarca(nombre, productos = productosParaLeer()) {
     const buscada = normalizarTexto(nombre);
     return Object.keys(productos).find(marca => normalizarTexto(marca) === buscada);
 }
@@ -1007,7 +1335,7 @@ function eliminarMarca(nombreMarca) {
 }
 
 function existeProductoEnMarca(marca, nombre, indiceExcluir = -1) {
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const marcaReal = buscarMarca(marca, productos);
     if (!marcaReal) return false;
 
@@ -1078,6 +1406,28 @@ function obtenerHistorial() {
     return historial.filter(registro => registro && typeof registro === "object");
 }
 
+// La misma lista, compartida y congelada (repasada): para leer sin copiar
+// todos los pedidos en cada toque. Quien la usa no cambia nada.
+function historialParaLeer() {
+    return recordarHastaQueCambie("historialParaLeer", ["historial"], () => {
+        const historial = leerColeccionParaLeer("historial", []);
+        return Object.freeze(Array.isArray(historial) ? historial.filter(registro => registro && typeof registro === "object") : []);
+    });
+}
+
+// Un pedido por su id, para leer (sin copiar la lista). null si no está.
+function pedidoParaLeer(id) {
+    const porId = recordarHastaQueCambie("pedidosPorId", ["historial"], () => {
+        const indice = new Map();
+        historialParaLeer().forEach(pedido => {
+            const clave = String(pedido.id || "");
+            if (clave && !indice.has(clave)) indice.set(clave, pedido);
+        });
+        return indice;
+    });
+    return porId.get(String(id || "")) || null;
+}
+
 function guardarHistorial(historial) {
     const lista = Array.isArray(historial) ? historial : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_PEDIDO);
@@ -1087,7 +1437,8 @@ function guardarHistorial(historial) {
 function agregarHistorial(registro) {
     if (!registro || typeof registro !== "object") return false;
 
-    const historial = obtenerHistorial();
+    // Los demás pedidos no cambian: van los mismos, sin copiarlos.
+    const historial = historialParaLeer().slice();
     historial.unshift(registro);
     return guardarHistorial(historial);
 }
@@ -1187,11 +1538,12 @@ function crearDatosRespaldo() {
         version: 1,
         fecha: new Date().toISOString(),
         datos: {
-            comercios: clonarDatos(obtenerComercios()),
-            productos: clonarDatos(obtenerProductos()),
+            // Una sola copia de cada cosa (antes se copiaba dos veces).
+            comercios: clonarDatos(comerciosParaLeer()),
+            productos: clonarDatos(productosParaLeer()),
             ordenMarcas: clonarDatos(obtenerMarcasOrdenadas()),
-            historial: clonarDatos(obtenerHistorial()),
-            rutasGuardadas: clonarDatos(obtenerRutasGuardadas())
+            historial: clonarDatos(historialParaLeer()),
+            rutasGuardadas: clonarDatos(rutasGuardadasParaLeer())
         }
     };
 }
@@ -2065,6 +2417,16 @@ function obtenerRutasGuardadas() {
         : [];
 }
 
+// Las mismas rutas, compartidas y congeladas (repasada): para leer.
+function rutasGuardadasParaLeer() {
+    return recordarHastaQueCambie("rutasGuardadasParaLeer", ["rutasGuardadas"], () => {
+        const rutas = leerColeccionParaLeer("rutasGuardadas", []);
+        return Object.freeze(Array.isArray(rutas)
+            ? rutas.filter(ruta => ruta && ruta.nombre && Array.isArray(ruta.comercios))
+            : []);
+    });
+}
+
 function guardarRutasGuardadas(rutas) {
     const lista = Array.isArray(rutas) ? rutas : [];
     asignarIdsFaltantes(lista, PREFIJO_ID_RUTA);
@@ -2095,10 +2457,8 @@ function buscarIndicePorId(registros, id) {
 // --- Comercios ---
 
 function existeOtroComercioConNombre(nombre, idExcluir) {
-    const buscado = normalizarTexto(nombre);
-    return obtenerComercios().some(comercio =>
-        comercio.id !== idExcluir && normalizarTexto(comercio.nombre) === buscado
-    );
+    const iguales = comerciosPorNombre().get(normalizarTexto(nombre)) || [];
+    return iguales.some(comercio => comercio.id !== idExcluir);
 }
 
 // Devuelve el id del comercio nuevo, o "" si no se pudo agregar.
@@ -2130,7 +2490,8 @@ function agregarComercioConId(comercio) {
 // Si cambia el nombre, las rutas guardadas que tienen este comercio
 // pasan a mostrar el nombre nuevo.
 function actualizarComercioPorId(id, datos) {
-    const comercios = obtenerComercios();
+    // Se cambia uno solo: los demás se toman como están, sin copiarlos.
+    const comercios = comerciosParaLeer().slice();
     const indice = buscarIndicePorId(comercios, id);
     if (indice === -1 || !datos || typeof datos !== "object") return false;
 
@@ -2161,7 +2522,7 @@ function actualizarComercioPorId(id, datos) {
 }
 
 function eliminarComercioPorId(id) {
-    const comercios = obtenerComercios();
+    const comercios = comerciosParaLeer().slice();
     const indice = buscarIndicePorId(comercios, id);
     if (indice === -1) return false;
 
@@ -2173,7 +2534,7 @@ function eliminarComercioPorId(id) {
 
 // Devuelve { marca, indice, producto } o null si no existe.
 function obtenerProductoPorId(id) {
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
 
     for (const marca of Object.keys(productos)) {
         const indice = buscarIndicePorId(productos[marca], id);
@@ -2259,7 +2620,8 @@ function eliminarProductoPorId(id) {
 function agregarPedidoConId(registro) {
     if (!registro || typeof registro !== "object") return "";
 
-    const historial = obtenerHistorial();
+    // Los demás pedidos no cambian: van los mismos, sin copiarlos.
+    const historial = historialParaLeer().slice();
     const id = generarIdNuevo(PREFIJO_ID_PEDIDO, historial);
 
     historial.unshift({ ...clonarDatos(registro), id });
@@ -2268,7 +2630,7 @@ function agregarPedidoConId(registro) {
 
 // Cambia solo los campos que vienen en "datos". El id nunca cambia.
 function eliminarPedidoPorId(id) {
-    const historial = obtenerHistorial();
+    const historial = historialParaLeer().slice();
     const indice = buscarIndicePorId(historial, id);
     if (indice === -1) return false;
 
@@ -2322,7 +2684,21 @@ function pedidoTieneEstados(pedido) {
 // Id del estado actual: el de la entrada más nueva según la hora en que se
 // hizo (si empatan, la de id mayor, así da igual en todos los celulares).
 // "" si el pedido no tiene historial de estados.
+// Un pedido congelado no cambia nunca: su estado se calcula una sola vez
+// (Inicio, Pedidos y el reparto lo preguntan miles de veces, repasada).
+const estadosDePedidosCongelados = new WeakMap();
+
 function estadoActualDelPedido(pedido) {
+    if (!pedido || typeof pedido !== "object" || !Object.isFrozen(pedido)) return calcularEstadoActualDelPedido(pedido);
+    let estado = estadosDePedidosCongelados.get(pedido);
+    if (estado === undefined) {
+        estado = calcularEstadoActualDelPedido(pedido);
+        estadosDePedidosCongelados.set(pedido, estado);
+    }
+    return estado;
+}
+
+function calcularEstadoActualDelPedido(pedido) {
     if (!pedidoTieneEstados(pedido)) return "";
 
     let elegida = null;
@@ -2444,7 +2820,7 @@ function prepararPedidoParaLaNube(productos, horaCelular, nombreComercio, comerc
     const persona = personaDeEsteCelular();
     if (!persona) return null;
 
-    const catalogo = obtenerProductos();
+    const catalogo = productosParaLeer();
     const comercio = comercioElegido || (nombreComercio ? buscarComercioPorNombre(nombreComercio) : null);
     const [idEntrada, entrada] = nuevaEntradaDeEstado(ESTADO_PEDIDO_INICIAL, "", persona, horaCelular);
 
@@ -2518,6 +2894,13 @@ function obtenerPedidosQueCuentan() {
     return obtenerHistorial().filter(pedidoCuentaEnHistorial);
 }
 
+// La misma lista, para leer sin copiar (repasada).
+function pedidosQueCuentanParaLeer() {
+    return recordarHastaQueCambie("pedidosQueCuentan", ["historial"], () => {
+        return Object.freeze(historialParaLeer().filter(pedidoCuentaEnHistorial));
+    });
+}
+
 // --- Entrega (T27) ---
 // En la nube, un pedido pasa a Historial recién cuando terminó todo el
 // proceso: al quedar "Entregado". Mientras tanto se sigue en "Pedidos".
@@ -2541,14 +2924,10 @@ function obtenerPedidosDelHistorial() {
 // hasta que cambia el historial, así que es compartida y quien la usa no
 // tiene que modificar ni la lista ni los pedidos. Estadísticas la leía unas
 // ocho veces al abrir y con muchos pedidos tardaba segundos.
-let pedidosDelHistorialRecordados = null;
-
 function pedidosDelHistorialParaLeer() {
-    const marca = marcaDeColeccion("historial") + "|" + usaNubeReal();
-    if (!pedidosDelHistorialRecordados || pedidosDelHistorialRecordados.marca !== marca) {
-        pedidosDelHistorialRecordados = { marca, lista: obtenerPedidosDelHistorial() };
-    }
-    return pedidosDelHistorialRecordados.lista;
+    return recordarHastaQueCambie("pedidosDelHistorial", ["historial"], () => {
+        return Object.freeze(historialParaLeer().filter(pedidoEstaEnHistorial));
+    }, String(usaNubeReal()));
 }
 
 // --- Rutas guardadas ---
@@ -2557,7 +2936,7 @@ function pedidosDelHistorialParaLeer() {
 // comercio ya no existe).
 
 // Recibe nombres o ids de comercios y devuelve { nombres, ids }.
-function armarComerciosDeRuta(lista, comercios = obtenerComercios()) {
+function armarComerciosDeRuta(lista, comercios = comerciosParaLeer()) {
     const nombres = [];
     const ids = [];
 
@@ -2584,7 +2963,7 @@ function armarComerciosDeRuta(lista, comercios = obtenerComercios()) {
 
 // Completa "idsComercios" en cada ruta: conserva los ids que siguen
 // existiendo y busca por nombre los que faltan. Devuelve true si cambió algo.
-function completarIdsComerciosDeRutas(rutas, comercios = obtenerComercios()) {
+function completarIdsComerciosDeRutas(rutas, comercios = comerciosParaLeer()) {
     const idsExistentes = obtenerIdsDeRegistros(comercios);
     let cambio = false;
 

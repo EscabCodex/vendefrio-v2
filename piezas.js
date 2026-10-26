@@ -464,17 +464,33 @@
     // Listas largas (T151): las primeras tarjetas se dibujan enseguida y el
     // resto de a tandas, sin trabar el celular. Volver a dibujar la lista (o
     // cortarTandas) frena las tandas que quedaban de antes.
+    // Repasada: lo que está a más de dos pantallas de distancia se dibuja
+    // recién cuando el dedo baja y se acerca. Con mil comercios, dibujarlos
+    // todos ocupaba mucha memoria (y Android cerraba antes la app de fondo).
     function cortarTandas(contenedor) {
-        if (contenedor) contenedor.tandaVendeFrio = null;
+        if (!contenedor) return;
+        const tanda = contenedor.tandaVendeFrio;
+        if (tanda && tanda.soltar) tanda.soltar();
+        contenedor.tandaVendeFrio = null;
     }
 
     function dibujarDeATandas(contenedor, items, dibujarUno, opciones) {
         // Cada tanda dura como mucho unos milisegundos: así el celular sigue
         // respondiendo al dedo mientras se completa la lista.
         const { primeros = 8, milisegundos = 10, alTerminar } = opciones || {};
+        cortarTandas(contenedor);
         const tanda = {};
         contenedor.tandaVendeFrio = tanda;
         let siguiente = 0;
+        let vigia = null;
+        tanda.soltar = () => {
+            if (vigia) vigia.disconnect();
+            vigia = null;
+        };
+        // ¿El final de la lista está a menos de dos pantallas de lo que se ve?
+        function cerca() {
+            return contenedor.getBoundingClientRect().bottom < window.innerHeight * 3;
+        }
         function dibujar(minimo) {
             const inicio = performance.now();
             const fragmento = document.createDocumentFragment();
@@ -485,17 +501,32 @@
             }
             contenedor.appendChild(fragmento);
             if (siguiente < items.length) {
-                setTimeout(seguir, 0);
+                if (cerca()) setTimeout(seguir, 0);
+                else esperarAlDedo();
                 return;
             }
             contenedor.tandaVendeFrio = null;
             if (alTerminar) alTerminar();
         }
+        // Se mira la última tarjeta: cuando el dedo la acerca, sigue la lista.
+        function esperarAlDedo() {
+            const ultima = contenedor.lastElementChild;
+            if (!ultima || typeof IntersectionObserver !== "function") {
+                setTimeout(seguir, 0);
+                return;
+            }
+            vigia = new IntersectionObserver(entradas => {
+                if (!entradas.some(entrada => entrada.isIntersecting)) return;
+                tanda.soltar();
+                seguir();
+            }, { rootMargin: "0px 0px " + Math.round(window.innerHeight * 2) + "px 0px" });
+            vigia.observe(ultima);
+        }
         function seguir() {
             if (contenedor.tandaVendeFrio !== tanda) return;
             // Si se fue de la pantalla, se corta: al volver se dibuja de nuevo.
             if (!contenedor.isConnected || contenedor.closest(".oculto")) {
-                contenedor.tandaVendeFrio = null;
+                cortarTandas(contenedor);
                 return;
             }
             dibujar(0);

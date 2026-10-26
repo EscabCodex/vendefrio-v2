@@ -93,6 +93,7 @@
     const enLaNube = () => typeof usaNubeReal === "function" && usaNubeReal();
 
     function pedidosQueCuentan() {
+        if (typeof pedidosQueCuentanParaLeer === "function") return pedidosQueCuentanParaLeer();
         if (typeof obtenerPedidosQueCuentan === "function") return obtenerPedidosQueCuentan();
         return typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
     }
@@ -190,7 +191,7 @@
         }
 
         if (/\b(que|cuantos) comercios? (me )?(falta|faltan|quedan) (visitar|por visitar)\b|\bsin visitar\b/.test(dicho)) {
-            const comercios = (typeof obtenerComercios === "function" ? obtenerComercios() : []).filter(comercio => comercio.archivado !== true);
+            const comercios = (typeof comerciosParaLeer === "function" ? comerciosParaLeer() : []).filter(comercio => comercio.archivado !== true);
             const faltan = typeof comercioVisitadoRecientemente === "function" ? comercios.filter(comercio => !comercioVisitadoRecientemente(comercio)) : [];
             if (!faltan.length) return { texto: "Ya visitaste todos tus comercios esta semana.", decir: "Ya visitaste todos tus comercios esta semana" };
             return { texto: "Te faltan visitar esta semana: " + faltan.slice(0, 6).map(comercio => comercio.nombre).join(", ") + ".", decir: "Te faltan " + faltan.length + " comercios por visitar esta semana" };

@@ -29,7 +29,7 @@
     function resumen() {
         const ahora = new Date();
         const lineas = ["Hoy es " + ahora.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + "."];
-        const historial = (typeof obtenerHistorial === "function" ? obtenerHistorial() : [])
+        const historial = (typeof historialParaLeer === "function" ? historialParaLeer() : [])
             .filter(pedido => pedido && pedido.eliminado !== true && pedido.estado !== "cancelado");
         const meses = [];
         for (let atras = 0; atras < 4; atras++) {
@@ -73,7 +73,7 @@
 
         // Comercios que este mes no compraron.
         const delMes = new Set(historial.filter(pedido => Number(pedido.timestamp) >= meses[0].desde).map(pedido => String(pedido.comercio || "")));
-        const sinComprar = (typeof obtenerComercios === "function" ? obtenerComercios() : [])
+        const sinComprar = (typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [])
             .filter(comercio => comercio.archivado !== true && !delMes.has(comercio.nombre)).map(comercio => comercio.nombre);
         if (sinComprar.length) lineas.push("", "Comercios que este mes no compraron: " + sinComprar.slice(0, 40).join(", ") + ".");
 

@@ -7,9 +7,12 @@
     }
 
     function obtenerDatosFicha(nombre) {
-        const comercio = obtenerComercios().find(item => normalizarFicha(item.nombre) === normalizarFicha(nombre));
+        const buscado = normalizarFicha(nombre);
+        const encontrado = comerciosParaLeer().find(item => normalizarFicha(item.nombre) === buscado);
+        // Una copia propia: la ficha se la pasa a editar, al GPS y a otras partes.
+        const comercio = encontrado ? clonarDatos(encontrado) : undefined;
         // Eliminados y cancelados no cuentan (T26).
-        const historial = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const historial = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
         const pedidos = historial.filter(item => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, item.comercio || item.cliente)
             : normalizarFicha(item.comercio || item.cliente) === normalizarFicha(nombre));

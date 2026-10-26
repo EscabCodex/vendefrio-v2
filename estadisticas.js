@@ -18,7 +18,7 @@
             const inicio = new Date(ahora); inicio.setHours(0, 0, 0, 0);
             if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
             if (periodo === "mes") inicio.setDate(1);
-            const pedidos = (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).filter(pedido => {
+            const pedidos = (typeof historialParaLeer === "function" ? historialParaLeer() : []).filter(pedido => {
                 if (!pedido || pedido.eliminado === true) return false;
                 if (periodo === "todo") return true;
                 const fecha = fechaPedido(pedido);

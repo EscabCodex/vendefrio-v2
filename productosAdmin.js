@@ -26,7 +26,7 @@ function cargarSelectMarcas() {
     if (!productoMarca) return;
 
     productoMarca.innerHTML = "";
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
 
     obtenerMarcasOrdenadas(productos)
         .forEach(marca => {
@@ -71,7 +71,7 @@ function renderizarProductosAdmin(filtro = "") {
     if (document.getElementById("pantallaProductos")?.classList.contains("oculto")) return;
 
     listaProductosAdmin.innerHTML = "";
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const filtroNormalizado = normalizarTexto(filtro);
     const tono = marca => typeof window.tonoDeMarca === "function" ? window.tonoDeMarca(marca) : "tono0";
 
@@ -288,7 +288,7 @@ function abrirOpcionesMarca(marca) {
 }
 
 function abrirModalNuevoProducto(marcaElegida) {
-    const marcas = Object.keys(obtenerProductos());
+    const marcas = Object.keys(productosParaLeer());
     if (marcas.length === 0) {
         mostrarAviso(
             "No hay marcas",

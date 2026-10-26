@@ -2,7 +2,7 @@
 // grande no se traba al abrir, y con poca señal abre desde el celular y avisa
 // cuando hay una versión nueva.
 const { test, expect, capturar } = require("./ayudas");
-const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas } = require("./datosGrandes");
+const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas, bajarHastaElFinal } = require("./datosGrandes");
 
 test("arranque: con 200 comercios y 600 pedidos abre sin trabarse", async ({ page }) => {
     await page.addInitScript(anotarTrabas);
@@ -26,7 +26,8 @@ test("arranque: con 200 comercios y 600 pedidos abre sin trabarse", async ({ pag
 
     // Las pantallas que ya no se dibujan al abrir se dibujan al entrar.
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-    await expect(page.locator("#listaComerciosAdmin .comercioCard")).toHaveCount(199, { timeout: 30000 });
+    await expect(page.locator("#listaComerciosAdmin .comercioCard").first()).toBeVisible();
+    await bajarHastaElFinal(page.locator("#listaComerciosAdmin"), ".comercioCard", 199);
     await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#productos .tituloMarca").first()).toBeVisible();
 });

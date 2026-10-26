@@ -258,8 +258,10 @@
 
     // Los pedidos de trabajo: con historial de estados, sin "Histórico" ni
     // eliminados. Cada uno con su estado actual.
+    // Para leer, sin copiar los pedidos en cada dibujo (repasada): esta
+    // pantalla nunca cambia los pedidos a mano, todo pasa por la nube.
     function pedidosDeTrabajo() {
-        return obtenerHistorial()
+        return historialParaLeer()
             .filter(pedido => pedido.estado !== "historico" && pedido.eliminado !== true)
             .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) }))
             .filter(registro => registro.estado !== "");
@@ -269,7 +271,7 @@
     // (pedidoEstaEnHistorial). Los "Histórico" no tienen estado: se marcan
     // como "historico".
     function pedidosDelHistorial() {
-        return obtenerHistorial()
+        return historialParaLeer()
             .filter(pedidoEstaEnHistorial)
             .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
     }
@@ -320,7 +322,7 @@
     }
 
     function buscarPedido(id) {
-        return obtenerHistorial().find(pedido => String(pedido.id || "") === id) || null;
+        return pedidoParaLeer(id);
     }
 
     // -------------------------------------------------
@@ -1824,7 +1826,7 @@
 
         // Encabezado (T35): número, comercio con su estado y la línea de pasos.
         const numero = crear("p", "numeroFichaPedido", "Pedido N° " + numeroCortoDelPedido(pedido));
-        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(String(pedido.comercio || "")) : null;
+        const comercio = comercioParaLeerPorNombre(String(pedido.comercio || ""));
         const direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
         const tarjeta = crear("div", "tarjetaFichaPedido");
         tarjeta.append(numero, titulo);
