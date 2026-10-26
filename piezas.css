@@ -976,9 +976,9 @@ html[data-tema] body:has(.tutorialCapa[data-modo="mientras"]) .modal.modalHoja .
    ===================================================== */
 html[data-tema] #pantallaHistorial .resumenHistorial,
 html[data-tema="oscuro"] #pantallaHistorial .resumenHistorial{margin:2px 6px 0;padding:0;border:0 !important;background:none !important;color:var(--texto-sec) !important;font-size:13px;font-weight:600;}
-html[data-tema] #pantallaHistorial .marcadorFechaHistorial{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 6px 8px;text-transform:none;letter-spacing:0;}
-html[data-tema] #pantallaHistorial .marcadorFechaHistorial strong{font-size:12.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
-html[data-tema] #pantallaHistorial .marcadorFechaHistorial small{font-size:13px;font-weight:650;color:var(--texto-ter);white-space:nowrap;}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial,html[data-tema] #listaVistaPedidos .marcadorFechaHistorial{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 6px 8px;text-transform:none;letter-spacing:0;}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial strong,html[data-tema] #listaVistaPedidos .marcadorFechaHistorial strong{font-size:12.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+html[data-tema] #pantallaHistorial .marcadorFechaHistorial small,html[data-tema] #listaVistaPedidos .marcadorFechaHistorial small{font-size:13px;font-weight:650;color:var(--texto-ter);white-space:nowrap;}
 html[data-tema] #pantallaHistorial .historialCard{position:relative;display:flex;align-items:center;padding:0;margin-bottom:10px;border-radius:24px;overflow:hidden;}
 html[data-tema] .historialCard .abrirPedidoHistorial{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:14px 56px 14px 14px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:76px;}
 html[data-tema] .historialCard .abrirPedidoHistorial:active{background:var(--superficie-2);}
@@ -1040,6 +1040,7 @@ html[data-tema] .hojaDatosTicket .vistaTicket b{font-size:14px;}
 html[data-tema] .avisosVacio{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px 8px;}
 html[data-tema] .avisosVacio strong{margin:4px 0 0;font-size:16px;}
 html[data-tema] .modal.modalHoja .btnModalSecundario{background:var(--superficie-2);color:var(--texto);line-height:1.2;}
+html[data-tema] #listaVistaPedidos .marcadorFechaHistorial:first-child{margin-top:4px;}
 
 /* ---- Botones de arriba alineados (pedido del dueño, 2026-10-26) ----
    Volver, casita y Asistente van en la barrita pegajosa a 12 px del borde;

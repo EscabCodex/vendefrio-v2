@@ -381,6 +381,54 @@
         return textoMonto(entrega ? entrega.total : totalDelPedido(pedido));
     }
 
+    function montoDelPedido(pedido) {
+        const entrega = estadoActualDelPedido(pedido) === "entregado" ? entregaDe(pedido) : null;
+        const { total, conPrecio } = entrega ? entrega.total : totalDelPedido(pedido);
+        return conPrecio ? total : 0;
+    }
+
+    // Terminados como el Historial nuevo (T167, opción A): los pedidos
+    // agrupados por día, cada día con cuántos son y cuánto suman.
+    function claveDelDia(pedido) {
+        const hora = horaParaOrdenar(pedido);
+        if (!hora) return "";
+        const fecha = new Date(hora);
+        return fecha.getFullYear() + "-" + fecha.getMonth() + "-" + fecha.getDate();
+    }
+
+    function dibujarTerminadosPorDia(deLaEtapa) {
+        const dias = new Map();
+        deLaEtapa.forEach(registro => {
+            const clave = claveDelDia(registro.pedido);
+            const dia = dias.get(clave) || { cuantos: 0, total: 0 };
+            dia.cuantos += 1;
+            dia.total += montoDelPedido(registro.pedido);
+            dias.set(clave, dia);
+        });
+        let anterior = null;
+        deLaEtapa.slice(0, mostrando).forEach(registro => {
+            const clave = claveDelDia(registro.pedido);
+            if (clave !== anterior) {
+                anterior = clave;
+                const dia = dias.get(clave);
+                const hora = horaParaOrdenar(registro.pedido);
+                const nombre = !hora
+                    ? "Sin fecha"
+                    : typeof nombreDelDiaDeFecha === "function"
+                        ? nombreDelDiaDeFecha(new Date(hora))
+                        : new Date(hora).toLocaleDateString("es-AR");
+                const marcador = crear("div", "marcadorFechaHistorial");
+                marcador.append(
+                    crear("strong", "", nombre),
+                    crear("small", "", (dia.cuantos === 1 ? "1 pedido" : dia.cuantos + " pedidos") +
+                        (dia.total > 0 ? " · " + textoPrecio(dia.total) : ""))
+                );
+                lista.appendChild(marcador);
+            }
+            lista.appendChild(crearTarjeta(registro));
+        });
+    }
+
     function textoUnidades(cantidad) {
         return cantidad === 1 ? "1 unidad" : cantidad + " unidades";
     }
@@ -799,6 +847,11 @@
         resumen.textContent = deLaEtapa.length === 1
             ? "1 pedido  ·  " + textoUnidades(unidades)
             : deLaEtapa.length + " pedidos  ·  " + textoUnidades(unidades);
+        // Terminados (T167): también cuánto suman.
+        if (enHistorial) {
+            const suma = deLaEtapa.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
+            if (suma > 0) resumen.textContent += "  ·  " + textoPrecio(suma);
+        }
 
         if (deLaEtapa.length === 0 && enHistorial) {
             const vacio = crear("div", "card seguimientoVacio");
@@ -827,7 +880,8 @@
             return;
         }
 
-        deLaEtapa.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
+        if (enHistorial) dibujarTerminadosPorDia(deLaEtapa);
+        else deLaEtapa.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
         recordarEstados(registros.concat(historial));
 
         if (deLaEtapa.length > mostrando) {

@@ -85,6 +85,11 @@ function nombreDelDiaHistorial(textoFecha) {
     if (partes.length !== 3) return textoFecha;
     const fecha = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]));
     if (Number.isNaN(fecha.getTime())) return textoFecha;
+    return nombreDelDiaDeFecha(fecha);
+}
+
+// También la usa Pedidos > Terminados en la nube (seguimiento.js).
+function nombreDelDiaDeFecha(fecha) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const dias = Math.round((hoy.getTime() - fecha.getTime()) / 86400000);
