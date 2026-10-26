@@ -1040,3 +1040,14 @@ html[data-tema] .hojaDatosTicket .vistaTicket b{font-size:14px;}
 html[data-tema] .avisosVacio{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px 8px;}
 html[data-tema] .avisosVacio strong{margin:4px 0 0;font-size:16px;}
 html[data-tema] .modal.modalHoja .btnModalSecundario{background:var(--superficie-2);color:var(--texto);line-height:1.2;}
+
+/* ---- Botones de arriba alineados (pedido del dueño, 2026-10-26) ----
+   Volver, casita y Asistente van en la barrita pegajosa a 12 px del borde;
+   Avisos y "?" van en la cabecera, que arranca a 18 px. Se suben 6 px y la
+   campana pasa a 44 px, así los cinco círculos quedan a la misma altura. */
+html body > section[data-botones-volver] > header > .campanaAvisos,
+html body > section[data-botones-volver] > header > .botonAyudaPantalla{margin-top:-6px;}
+html body > section > header > .campanaAvisos{width:44px;height:44px;}
+/* En Más la cabecera tenía 12 px entre botones y las demás 14: la campana
+   quedaba 2 px corrida. Mismo espacio en todas. */
+html #pantallaConfiguracion .configHeader{gap:14px;}

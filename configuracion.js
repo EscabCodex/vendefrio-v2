@@ -2186,6 +2186,9 @@
 
         if (fila) {
             detalle(fila.dataset.configSeccion);
+            // La sección abre desde arriba, con el título a la vista, aunque
+            // la lista de Más estuviera bajada (pedido del dueño, 2026-10-26).
+            window.scrollTo(0, 0);
         }
 
         if (event.target.closest(".configVolver")) {
