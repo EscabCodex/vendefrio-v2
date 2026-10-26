@@ -1,0 +1,1007 @@
+[
+ {
+  "nombre": "nav-Pedidos",
+  "sec": "pantallaPedido",
+  "scrollY": 0,
+  "alto": 525,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Inicio",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "DIV",
+    "l": "Pedidos\n      Vend",
+    "x": 72,
+    "y": 18,
+    "h": 31,
+    "w": 101,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "nav-Comercios",
+  "sec": "pantallaComercios",
+  "scrollY": 0,
+  "alto": 582,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Inicio",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "nav-Catálogo",
+  "sec": "pantallaCatalogo",
+  "scrollY": 0,
+  "alto": 762,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Inicio",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "DIV",
+    "l": "CatálogoLo que ven",
+    "x": 72,
+    "y": 18,
+    "h": 65,
+    "w": 124,
+    "cy": 51
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-A_cobrar",
+  "sec": "pantallaACobrar",
+  "scrollY": 0,
+  "alto": 471,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Inicio",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "DIV",
+    "l": "A cobrarLo que te ",
+    "x": 72,
+    "y": 18,
+    "h": 65,
+    "w": 124,
+    "cy": 51
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Cierre_del_d_a",
+  "sec": "pantallaCierre",
+  "scrollY": 0,
+  "alto": 1508,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Estad_sticas",
+  "sec": "pantallaEstadisticas",
+  "scrollY": 0,
+  "alto": 2224,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Mapa_de_ventas",
+  "sec": "pantallaMapaVentas",
+  "scrollY": 0,
+  "alto": 497,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Registro_de_cambios",
+  "sec": "pantallaCambios",
+  "scrollY": 0,
+  "alto": 514,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Rutas",
+  "sec": "pantallaRutas",
+  "scrollY": 0,
+  "alto": 912,
+  "botones": []
+ },
+ {
+  "nombre": "acceso-WhatsApp",
+  "sec": "pantallaWhatsapp",
+  "scrollY": 0,
+  "alto": 1681,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Listas_de_precios",
+  "sec": "pantallaListasPrecios",
+  "scrollY": 0,
+  "alto": 711,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "acceso-Importar_planilla",
+  "sec": "pantallaImportar",
+  "scrollY": 0,
+  "alto": 730,
+  "botones": [
+   {
+    "c": "botonVolverPantalla volverGenerico",
+    "l": "Volver a Más",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 210,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-cuenta",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1120,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-avisos",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1475,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-navegacion",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1374,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-trabajo",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1539,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-empleados",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1570,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-respaldo",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1152,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-apariencia",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 3326,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ },
+ {
+  "nombre": "mas-seguridad",
+  "sec": "pantallaConfiguracion",
+  "scrollY": 0,
+  "alto": 1498,
+  "botones": [
+   {
+    "c": "configVolver",
+    "l": "Volver",
+    "x": 16,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonInicioPantalla",
+    "l": "Ir a Inicio",
+    "x": 68,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAsistentePantalla",
+    "l": "Asistente",
+    "x": 330,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "botonAyudaPantalla conNombre",
+    "l": "Ayuda de esta pant",
+    "x": 274,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   },
+   {
+    "c": "campanaAvisos conNombre",
+    "l": "Avisos",
+    "x": 212,
+    "y": 12,
+    "h": 44,
+    "w": 44,
+    "cy": 34
+   }
+  ]
+ }
+]
