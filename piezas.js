@@ -239,6 +239,60 @@
         });
     }
 
+    // ---------- Lo último que se abre queda arriba ----------
+    // Cada hoja o ventana tiene su altura (z-index) en el CSS, y entre dos de
+    // la misma altura ganaba la que se creó después: la de "una o dos copias"
+    // del ticket salía debajo de la ficha del pedido. Ahora la que se abre
+    // sube por encima de las que ya estaban abiertas, en toda la app.
+    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear";
+    const capasAbiertas = new WeakMap();
+
+    function capaAbierta(capa) {
+        return capa.isConnected && !capa.hidden && !capa.classList.contains("oculto");
+    }
+
+    function alturaDe(capa) {
+        return Number(getComputedStyle(capa).zIndex) || 0;
+    }
+
+    function subirCapa(capa) {
+        capa.style.removeProperty("z-index");
+        let encima = 0;
+        for (const otra of document.body.children) {
+            if (otra !== capa && otra.matches(CAPAS) && capaAbierta(otra)) encima = Math.max(encima, alturaDe(otra));
+        }
+        if (encima && encima >= alturaDe(capa)) capa.style.setProperty("z-index", String(encima + 1), "important");
+    }
+
+    function revisarCapa(capa) {
+        const abiertaAhora = capaAbierta(capa);
+        if (abiertaAhora && !capasAbiertas.get(capa)) subirCapa(capa);
+        capasAbiertas.set(capa, abiertaAhora);
+    }
+
+    // Se mira solo la clase de cada ventana (no todo lo de adentro), así no
+    // cuesta nada mientras la app se usa.
+    const vigiaCapas = new MutationObserver(cambios => {
+        new Set(cambios.map(cambio => cambio.target)).forEach(revisarCapa);
+    });
+
+    function vigilarCapa(capa) {
+        if (!capasAbiertas.has(capa)) vigiaCapas.observe(capa, { attributes: true, attributeFilter: ["class", "hidden"] });
+        capasAbiertas.set(capa, false);
+        revisarCapa(capa);
+    }
+
+    new MutationObserver(cambios => {
+        cambios.forEach(cambio => {
+            cambio.addedNodes.forEach(nodo => {
+                if (nodo.nodeType === 1 && nodo.matches(CAPAS)) vigilarCapa(nodo);
+            });
+        });
+    }).observe(document.body, { childList: true });
+    [...document.body.children].forEach(nodo => {
+        if (nodo.matches(CAPAS)) vigilarCapa(nodo);
+    });
+
     // ---------- "Deshacer" ----------
     let deshacerActual = null;
 
