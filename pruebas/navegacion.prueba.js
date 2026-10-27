@@ -230,3 +230,45 @@ test("navegación: elegir Google Maps la primera vez que se toca Ir", async ({ p
     await expect(page.locator("#pantallaNavegacion")).toBeVisible();
     await expect(eleccion).toHaveCount(0);
 });
+
+// "Visité, sin pedido" también navegando: pide el motivo, deja la parada
+// visitada y sigue con la próxima.
+test("navegación: visité sin pedido pasa a la parada que sigue", async ({ page }, testInfo) => {
+    await page.route("https://routing.openstreetmap.de/**", ruta =>
+        ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CAMINO) }));
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation(SALIDA);
+    await registrarDistribuidora(page, testInfo);
+    await page.evaluate(({ lat, lng }) => {
+        agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", lat, lng, origenGps: "gps" });
+        agregarComercio({ nombre: "Almacén Rivadavia", direccion: "Rivadavia 900", lat: lat - 0.002, lng, origenGps: "gps" });
+        return window.navegacionVendeFrio.abrir(["Kiosco La Esquina", "Almacén Rivadavia"]);
+    }, COMERCIO);
+
+    const navegacion = page.locator("#pantallaNavegacion");
+    await expect(navegacion.locator(".nombreNavegacion")).toHaveText("Kiosco La Esquina");
+    // La hoja de la parada se abre tocando la tarjeta de abajo.
+    await navegacion.locator(".paradaActualNavegacion").click();
+    // La flechita de la hoja solo la achica: la navegación sigue.
+    await navegacion.getByRole("button", { name: "Achicar la tarjeta" }).click();
+    await expect(navegacion.locator(".hojaNavegacion")).toBeHidden();
+    await expect(navegacion).toBeVisible();
+    await expect(navegacion.locator(".paradaActualNavegacion")).toBeVisible();
+    await navegacion.locator(".paradaActualNavegacion").click();
+    const sinPedido = navegacion.getByRole("button", { name: "Visité, sin pedido" });
+    await expect(sinPedido).toBeVisible();
+    await expect(navegacion.locator(".hojaAcciones").getByRole("button", { name: "Cargar pedido" })).toBeVisible();
+    await capturar(page, "navegacion-04-visite-sin-pedido");
+    await sinPedido.click();
+
+    const hoja = page.getByRole("dialog", { name: "¿Por qué no hubo pedido?" });
+    await expect(hoja).toContainText("Kiosco La Esquina");
+    await hoja.getByRole("button", { name: "Estaba cerrado" }).click();
+    await hoja.getByRole("button", { name: "Guardar visita" }).click();
+    await expect(hoja).toBeHidden();
+
+    await expect(navegacion).toBeVisible();
+    await expect(navegacion.locator(".nombreNavegacion")).toHaveText("Almacén Rivadavia");
+    expect(await page.evaluate(() => estaVisitadoEstaSemana(buscarComercioPorNombre("Kiosco La Esquina")))).toBe(true);
+    expect(await page.evaluate(() => window.visitasVendeFrio.visitasDelComercio("Kiosco La Esquina").length)).toBe(1);
+});

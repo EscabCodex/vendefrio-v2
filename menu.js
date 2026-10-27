@@ -130,16 +130,30 @@ function comercioVisitadoRecientemente(comercio) {
 }
 
 let ubicacionDashboard = null;
+let horaUbicacionDashboard = 0;
 let solicitandoUbicacionDashboard = false;
 
 function distanciaDashboard(lat1, lng1, lat2, lng2) {
     const radio = 6371; const rad = valor => valor * Math.PI / 180; const dLat = rad(lat2 - lat1); const dLng = rad(lng2 - lng1); const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2; return radio * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// La ubicación se pide de nuevo si tiene más de 2 minutos: andando, la
+// parada más cercana cambia. "Actualizar mi ubicación" la pide en el momento.
 function actualizarUbicacionDashboard(forzar = false) {
-    if ((!forzar && ubicacionDashboard) || solicitandoUbicacionDashboard || !navigator.geolocation) return;
+    const vieja = Date.now() - horaUbicacionDashboard > 120000;
+    if ((!forzar && ubicacionDashboard && !vieja) || solicitandoUbicacionDashboard || !navigator.geolocation) return;
     solicitandoUbicacionDashboard = true;
-    navigator.geolocation.getCurrentPosition(posicion => { ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude }; solicitandoUbicacionDashboard = false; actualizarDashboard(); }, () => { solicitandoUbicacionDashboard = false; }, { enableHighAccuracy: true, maximumAge: 120000, timeout: 8000 });
+    navigator.geolocation.getCurrentPosition(posicion => {
+        ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude };
+        horaUbicacionDashboard = Date.now();
+        solicitandoUbicacionDashboard = false;
+        actualizarDashboard();
+    }, () => {
+        solicitandoUbicacionDashboard = false;
+        if (!forzar) return;
+        document.querySelectorAll(".btnUbicacionDashboard").forEach(boton => { boton.disabled = false; boton.lastChild.textContent = " Probar de nuevo"; });
+        if (typeof mostrarToast === "function") mostrarToast("No se pudo saber dónde estás. Revisá que el GPS esté prendido.");
+    }, { enableHighAccuracy: true, maximumAge: forzar ? 0 : 120000, timeout: 8000 });
 }
 
 // -----------------------------------------------------
@@ -422,12 +436,18 @@ function dibujarProximaParadaInicio(comercios) {
     }
     contenedor.append(info, acciones);
 
-    if (!ubicacionDashboard && navigator.geolocation) {
+    // Siempre a mano (como al principio): sin ubicación la pide; con
+    // ubicación la vuelve a pedir y elige otra vez la más cercana.
+    if (navigator.geolocation) {
         const ubicar = document.createElement("button");
         ubicar.type = "button";
         ubicar.className = "btnUbicacionDashboard";
-        ubicar.innerHTML = window.icono("mira", 14) + " Usar mi ubicación para elegir la más cercana";
-        ubicar.addEventListener("click", () => actualizarUbicacionDashboard(true));
+        ubicar.innerHTML = window.icono("mira", 14) + (ubicacionDashboard ? " Actualizar mi ubicación" : " Usar mi ubicación para elegir la más cercana");
+        ubicar.addEventListener("click", () => {
+            ubicar.disabled = true;
+            ubicar.lastChild.textContent = " Buscando dónde estás…";
+            actualizarUbicacionDashboard(true);
+        });
         contenedor.appendChild(ubicar);
     }
 }

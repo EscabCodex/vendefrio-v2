@@ -106,14 +106,15 @@ test("llegando: a 150 m se agranda la hoja con todo para la parada", async ({ pa
     await expect(hoja.getByRole("button", { name: "Cargar pedido" })).toBeVisible();
     await expect(hoja.getByRole("button", { name: /Deslizá para marcar Llegué/ })).toBeVisible();
     await expect(hoja.getByRole("button", { name: "Saltear parada" })).toBeVisible();
-    await expect(hoja.getByRole("button", { name: "Salir" })).toBeVisible();
+    // Desde la hoja no se sale de la navegación (pedido del dueño): sin «Salir».
+    await expect(hoja.getByRole("button", { name: "Salir" })).toHaveCount(0);
 
     // En la pantalla chica: lo de arriba no se pisa con la hoja, la hoja
-    // entra hasta «Salir» sin bajar y tu posición se ve en el medio de las dos.
+    // entra hasta «Saltear parada» sin bajar y tu posición se ve en el medio de las dos.
     const cajaCartel = await cartel.boundingBox();
     const cajaHoja = await hoja.boundingBox();
     expect(cajaCartel.y + cajaCartel.height).toBeLessThanOrEqual(cajaHoja.y);
-    const cajaSalir = await hoja.getByRole("button", { name: "Salir" }).boundingBox();
+    const cajaSalir = await hoja.getByRole("button", { name: "Saltear parada" }).boundingBox();
     expect(cajaSalir.y + cajaSalir.height).toBeLessThanOrEqual(640);
     await expect.poll(async () => {
         const yo = await navegacion.locator(".marcadorYoNav").boundingBox();
@@ -145,8 +146,11 @@ test("llegando: a 150 m se agranda la hoja con todo para la parada", async ({ pa
     await expect(navegacion.locator(".numeroTarjetaParada")).toHaveText("Parada 3 de 3");
     expect(await page.evaluate(() => estaVisitadoEstaSemana(buscarComercioPorNombre("Súper El Sol")))).toBe(false);
 
-    // Salir cierra la navegación.
+    // La flechita achica la hoja; para salir queda la X flotante del mapa.
     await navegacion.locator(".paradaActualNavegacion").click();
-    await hoja.getByRole("button", { name: "Salir" }).click();
+    await hoja.getByRole("button", { name: "Achicar la tarjeta" }).click();
+    await expect(hoja).toBeHidden();
+    await expect(navegacion).toBeVisible();
+    await navegacion.getByRole("button", { name: "Terminar navegación" }).click();
     await expect(navegacion).toBeHidden();
 });
