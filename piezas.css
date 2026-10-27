@@ -901,8 +901,8 @@ html[data-tema] .modal.modalHoja .modalContenido{
 html[data-tema] .modal.modalHoja .modalContenido::before{top:8px;width:40px;height:5px;background:var(--borde-fuerte);}
 html[data-tema] .modal.modalHoja .modalContenido > h2{margin:6px 4px 10px;text-align:left;font-size:19px;font-weight:750;letter-spacing:-.01em;}
 html[data-tema] .modal.modalHoja .modalContenido > label{display:block;margin:14px 4px 6px;font-size:13px;font-weight:650;color:var(--texto-sec);}
-html[data-tema] .modal.modalHoja .modalContenido > input,
-html[data-tema] .modal.modalHoja .modalContenido > select{
+html[data-tema] .modal.modalHoja .modalContenido > input:not(.oculto):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+html[data-tema] .modal.modalHoja .modalContenido > select:not(.oculto){
   display:block;width:100%;min-height:50px;margin:0;padding:12px 14px;
   border-radius:var(--radius-md);border:1px solid var(--borde);background:var(--pz-campo);color:var(--texto);font-size:16px;
 }
@@ -975,7 +975,7 @@ html[data-tema] .modalEditorFoto .accionesModalCatalogo .guardarEdicionCatalogo{
 html[data-tema] .modalEditorFoto .zoomEditorFoto{width:100%;accent-color:var(--acento);}
 /* Con el globo del tutorial abajo (mientras se completa un paso), la hoja
    deja lugar para que no tape "Guardar". */
-html[data-tema] body:has(.tutorialCapa[data-modo="mientras"]) .modal.modalHoja .modalContenido{padding-bottom:calc(200px + env(safe-area-inset-bottom));}
+html[data-tema] body:has(.tutorialCapa:is([data-modo="mientras"],[data-modo="listo"])) .modal.modalHoja .modalContenido{padding-bottom:calc(200px + env(safe-area-inset-bottom));}
 
 /* =====================================================
    T167: Historial (opción A), "Tus datos" (opción B) y datos del ticket
