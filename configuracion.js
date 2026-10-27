@@ -2109,8 +2109,8 @@
                     filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
                         ["app", "VendeFrío"], ["google", "Google Maps"]
                     ]) +
-                    filaSegmento("mapa", "violeta", "Servidor de caminos", "Valhalla tiene modo moto de verdad. Si no contesta, va OSRM", "servidorCaminos", [
-                        ["osrm", "OSRM"], ["valhalla", "Valhalla"]
+                    filaSegmento("mapa", "violeta", "Cómo calcula el camino", "«Con modo moto» está en prueba. Si no contesta, usa el normal", "servidorCaminos", [
+                        ["osrm", "Normal"], ["valhalla", "Con modo moto"]
                     ])) +
                 grupo("Voz",
                     filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [

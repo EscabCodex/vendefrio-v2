@@ -88,10 +88,11 @@ async function elegirValhallaEnMoto(page) {
     await page.locator('.configFila[data-config-seccion="navegacion"]').click();
     const detalle = page.locator("#configDetalle");
     await expect(detalle).toBeVisible();
-    await expect(detalle.getByRole("radio", { name: "OSRM" })).toBeChecked();
-    await detalle.locator(".ajSegmento label", { hasText: "Moto" }).click();
-    await detalle.locator(".ajSegmento label", { hasText: "Valhalla" }).click();
-    await expect(detalle.getByRole("radio", { name: "Valhalla" })).toBeChecked();
+    const camino = detalle.getByRole("radiogroup", { name: "Cómo calcula el camino" });
+    await expect(camino.getByRole("radio", { name: "Normal" })).toBeChecked();
+    await detalle.locator(".ajSegmento label", { hasText: /^Moto$/ }).click();
+    await camino.locator(".ajSegmento label", { hasText: "Con modo moto" }).click();
+    await expect(camino.getByRole("radio", { name: "Con modo moto" })).toBeChecked();
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).servidorCaminos)).toBe("valhalla");
     return detalle;
 }

@@ -101,6 +101,12 @@
 
     function mostrarCartelPersonal(intento = 0) {
         clearTimeout(esperaCartel);
+        // Probando con datos de ejemplo: un solo cartel arriba, el del ejemplo
+        // (informe "visto por un desconocido"). Vuelve al empezar de cero.
+        if (window.ejemploVendeFrio?.hay?.()) {
+            quitarCartelPersonal();
+            return;
+        }
         const aviso = window.piezas?.avisoInicio?.("avisoModoPersonal", {
             color: "Aviso",
             icono: "alerta",
@@ -1284,7 +1290,8 @@
         usaModoPersonal,
         datosPersonales,
         nombresDeRolesPersonales,
-        pedirDatosPersonales: () => pedirDatosPersonales(true)
+        pedirDatosPersonales: () => pedirDatosPersonales(true),
+        mostrarCartelPersonal: () => { if (usaModoPersonal()) mostrarCartelPersonal(); }
     };
 
     decidir();

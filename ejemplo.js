@@ -10,32 +10,49 @@
     const CLAVE = "vendefrio_datos_ejemplo";
     const DIA = 86400000;
 
+    // Una distribuidora inventada y completa (pedido del dueño, informe "visto
+    // por un desconocido"): todo con precio, un solo rubro y comercios con
+    // dirección, teléfono y GPS. "stock" deja ver el stock simple (T90).
+    const MARCAS = {
+        "Frío Sur": [
+            ["Helado 1 kg", 4500, 40], ["Helado 1/2 kg", 2600, 35], ["Helado 1/4 kg", 1600, 60],
+            ["Palito bombón", 800, 120], ["Palito de agua", 500, 150], ["Cucurucho", 1200, 80]
+        ],
+        "Frío Sur Postres": [
+            ["Torta helada", 6800, 12], ["Almendrado", 5200, 7], ["Bombón suizo", 900, 70], ["Copa helada", 1500, 30]
+        ],
+        "Hielo Austral": [
+            ["Bolsa de hielo 2 kg", 1100, 50], ["Bolsa de hielo 5 kg", 2300, 25]
+        ]
+    };
     const MARCA = "Frío Sur";
-    const PRODUCTOS = [
-        ["Helado 1 kg", 4500],
-        ["Helado 1/4 kg", 1600],
-        ["Palito bombón", 800],
-        ["Palito de agua", 500],
-        ["Cucurucho", 1200],
-        ["Torta helada", 6800]
-    ];
+    const PRODUCTOS = Object.values(MARCAS).flat().map(([nombre, precio]) => [nombre, precio]);
+    const MARCA_DE = Object.fromEntries(Object.entries(MARCAS).flatMap(([marca, lista]) => lista.map(([nombre]) => [nombre, marca])));
     const COMERCIOS = [
-        { nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "11 5555-1234", lat: -34.6045, lng: -58.3790, cada: 7, pide: [["Helado 1 kg", 3], ["Palito bombón", 20]] },
+        { nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "11 5555-1234", lat: -34.6045, lng: -58.3790, cada: 7, pide: [["Helado 1 kg", 3], ["Palito bombón", 20], ["Bolsa de hielo 2 kg", 4]] },
         { nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "11 4000-1111", lat: -34.6010, lng: -58.3810, cada: 4, pide: [["Palito de agua", 30], ["Cucurucho", 10]] },
         { nombre: "Despensa Mary", direccion: "Mitre 900", telefono: "11 4444-2222", lat: -34.6080, lng: -58.3860, cada: 7, deja: 16, pide: [["Helado 1 kg", 2], ["Helado 1/4 kg", 6]] },
         { nombre: "Maxikiosco 24", direccion: "Rivadavia 2100", telefono: "11 3333-7777", lat: -34.6098, lng: -58.3950, cada: 10, pide: [["Torta helada", 2], ["Palito bombón", 15]] },
-        { nombre: "Granja El Sol", direccion: "Moreno 550", telefono: "11 6666-0101", lat: -34.6125, lng: -58.3735, cada: 14, pide: [["Helado 1 kg", 4], ["Cucurucho", 12]] }
+        { nombre: "Granja El Sol", direccion: "Moreno 550", telefono: "11 6666-0101", lat: -34.6125, lng: -58.3735, cada: 14, pide: [["Helado 1 kg", 4], ["Cucurucho", 12]] },
+        { nombre: "Autoservicio La Esquina", direccion: "Av. Corrientes 1450", telefono: "11 4321-5678", lat: -34.6037, lng: -58.3880, cada: 7, pide: [["Helado 1/2 kg", 6], ["Bombón suizo", 24], ["Bolsa de hielo 5 kg", 3]] },
+        { nombre: "Kiosco El Faro", direccion: "Tucumán 780", telefono: "11 4123-9090", lat: -34.6020, lng: -58.3770, cada: 5, pide: [["Palito bombón", 25], ["Palito de agua", 20]] },
+        { nombre: "Almacén Doña Rosa", direccion: "Sarmiento 1220", telefono: "11 4777-3030", lat: -34.6055, lng: -58.3905, cada: 7, deja: 9, pide: [["Helado 1/4 kg", 8], ["Almendrado", 2]] },
+        { nombre: "Súper Tres Hermanos", direccion: "Av. Callao 300", telefono: "11 4950-2020", lat: -34.6070, lng: -58.3925, cada: 7, pide: [["Helado 1 kg", 6], ["Torta helada", 3], ["Copa helada", 12]] },
+        { nombre: "Rotisería La Estación", direccion: "Lavalle 1600", telefono: "11 4372-1188", lat: -34.6030, lng: -58.3895, cada: 14, pide: [["Bolsa de hielo 5 kg", 6], ["Helado 1/2 kg", 4]] },
+        { nombre: "Kiosco Plaza", direccion: "Paraná 450", telefono: "11 4811-4545", lat: -34.6040, lng: -58.3920, cada: 4, pide: [["Palito de agua", 25], ["Cucurucho", 8], ["Bombón suizo", 12]] },
+        { nombre: "Mercadito Los Pinos", direccion: "Uruguay 950", telefono: "11 4816-6060", lat: -34.6005, lng: -58.3860, cada: 10, deja: 21, pide: [["Helado 1 kg", 3], ["Copa helada", 10]] }
     ];
 
     // La fecha, las unidades y el mensaje que guarda Nuevo pedido.
     function comoPedidoGuardado(comercio, timestamp, productos) {
         const fecha = new Date(timestamp).toLocaleDateString("es-AR");
         const cantidad = productos.reduce((total, item) => total + item.cantidad, 0);
+        const marcas = [...new Set(productos.map(item => item.marca))];
         const pedido = String.fromCodePoint(0x1F3EA) + " *" + comercio + "*\n" + fecha + "\n\n" +
             String.fromCodePoint(0x1F4E6) + " *RESUMEN DEL PEDIDO*\nUnidades totales: " + cantidad +
             "\nProductos diferentes: " + productos.length + "\n\n" +
-            String.fromCodePoint(0x1F535) + " *" + MARCA + "*\n" +
-            productos.map(item => "- " + item.producto + " x" + item.cantidad).join("\n");
+            marcas.map(marca => String.fromCodePoint(0x1F535) + " *" + marca + "*\n" +
+                productos.filter(item => item.marca === marca).map(item => "- " + item.producto + " x" + item.cantidad).join("\n")).join("\n\n");
         return { fecha, cantidad, pedido };
     }
 
@@ -55,15 +72,36 @@
         return !hayDatosPropios();
     }
 
+    const normal = texto => String(texto || "").trim().toLocaleLowerCase("es");
+    const buscarMarcaGuardada = (productos, marca) => Object.keys(productos).find(item => normal(item) === normal(marca));
+
     function cargar() {
         if (hayDatosPropios()) throw new Error("Ya hay datos en este celular.");
-        const productos = obtenerProductos();
-        const marcaNueva = !Object.keys(productos).some(marca => marca.toLocaleLowerCase("es") === MARCA.toLocaleLowerCase("es"));
-        if (marcaNueva) agregarMarca(MARCA);
+        const marcasNuevas = [];
         const agregados = [];
-        PRODUCTOS.forEach(([nombre, precio]) => {
-            if (agregarProducto(MARCA, { nombre, precio })) agregados.push(nombre);
+        Object.entries(MARCAS).forEach(([marca, lista]) => {
+            if (!buscarMarcaGuardada(obtenerProductos(), marca)) {
+                agregarMarca(marca);
+                marcasNuevas.push(marca);
+            }
+            lista.forEach(([nombre, precio]) => {
+                if (agregarProducto(marca, { nombre, precio })) agregados.push(nombre);
+            });
         });
+        // El stock contado hace dos días, para que el Catálogo lo muestre.
+        const productos = obtenerProductos();
+        const contado = Date.now() - 2 * DIA;
+        Object.entries(MARCAS).forEach(([marca, lista]) => {
+            const guardada = buscarMarcaGuardada(productos, marca);
+            lista.forEach(([nombre, , stock]) => {
+                const producto = (productos[guardada] || []).find(item => item.nombre === nombre);
+                if (producto && agregados.includes(nombre) && producto.stock === undefined) {
+                    producto.stock = stock;
+                    producto.stockHora = contado;
+                }
+            });
+        });
+        guardarProductos(productos);
 
         const agregadosComercios = [];
         COMERCIOS.forEach(comercio => {
@@ -81,7 +119,7 @@
                 const variacion = (hace + numero) % 3 - 1;
                 const timestamp = hoy.getTime() - hace * DIA + numero * 1800000;
                 const productos = comercio.pide.map(([producto, cantidad]) => ({
-                    marca: MARCA, producto, cantidad: Math.max(1, cantidad + variacion * Math.ceil(cantidad / 5)), precio: precio[producto]
+                    marca: MARCA_DE[producto], producto, cantidad: Math.max(1, cantidad + variacion * Math.ceil(cantidad / 5)), precio: precio[producto]
                 }));
                 pedidos.push({
                     comercio: comercio.nombre,
@@ -106,7 +144,7 @@
         });
 
         p.lsGuardar(CLAVE, {
-            marca: marcaNueva ? MARCA : "",
+            marcas: marcasNuevas,
             productos: agregados,
             comercios: agregadosComercios,
             hora: Date.now()
@@ -127,20 +165,25 @@
             const tienePedidos = obtenerHistorial().some(pedido => pedido.comercio === nombre);
             if (!tienePedidos) eliminarComercio(nombre);
         });
-        const productos = obtenerProductos();
-        const marca = Object.keys(productos).find(item => item.toLocaleLowerCase("es") === MARCA.toLocaleLowerCase("es"));
-        if (marca) {
-            const quedan = (productos[marca] || []).filter(producto => !(datos.productos || []).includes(producto.nombre));
-            if (datos.marca && !quedan.length) {
+        // Antes se guardaba una sola marca ("marca"); se sigue leyendo.
+        const nuevas = (datos.marcas || (datos.marca ? [datos.marca] : [])).map(normal);
+        const deEjemplo = datos.productos || [];
+        Object.keys(MARCAS).forEach(nombreMarca => {
+            const productos = obtenerProductos();
+            const marca = buscarMarcaGuardada(productos, nombreMarca);
+            if (!marca) return;
+            const quedan = (productos[marca] || []).filter(producto => !deEjemplo.includes(producto.nombre));
+            if (nuevas.includes(normal(marca)) && !quedan.length) {
                 eliminarMarca(marca);
-            } else {
-                for (let indice = productos[marca].length - 1; indice >= 0; indice -= 1) {
-                    if ((datos.productos || []).includes(productos[marca][indice].nombre)) eliminarProducto(marca, indice);
-                }
+                return;
             }
-        }
+            for (let indice = productos[marca].length - 1; indice >= 0; indice -= 1) {
+                if (deEjemplo.includes(productos[marca][indice].nombre)) eliminarProducto(marca, indice);
+            }
+        });
         try { localStorage.removeItem(CLAVE); } catch (error) { /* nada */ }
         revisar();
+        window.inicioVendeFrio?.mostrarCartelPersonal?.();
         ["renderizarComercios", "renderizarCatalogo", "actualizarDashboard"].forEach(nombre => {
             if (typeof window[nombre] === "function") { try { window[nombre](); } catch (error) { /* nada */ } }
         });
@@ -161,6 +204,8 @@
 
     function revisar() {
         const hay = Boolean(marcados()) && !(typeof usaNubeReal === "function" && usaNubeReal());
+        // Un solo cartel arriba mientras se prueba (inicio.js no lo vuelve a poner).
+        if (hay) p.avisoInicio("avisoModoPersonal", null);
         p.avisoInicio("avisoDatosEjemplo", hay ? {
             color: "Info",
             icono: "chispa",
