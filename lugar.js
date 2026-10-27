@@ -433,9 +433,9 @@
         if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") return;
         if (seccion.id === "pantallaNavegacion") return;
         const boton = botonVolverDe(seccion);
-        // Un paso atrás: lo que se abrió desde Más vuelve a Más, aunque su
-        // flecha de arriba lleve a Inicio.
-        if (boton && boton.matches('.volverGenerico[data-volver="menu"]') && deDonde.get(seccion.id) === "pantallaConfiguracion" && typeof mostrarPantalla === "function") {
+        // Un paso atrás: lo que se abrió desde Más (A cobrar, Historial,
+        // Rutas...) vuelve a Más, sea cual sea su flecha de arriba.
+        if (deDonde.get(seccion.id) === "pantallaConfiguracion" && typeof mostrarPantalla === "function") {
             mostrarPantalla("mas");
             return;
         }
