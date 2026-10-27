@@ -280,20 +280,74 @@
     }
 
     // ---------- 2) El botón atrás del celular ----------
-    // Mientras haya algo para cerrar o no se esté en Inicio, arriba de la
-    // historia queda una entrada nuestra ("guardia"): el atrás la saca, y en
-    // vez de cerrar la app se da un paso atrás adentro.
-    let guardia = Boolean(window.history.state && window.history.state.vendefrio === "guardia");
+    // Mientras haya algo para cerrar o no se esté en Inicio, se "frena" el
+    // atrás y en vez de cerrar la app se da un paso atrás adentro.
+    // Chrome en Android salta las entradas de la historia que se agregan
+    // sin que la persona toque nada: por eso, con una entrada sola, el
+    // segundo atrás seguido (Más > A cobrar > atrás > atrás) cerraba la app
+    // en vez de ir a Inicio. Donde se puede se usa CloseWatcher, que está
+    // hecho justo para el atrás de Android y se puede volver a armar
+    // después de cada atrás. Si no hay, queda la entrada en la historia.
+    const conVigia = typeof window.CloseWatcher === "function";
+    let vigia = null;
+    let guardia = !conVigia && Boolean(window.history.state && window.history.state.vendefrio === "guardia");
     let ignorarVuelta = false;
     let relojIgnorar = null;
 
+    function navegando() {
+        try {
+            return Boolean(window.navegacionVendeFrio?.abierta?.());
+        } catch (error) {
+            return false;
+        }
+    }
+
     function enLaBase() {
-        if (tutorialAbierto() || capaDeArriba()) return false;
+        if (tutorialAbierto() || capaDeArriba() || navegando()) return false;
         const seccion = pantallaVisible();
         return !seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion";
     }
 
+    function alAtras() {
+        try {
+            unPasoAtras();
+        } catch (error) {
+            console.warn("No se pudo volver atrás.", error);
+        }
+        // Si todavía queda algo para volver, se frena el próximo atrás ya:
+        // así dos "atrás" seguidos no cierran la app. Las hojas tardan un
+        // poquito en irse: después se vuelve a ver si sigue haciendo falta.
+        revisarGuardia();
+        setTimeout(revisarGuardia, 260);
+    }
+
+    function revisarVigia() {
+        if (enLaBase()) {
+            if (!vigia) return;
+            const viejo = vigia;
+            vigia = null;
+            viejo.destroy();
+            return;
+        }
+        if (vigia) return;
+        try {
+            const nuevo = new window.CloseWatcher();
+            nuevo.addEventListener("close", () => {
+                if (vigia !== nuevo) return;
+                vigia = null;
+                alAtras();
+            });
+            vigia = nuevo;
+        } catch (error) {
+            // Sin vigía: el atrás sigue como antes.
+        }
+    }
+
     function revisarGuardia() {
+        if (conVigia) {
+            revisarVigia();
+            return;
+        }
         if (enLaBase()) {
             if (!guardia) return;
             guardia = false;
@@ -319,6 +373,28 @@
         } catch (error) {
             // Sin historia: el atrás sigue como antes.
         }
+    }
+
+    // En la compu, Escape ya cierra las hojas y fichas como siempre: no
+    // tiene que dar además un paso atrás.
+    if (conVigia) {
+        window.addEventListener("keydown", evento => {
+            if (evento.key === "Escape" && vigia) evento.preventDefault();
+        });
+    }
+
+    // Lo mismo que el atrás del celular (para las pruebas y el Asistente).
+    function atrasDelCelular() {
+        if (conVigia) {
+            if (vigia) vigia.requestClose();
+            return Boolean(vigia) || !enLaBase();
+        }
+        window.history.back();
+        return true;
+    }
+
+    function frenaElAtras() {
+        return conVigia ? Boolean(vigia) : guardia;
     }
 
     function botonVolverDe(seccion) {
@@ -347,16 +423,28 @@
             cerrarCapa(capa);
             return;
         }
+        // En plena navegación, el atrás no la corta: la minimiza (sigue
+        // andando debajo de la burbuja) y queda la pantalla de antes.
+        if (navegando()) {
+            window.navegacionVendeFrio.minimizar();
+            return;
+        }
         const seccion = pantallaVisible();
         if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") return;
-        // En plena navegación, un atrás sin querer no la corta.
         if (seccion.id === "pantallaNavegacion") return;
         const boton = botonVolverDe(seccion);
+        // Un paso atrás: lo que se abrió desde Más (A cobrar, Historial,
+        // Rutas...) vuelve a Más, sea cual sea su flecha de arriba.
+        if (deDonde.get(seccion.id) === "pantallaConfiguracion" && typeof mostrarPantalla === "function") {
+            mostrarPantalla("mas");
+            return;
+        }
         if (boton) boton.click();
         else if (typeof mostrarPantalla === "function") mostrarPantalla("menu");
     }
 
     window.addEventListener("popstate", evento => {
+        if (conVigia) return;
         if (ignorarVuelta) {
             ignorarVuelta = false;
             clearTimeout(relojIgnorar);
@@ -367,26 +455,29 @@
             return;
         }
         guardia = false;
-        try {
-            unPasoAtras();
-        } catch (error) {
-            console.warn("No se pudo volver atrás.", error);
-        }
-        // Si todavía queda algo para volver, la entrada se pone ya: así dos
-        // "atrás" seguidos no cierran la app. Las hojas tardan un poquito en
-        // irse: después se vuelve a ver si sigue haciendo falta.
-        revisarGuardia();
-        setTimeout(revisarGuardia, 260);
+        alAtras();
     });
 
     // Se mira solo lo que cambia arriba de todo: las pantallas y ventanas
     // que se agregan al cuerpo y su clase (no lo de adentro).
+    // De qué pantalla se llegó a cada una (para el paso atrás desde Más).
+    const deDonde = new Map();
+    let ultimaPantalla = null;
+    function anotarPantalla() {
+        const seccion = pantallaVisible();
+        const id = seccion ? seccion.id : null;
+        if (id === ultimaPantalla) return;
+        if (id) deDonde.set(id, ultimaPantalla);
+        ultimaPantalla = id;
+    }
+
     let pedido = false;
     function pedirRevisar() {
         if (pedido) return;
         pedido = true;
         requestAnimationFrame(() => {
             pedido = false;
+            anotarPantalla();
             revisarGuardia();
         });
     }
@@ -409,5 +500,5 @@
         pedirRevisar();
     });
 
-    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras };
+    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras, atrasDelCelular, frenaElAtras };
 }());

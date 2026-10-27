@@ -102,6 +102,7 @@
     deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
     subir: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     bajar: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    minimizar: '<path d="m6 8 6 6 6-6"/><path d="M5 19h14"/>',
     planilla: '<path d="M4 4h16v16H4z"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16"/>',
     qr: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2v2M18 18h2v2h-2z"/>'
   };

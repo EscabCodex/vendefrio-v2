@@ -104,7 +104,8 @@
         pantallaNavegacion: { titulo: "Navegación", pasos: [
             "Seguí la línea del mapa.",
             "Si está prendida, la voz te avisa cuándo doblar.",
-            "Al llegar, tocá «Llegué»."] },
+            "Al llegar, tocá «Llegué».",
+            "Para usar otra parte de la app sin cortarla, tocá la flecha para abajo: queda una burbuja que la trae de vuelta."] },
         pantallaEscanear: { titulo: "Escanear", pasos: [
             "Apuntá la cámara al código de barras.",
             "Cuando lo lee, la app busca el producto.",

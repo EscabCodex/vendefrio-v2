@@ -1119,6 +1119,22 @@ html.enNavegacion body{overflow:hidden;}
   background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
 }
 .botonFlotanteNav.apagado{color:var(--peligro);}
+/* T170: la burbuja de la navegación minimizada, como la de Messenger:
+   abajo a la derecha (al alcance del pulgar), arriba del botón de nuevo
+   pedido. Se arrastra a otro lugar y se queda pegada al borde. */
+.burbujaNavegacion{
+  position:fixed;z-index:1300;right:max(12px, env(safe-area-inset-right));bottom:calc(168px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;width:60px;height:60px;padding:0;margin:0;min-height:0;box-sizing:border-box;
+  border:3px solid var(--superficie);border-radius:50%;background:var(--acento);color:var(--acento-txt);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;
+}
+.burbujaNavegacion[hidden],html.enNavegacion .burbujaNavegacion{display:none !important;}
+.burbujaNavegacionIcono{display:grid;place-items:center;}
+.burbujaNavegacionDato{
+  position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);padding:1px 7px;border-radius:var(--radio-pildora);
+  background:var(--superficie);color:var(--texto);font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.burbujaNavegacionDato:empty{display:none;}
 .centrarNavegacion{position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(204px + env(safe-area-inset-bottom));}
 .centrarNavegacion.oculto{display:none;}
 
@@ -1178,7 +1194,7 @@ html[data-tema="oscuro"] :is(.direccionTarjetaParada, .detalleTarjetaParada, .si
   background:var(--fondo);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
   touch-action:pan-y;
 }
-.cabezaHoja{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:8px;padding-top:8px;}
+.cabezaHoja{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:8px;padding-top:8px;touch-action:none;}
 .botonChicoNav{display:grid;place-items:center;width:40px;height:40px;padding:0;margin:0;min-height:0;border:0;border-radius:50%;cursor:pointer;background:var(--superficie);color:var(--texto);}
 .botonChicoNav.apagado{color:var(--peligro);}
 .asaHoja{display:grid;place-items:center;width:100%;height:40px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
@@ -1211,6 +1227,10 @@ html[data-tema="oscuro"] .pantallaNavegacion .hojaAcciones .accesoNavegacionIcon
 .pantallaNavegacion .hojaAcciones .accesoYaLlego .accesoNavegacionIcono{color:var(--pz-wa, var(--visitado));}
 .accesoNavegacion small{font-size:15px;font-weight:800;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 html[data-tema="oscuro"] .accesoNavegacion small{color:var(--texto) !important;}
+/* «Visité, sin pedido»: si queda sola en la fila ocupa todo el ancho y, en
+   un celular chico, baja a dos renglones en vez de cortarse. */
+.hojaAcciones .accesoSinPedido:nth-child(odd){grid-column:1 / -1;}
+.accesoNavegacion.accesoSinPedido small{white-space:normal;line-height:1.1;text-align:left;}
 .llegueHoja .deslizador{height:62px;margin-top:0;background:var(--visitado-bg);}
 .llegueHoja .rellenoDeslizador{background:var(--visitado);}
 .llegueHoja .textoDeslizador{color:var(--visitado);font-size:15.5px;}

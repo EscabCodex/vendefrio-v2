@@ -1084,6 +1084,7 @@ function generarPedido() {
 
     borrarBorradorPedido();
     if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.alGuardar(idPedidoNuevo, cliente);
+    window.dispatchEvent(new CustomEvent("pedidoGuardadoVendeFrio", { detail: { id: idPedidoNuevo, comercio: cliente } }));
 
     if (pedidoCliente) pedidoCliente.textContent = cliente;
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);

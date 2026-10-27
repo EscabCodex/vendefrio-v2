@@ -35,7 +35,8 @@
     }
 
     // ---------- La hoja "¿Por qué no hubo pedido?" ----------
-    function abrir(nombreComercio) {
+    // alGuardar (opcional): la navegación lo usa para pasar a la parada que sigue.
+    function abrir(nombreComercio, alGuardar) {
         const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreComercio) : null;
         if (!comercio) return;
         if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();
@@ -56,7 +57,11 @@
                 texto: "Guardar visita",
                 icono: "check",
                 id: "guardarVisita",
-                alTocar: caja => guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value)
+                alTocar: caja => {
+                    const guardada = guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value);
+                    if (guardada && typeof alGuardar === "function") alGuardar();
+                    return guardada;
+                }
             }]
         });
         const botonGuardar = caja.querySelector("#guardarVisita");

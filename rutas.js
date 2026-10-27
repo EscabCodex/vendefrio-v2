@@ -735,8 +735,8 @@ function renderizarRutasGuardadas() {
         return;
     }
 
-    rutas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-    rutas.forEach(ruta => {
+    // Las rutas vienen congeladas (repasada): se ordena una copia.
+    rutas.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).forEach(ruta => {
         const fila = document.createElement("div");
         fila.className = "filaRutaGuardadaItem";
         fila.dataset.nombre = ruta.nombre;
