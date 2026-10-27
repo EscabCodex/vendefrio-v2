@@ -2,12 +2,13 @@
 // filas, y los ajustes de Apariencia, Trabajo y Recorrido que cambian algo
 // de verdad. También "Comercios para esta ruta" en Rutas.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirAjustes } = require("./recorridos");
+const { registrarDistribuidora, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
 async function abrirSeccion(page, seccion) {
-    await abrirAjustes(page);
+    if (seccion === "cuenta") await abrirMas(page);
+    else await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -78,7 +79,7 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
 
     // Cómo hacés el recorrido.
     await abrirSeccion(page, "navegacion");
-    await expect(detalle.getByRole("radio", { name: "Moto" })).toBeChecked();
+    await expect(detalle.getByRole("radio", { name: "Moto", exact: true })).toBeChecked();
     await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
     await capturar(page, "ajustes-04-recorrido");
 

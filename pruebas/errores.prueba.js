@@ -48,6 +48,11 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     // ajustes dice "Qué avisos recibir".
     const kiosco = await page.evaluate(() => obtenerComercios().find(comercio => comercio.nombre === "Kiosco Luna"));
     expect(kiosco.ultimaVisita).toMatch(/^\d{1,2}\/\d{1,2}\/\d{4}$/);
+    const ventanaPedido = page.locator("#modalPedido");
+    if (await ventanaPedido.isVisible()) {
+        await ventanaPedido.click({ position: { x: 10, y: 10 } });
+        await expect(ventanaPedido).toBeHidden();
+    }
     await abrirAjustes(page);
     await expect(page.locator("#configFilaAvisos strong")).toHaveText("Qué avisos recibir");
 });

@@ -10,7 +10,13 @@ async function entrarSinCuenta(page) {
 }
 
 function cargarDatosGrandes() {
-    const productos = JSON.parse(localStorage.getItem("vendefrio_productos"));
+    // Un celular nuevo arranca vacío: se usa el catálogo de fábrica de antes
+    // (productos.js), con sus tres marcas.
+    let productos = JSON.parse(localStorage.getItem("vendefrio_productos") || "{}");
+    if (!Object.keys(productos).length) {
+        productos = PRODUCTOS;
+        localStorage.setItem("vendefrio_productos", JSON.stringify(productos));
+    }
     const lista = [];
     Object.entries(productos).forEach(([marca, items]) => items.forEach(item => lista.push([marca, item.nombre])));
     const comercios = [];

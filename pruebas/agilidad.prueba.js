@@ -7,6 +7,8 @@ const { entrarSinCuenta } = require("./datosGrandes");
 
 test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page }) => {
     await entrarSinCuenta(page);
+    // Un celular nuevo arranca vacío: se carga la lista de fábrica de antes.
+    await page.evaluate(() => { guardarComercios(COMERCIOS); guardarProductos(PRODUCTOS); });
     const aviso = page.locator("#avisoPedidoMedioCargado");
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await expect(aviso).toHaveCount(0);

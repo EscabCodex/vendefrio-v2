@@ -103,6 +103,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await capturar(page, "diseno-10-cierre-del-dia");
 
     await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator("#configFilaEmpleados").click();
     await capturar(page, "diseno-11-empleados");
 

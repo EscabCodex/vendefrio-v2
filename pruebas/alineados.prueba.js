@@ -33,6 +33,12 @@ async function abrirMas(page) {
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
 }
 
+async function abrirAjustes(page) {
+    await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
+    await expect(page.locator("#configDetalle .configMenuAjustes")).toBeVisible();
+}
+
 for (const ancho of [390, 320]) {
     test(`botones de arriba alineados (${ancho} px)`, async ({ page }, testInfo) => {
         test.setTimeout(150000);
@@ -63,11 +69,19 @@ for (const ancho of [390, 320]) {
         const secciones = await page.locator(".configFila[data-config-seccion]").evaluateAll(filas =>
             filas.filter(fila => fila.getClientRects().length).map(fila => fila.dataset.configSeccion));
         expect(secciones).toContain("cuenta");
-        for (const seccion of secciones) {
-            await abrirMas(page);
+        // Más quedó corta (informe del desconocido): sus secciones y las de
+        // Más > Ajustes, cada una entrando con la lista bajada.
+        await abrirAjustes(page);
+        const deAjustes = await page.locator("#configDetalle .configFila[data-config-seccion]").evaluateAll(filas =>
+            filas.filter(fila => fila.getClientRects().length).map(fila => fila.dataset.configSeccion));
+        expect(deAjustes).toContain("apariencia");
+        for (const seccion of [...secciones, ...deAjustes.map(nombre => "ajustes/" + nombre)]) {
+            const enAjustes = seccion.startsWith("ajustes/");
+            if (enAjustes) await abrirAjustes(page);
+            else await abrirMas(page);
             await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-            expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
-            await page.locator(`.configFila[data-config-seccion="${seccion}"]`).first().click();
+            if (!enAjustes) expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+            await page.locator(`.configFila[data-config-seccion="${seccion.replace("ajustes/", "")}"]`).first().click();
             await expect(page.locator("#configDetalle")).toBeVisible();
             expect(await page.evaluate(() => window.scrollY), seccion).toBe(0);
             await revisarAlineados(page, "Más > " + seccion);

@@ -36,6 +36,9 @@ test("arranque: con poca señal abre desde el celular y avisa la versión nueva"
     // Esta prueba necesita el service worker, que las demás apagan.
     const contexto = await browser.newContext({ ...testInfo.project.use, baseURL: testInfo.project.use.baseURL, serviceWorkers: "allow" });
     const page = await contexto.newPage();
+    // Como en las demás pruebas: sin el tutorial, que ahora arranca solo al
+    // entrar sin cuenta con el celular vacío.
+    await page.addInitScript(() => { window.vendefrioPruebas = { resumenNoche: false, tutorial: false }; });
     const errores = [];
     page.on("pageerror", error => errores.push(error.message));
     await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => ruta.fulfill({ status: 200, body: "" }));

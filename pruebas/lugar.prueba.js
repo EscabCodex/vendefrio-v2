@@ -135,8 +135,9 @@ async function variosAtrasSeguidos(page) {
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
 
-    // Más > Apariencia > una hoja: tres atrás seguidos, un paso cada uno.
+    // Más > Ajustes > Apariencia > una hoja: cuatro atrás seguidos, un paso cada uno.
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     await page.evaluate(() => window.piezas.hoja({ titulo: "Hoja de prueba", html: "<p>Hola</p>" }));
@@ -144,6 +145,9 @@ async function variosAtrasSeguidos(page) {
     await atrasDelCelular(page);
     await expect(page.locator(".pzFondo")).toHaveCount(0);
     await expect(page.locator("#configDetalle")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await atrasDelCelular(page);
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
     await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
     await atrasDelCelular(page);
     await expect(page.locator("#configDetalle")).toBeHidden();
