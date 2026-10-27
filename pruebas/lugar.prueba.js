@@ -20,6 +20,13 @@ async function androidLaCierraDeFondo(page) {
     await page.reload();
 }
 
+// El atrás del celular (Android): con CloseWatcher es lo mismo que pide el
+// sistema; sin él, un paso atrás en la historia.
+async function atrasDelCelular(page) {
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await page.evaluate(() => window.lugarVendeFrio.atrasDelCelular());
+}
+
 test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba", async ({ page, context }) => {
     await entrarSinCuenta(page);
     await page.evaluate(cargarDatosGrandes);
@@ -56,14 +63,14 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
     await capturar(page, "lugar-01-vuelve-con-la-ficha");
 
     // El atrás del celular: primero cierra la ficha y sigue en Comercios.
-    await page.evaluate(() => history.back());
+    await atrasDelCelular(page);
     await expect(page.locator(".modalFichaComercio")).toHaveCount(0);
     await expect(page.locator("#pantallaComercios")).toBeVisible();
     // Después vuelve a Inicio, igual que la flecha de arriba.
-    await page.evaluate(() => history.back());
+    await atrasDelCelular(page);
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    // En Inicio no queda nada nuestro en la historia: el próximo atrás cierra la app.
-    await expect.poll(() => page.evaluate(() => history.state && history.state.vendefrio)).toBeFalsy();
+    // En Inicio ya no se frena el atrás: el próximo cierra la app.
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
 
     // En Más > Apariencia: el atrás vuelve a la lista de Más y después a Inicio.
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
@@ -73,10 +80,10 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
     await androidLaCierraDeFondo(page);
     await expect(page.locator("#configDetalle")).toBeVisible();
     await expect(page.locator("#configDetalle .configSubVolver")).toContainText("Apariencia");
-    await page.evaluate(() => history.back());
+    await atrasDelCelular(page);
     await expect(page.locator("#configDetalle")).toBeHidden();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
-    await page.evaluate(() => history.back());
+    await atrasDelCelular(page);
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // Una hoja abierta en Inicio: el atrás la cierra y deja Inicio como estaba.
@@ -85,7 +92,7 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await page.evaluate(() => window.piezas.hoja({ titulo: "Hoja de prueba", html: "<p>Hola</p>" }));
     await expect(page.locator(".pzFondo.visible")).toBeVisible();
-    await page.evaluate(() => history.back());
+    await atrasDelCelular(page);
     await expect(page.locator(".pzFondo")).toHaveCount(0);
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
@@ -103,6 +110,56 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
     await expect(nueva.locator("#pantallaComercios")).toBeHidden();
     expect(errores).toEqual([]);
     await nueva.close();
+});
+
+// Lo que le pasaba a Jere: Más > una pantalla > atrás > atrás cerraba la app
+// en vez de ir a Inicio. Varios atrás seguidos, sin tocar nada en el medio.
+async function variosAtrasSeguidos(page) {
+    await entrarSinCuenta(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+
+    // Una pantalla de Más cuya flecha de arriba va a Inicio: el atrás vuelve a Más.
+    await page.locator('.masAcceso[data-mas="listasPrecios"]').click();
+    await expect(page.locator("#pantallaListasPrecios")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+    await expect(page.locator("#pantallaListasPrecios")).toBeHidden();
+    // Enseguida otro atrás, sin tocar nada: Inicio, no se cierra la app.
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
+
+    // Más > Apariencia > una hoja: tres atrás seguidos, un paso cada uno.
+    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator('.configFila[data-config-seccion="apariencia"]').click();
+    await expect(page.locator("#configDetalle")).toBeVisible();
+    await page.evaluate(() => window.piezas.hoja({ titulo: "Hoja de prueba", html: "<p>Hola</p>" }));
+    await expect(page.locator(".pzFondo.visible")).toBeVisible();
+    await atrasDelCelular(page);
+    await expect(page.locator(".pzFondo")).toHaveCount(0);
+    await expect(page.locator("#configDetalle")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await atrasDelCelular(page);
+    await expect(page.locator("#configDetalle")).toBeHidden();
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
+}
+
+test("lugar: varios atrás seguidos dan un paso cada uno y terminan en Inicio", async ({ page }) => {
+    expect(await page.evaluate(() => typeof CloseWatcher)).toBe("function");
+    await variosAtrasSeguidos(page);
+});
+
+test("lugar: sin CloseWatcher (celulares viejos), lo mismo con la historia", async ({ page }) => {
+    await page.addInitScript(() => { delete window.CloseWatcher; });
+    await variosAtrasSeguidos(page);
 });
 
 test.describe("en la nube", () => {
@@ -125,7 +182,7 @@ test.describe("en la nube", () => {
         await capturar(page, "lugar-02-vuelve-con-el-pedido");
 
         // Atrás: se cierra la ficha y queda la lista de Pedidos.
-        await page.evaluate(() => history.back());
+        await atrasDelCelular(page);
         await expect(page.locator(".fichaPedido")).toBeHidden();
         await expect(page.locator("#vistaPedidos")).toBeVisible();
     });

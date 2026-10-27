@@ -631,6 +631,35 @@
     dibujarExtras();
     marcarFavoritos();
 
+    // ---------- Pedido a medio cargar ----------
+    // Si saliste de Nuevo pedido sin guardarlo (te llamaron, fuiste a otra
+    // pantalla), Inicio te lo recuerda y lo retomás de un toque, como estaba.
+    function avisoMedioCargado() {
+        const datos = p.lsLeer("vendefrio_borrador_pedido", null);
+        const cantidades = datos && Array.isArray(datos.cantidades) ? datos.cantidades : [];
+        const unidades = cantidades.reduce((suma, item) => suma + (Number(item.cantidad) || 0), 0);
+        const cliente = datos ? String(datos.cliente || "").trim() : "";
+        p.avisoInicio("avisoPedidoMedioCargado", unidades > 0 ? {
+            icono: "documento",
+            titulo: cliente ? "Seguí el pedido de " + cliente : "Tenés un pedido a medio cargar",
+            texto: unidades === 1 ? "1 unidad cargada" : unidades + " unidades cargadas",
+            boton: "Seguir",
+            etiqueta: "Seguir el pedido a medio cargar",
+            orden: 5,
+            alTocar: () => window.abrirNuevoPedido?.()
+        } : null, "arriba");
+    }
+
+    if (typeof window.actualizarDashboard === "function") {
+        const original = window.actualizarDashboard;
+        window.actualizarDashboard = function () {
+            const resultado = original.apply(this, arguments);
+            try { avisoMedioCargado(); } catch (error) { console.error("Falló el aviso del pedido a medio cargar.", error); }
+            return resultado;
+        };
+    }
+    setTimeout(() => { try { avisoMedioCargado(); } catch (error) { /* nada */ } }, 0);
+
     window.nuevoPedidoVendeFrio = {
         precioCambiado, puedeCambiarPrecio, ajustarProductos, textoParaMensaje, alGuardar,
         anotarCambio, elegirFecha, editarPrecio, abrirOpciones, detalleDe, textoFecha,

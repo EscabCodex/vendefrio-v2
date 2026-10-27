@@ -134,6 +134,13 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect(page.locator(".bottom-nav")).toBeHidden();
     await expect(navegacion.locator(".nombreNavegacion")).toHaveText("Kiosco La Esquina");
     await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
+    // El atrás del celular no corta la navegación: la minimiza, igual que el botón.
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await page.evaluate(() => window.lugarVendeFrio.atrasDelCelular());
+    await expect(navegacion).toBeHidden();
+    await expect(burbuja).toBeVisible();
+    await burbuja.click();
+    await expect(navegacion).toBeVisible();
     // «Ir» al mismo comercio con la navegación minimizada también la trae, sin empezar de nuevo.
     await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
