@@ -173,3 +173,29 @@ test("vender: ofertas con fecha y ficha del comercio completa", async ({ page },
     await parada.evaluate(el => el.scrollIntoView({ block: "center" }));
     await capturar(page, "vender-07-inicio-parada");
 });
+
+// Próxima parada: "Actualizar mi ubicación" vuelve a buscar dónde estás y
+// elige otra vez la parada más cercana.
+test("vender: próxima parada se actualiza con mi ubicación", async ({ page }, testInfo) => {
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.6, longitude: -58.4 });
+    await registrarDistribuidora(page, testInfo);
+    await page.evaluate(() => {
+        agregarComercio({ nombre: "Kiosco Norte", direccion: "Norte 100", lat: -34.6, lng: -58.4, origenGps: "gps" });
+        agregarComercio({ nombre: "Kiosco Sur", direccion: "Sur 200", lat: -34.65, lng: -58.4, origenGps: "gps" });
+    });
+    await irAInicio(page);
+
+    const parada = page.locator("#dashProximaParada");
+    await expect(parada).toContainText("Kiosco Norte");
+    const ubicar = parada.getByRole("button", { name: "Actualizar mi ubicación" });
+    await expect(ubicar).toBeVisible();
+
+    // Me muevo cerca del otro comercio y toco el botón.
+    await page.context().setGeolocation({ latitude: -34.6495, longitude: -58.4 });
+    await ubicar.click();
+    await expect(parada).toContainText("Kiosco Sur");
+    await expect(parada).toContainText("a 60 m");
+    await expect(parada.getByRole("button", { name: "Actualizar mi ubicación" })).toBeVisible();
+    await capturar(page, "vender-08-actualizar-ubicacion");
+});
