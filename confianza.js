@@ -17,12 +17,24 @@
     // hay una versión nueva. Esta pantalla sigue con el código viejo hasta
     // que se recarga: el aviso ofrece hacerlo en un toque.
     let versionNueva = false;
+    let cambiosNuevos = null;
     let ultimaRevision = 0;
     const MINUTOS_ENTRE_REVISIONES = 30;
+    const notas = () => window.notasDeCambiosVendeFrio;
 
     function avisarVersionNueva() {
         versionNueva = true;
         dibujarAvisos();
+        // Cuántos cambios trae, de las notas de la versión nueva.
+        notas()?.cuantasNuevas?.().then(cantidad => {
+            cambiosNuevos = cantidad;
+            dibujarAvisos();
+        });
+    }
+
+    // Tocar la tarjeta (no el botón) abre las notas de cambios.
+    function verQueCambio() {
+        notas()?.abrir?.({ conActualizar: true, actualizar: actualizarApp });
     }
 
     function actualizarApp() {
@@ -97,11 +109,14 @@
             color: "Pri",
             icono: "refrescar",
             titulo: "Hay una versión nueva",
-            texto: "Trae arreglos. Tarda unos segundos.",
+            texto: cambiosNuevos ? "Trae " + (cambiosNuevos === 1 ? "1 cambio." : cambiosNuevos + " cambios.") : "Trae arreglos.",
+            destacado: "Tocá para ver qué cambió",
             boton: "Actualizar",
             alTocar: actualizarApp,
             orden: 0
         } : null, "arriba");
+        const tarjetaVersion = document.getElementById("avisoVersionNueva");
+        if (tarjetaVersion) pz().tocable(tarjetaVersion, verQueCambio, { etiqueta: "Hay una versión nueva. Tocá para ver qué cambió" });
 
         const datos = enLaNube() ? detalle() : null;
         pz().avisoInicio("avisoSinSubir", hayQueAvisarSinSubir(datos) ? {

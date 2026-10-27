@@ -2758,7 +2758,7 @@ html[data-inicio-sin~="pedidosHoy"] #cabeceraPedidosHoy,
 html[data-inicio-sin~="pedidosHoy"] #dashPedidosDeHoy,
 html[data-inicio-sin~="semana"] #tituloSemana,
 html[data-inicio-sin~="semana"] #dashSemana,
-html[data-inicio-sin~="avisos"] #pantallaMenu .pzBanner:not(#avisoVersionNueva):not(#avisoSinSubir):not(#avisoDatosEjemplo):not(#avisoModoPersonal),
+html[data-inicio-sin~="avisos"] #pantallaMenu .pzBanner:not(#avisoVersionNueva):not(#avisoNotasCambios):not(#avisoSinSubir):not(#avisoDatosEjemplo):not(#avisoModoPersonal),
 html[data-inicio-sin~="avisos"] #dashWhatsapp{display:none !important;}
 .inicioVacio{display:none;}
 html[data-inicio-sin~="resumen"][data-inicio-sin~="queHacer"][data-inicio-sin~="proxima"][data-inicio-sin~="pedidosHoy"][data-inicio-sin~="semana"] .inicioVacio{
