@@ -7,7 +7,7 @@
         s.innerHTML = `<header><div class="logo">${window.icono("bolsa",22)}</div><div><h1>Catálogo</h1><p>Lo que vendés y sus precios</p></div></header><main class="container"><button class="extraVolver" type="button">‹ Volver</button><div class="catalogoFiltros"><input id="buscarCatalogo" class="buscadorCatalogo" type="search" placeholder="Buscar producto..."><select id="filtroMarcaCatalogo" aria-label="Filtrar por marca"><option value="todas">Todas las marcas</option></select></div><div id="grillaCatalogo" class="grillaCatalogo"></div></main></section>`;
         document.body.insertBefore(s, document.querySelector("nav.bottom-nav")); s.querySelector(".extraVolver").onclick = () => { s.classList.add("oculto"); mostrarPantalla("menu"); }; s.querySelector("#buscarCatalogo").oninput = renderizar; s.querySelector("#filtroMarcaCatalogo").onchange = renderizar; s.querySelector("main").prepend(crearSegmentoCatalogo("catalogo")); catalogoCreado = true; return s;
     }
-    function datos() { const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {}; const lista = []; Object.entries(productos).forEach(([marca, items]) => (items || []).forEach(item => { const p = typeof item === "string" ? { nombre: item } : item || {}; lista.push({ ...p, nombre: p.nombre || p.producto || "Producto", marca }); })); return lista; }
+    function datos() { const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {}; const lista = []; Object.entries(productos).forEach(([marca, items]) => (items || []).forEach(item => { const p = typeof item === "string" ? { nombre: item } : item || {}; lista.push({ ...p, nombre: p.nombre || p.producto || "Producto", marca }); })); return lista; }
     function abrirEditorFoto(archivo, alGuardar) {
         const lector = new FileReader();
         lector.onload = () => {
@@ -228,6 +228,24 @@
         });
     }
     function abrir() { const s = crear(); document.querySelectorAll('body > section[id^="pantalla"]').forEach(item => item.classList.add("oculto")); s.classList.remove("oculto"); renderizar(); }
+    // Repasada: desde Estadísticas ("Lo más pedido") abre en esa marca y,
+    // si es un producto, lo deja a la vista.
+    function abrirEn({ marca = "", producto = "" } = {}) {
+        crear();
+        const filtro = document.getElementById("filtroMarcaCatalogo");
+        const buscar = document.getElementById("buscarCatalogo");
+        if (buscar) buscar.value = "";
+        if (filtro && marca) {
+            if (![...filtro.options].some(opcion => opcion.value === marca)) filtro.add(new Option(marca, marca));
+            filtro.value = marca;
+        }
+        if (typeof mostrarPantalla === "function") mostrarPantalla("catalogo"); else abrir();
+        if (!producto) return;
+        const tarjeta = [...document.querySelectorAll("#grillaCatalogo .itemCatalogo")]
+            .find(item => item.querySelector("strong")?.textContent === producto);
+        if (tarjeta) tarjeta.scrollIntoView({ block: "center" });
+    }
     window.abrirCatalogo = abrir;
+    window.abrirCatalogoEn = abrirEn;
     window.renderizarCatalogo = renderizar;
 }());

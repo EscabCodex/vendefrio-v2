@@ -374,7 +374,9 @@ html[data-tema="oscuro"] .resumenHoy::after{
 .resumenHoyFecha{margin:0 0 10px;font-size:13px;font-weight:600;opacity:.9;}
 .resumenHoyFecha::first-letter{text-transform:uppercase;}
 html[data-tema="oscuro"] .resumenHoyFecha{color:var(--texto-ter);opacity:1;}
-.resumenHoy > small{font-size:13px;opacity:.9;}
+/* Repasada: título, total y pedidos van juntos para tocarlos (Estadísticas de hoy). */
+.resumenHoyVendido{display:flex;flex-direction:column;}
+.resumenHoyVendido > small{font-size:13px;opacity:.9;}
 .resumenHoyTotal{font-size:38px;line-height:1.1;font-weight:800;letter-spacing:-.03em;margin:2px 0 4px;}
 html[data-tema="oscuro"] .resumenHoyTotal{color:var(--acento);}
 .resumenHoySub{font-size:13px;opacity:.9;}
@@ -453,6 +455,8 @@ html .listaInicio{padding:0 !important;overflow:hidden;}
 .filaCambio{animation:filaCambio 2.4s ease-out;}
 
 html .semanaInicio{display:grid;gap:12px;}
+/* Repasada: "23 de 80" y su barra van juntos para tocarlos (los visitados). */
+.semanaVisitados{display:grid;gap:12px;}
 .semanaTexto{margin:0;font-size:14px;color:var(--texto-sec);}
 .semanaTexto strong{font-size:16px;color:var(--texto);}
 .barraSemana{height:8px;border-radius:var(--radio-pildora);background:var(--superficie-2);overflow:hidden;}
@@ -1808,6 +1812,25 @@ html .tarjetaRutasGuardadas .filaRutaGuardadaItem{background:var(--superficie-2)
 html .opcionSeleccionRuta{grid-template-columns:24px 40px minmax(0,1fr);column-gap:16px !important;padding-left:4px !important;}
 html body > nav.bottom-nav .nav-item{font-size:10.5px;letter-spacing:-.01em;}
 html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 8px;}
+/* Repasada: con la letra grande del celular la barra queda angosta y
+   "Comercios" se montaba sobre "Catálogo". Ningún botón queda más angosto que
+   su nombre; si no entran, cada uno arranca del ancho de su nombre (sin
+   relleno a los costados) y se reparte lo que sobra. Con la letra todavía más
+   grande, los nombres achican un poco. Con letra normal no cambia nada. */
+@media (min-width:320px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){min-width:min-content;}
+}
+@media (max-width:319px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){flex:1 1 auto;padding-left:0;padding-right:0;letter-spacing:-.3px;}
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo) .nav-icon{padding:3px;}
+}
+@media (max-width:279px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){font-size:9px;}
+}
+@media (max-width:249px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){font-size:8px;}
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo) .nav-icon{padding:3px 1px;}
+}
 /* Botones + y − del mapa legibles en los dos temas (T51). */
 html .leaflet-bar{border:var(--borde-tarjeta) !important;border-radius:12px !important;overflow:hidden;box-shadow:var(--sombra) !important;}
 html .leaflet-bar a{background:var(--superficie) !important;color:var(--texto) !important;border-bottom-color:var(--borde) !important;}
@@ -1885,6 +1908,10 @@ html[data-tema="oscuro"] .statsPestanas button[aria-selected="true"]{background:
 .statsMes{font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .statsMes{color:var(--acento);}
 .statsFilaRanking[data-puesto="1"] .statsAvatar{background:var(--acento);color:var(--acento-txt);}
+/* Repasada: la regla vieja del modo oscuro (styles.css, con !important)
+   pintaba de blanco estas letras sobre el verde lima y no se leían. */
+html[data-tema="oscuro"] .statsFilaRanking[data-puesto="1"] .statsAvatar,
+html[data-tema="oscuro"] .ajVistaBoton{color:var(--acento-txt) !important;}
 .statsFilaRanking[data-puesto="2"] .statsAvatar,.statsFilaRanking[data-puesto="3"] .statsAvatar{background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[data-tema="oscuro"] .statsFilaRanking[data-puesto="3"] .statsAvatar{color:var(--acento);}
 .statsAvatar[data-tono="atrasado"]{background:var(--peligro-bg);color:var(--peligro);}
@@ -2370,9 +2397,11 @@ html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
 .botonesPlanRutas{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px;}
 .botonesPlanRutas .pzBtn{min-height:54px;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
 .iniciarRutas.sinRuta{opacity:.55;}
-.herramientasRutas{display:flex;gap:6px;margin-top:10px;}
+/* Repasada: con la letra grande del celular los cuatro no entraban y se
+   cortaban ("Opti…", "El…"): ahora, si no entran, pasan a otra fila. */
+.herramientasRutas{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .herramientasRutas button{
-  flex:1 1 auto;min-width:0;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);
+  flex:1 1 auto;min-width:max-content;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);
   font:inherit;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
 }
 /* T137: carrusel de paradas, justo arriba de la hoja. Se desliza de costado

@@ -26,23 +26,31 @@ const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;
 let mensajeSinResultadosPedido = null;
+// El último pedido guardado, mientras el formulario no se toca (ver
+// generarPedidoSinRepetir).
+let ultimoPedidoGenerado = null;
 
 // -----------------------------------------------------
 // COMERCIOS
 // -----------------------------------------------------
 
+// La lista ya dibujada: si los comercios no cambiaron, no se rehace.
+let comerciosEnDatalistPedido = null;
+
 function actualizarDatalistPedido() {
     if (!listaComercios) return;
 
+    const comercios = comerciosActivosOrdenadosParaLeer();
+    if (comercios === comerciosEnDatalistPedido && listaComercios.childElementCount === comercios.length) return;
+    comerciosEnDatalistPedido = comercios;
+
     listaComercios.innerHTML = "";
 
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-        .forEach(comercio => {
-            const option = document.createElement("option");
-            option.value = comercio.nombre;
-            listaComercios.appendChild(option);
-        });
+    comercios.forEach(comercio => {
+        const option = document.createElement("option");
+        option.value = comercio.nombre;
+        listaComercios.appendChild(option);
+    });
 }
 
 // Alias usados por menu.js para que la pantalla se actualice al abrirla.
@@ -87,7 +95,7 @@ function actualizarResumenPedido() {
     }
 
     // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
-    const productosCatalogo = obtenerProductos();
+    const productosCatalogo = productosParaLeer();
     const comercioActual = comercioDelPedidoActual();
     let plata = 0;
     document.querySelectorAll("#productos .marca").forEach(marca => {
@@ -255,6 +263,8 @@ function obtenerDatosBorradorPedido() {
 }
 
 function guardarBorradorPedido() {
+    // Se tocó el formulario: ya no es "el mismo pedido sin tocar".
+    ultimoPedidoGenerado = null;
     const datos = obtenerDatosBorradorPedido();
 
     if (
@@ -432,12 +442,15 @@ function ordenarProductosDelPedido(productos) {
         return lista.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
     }
     if (orden === "frecuencia") {
-        const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
-        const veces = new Map();
-        pedidos.forEach(pedido => (pedido.productos || []).forEach(item => {
-            const nombre = String(item.nombre || item.producto || "");
-            veces.set(nombre, (veces.get(nombre) || 0) + (Number(item.cantidad) || 0));
-        }));
+        // Se cuenta una vez por cambio de los pedidos, no una vez por marca.
+        const veces = recordarHastaQueCambie("vecesPedidoCadaProducto", ["historial"], () => {
+            const cuenta = new Map();
+            pedidosQueCuentanParaLeer().forEach(pedido => (pedido.productos || []).forEach(item => {
+                const nombre = String(item.nombre || item.producto || "");
+                cuenta.set(nombre, (cuenta.get(nombre) || 0) + (Number(item.cantidad) || 0));
+            }));
+            return cuenta;
+        });
         return lista.sort((a, b) => (veces.get(b.nombre) || 0) - (veces.get(a.nombre) || 0));
     }
     return lista;
@@ -601,6 +614,7 @@ function renderizarPedido() {
     if (!contenedorProductos) return;
     // Con la pantalla oculta no se dibuja: mostrarPantalla("pedido") la dibuja al abrirla (T150).
     if (document.getElementById("pantallaPedido")?.classList.contains("oculto")) return;
+    formularioPorRedibujar = false;
 
     prepararBuscadorProductosPedido();
     contenedorProductos.innerHTML = "";
@@ -684,6 +698,27 @@ function aplicarProductoPendienteCatalogo() {
 // Alias usado por menu.js.
 const renderizarProductosPedido = renderizarPedido;
 
+// Repasada: en la nube, con la lista de Pedidos a la vista, el formulario
+// de Nuevo pedido está escondido en la misma pantalla. Los cambios que
+// llegan de la nube no lo redibujan ahí (al abrir la app con miles de
+// pedidos eso trababa): se dibuja al volver al formulario.
+let formularioPorRedibujar = false;
+const pantallaDelPedido = document.getElementById("pantallaPedido");
+
+function renderizarPedidoSiSeVe() {
+    if (pantallaDelPedido && pantallaDelPedido.dataset.vista === "pedidos") {
+        formularioPorRedibujar = true;
+        return;
+    }
+    renderizarPedido();
+}
+
+if (pantallaDelPedido) {
+    new MutationObserver(() => {
+        if (formularioPorRedibujar && pantallaDelPedido.dataset.vista !== "pedidos") renderizarPedido();
+    }).observe(pantallaDelPedido, { attributes: true, attributeFilter: ["class", "data-vista"] });
+}
+
 actualizarDatalistPedido();
 renderizarPedido();
 
@@ -755,7 +790,7 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 
 function repetirUltimoPedido() {
     // Eliminados y cancelados no se repiten (T26).
-    const historial = obtenerPedidosQueCuentan();
+    const historial = pedidosQueCuentanParaLeer();
     // T64: en la nube, el último pedido que cargó esta persona (no el de
     // otro del equipo).
     const yo = usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
@@ -789,7 +824,7 @@ function repetirUltimoPedido() {
         }
 
         let cantidadCargada = 0;
-        const productos = obtenerProductos();
+        const productos = productosParaLeer();
         const productosEstructurados = obtenerProductosEstructuradosPedido(ultimo);
         const textoPedido = String(ultimo.pedido || "");
 
@@ -1056,8 +1091,48 @@ function generarPedido() {
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
     if (modalPedido) modalPedido.classList.remove("oculto");
     if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
+    ultimoPedidoGenerado = { firma: firmaDelPedidoActual(), hora: Date.now() };
 
     return true;
+}
+
+// Repasada: después de "Generar Pedido" el formulario queda lleno (para
+// copiarlo de nuevo o mandarlo por WhatsApp). Si se cerraba la ventana y se
+// volvía a tocar "Generar Pedido" sin cambiar nada, quedaba el mismo pedido
+// dos veces. Ahora, si no se tocó nada desde entonces, pregunta antes. Si se
+// cambió algo (o se volvió a cargar a mano), es a propósito: no pregunta.
+const MINUTOS_PEDIDO_REPETIDO = 15;
+
+function firmaDelPedidoActual() {
+    const cliente = inputCliente ? inputCliente.value.trim().toLocaleLowerCase("es") : "";
+    const observaciones = inputObs ? inputObs.value.trim() : "";
+    const cantidades = Array.from(document.querySelectorAll(".marca select"))
+        .filter(select => Number(select.value) > 0)
+        .map(select => {
+            const titulo = select.closest(".marca")?.querySelector(".tituloMarca span");
+            return (titulo ? titulo.textContent.trim() : "") + "/" + (select.dataset.producto || "") + "=" + select.value;
+        })
+        .sort();
+    return cliente + "|" + cantidades.join(",") + "|" + observaciones;
+}
+
+function generarPedidoSinRepetir() {
+    const repetido = ultimoPedidoGenerado &&
+        Date.now() - ultimoPedidoGenerado.hora < MINUTOS_PEDIDO_REPETIDO * 60000 &&
+        ultimoPedidoGenerado.firma === firmaDelPedidoActual();
+
+    if (!repetido || !window.piezas) return generarPedido();
+
+    const cliente = inputCliente ? inputCliente.value.trim() : "";
+    window.piezas.preguntar({
+        titulo: "\u00bfCargar otro pedido igual?",
+        texto: "Este mismo pedido para " + cliente + " ya se guard\u00f3 hace un momento. Si lo carg\u00e1s de nuevo, va a quedar dos veces.",
+        si: "Cargar otro igual",
+        no: "No, ya est\u00e1"
+    }).then(cargar => {
+        if (cargar) generarPedido();
+    });
+    return false;
 }
 
 // -----------------------------------------------------
@@ -1072,8 +1147,8 @@ function registrarPedido(nombreComercio) {
 
     // T64: el contador sale de los pedidos guardados (más este, que se guarda
     // enseguida), así dos celulares que cargan a la vez no se pisan la cuenta.
-    const anteriores = typeof contarPedidosDelComercio === "function" && typeof obtenerPedidosQueCuentan === "function"
-        ? contarPedidosDelComercio(comercio.nombre, obtenerPedidosQueCuentan())
+    const anteriores = typeof contarPedidosDelComercio === "function"
+        ? contarPedidosDelComercio(comercio.nombre, pedidosQueCuentanParaLeer())
         : Number(comercio.pedidosRealizados) || 0;
 
     return actualizarComercioPorId(comercio.id, {
@@ -1108,6 +1183,7 @@ function recordarPedidoActual() {
 }
 
 function limpiarPedido() {
+    ultimoPedidoGenerado = null;
     if (inputCliente) inputCliente.value = "";
     if (inputObs) inputObs.value = "";
 
@@ -1153,7 +1229,7 @@ function abrirPedidoNuevoParaComercio(nombreComercio) {
 // -----------------------------------------------------
 
 if (botonGenerar) {
-    botonGenerar.addEventListener("click", generarPedido);
+    botonGenerar.addEventListener("click", generarPedidoSinRepetir);
 }
 
 if (botonReset) {
@@ -1188,7 +1264,7 @@ if (inputObs) {
     inputObs.addEventListener("input", guardarBorradorPedido);
 
     inputObs.addEventListener("keydown", event => {
-        if (event.ctrlKey && event.key === "Enter") generarPedido();
+        if (event.ctrlKey && event.key === "Enter") generarPedidoSinRepetir();
     });
 }
 
@@ -1233,7 +1309,7 @@ function mostrarImprimirPedidoGenerado(id) {
     const boton = document.getElementById("imprimirPedidoGenerado");
     if (!boton) return;
 
-    const pedido = id ? obtenerHistorial().find(item => item.id === id) : null;
+    const pedido = id ? pedidoParaLeer(id) : null;
     const puede = Boolean(pedido && window.impresionVendeFrio?.puedeImprimir?.(pedido));
     boton.classList.toggle("oculto", !puede);
     if (puede && window.icono && !boton.querySelector("svg")) {
@@ -1421,7 +1497,7 @@ function maximoDeFila(fila) {
 }
 
 function abrirEdicionPedido(id) {
-    const pedido = obtenerHistorial().find(item => String(item.id || "") === String(id || ""));
+    const pedido = pedidoParaLeer(id);
     const nube = window.nubeVendeFrio;
 
     if (!pedido || !nube || typeof nube.puedeEditarElPedido !== "function" || !nube.puedeEditarElPedido(pedido)) {
@@ -1587,7 +1663,7 @@ function dibujarResultadosEdicion() {
     const termino = normalizarTexto(buscador.value);
     if (!termino) return;
 
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const resultados = [];
 
     obtenerMarcasOrdenadas(productos).forEach(marca => {
@@ -1732,14 +1808,14 @@ function guardarEdicionPedido() {
     }
 
     // Si mientras tanto el pedido cambió (otra edición), no se pisa.
-    const pedido = obtenerHistorial().find(item => String(item.id || "") === edicionAbierta.id);
+    const pedido = pedidoParaLeer(edicionAbierta.id);
     if (!pedido || fotoDeLoPedido(pedido) !== edicionAbierta.foto) {
         cerrarEdicionPedido();
         mostrarAviso("El pedido cambió", "Otra persona lo editó mientras lo cambiabas. Abrí «Editar pedido» de nuevo para ver cómo quedó.");
         return;
     }
 
-    const catalogo = obtenerProductos();
+    const catalogo = productosParaLeer();
     const revisar = {};
     const productos = filas.map(fila => {
         if (fila.item && fila.cantidad === fila.original) return JSON.parse(JSON.stringify(fila.item));

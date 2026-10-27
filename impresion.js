@@ -665,7 +665,7 @@
     }
 
     function buscarPedido(id) {
-        return obtenerHistorial().find(item => String(item.id || "") === String(id || "")) || null;
+        return pedidoParaLeer(id);
     }
 
     function elegirCopias(idPedido, opciones) {
@@ -774,7 +774,7 @@
         const sinEntregar = [];
         const aCobrar = [];
 
-        obtenerHistorial().forEach(pedido => {
+        historialParaLeer().forEach(pedido => {
             if (!pedido || pedido.eliminado === true || !mismoComercio(pedido.comercio, nombre)) return;
 
             const estado = estadoActualDelPedido(pedido);

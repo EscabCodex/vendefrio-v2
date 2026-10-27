@@ -239,6 +239,60 @@
         });
     }
 
+    // ---------- Lo último que se abre queda arriba ----------
+    // Cada hoja o ventana tiene su altura (z-index) en el CSS, y entre dos de
+    // la misma altura ganaba la que se creó después: la de "una o dos copias"
+    // del ticket salía debajo de la ficha del pedido. Ahora la que se abre
+    // sube por encima de las que ya estaban abiertas, en toda la app.
+    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear";
+    const capasAbiertas = new WeakMap();
+
+    function capaAbierta(capa) {
+        return capa.isConnected && !capa.hidden && !capa.classList.contains("oculto");
+    }
+
+    function alturaDe(capa) {
+        return Number(getComputedStyle(capa).zIndex) || 0;
+    }
+
+    function subirCapa(capa) {
+        capa.style.removeProperty("z-index");
+        let encima = 0;
+        for (const otra of document.body.children) {
+            if (otra !== capa && otra.matches(CAPAS) && capaAbierta(otra)) encima = Math.max(encima, alturaDe(otra));
+        }
+        if (encima && encima >= alturaDe(capa)) capa.style.setProperty("z-index", String(encima + 1), "important");
+    }
+
+    function revisarCapa(capa) {
+        const abiertaAhora = capaAbierta(capa);
+        if (abiertaAhora && !capasAbiertas.get(capa)) subirCapa(capa);
+        capasAbiertas.set(capa, abiertaAhora);
+    }
+
+    // Se mira solo la clase de cada ventana (no todo lo de adentro), así no
+    // cuesta nada mientras la app se usa.
+    const vigiaCapas = new MutationObserver(cambios => {
+        new Set(cambios.map(cambio => cambio.target)).forEach(revisarCapa);
+    });
+
+    function vigilarCapa(capa) {
+        if (!capasAbiertas.has(capa)) vigiaCapas.observe(capa, { attributes: true, attributeFilter: ["class", "hidden"] });
+        capasAbiertas.set(capa, false);
+        revisarCapa(capa);
+    }
+
+    new MutationObserver(cambios => {
+        cambios.forEach(cambio => {
+            cambio.addedNodes.forEach(nodo => {
+                if (nodo.nodeType === 1 && nodo.matches(CAPAS)) vigilarCapa(nodo);
+            });
+        });
+    }).observe(document.body, { childList: true });
+    [...document.body.children].forEach(nodo => {
+        if (nodo.matches(CAPAS)) vigilarCapa(nodo);
+    });
+
     // ---------- "Deshacer" ----------
     let deshacerActual = null;
 
@@ -410,17 +464,33 @@
     // Listas largas (T151): las primeras tarjetas se dibujan enseguida y el
     // resto de a tandas, sin trabar el celular. Volver a dibujar la lista (o
     // cortarTandas) frena las tandas que quedaban de antes.
+    // Repasada: lo que está a más de dos pantallas de distancia se dibuja
+    // recién cuando el dedo baja y se acerca. Con mil comercios, dibujarlos
+    // todos ocupaba mucha memoria (y Android cerraba antes la app de fondo).
     function cortarTandas(contenedor) {
-        if (contenedor) contenedor.tandaVendeFrio = null;
+        if (!contenedor) return;
+        const tanda = contenedor.tandaVendeFrio;
+        if (tanda && tanda.soltar) tanda.soltar();
+        contenedor.tandaVendeFrio = null;
     }
 
     function dibujarDeATandas(contenedor, items, dibujarUno, opciones) {
         // Cada tanda dura como mucho unos milisegundos: así el celular sigue
         // respondiendo al dedo mientras se completa la lista.
         const { primeros = 8, milisegundos = 10, alTerminar } = opciones || {};
+        cortarTandas(contenedor);
         const tanda = {};
         contenedor.tandaVendeFrio = tanda;
         let siguiente = 0;
+        let vigia = null;
+        tanda.soltar = () => {
+            if (vigia) vigia.disconnect();
+            vigia = null;
+        };
+        // ¿El final de la lista está a menos de dos pantallas de lo que se ve?
+        function cerca() {
+            return contenedor.getBoundingClientRect().bottom < window.innerHeight * 3;
+        }
         function dibujar(minimo) {
             const inicio = performance.now();
             const fragmento = document.createDocumentFragment();
@@ -431,23 +501,72 @@
             }
             contenedor.appendChild(fragmento);
             if (siguiente < items.length) {
-                setTimeout(seguir, 0);
+                if (cerca()) setTimeout(seguir, 0);
+                else esperarAlDedo();
                 return;
             }
             contenedor.tandaVendeFrio = null;
             if (alTerminar) alTerminar();
         }
+        // Se mira la última tarjeta: cuando el dedo la acerca, sigue la lista.
+        function esperarAlDedo() {
+            const ultima = contenedor.lastElementChild;
+            if (!ultima || typeof IntersectionObserver !== "function") {
+                setTimeout(seguir, 0);
+                return;
+            }
+            vigia = new IntersectionObserver(entradas => {
+                if (!entradas.some(entrada => entrada.isIntersecting)) return;
+                tanda.soltar();
+                seguir();
+            }, { rootMargin: "0px 0px " + Math.round(window.innerHeight * 2) + "px 0px" });
+            vigia.observe(ultima);
+        }
         function seguir() {
             if (contenedor.tandaVendeFrio !== tanda) return;
             // Si se fue de la pantalla, se corta: al volver se dibuja de nuevo.
             if (!contenedor.isConnected || contenedor.closest(".oculto")) {
-                contenedor.tandaVendeFrio = null;
+                cortarTandas(contenedor);
                 return;
             }
             dibujar(0);
         }
         dibujar(primeros);
     }
+
+    // Repasada: lo que parece solo información (un número, una tarjeta) se
+    // puede tocar y lleva a su detalle. Se ve igual que antes; al apretarlo
+    // se achica apenas, como los botones. Un solo oyente para toda la app.
+    // Si adentro tiene su propio botón o enlace, ese sigue haciendo lo suyo.
+    const alTocarDe = new WeakMap();
+    function tocable(elemento, alTocar, { etiqueta = "", rol = true } = {}) {
+        if (!elemento || typeof alTocar !== "function") return elemento;
+        alTocarDe.set(elemento, alTocar);
+        elemento.classList.add("pzTocable");
+        if (rol && elemento.tagName !== "BUTTON" && elemento.tagName !== "A") {
+            elemento.setAttribute("role", "button");
+            elemento.tabIndex = 0;
+        }
+        if (etiqueta) elemento.setAttribute("aria-label", etiqueta);
+        return elemento;
+    }
+    function tocadoEn(evento) {
+        const elemento = evento.target.closest?.(".pzTocable");
+        if (!elemento || !alTocarDe.has(elemento)) return null;
+        const propio = evento.target.closest("button, a[href], input, select, textarea, label, [role='button']");
+        return propio && propio !== elemento && elemento.contains(propio) ? null : elemento;
+    }
+    document.addEventListener("click", evento => {
+        const elemento = tocadoEn(evento);
+        if (elemento) alTocarDe.get(elemento)(evento);
+    });
+    document.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        const elemento = evento.target;
+        if (!alTocarDe.has(elemento) || elemento.tagName === "BUTTON" || elemento.tagName === "A") return;
+        evento.preventDefault();
+        alTocarDe.get(elemento)(evento);
+    });
 
     // Cabeceras en un celular chico (T152): si el título no entra al lado de
     // "Avisos" y "?", pasa a su propio renglón debajo de los botones, en vez
@@ -487,7 +606,7 @@
         if (evento.target && evento.target.closest && evento.target.closest("img, svg, a")) evento.preventDefault();
     });
 
-    // Deslizar hacia abajo para cerrar (T168): cualquier hoja que sube desde
+    // Deslizar hacia abajo para cerrar (T169): cualquier hoja que sube desde
     // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
     // hacia abajo, como en las apps del celular. Solo mueve la hoja con
     // transform, para que ande fluido en celulares baratos.
@@ -592,7 +711,7 @@
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer,
+        hoja, modal, preguntar, cerrar, deshacer, tocable,
         avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

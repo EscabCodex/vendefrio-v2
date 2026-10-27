@@ -37,14 +37,14 @@
 
     // ---------- Lo que hay cargado, para saber si ya lo hizo ----------
     function contar() {
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         const listas = Object.values(productos).filter(Array.isArray);
         return {
-            comercios: typeof obtenerComercios === "function" ? obtenerComercios().length : 0,
+            comercios: typeof comerciosParaLeer === "function" ? comerciosParaLeer().length : 0,
             marcas: Object.keys(productos).length,
             productos: listas.reduce((total, lista) => total + lista.length, 0),
-            pedidos: typeof obtenerHistorial === "function" ? obtenerHistorial().length : 0,
-            entregados: typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial().length : 0
+            pedidos: typeof historialParaLeer === "function" ? historialParaLeer().length : 0,
+            entregados: typeof pedidosDelHistorialParaLeer === "function" ? pedidosDelHistorialParaLeer().length : 0
         };
     }
 

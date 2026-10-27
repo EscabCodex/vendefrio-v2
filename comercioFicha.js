@@ -7,9 +7,12 @@
     }
 
     function obtenerDatosFicha(nombre) {
-        const comercio = obtenerComercios().find(item => normalizarFicha(item.nombre) === normalizarFicha(nombre));
+        const buscado = normalizarFicha(nombre);
+        const encontrado = comerciosParaLeer().find(item => normalizarFicha(item.nombre) === buscado);
+        // Una copia propia: la ficha se la pasa a editar, al GPS y a otras partes.
+        const comercio = encontrado ? clonarDatos(encontrado) : undefined;
         // Eliminados y cancelados no cuentan (T26).
-        const historial = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const historial = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
         const pedidos = historial.filter(item => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, item.comercio || item.cliente)
             : normalizarFicha(item.comercio || item.cliente) === normalizarFicha(nombre));
@@ -214,6 +217,10 @@
         debe.classList.toggle("oculto", !debe.innerHTML);
         dibujarMasDatos(modalFicha.querySelector(".fichaMasDatos"), comercio);
 
+        // Repasada: los números y los productos habituales llevan a sus pedidos
+        // (lo mismo que "Ver sus pedidos").
+        const verPedidos = () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); };
+        const tocable = datos.pedidos > 0 && window.piezas?.tocable;
         const numeros = modalFicha.querySelector(".fichaNumeros");
         [[String(datos.pedidos), datos.pedidos === 1 ? "pedido" : "pedidos"], [String(datos.totalUnidades), "unidades"], [String(datos.ultimaVisita).replace(/^(\d{1,2}\/\d{1,2})\/\d{4}$/, "$1"), "última visita"]].forEach(([valor, texto]) => {
             const caja = document.createElement("div");
@@ -222,6 +229,7 @@
             const chico = document.createElement("small");
             chico.textContent = texto;
             caja.append(fuerte, chico);
+            if (tocable) tocable(caja, verPedidos);
             numeros.appendChild(caja);
         });
 
@@ -245,6 +253,7 @@
                 fila.querySelector(".fichaProductoNombre").textContent = producto.nombre;
                 fila.querySelector(".fichaProductoPorcentaje").textContent = producto.cantidad + " u · " + producto.porcentaje + "%";
                 fila.querySelector(".fichaProductoBarra i").style.width = Math.max(4, producto.porcentaje) + "%";
+                if (tocable) tocable(fila, verPedidos);
                 listaProductos.appendChild(fila);
             });
         } else {

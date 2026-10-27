@@ -193,20 +193,31 @@
         if (boton) abrirAyuda(boton.closest('body > section[id^="pantalla"]'));
     });
 
-    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se mira
-    // todo el cuerpo, una vez por cuadro.
-    // Lo que cambia dentro de un mapa o de la navegación (cada posición del
-    // GPS) no agrega pantallas: se ignora, así no se trabaja de más (T141).
+    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se miran
+    // las pantallas nuevas del cuerpo y lo que cambia justo debajo de cada
+    // una (donde va el encabezado), una vez por cuadro. Lo de adentro (las
+    // listas, un mapa, cada posición del GPS) no agrega encabezados: no se
+    // mira, así no se trabaja de más con cada tarjeta que se dibuja (T141).
     let pendiente = false;
-    new MutationObserver(cambios => {
+    const miradas = new WeakSet();
+    const vigia = new MutationObserver(() => {
         if (pendiente) return;
-        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
         pendiente = true;
         requestAnimationFrame(() => {
             pendiente = false;
+            mirarPantallas();
             ponerBotones();
         });
-    }).observe(document.body, { childList: true, subtree: true });
+    });
+    function mirarPantallas() {
+        document.querySelectorAll('body > section[id^="pantalla"]').forEach(seccion => {
+            if (miradas.has(seccion)) return;
+            miradas.add(seccion);
+            vigia.observe(seccion, { childList: true });
+        });
+    }
+    vigia.observe(document.body, { childList: true });
+    mirarPantallas();
     ponerBotones();
 
     // ---------- Confirmación hablada al guardar (opcional) ----------

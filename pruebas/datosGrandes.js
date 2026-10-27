@@ -40,4 +40,14 @@ function anotarTrabas() {
         .observe({ type: "longtask", buffered: true });
 }
 
-module.exports = { entrarSinCuenta, cargarDatosGrandes, anotarTrabas };
+// Las listas largas se dibujan a medida que se baja (repasada): baja con el
+// dedo hasta el final, hasta que estén las "cantidad" tarjetas.
+async function bajarHastaElFinal(lista, selector, cantidad) {
+    const { expect } = require("./ayudas");
+    await expect(async () => {
+        await lista.locator(":scope > *").last().scrollIntoViewIfNeeded();
+        expect(await lista.locator(selector).count()).toBe(cantidad);
+    }).toPass({ timeout: 30000, intervals: [100, 250, 500] });
+}
+
+module.exports = { entrarSinCuenta, cargarDatosGrandes, anotarTrabas, bajarHastaElFinal };

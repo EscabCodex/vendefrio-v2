@@ -30,7 +30,7 @@
     }
 
     function calcularPedidosDe(nombre) {
-        const todos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const todos = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
         return todos.filter(pedido => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)
             : normal(pedido.comercio || pedido.cliente) === normal(nombre))
@@ -281,7 +281,7 @@
 
     function actualizarPreciosDeLaLista() {
         const comercio = comercioDelPedidoActual();
-        const buscar = indiceDelCatalogo(obtenerProductos());
+        const buscar = indiceDelCatalogo(productosParaLeer());
         document.querySelectorAll("#productos .marca .fila").forEach(fila => {
             const select = fila.querySelector("select");
             const texto = fila.querySelector(".nombreProductoPedido");

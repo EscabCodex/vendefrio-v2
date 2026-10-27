@@ -218,7 +218,7 @@ function pedidosDeHoyInicio(pedidos) {
 function abrirPedidoDesdeInicio(pedido) {
     if (usaNubeReal() && window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) return;
     if (typeof abrirHistorialDePedido === "function") {
-        const indice = obtenerHistorial().findIndex(item => item.id === pedido.id);
+        const indice = historialParaLeer().findIndex(item => item.id === pedido.id);
         if (indice >= 0) abrirHistorialDePedido(indice);
     }
 }
@@ -445,17 +445,31 @@ function actualizarEncabezadoInicio() {
     }
 }
 
+// Las cuentas de Inicio, recordadas hasta que cambian los pedidos, los
+// comercios o el día (repasada): Inicio se dibuja muchas veces seguidas y
+// con miles de pedidos recorrerlos todos cada vez trababa el celular.
+function cuentasDeInicio() {
+    return recordarHastaQueCambie("cuentasDeInicio", ["historial", "comercios"], () => {
+        const comercios = comerciosActivosParaLeer();
+        const pedidos = pedidosQueCuentanParaLeer();
+        return Object.freeze({
+            comercios,
+            pedidos,
+            pedidosHoy: Object.freeze(pedidosDeHoyInicio(pedidos)),
+            cargadosHoy: Object.freeze(pedidos.filter(esDeHoyInicio)),
+            pedidosSemana: Object.freeze(pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)))),
+            visitadosSemana: comercios.filter(comercioVisitadoRecientemente).length
+        });
+    }, new Date().toDateString() + "|" + usaNubeReal());
+}
+
 function actualizarDashboard() {
     actualizarUbicacionDashboard();
     actualizarEncabezadoInicio();
 
     const nube = usaNubeReal();
-    const comercios = comerciosActivos();
-    const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
-    const pedidosHoy = pedidosDeHoyInicio(pedidos);
-    const cargadosHoy = pedidos.filter(esDeHoyInicio);
-    const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
-    const visitadosSemana = comercios.filter(comercioVisitadoRecientemente).length;
+    // Para leer, sin copiar los datos en cada dibujo (repasada).
+    const { comercios, pedidos, pedidosHoy, cargadosHoy, pedidosSemana, visitadosSemana } = cuentasDeInicio();
     const sinVisitar = comercios.length - visitadosSemana;
 
     // Resumen de hoy.
@@ -512,7 +526,7 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     let cerrado = false;
     try { cerrado = localStorage.getItem(CLAVE_PRIMEROS_PASOS) === "cerrado"; } catch (error) { cerrado = false; }
 
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const hayProductos = Object.values(productos).some(lista => Array.isArray(lista) && lista.length > 0);
     const pasos = [
         { hecho: hayProductos, texto: "Cargá tus productos y precios", accion: () => mostrarPantalla("productos") },
@@ -694,8 +708,13 @@ function ejecutarAccionTarjetaDashboard(accion) {
         abrirComerciosConFiltroDashboard("pendientes");
     }
 
+    // Repasada: Estadísticas abre en el período del número que se tocó.
     if (accion === "vendidoSemana" && typeof window.abrirEstadisticas === "function") {
-        window.abrirEstadisticas();
+        window.abrirEstadisticas("semana");
+    }
+
+    if (accion === "vendidoHoy" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas("hoy");
     }
 }
 
@@ -717,6 +736,13 @@ function prepararTarjetasDashboard() {
 
         tarjeta.dataset.dashboardConfigurada = "true";
     });
+
+    // Repasada: "Vendido hoy" lleva a Estadísticas de hoy y "23 de 80
+    // comercios visitados" a la lista de los visitados.
+    const tocable = window.piezas && window.piezas.tocable;
+    if (!tocable) return;
+    tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
+    tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
 }
 
 prepararTarjetasDashboard();
@@ -824,13 +850,19 @@ window.actualizarDashboard = actualizarDashboard;
 // redibuja una sola vez aunque lleguen varios juntos. Al abrir la app llegan
 // por separado los comercios, los productos, los pedidos y los pagos, y
 // redibujar Inicio con cada uno trababa un celular barato.
+// Con Inicio escondido se espera más (repasada): lo que llega de la nube en
+// tandas se junta en menos redibujos mientras se usa otra pantalla. No se
+// saltea, porque de este redibujo cuelgan avisos que trabajan aunque no se
+// vea Inicio (por ejemplo, apagar la ubicación al terminar el reparto). Al
+// volver a Inicio se dibuja enseguida (mostrarPantalla).
 let relojInicio = null;
 function pedirActualizarDashboard() {
     if (relojInicio) return;
+    const escondido = Boolean(pantallas.menu && pantallas.menu.classList.contains("oculto"));
     relojInicio = setTimeout(() => {
         relojInicio = null;
         window.actualizarDashboard();
-    }, 100);
+    }, escondido ? 1500 : 100);
 }
 window.pedirActualizarDashboard = pedirActualizarDashboard;
 

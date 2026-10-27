@@ -32,19 +32,10 @@ let comercioSeleccionado = null;
 let accionConfirmada = null;
 let comercioMostradoIndividual = "";
 
+// Es la misma lista que la de Nuevo pedido (#listaComercios): se arma ahí,
+// y solo si los comercios cambiaron.
 function actualizarDatalist() {
-    const lista = document.getElementById("listaComercios");
-    if (!lista) return;
-
-    lista.innerHTML = "";
-
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-        .forEach(comercio => {
-            const option = document.createElement("option");
-            option.value = comercio.nombre;
-            lista.appendChild(option);
-        });
+    if (typeof actualizarDatalistPedido === "function") actualizarDatalistPedido();
 }
 
 function estaVisitadoEstaSemana(comercio) {
@@ -282,13 +273,15 @@ function renderizarComercios() {
     if (document.getElementById("pantallaComercios")?.classList.contains("oculto")) return;
 
     // Archivados (T63): aparte, con "Archivados (N)" al final de la lista.
-    const guardados = obtenerComercios();
+    const guardados = comerciosParaLeer();
     const archivados = guardados.filter(comercioArchivado);
     if (!archivados.length) verComerciosArchivados = false;
-    const todosLosComercios = verComerciosArchivados ? archivados : guardados.filter(comercio => !comercioArchivado(comercio));
-    // Eliminados y cancelados no cuentan (T26).
-    const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
-    const pedidosPorComercio = contarPedidosDeComercios(todosLosComercios, historialComercios);
+    const todosLosComercios = verComerciosArchivados ? archivados : comerciosActivosParaLeer();
+    // Eliminados y cancelados no cuentan (T26). Se cuenta una vez por cada
+    // cambio, no en cada letra del buscador.
+    const pedidosPorComercio = recordarHastaQueCambie("pedidosPorComercio", ["comercios", "historial"], () => {
+        return contarPedidosDeComercios(guardados, pedidosQueCuentanParaLeer());
+    });
     actualizarResumenComercios(verComerciosArchivados ? guardados.filter(comercio => !comercioArchivado(comercio)) : todosLosComercios);
     if (segmentoEstadoComercios && filtroEstadoComercios) sincronizarSegmento(segmentoEstadoComercios, filtroEstadoComercios.value);
 
@@ -298,13 +291,22 @@ function renderizarComercios() {
         : "todos";
     const filtroNormalizado = normalizarTexto(texto);
 
+    // Visitado o no, una vez por comercio (no en cada comparación del orden).
+    const visitados = new Map();
+    const fueVisitado = comercio => {
+        if (!visitados.has(comercio)) visitados.set(comercio, estaVisitadoEstaSemana(comercio));
+        return visitados.get(comercio);
+    };
+    // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
+    const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
+
     const comercios = todosLosComercios
         .filter(comercio => {
             const coincideIndividual = !comercioMostradoIndividual ||
                 normalizarTexto(comercio.nombre) === normalizarTexto(comercioMostradoIndividual);
             const coincideTexto = normalizarTexto(comercio.nombre)
                 .includes(filtroNormalizado) && coincideIndividual;
-            const visitado = estaVisitadoEstaSemana(comercio);
+            const visitado = fueVisitado(comercio);
 
             const coincideEstado =
                 filtro === "todos" ||
@@ -314,22 +316,19 @@ function renderizarComercios() {
             return coincideTexto && coincideEstado;
         })
         .sort((a, b) => {
-            // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
-            const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
-
             if (orden === "frecuentes") {
                 const diferencia = pedidosPorComercio.get(b.nombre) - pedidosPorComercio.get(a.nombre);
                 if (diferencia) return diferencia;
             } else if (orden === "pendientes") {
-                const pendienteA = !estaVisitadoEstaSemana(a);
-                const pendienteB = !estaVisitadoEstaSemana(b);
+                const pendienteA = !fueVisitado(a);
+                const pendienteB = !fueVisitado(b);
 
                 if (pendienteA !== pendienteB) {
                     return pendienteA ? -1 : 1;
                 }
             }
 
-            return a.nombre.localeCompare(b.nombre, "es");
+            return ordenAlfabeticoEs.compare(a.nombre, b.nombre);
         });
 
     window.piezas?.cortarTandas(listaComerciosAdmin);
@@ -398,18 +397,18 @@ function renderizarComercios() {
         ultimaVisita.className = "datoComercio datoVisita";
         ultimaVisita.innerHTML =
             window.icono("calendario", 12) + " " +
-            (comercio.ultimaVisita || "Nunca");
+            window.piezas.esc(comercio.ultimaVisita || "Nunca");
 
         const direccion = document.createElement("span");
         direccion.className = "datoComercio datoDireccion";
         direccion.innerHTML = comercio.direccion
-            ? window.icono("ubicacion", 12) + " " + comercio.direccion
+            ? window.icono("ubicacion", 12) + " " + window.piezas.esc(comercio.direccion)
             : "";
 
         const telefono = document.createElement("span");
         telefono.className = "datoComercio datoTelefono";
         telefono.innerHTML = comercio.telefono
-            ? window.icono("telefono", 12) + " " + comercio.telefono
+            ? window.icono("telefono", 12) + " " + window.piezas.esc(comercio.telefono)
             : "";
 
         datosComercio.append(

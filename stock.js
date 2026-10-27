@@ -30,9 +30,9 @@
     function movimientos() {
         // Sin ningún producto con stock cargado no hace falta recorrer el
         // historial (T151): con muchos pedidos trababa el Catálogo.
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         if (!Object.values(productos).some(lista => (lista || []).some(tieneStock))) return { entregas: new Map(), reservas: new Map() };
-        const historial = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
+        const historial = typeof historialParaLeer === "function" ? historialParaLeer() : [];
         const entregas = new Map();
         const reservas = new Map();
         historial.forEach(pedido => {
@@ -69,7 +69,7 @@
     }
 
     function todos(datos = movimientos()) {
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         const lista = [];
         Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(producto => {
             if (!producto || producto.archivado === true) return;

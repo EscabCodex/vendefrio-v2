@@ -39,6 +39,13 @@ html[data-tema="oscuro"]{
 }
 .pzBtn:active{transform:scale(.97);}
 .pzBtn:disabled{opacity:.45;cursor:default;transform:none;}
+/* Repasada: números y tarjetas que llevan a su detalle (piezas.tocable).
+   En reposo se ven igual; al apretarlos se achican apenas. Si lo que se
+   aprieta es un botón o enlace de adentro, la tarjeta no se mueve. */
+.pzTocable{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s;}
+.pzTocable:active{transform:scale(.98);}
+.pzTocable:has(a:active, button:active){transform:none;}
+@media (prefers-reduced-motion:reduce){.pzTocable{transition:none;}}
 .pzBtnPri{background:var(--acento);color:var(--acento-txt);}
 .pzBtnSec{background:var(--acento-bg);color:var(--pz-pri-fuerte);}
 html[data-tema="oscuro"] .pzBtnSec{background:var(--superficie-2);color:var(--texto);}
@@ -1043,7 +1050,7 @@ html[data-tema] .modal.modalHoja .btnModalSecundario{background:var(--superficie
 html[data-tema] #listaVistaPedidos .marcadorFechaHistorial:first-child{margin-top:4px;}
 
 /* =====================================================
-   T168: todas las ventanas suben desde abajo y se cierran deslizándolas
+   T169: todas las ventanas suben desde abajo y se cierran deslizándolas
    hacia abajo; el aviso "Tus datos no están protegidos" va en Inicio.
    ===================================================== */
 @keyframes subirHoja{from{transform:translateY(48px);opacity:.7;}to{transform:none;opacity:1;}}
@@ -1054,3 +1061,13 @@ html[data-tema] #modalAviso.modalHoja,html[data-tema] #modalConfirmacion.modalHo
 /* Mientras se arrastra la hoja, sin transición; al soltar, vuelve suave. */
 .hojaArrastrando{transition:none !important;animation:none !important;}
 .hojaSoltando{transition:transform .2s ease-out !important;}
+/* ---- Botones de arriba alineados (pedido del dueño, 2026-10-26) ----
+   Volver, casita y Asistente van en la barrita pegajosa a 12 px del borde;
+   Avisos y "?" van en la cabecera, que arranca a 18 px. Se suben 6 px y la
+   campana pasa a 44 px, así los cinco círculos quedan a la misma altura. */
+html body > section[data-botones-volver] > header > .campanaAvisos,
+html body > section[data-botones-volver] > header > .botonAyudaPantalla{margin-top:-6px;}
+html body > section > header > .campanaAvisos{width:44px;height:44px;}
+/* En Más la cabecera tenía 12 px entre botones y las demás 14: la campana
+   quedaba 2 px corrida. Mismo espacio en todas. */
+html #pantallaConfiguracion .configHeader{gap:14px;}

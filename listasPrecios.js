@@ -33,8 +33,8 @@
     const COLORES = ["pzIniInfo", "pzIni2", "pzIni1", "pzIni3"];
 
     function todosLosProductos() {
-        if (typeof obtenerProductos !== "function") return [];
-        const productos = obtenerProductos();
+        if (typeof productosParaLeer !== "function") return [];
+        const productos = productosParaLeer();
         return Object.keys(productos).flatMap(marca => productos[marca].map(producto => ({ ...producto, marca })));
     }
 
@@ -52,8 +52,8 @@
     }
 
     function comerciosEn(nombre) {
-        if (typeof obtenerComercios !== "function") return 0;
-        return obtenerComercios().filter(comercio => comercio.listaPrecios === nombre && comercio.archivado !== true).length;
+        if (typeof comerciosParaLeer !== "function") return 0;
+        return comerciosParaLeer().filter(comercio => comercio.listaPrecios === nombre && comercio.archivado !== true).length;
     }
 
     function abrir(producto) {
@@ -413,7 +413,7 @@
     // Los productos de la lista por marca, en el orden del catálogo. El precio
     // es el de la lista o, si no tiene, el general (lo que paga el comercio).
     function marcasDeLista(nombre) {
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         return Object.keys(productos).map(marca => ({
             marca,
             productos: (productos[marca] || []).filter(producto => producto && producto.archivado !== true).map(producto => {

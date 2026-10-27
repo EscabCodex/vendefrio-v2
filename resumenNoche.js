@@ -36,7 +36,7 @@
     // Los números del día, con el Cierre.
     function datos() {
         const cierre = window.cierreVendeFrio.calcular(hoy());
-        const vendidos = (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).filter(pedido => {
+        const vendidos = (typeof historialParaLeer === "function" ? historialParaLeer() : []).filter(pedido => {
             if (!pedido || pedido.eliminado === true || pedido.estado === "cancelado") return false;
             const hora = Number(pedido.timestamp) || 0;
             return hora >= hoy();

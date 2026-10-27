@@ -1,8 +1,9 @@
 // VendeFrío - Pantallas sin trabas (T151): con los datos de un reparto
 // grande, en un celular común, ninguna pantalla deja trabado el celular y las
-// listas largas terminan de dibujarse completas.
+// listas largas se completan al bajar (repasada: lo lejano se dibuja cuando
+// el dedo se acerca, así la app ocupa menos memoria).
 const { test, expect, capturar } = require("./ayudas");
-const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas } = require("./datosGrandes");
+const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas, bajarHastaElFinal } = require("./datosGrandes");
 
 // La traba más larga que se acepta al tocar algo. Antes de T151 Comercios
 // dejaba el celular trabado unos 7 segundos e Historial unos 4.
@@ -36,11 +37,14 @@ test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ pag
         return page.evaluate(() => Math.max(0, ...window.trabasDePrueba));
     }
 
-    // Comercios: aparece enseguida y se completa de a tandas, con
-    // "Archivados (1)" al final.
+    // Comercios: aparece enseguida y se completa al bajar (sin trabas), con
+    // "Archivados (1)" al final. De entrada no se dibujan las 199 tarjetas.
     expect(await peorTraba(() => barra("Comercios").click()), "Comercios (ms)").toBeLessThan(TRABA_MAXIMA);
     const lista = page.locator("#listaComerciosAdmin");
-    await expect(lista.locator(".comercioCard")).toHaveCount(199, { timeout: 30000 });
+    await expect(lista.locator(".comercioCard").first()).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(await lista.locator(".comercioCard").count(), "Tarjetas dibujadas de entrada").toBeLessThan(80);
+    expect(await peorTraba(() => bajarHastaElFinal(lista, ".comercioCard", 199)), "Bajar por Comercios (ms)").toBeLessThan(TRABA_MAXIMA);
     await expect(lista.locator(":scope > :last-child")).toHaveClass(/filaComerciosArchivados/);
 
     // Buscar mientras se dibuja: solo quedan los que coinciden.
@@ -49,11 +53,12 @@ test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ pag
     await page.waitForTimeout(1000);
     await expect(lista.locator(".comercioCard")).toHaveCount(11);
     await page.locator("#buscarComercio").fill("");
-    await expect(lista.locator(".comercioCard")).toHaveCount(199, { timeout: 30000 });
+    await bajarHastaElFinal(lista, ".comercioCard", 199);
 
     // Historial (en el modo personal, "Pedidos" de la barra).
     expect(await peorTraba(() => barra("Pedidos").click()), "Historial (ms)").toBeLessThan(TRABA_MAXIMA);
-    await expect(page.locator("#contenedorHistorial .historialCard")).toHaveCount(600, { timeout: 30000 });
+    await expect(page.locator("#contenedorHistorial .historialCard").first()).toBeVisible();
+    expect(await peorTraba(() => bajarHastaElFinal(page.locator("#contenedorHistorial"), ".historialCard", 600)), "Bajar por Historial (ms)").toBeLessThan(TRABA_MAXIMA);
 
     expect(await peorTraba(() => barra("Catálogo").click()), "Catálogo (ms)").toBeLessThan(TRABA_MAXIMA);
     expect(await peorTraba(() => barra("Más").click()), "Más (ms)").toBeLessThan(TRABA_MAXIMA);

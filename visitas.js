@@ -122,11 +122,15 @@
                     <span class="statsPista"><i style="width:${Math.round(cuenta[motivo.clave] / max * 100)}%"></i></span></div>
                 <b class="statsFilaValor">${cuenta[motivo.clave]}</b>
             </div>`).join("");
-        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila">
+        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila" data-ficha="${esc(visita.comercio)}">
                 <span class="statsAvatar">${esc(window.piezas.iniciales(visita.comercio))}</span>
                 <div class="statsFilaTexto"><strong>${esc(visita.comercio)}</strong><small>${esc(textoMotivo(visita))} · ${esc(window.piezas.fechaCorta(visita.horaCelular))}${visita.persona && visita.persona.nombre ? " · " + esc(visita.persona.nombre) : ""}</small></div>
             </div>`).join("");
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div><p class="statsSubtitulo">Últimas</p><div class="statsLista">${ultimas}</div>`);
+        // Repasada: cada visita abre la ficha de ese comercio.
+        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
+            window.piezas.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha));
+        });
         return card;
     }
 

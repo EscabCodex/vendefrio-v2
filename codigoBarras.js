@@ -17,7 +17,7 @@
     function productoConCodigo(codigo) {
         const buscado = limpiar(codigo);
         if (!buscado) return null;
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         for (const marca of Object.keys(productos)) {
             const producto = (productos[marca] || []).find(item => item && item.archivado !== true && limpiar(item.codigo) === buscado);
             if (producto) return { ...producto, marca };

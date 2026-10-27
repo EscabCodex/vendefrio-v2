@@ -94,7 +94,7 @@
         return true;
     }
 
-    // Aviso en Inicio (T168, opción B que eligió el dueño): una tarjeta
+    // Aviso en Inicio (T169, opción B que eligió el dueño): una tarjeta
     // arriba de todo, que se va al bajar la pantalla y no tapa nada. "Guardar"
     // abre la pantalla de inicio, para ingresar o registrarse.
     let esperaCartel = 0;
