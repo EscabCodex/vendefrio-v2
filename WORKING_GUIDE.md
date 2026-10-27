@@ -108,6 +108,21 @@ Son programas que abren la app en un navegador manejado solo (Playwright, con Ch
 - **Archivos:** carpeta `pruebas` (las pruebas, el servidor de prueba y la configuración), `firebase.json` (los emuladores) y `package.json`. Ninguno cambia la app, y Vercel no los publica (`.vercelignore`).
 - **Lo que una máquina no prueba:** la impresora Bluetooth, dos celulares reales a la vez y las notificaciones. Eso lo probás vos, solo en las tareas que lo tocan.
 
+## Notas de cambios
+
+Cuando hay una versión nueva, Inicio muestra la tarjeta "Hay una versión nueva · Tocá para ver qué cambió". Al tocarla se abre una hoja con lo que cambió, como las notas de los juegos. Si el dueño actualiza sin mirarlas, Inicio muestra una vez "La app se actualizó". Cada celular ve solo lo que todavía no vio.
+
+- **Dónde están:** en `notas.json`, en la raíz del repo. La app las lee de ahí (`notasDeCambios.js`).
+- **Quién las escribe:** cada hilo o sesión que sube un cambio que el dueño o su equipo pueden ver o notar (algo nuevo, algo que anda mejor, un arreglo). Un cambio que no se nota (pruebas, documentos, orden del código) no lleva nota.
+- **Cómo:** una nota por cada cosa que cambió, **arriba de todo** de la lista, con estos datos:
+  - `version`: el número de la caché nueva de `sw.js` (por ejemplo, `vendefrio-v238` lleva `238`). Si al unir `desarrollo` cambia el número, se corrige la nota.
+  - `fecha`: el día, como `2026-10-27`.
+  - `tipo`: `nuevo` (algo que antes no estaba), `mejor` (algo que ya estaba y ahora anda mejor) o `arreglado` (algo que andaba mal).
+  - `icono`: un nombre de `iconos.js` que tenga que ver (por ejemplo `navegar`, `mapa`, `check`).
+  - `titulo`: hasta 40 letras. `texto`: hasta 110 letras.
+- **Cómo se escriben:** en rioplatense simple, como se lo contarías al dueño en la vereda. Sin palabras técnicas (nada de "caché", "CloseWatcher", "sincronización" o nombres de archivos). Dicen qué puede hacer ahora y dónde, no cómo se hizo. Ejemplo: "La navegación se achica · Con la flechita para abajo queda una burbuja con los minutos. Tocala y vuelve como estaba."
+- **Prueba:** `notasCambios.prueba.js` revisa que `notas.json` esté bien escrito (orden, tipo, ícono, largo y versión no más nueva que la caché).
+
 ## Equipo de agentes
 
 Desde el 2026-10-20 el trabajo lo hace un equipo de 4 agentes (un agente es una sesión de Claude con un trabajo fijo y sus propias instrucciones). El diseño completo está en el documento "Equipo de agentes para VendeFrío" del Proyecto de Claude.

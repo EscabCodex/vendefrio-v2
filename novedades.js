@@ -114,5 +114,5 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", revisar);
     else revisar();
 
-    window.novedadesVendeFrio = { version: VERSION, abrir };
+    window.novedadesVendeFrio = { version: VERSION, abrir, hayDatosDeAntes };
 }());
