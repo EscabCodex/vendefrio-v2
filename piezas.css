@@ -1071,3 +1071,32 @@ html body > section > header > .campanaAvisos{width:44px;height:44px;}
 /* En Más la cabecera tenía 12 px entre botones y las demás 14: la campana
    quedaba 2 px corrida. Mismo espacio en todas. */
 html #pantallaConfiguracion .configHeader{gap:14px;}
+
+/* Notas de cambios (notasDeCambios.js): la tarjeta de Inicio avisa que se
+   puede tocar, y la ventana en el medio (como las notas de los juegos)
+   separa lo nuevo de lo arreglado. */
+.pzBanner small .pzDestacado{color:var(--pz-pri-fuerte);font-weight:700;}
+html[data-tema] .modal.ventanaNotas{z-index:10040;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(16px + env(safe-area-inset-bottom));background:rgba(5,10,20,.5);overflow:hidden;}
+.ventanaNotas .notasCaja{width:100%;max-width:380px;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:left;}
+html[data-tema] .modal.ventanaNotas:not(.oculto) .notasCaja{animation:notasAparece .2s ease-out;}
+@keyframes notasAparece{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){html[data-tema] .modal.ventanaNotas:not(.oculto) .notasCaja{animation:none;}}
+.ventanaNotas .notasBanda{padding:18px 18px 14px;background:linear-gradient(135deg,var(--acento),color-mix(in srgb,var(--acento) 82%,#000));color:var(--acento-txt);}
+.ventanaNotas .notasBanda small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acento-txt) !important;opacity:.9;}
+html[data-tema] .ventanaNotas .notasBanda h2{margin:4px 0 0;font-size:22px;font-weight:800;color:var(--acento-txt) !important;}
+.ventanaNotas .notasSeccion{padding:14px 18px 2px;}
+.ventanaNotas .notasSeccion h3{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--pz-pri-fuerte) !important;}
+.ventanaNotas .notasArreglado h3{color:var(--visitado) !important;}
+.ventanaNotas .notasSeccion ul{margin:0;padding:0;list-style:none;}
+.ventanaNotas .notaFila{position:relative;padding:0 0 9px 16px;font-size:14px;line-height:1.35;}
+.ventanaNotas .notaFila::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--texto-ter);}
+.ventanaNotas .notaFila b{font-weight:700;}
+.ventanaNotas .notaFila span{color:var(--texto-sec);}
+.ventanaNotas .notasVacio{margin:0;padding:16px 18px 4px;color:var(--texto-sec);}
+.ventanaNotas .notasPie{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:10px 18px 18px;}
+.ventanaNotas .notasPie button{min-height:48px;border:0;border-radius:var(--radio-pildora);font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.ventanaNotas .notasCerrar{background:var(--superficie-2);color:var(--texto);}
+.ventanaNotas .notasActualizar{background:var(--acento);color:var(--acento-txt);}
+.ventanaNotas .notasActualizar[hidden]{display:none;}
+.ventanaNotas.notasSinActualizar .notasPie{grid-template-columns:1fr;}
+.ventanaNotas.notasSinActualizar .notasCerrar{background:var(--acento);color:var(--acento-txt);}

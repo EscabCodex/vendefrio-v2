@@ -340,7 +340,7 @@
             aviso.id = id;
         }
         aviso.className = "pzBanner pzBan" + (datos.color || "Pri");
-        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto ? `<small>${esc(datos.texto)}</small>` : ""}</div>` +
+        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto || datos.destacado ? `<small>${esc(datos.texto || "")}${datos.destacado ? `${datos.texto ? " " : ""}<b class="pzDestacado">${esc(datos.destacado)}</b>` : ""}</small>` : ""}</div>` +
             (conBoton ? `<button type="button" class="pzBtn ${datos.claseBoton || "pzBtnPri"}">${esc(datos.boton)}</button>` : ico("chevDerecha", 20));
         const tocar = conBoton ? aviso.querySelector("button") : aviso;
         tocar.onclick = datos.alTocar || null;
@@ -610,7 +610,7 @@
     // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
     // hacia abajo, como en las apps del celular. Solo mueve la hoja con
     // transform, para que ande fluido en celulares baratos.
-    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido";
+    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido, .ventanaNotas > .notasCaja";
     let arrastre = null;
     const BOTONES_CERRAR = /^(Cancelar|Cerrar|Volver|Ahora no|Entendido)$/;
 

@@ -35,9 +35,9 @@ function configuracionConEmuladores() {
 async function prepararPagina(page, nube) {
     const errores = [];
     page.on("pageerror", error => errores.push(error.message));
-    // El resumen de la noche (T79) y el tutorial (T157) no salen solos en
-    // las pruebas (tutorial.prueba.js los prende).
-    await page.addInitScript(() => { window.vendefrioPruebas = { resumenNoche: false, tutorial: false }; });
+    // El resumen de la noche (T79), el tutorial (T157) y "La app se
+    // actualizó" (notas de cambios) no salen solos en las pruebas.
+    await page.addInitScript(() => { window.vendefrioPruebas = { resumenNoche: false, tutorial: false, notasDeCambios: false }; });
 
     await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
         const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
