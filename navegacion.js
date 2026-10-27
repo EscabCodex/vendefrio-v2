@@ -1497,6 +1497,21 @@
         return true;
     }
 
+    // Con la navegación minimizada (en ruta), al guardar un pedido y cerrar
+    // la ventana "Pedido generado" se vuelve sola a la navegación.
+    let volverAlGuardar = false;
+    window.addEventListener("pedidoGuardadoVendeFrio", () => {
+        volverAlGuardar = minimizada;
+    });
+    const ventanaPedido = document.getElementById("modalPedido");
+    if (ventanaPedido) {
+        new MutationObserver(() => {
+            if (!volverAlGuardar || !ventanaPedido.classList.contains("oculto")) return;
+            volverAlGuardar = false;
+            if (minimizada) restaurar();
+        }).observe(ventanaPedido, { attributes: true, attributeFilter: ["class"] });
+    }
+
     function lugarDeBurbuja() {
         try {
             const guardado = JSON.parse(localStorage.getItem(CLAVE_BURBUJA) || "null");

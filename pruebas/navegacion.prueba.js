@@ -159,6 +159,24 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect.poll(() => page.evaluate(() => window.__dichos.join(" | "))).toContain("Llegaste a Kiosco La Esquina");
     await capturar(page, "navegacion-03-llegaste");
 
+    // En ruta: «Cargar pedido» minimiza, y al guardarlo y cerrar la ventana
+    // del pedido se vuelve sola a la navegación.
+    const cargarPedido = navegacion.getByRole("button", { name: "Cargar pedido" });
+    if (!(await cargarPedido.isVisible())) await navegacion.locator(".tarjetaParada, .cartelParada").first().click();
+    await cargarPedido.click();
+    await expect(navegacion).toBeHidden();
+    await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
+    if (await page.locator(".tituloMarca").first().getAttribute("aria-expanded") === "false") {
+        await page.locator(".tituloMarca").first().click();
+    }
+    await page.locator(".listaProdutos .fila").first().getByRole("button", { name: "Aumentar cantidad" }).click();
+    await page.locator("#generar").click();
+    const ventanaPedido = page.locator("#modalPedido");
+    await expect(ventanaPedido).toBeVisible();
+    await ventanaPedido.click({ position: { x: 10, y: 10 } });
+    await expect(navegacion).toBeVisible();
+    await expect(page.getByRole("button", { name: "Volver a la navegación" })).toBeHidden();
+
     await deslizar(page, "Deslizá para marcar Llegué");
     await expect(navegacion).toBeHidden();
     await expect(page.locator(".bottom-nav")).toBeVisible();
