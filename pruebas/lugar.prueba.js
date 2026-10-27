@@ -192,6 +192,8 @@ test("lugar: sin CloseWatcher (celulares viejos), lo mismo con la historia", asy
 
 test("lugar: el atrás vuelve a la pantalla de la que se vino, no siempre a Inicio", async ({ page }) => {
     await entrarSinCuenta(page);
+    // Un celular nuevo arranca vacío: se carga la lista de fábrica de antes.
+    await page.evaluate(() => { guardarComercios(COMERCIOS); guardarProductos(PRODUCTOS); window.actualizarDashboard?.(); });
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     const nav = destino => page.locator(`.bottom-nav [data-pantalla="${destino}"]`).click();
     const enInicio = async () => {

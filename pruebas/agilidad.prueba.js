@@ -62,6 +62,8 @@ async function mantenerApretado(page, localizador) {
 
 test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) => {
     await entrarSinCuenta(page);
+    // Un celular nuevo arranca vacío: se carga la lista de fábrica de antes.
+    await page.evaluate(() => { guardarComercios(COMERCIOS); guardarProductos(PRODUCTOS); window.actualizarDashboard?.(); });
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     const mas = page.locator(".bottom-nav .nav-nuevo");
 
