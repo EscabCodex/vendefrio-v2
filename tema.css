@@ -1194,7 +1194,7 @@ html[data-tema="oscuro"] :is(.direccionTarjetaParada, .detalleTarjetaParada, .si
   background:var(--fondo);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
   touch-action:pan-y;
 }
-.cabezaHoja{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:8px;padding-top:8px;}
+.cabezaHoja{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:8px;padding-top:8px;touch-action:none;}
 .botonChicoNav{display:grid;place-items:center;width:40px;height:40px;padding:0;margin:0;min-height:0;border:0;border-radius:50%;cursor:pointer;background:var(--superficie);color:var(--texto);}
 .botonChicoNav.apagado{color:var(--peligro);}
 .asaHoja{display:grid;place-items:center;width:100%;height:40px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
@@ -1227,6 +1227,10 @@ html[data-tema="oscuro"] .pantallaNavegacion .hojaAcciones .accesoNavegacionIcon
 .pantallaNavegacion .hojaAcciones .accesoYaLlego .accesoNavegacionIcono{color:var(--pz-wa, var(--visitado));}
 .accesoNavegacion small{font-size:15px;font-weight:800;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 html[data-tema="oscuro"] .accesoNavegacion small{color:var(--texto) !important;}
+/* «Visité, sin pedido»: si queda sola en la fila ocupa todo el ancho y, en
+   un celular chico, baja a dos renglones en vez de cortarse. */
+.hojaAcciones .accesoSinPedido:nth-child(odd){grid-column:1 / -1;}
+.accesoNavegacion.accesoSinPedido small{white-space:normal;line-height:1.1;text-align:left;}
 .llegueHoja .deslizador{height:62px;margin-top:0;background:var(--visitado-bg);}
 .llegueHoja .rellenoDeslizador{background:var(--visitado);}
 .llegueHoja .textoDeslizador{color:var(--visitado);font-size:15.5px;}

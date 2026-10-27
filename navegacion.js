@@ -692,7 +692,7 @@
                 <div class="cabezaHoja">
                     <button type="button" class="botonChicoNav vozNavegacion" aria-label="Voz"></button>
                     <button type="button" class="asaHoja" aria-label="Ver más datos del comercio" aria-expanded="false"><span></span></button>
-                    <button type="button" class="botonChicoNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 20)}</button>
+                    <button type="button" class="botonChicoNav achicarHoja" aria-label="Achicar la tarjeta">${window.icono("chevAbajo", 20)}</button>
                 </div>
                 <div class="hojaResumen">
                     <div class="hojaComercio"><div class="hojaAvatar"></div><div><h2 class="nombreNavegacion"></h2><p class="direccionNavegacion"></p></div></div>
@@ -703,7 +703,6 @@
                 <div class="llegueHoja"></div>
                 <div class="pieHoja">
                     <button type="button" class="botonPieHoja saltearNavegacion">Saltear parada</button>
-                    <button type="button" class="botonPieHoja salirNavegacion">Salir</button>
                 </div>
                 <div class="hojaMas">
                     <div class="hojaPedidos"></div>
@@ -732,7 +731,6 @@
         pantalla.querySelector(".minimizarNavegacion").addEventListener("click", minimizar);
         pantalla.querySelectorAll(".vozNavegacion").forEach(boton => boton.addEventListener("click", alternarVoz));
         pantalla.querySelector(".saltearNavegacion").addEventListener("click", saltearParada);
-        pantalla.querySelector(".salirNavegacion").addEventListener("click", () => cerrar());
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
             seguir = true;
             pantalla.querySelector(".centrarNavegacion").classList.add("oculto");
@@ -774,6 +772,47 @@
             if (movido < -30) abrirHoja(false);
         });
         hoja.addEventListener("pointercancel", () => { inicioY = null; });
+        // En el celular la hoja sigue al dedo y, bajándola, se achica (la
+        // navegación sigue). Hace falta con toques: con touch-action pan-y el
+        // navegador se queda con el gesto y cancela los pointer de arriba.
+        pantalla.querySelector(".achicarHoja").addEventListener("click", () => abrirHoja(false));
+        let arrastreHoja = null;
+        hoja.addEventListener("touchstart", evento => {
+            arrastreHoja = null;
+            if (!hoja.classList.contains("abierta") || evento.touches.length !== 1) return;
+            if (evento.target.closest(".deslizador, a, input, textarea")) return;
+            if (!evento.target.closest(".cabezaHoja") && hoja.scrollTop > 0) return;
+            arrastreHoja = { y: evento.touches[0].clientY, dy: 0, activo: false, cuadro: 0 };
+        }, { passive: true });
+        hoja.addEventListener("touchmove", evento => {
+            if (!arrastreHoja) return;
+            const dy = evento.touches[0].clientY - arrastreHoja.y;
+            if (!arrastreHoja.activo) {
+                if (dy < -6) { arrastreHoja = null; return; }
+                if (dy < 10) return;
+                arrastreHoja.activo = true;
+                hoja.style.transition = "none";
+            }
+            arrastreHoja.dy = Math.max(0, dy - 10);
+            if (!arrastreHoja.cuadro) {
+                const actual = arrastreHoja;
+                actual.cuadro = requestAnimationFrame(() => {
+                    actual.cuadro = 0;
+                    hoja.style.transform = "translateY(" + actual.dy + "px)";
+                });
+            }
+        }, { passive: true });
+        const soltarHoja = () => {
+            const actual = arrastreHoja;
+            arrastreHoja = null;
+            if (!actual || !actual.activo) return;
+            if (actual.cuadro) cancelAnimationFrame(actual.cuadro);
+            hoja.style.transform = "";
+            hoja.style.transition = "";
+            if (actual.dy > 70) abrirHoja(false);
+        };
+        hoja.addEventListener("touchend", soltarHoja, { passive: true });
+        hoja.addEventListener("touchcancel", soltarHoja, { passive: true });
         return pantalla;
     }
 
@@ -790,7 +829,7 @@
         // Minimizada no hay nada que medir: se acomoda al volver (T170).
         if (!mapa || minimizada) return;
         if (abierta) {
-            // La hoja llega hasta «Salir» y asoma lo que sigue (pedidos y
+            // La hoja llega hasta «Saltear parada» y asoma lo que sigue (pedidos y
             // paradas, deslizando la hoja): así queda mapa a la vista.
             const pie = hoja.querySelector(".pieHoja");
             hoja.style.maxHeight = "";
@@ -946,6 +985,18 @@
             minimizar();
             if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
         });
+        // "Visité, sin pedido" (T65, como en Próxima parada de Inicio): pide
+        // el motivo, la deja visitada y sigue con la próxima parada.
+        if (window.visitasVendeFrio) {
+            const sinPedido = acceso("cerrarX", "Visité, sin pedido");
+            sinPedido.classList.add("accesoSinPedido");
+            sinPedido.addEventListener("click", () => {
+                const nombre = comercio.nombre;
+                window.visitasVendeFrio.abrir(nombre, () => {
+                    if (paradaActual()?.nombre === nombre) pasarALaQueSigue(paradas.length > 1 ? "Terminaste el recorrido" : "");
+                });
+            });
+        }
 
         // "Llegué" se desliza, para no marcarlo sin querer manejando (T135).
         const llegue = pantalla.querySelector(".llegueHoja");
@@ -1331,13 +1382,18 @@
         if (!comercio) return;
         if (typeof marcarVisitaManual === "function") marcarVisitaManual(comercio.nombre);
         if (navigator.vibrate) navigator.vibrate(30);
+        pasarALaQueSigue(paradas.length > 1 ? "Terminaste el recorrido" : "");
+    }
+
+    // Después de dejar visitada la parada: la que sigue o, en la última, el fin.
+    function pasarALaQueSigue(despedida) {
         if (indiceParada < paradas.length - 1) {
             indiceParada++;
             hablar("Vamos a " + paradaActual().nombre);
             empezarParada();
             return;
         }
-        hablar(paradas.length > 1 ? "Terminaste el recorrido" : "");
+        hablar(despedida);
         cerrar({ despedida: true });
     }
 
