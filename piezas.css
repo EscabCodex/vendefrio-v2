@@ -1080,14 +1080,32 @@ html #pantallaConfiguracion .configHeader{gap:14px;}
    puede tocar, y la ventana en el medio (como las notas de los juegos)
    separa lo nuevo de lo arreglado. */
 .pzBanner small .pzDestacado{color:var(--pz-pri-fuerte);font-weight:700;}
-html[data-tema] .modal.ventanaNotas{z-index:10040;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(16px + env(safe-area-inset-bottom));background:rgba(5,10,20,.5);overflow:hidden;}
-.ventanaNotas .notasCaja{width:100%;max-width:380px;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:left;}
+html[data-tema] .modal.ventanaNotas{z-index:10040;align-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(16px + env(safe-area-inset-bottom));background:rgba(5,10,20,.42);overflow:hidden;justify-content:center;}
+/* Fondo apenas difuminado (pedido del dueño). Un desenfoque chico y quieto
+   no traba un celular barato; sin soporte queda solo el oscurecido. */
+@supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){html[data-tema] .modal.ventanaNotas{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}}
+.ventanaNotas .notasCaja{display:flex;flex-direction:column;width:100%;max-width:380px;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:hidden;border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 20px 50px rgba(0,0,0,.35);text-align:left;}
 html[data-tema] .modal.ventanaNotas:not(.oculto) .notasCaja{animation:notasAparece .2s ease-out;}
 @keyframes notasAparece{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:none;}}
 @media (prefers-reduced-motion:reduce){html[data-tema] .modal.ventanaNotas:not(.oculto) .notasCaja{animation:none;}}
 .ventanaNotas .notasBanda{padding:18px 18px 14px;background:linear-gradient(135deg,var(--acento),color-mix(in srgb,var(--acento) 82%,#000));color:var(--acento-txt);}
 .ventanaNotas .notasBanda small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acento-txt) !important;opacity:.9;}
 html[data-tema] .ventanaNotas .notasBanda h2{margin:4px 0 0;font-size:22px;font-weight:800;color:var(--acento-txt) !important;}
+/* Con muchas notas (al pasar varias versiones juntas) van en páginas que se
+   deslizan de costado (sin flechas, pedido del dueño): el desplazamiento con imán lo hace el navegador, así
+   anda fluido en celulares baratos. Título y botones siempre a la vista. */
+.ventanaNotas .notasBanda,.ventanaNotas .notasPie,.ventanaNotas .notasPaginas{flex:none;}
+.ventanaNotas .notasLista{display:flex;align-items:flex-start;transition:height .2s ease-out;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior:contain;scrollbar-width:none;}
+.ventanaNotas .notasLista::-webkit-scrollbar{display:none;}
+.ventanaNotas .notasPagina{flex:0 0 100%;min-width:0;max-height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overscroll-behavior:contain;}
+.ventanaNotas .notasPaginas[hidden]{display:none;}
+/* Los puntitos van en el medio entre el texto y el botón, todo una sola tarjeta. */
+.ventanaNotas .notasPaginas{display:flex;align-items:center;justify-content:center;padding:1px 12px 0;}
+.ventanaNotas .notasPuntos{display:flex;flex:1;justify-content:center;gap:4px;}
+.ventanaNotas .notasPuntos i{width:5px;height:5px;border-radius:50%;background:var(--texto-ter);opacity:.45;transition:width .15s,opacity .15s;}
+.ventanaNotas .notasPuntos i.activo{width:12px;border-radius:3px;background:var(--acento);opacity:1;}
+.ventanaNotas .notasNumero{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+.ventanaNotas .notasPuntos:empty + .notasNumero{position:static;width:auto;height:auto;flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--texto-sec);}
 .ventanaNotas .notasSeccion{padding:14px 18px 2px;}
 .ventanaNotas .notasSeccion h3{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--pz-pri-fuerte) !important;}
 .ventanaNotas .notasArreglado h3{color:var(--visitado) !important;}
@@ -1097,7 +1115,7 @@ html[data-tema] .ventanaNotas .notasBanda h2{margin:4px 0 0;font-size:22px;font-
 .ventanaNotas .notaFila b{font-weight:700;}
 .ventanaNotas .notaFila span{color:var(--texto-sec);}
 .ventanaNotas .notasVacio{margin:0;padding:16px 18px 4px;color:var(--texto-sec);}
-.ventanaNotas .notasPie{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:10px 18px 18px;}
+.ventanaNotas .notasPie{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:12px 18px 18px;}
 .ventanaNotas .notasPie button{min-height:48px;border:0;border-radius:var(--radio-pildora);font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
 .ventanaNotas .notasCerrar{background:var(--superficie-2);color:var(--texto);}
 .ventanaNotas .notasActualizar{background:var(--acento);color:var(--acento-txt);}

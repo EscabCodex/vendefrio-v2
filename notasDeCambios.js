@@ -9,7 +9,10 @@
 // =====================================================
 (function () {
     const CLAVE = "vendefrio_notas_vistas";
-    const MAXIMO = 15;
+    // Quien pasa varias versiones de golpe ve todo lo acumulado; el tope es
+    // solo por si acaso. Con muchas, van en páginas que se deslizan de costado.
+    const MAXIMO = 60;
+    const POR_PAGINA = 6;
     const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
     const pz = () => window.piezas;
@@ -76,6 +79,10 @@
             <div class="notasCaja" role="dialog" aria-modal="true" aria-labelledby="tituloNotas">
                 <div class="notasBanda"><small class="notasCuando"></small><h2 id="tituloNotas">¡Hay cosas nuevas!</h2></div>
                 <div class="notasLista"></div>
+                <div class="notasPaginas" hidden>
+                    <div class="notasPuntos" aria-hidden="true"></div>
+                    <span class="notasNumero"></span>
+                </div>
                 <div class="notasPie">
                     <button type="button" class="notasCerrar">Después</button>
                     <button type="button" class="notasActualizar">Actualizar ahora</button>
@@ -85,6 +92,13 @@
         const cerrar = () => ventana.classList.add("oculto");
         ventana.querySelector(".notasCerrar").addEventListener("click", cerrar);
         ventana.addEventListener("click", evento => { if (evento.target === ventana) cerrar(); });
+        // Páginas: se deslizan con el dedo (el navegador hace el trabajo);
+        // los puntitos dicen en cuál estás.
+        const lista = ventana.querySelector(".notasLista");
+        let cuadro = 0;
+        lista.addEventListener("scroll", () => {
+            if (!cuadro) cuadro = requestAnimationFrame(() => { cuadro = 0; marcarPagina(); });
+        }, { passive: true });
         ventana.querySelector(".notasActualizar").addEventListener("click", () => {
             const boton = ventana.querySelector(".notasActualizar");
             boton.disabled = true;
@@ -101,17 +115,53 @@
             "</ul></div>";
     }
 
+    // Cada sección se corta en páginas de POR_PAGINA notas.
+    function paginas(clase, icono, titulo, notas) {
+        const lista = [];
+        for (let i = 0; i < notas.length; i += POR_PAGINA) {
+            lista.push(seccion(clase, icono, titulo, notas.slice(i, i + POR_PAGINA)));
+        }
+        return lista;
+    }
+
+    function cantidadPaginas() {
+        return ventana.querySelectorAll(".notasPagina").length;
+    }
+
+    function paginaActual() {
+        const lista = ventana.querySelector(".notasLista");
+        return lista.clientWidth ? Math.round(lista.scrollLeft / lista.clientWidth) : 0;
+    }
+
+    function marcarPagina() {
+        const total = cantidadPaginas();
+        const actual = Math.min(total - 1, paginaActual());
+        ventana.querySelectorAll(".notasPuntos i").forEach((punto, indice) => punto.classList.toggle("activo", indice === actual));
+        ventana.querySelector(".notasNumero").textContent = (actual + 1) + " de " + total;
+        ajustarAlto(actual);
+    }
+
+    // La tarjeta toma el largo de la página que se ve: los puntitos quedan
+    // pegados al texto, sin hueco (pedido del dueño).
+    function ajustarAlto(actual) {
+        const pagina = ventana.querySelectorAll(".notasPagina")[actual];
+        if (pagina) ventana.querySelector(".notasLista").style.height = pagina.scrollHeight + "px";
+    }
+
     function dibujar(notas) {
         const lista = ventana.querySelector(".notasLista");
         ventana.querySelector(".notasCuando").textContent = ["Notas de la versión", fechaCorta(notas[0]?.fecha)].filter(Boolean).join(" · ");
         ventana.querySelector("#tituloNotas").textContent = notas.length ? "¡Hay cosas nuevas!" : "Arreglos chicos";
         if (!notas.length) {
-            lista.innerHTML = '<p class="notasVacio">Esta vez son arreglos chicos para que todo ande mejor.</p>';
+            lista.innerHTML = '<div class="notasPagina"><p class="notasVacio">Esta vez son arreglos chicos para que todo ande mejor.</p></div>';
+            ventana.querySelector(".notasPaginas").hidden = true;
             return;
         }
-        lista.innerHTML =
-            seccion("", "chispa", "Nuevo y mejor", notas.filter(nota => nota.tipo !== "arreglado")) +
-            seccion("notasArreglado", "herramientas", "Arreglado", notas.filter(nota => nota.tipo === "arreglado"));
+        const todas = paginas("", "chispa", "Nuevo y mejor", notas.filter(nota => nota.tipo !== "arreglado"))
+            .concat(paginas("notasArreglado", "herramientas", "Arreglado", notas.filter(nota => nota.tipo === "arreglado")));
+        lista.innerHTML = todas.map(html => `<div class="notasPagina">${html}</div>`).join("");
+        ventana.querySelector(".notasPuntos").innerHTML = todas.length > 12 ? "" : todas.map(() => "<i></i>").join("");
+        ventana.querySelector(".notasPaginas").hidden = todas.length < 2;
     }
 
     // conActualizar: desde "Hay una versión nueva" (el botón actualiza).
@@ -128,8 +178,10 @@
         ventana.querySelector(".notasActualizar").textContent = "Actualizar ahora";
         ventana.querySelector(".notasCerrar").textContent = conActualizar ? "Después" : "Entendido";
         ventana.classList.toggle("notasSinActualizar", !conActualizar);
-        ventana.querySelector(".notasCaja").scrollTop = 0;
+        ventana.querySelector(".notasLista").scrollLeft = 0;
         ventana.classList.remove("oculto");
+        ventana.querySelector(".notasLista").style.height = "";
+        if (cantidadPaginas() > 1) marcarPagina();
         if (notas.length) marcarVista(Number(notas[0].version));
         avisoActualizada(0);
     }
