@@ -433,12 +433,13 @@
         if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") return;
         if (seccion.id === "pantallaNavegacion") return;
         const boton = botonVolverDe(seccion);
-        // Un paso atrás: lo que se abrió desde Más (A cobrar, Historial,
-        // Rutas...) vuelve a Más, sea cual sea su flecha de arriba.
-        if (deDonde.get(seccion.id) === "pantallaConfiguracion" && typeof mostrarPantalla === "function") {
-            mostrarPantalla("mas");
-            return;
-        }
+        // Un paso atrás: si la flecha de arriba lleva a otra pantalla (Inicio
+        // o Más), se vuelve a la pantalla de la que se vino: Más > Nuevo
+        // pedido vuelve a Más, Catálogo > Agregar al pedido vuelve a
+        // Catálogo, Inicio > Estadísticas vuelve a Inicio. Las flechas propias
+        // de cada pantalla (los pasos de adentro, como cerrar una sección de
+        // Más o la ficha de un pedido) se respetan.
+        if (vaAOtraPantalla(seccion, boton) && volverALaAnterior()) return;
         if (boton) boton.click();
         else if (typeof mostrarPantalla === "function") mostrarPantalla("menu");
     }
@@ -458,19 +459,80 @@
         alAtras();
     });
 
-    // Se mira solo lo que cambia arriba de todo: las pantallas y ventanas
-    // que se agregan al cuerpo y su clase (no lo de adentro).
-    // De qué pantalla se llegó a cada una (para el paso atrás desde Más).
-    const deDonde = new Map();
-    let ultimaPantalla = null;
+    // Las pantallas por las que se pasó, desde Inicio, sin repetir: volver
+    // a una ya visitada corta lo que había después, así que el atrás va
+    // por el mismo camino de ida y nunca da vueltas.
+    const camino = [];
+    function datosDe(seccion) {
+        const datos = { pantalla: seccion.id };
+        if (seccion.id === "pantallaPedido") {
+            datos.vista = seccion.dataset.vista || "nuevo";
+            datos.etapa = window.seguimientoVendeFrio?.etapa?.() || "";
+        }
+        return datos;
+    }
+    function clave(datos) {
+        return datos.pantalla + (datos.pantalla === "pantallaPedido" ? ":" + datos.vista : "");
+    }
     function anotarPantalla() {
         const seccion = pantallaVisible();
-        const id = seccion ? seccion.id : null;
-        if (id === ultimaPantalla) return;
-        if (id) deDonde.set(id, ultimaPantalla);
-        ultimaPantalla = id;
+        if (!seccion || seccion.id === "pantallaInicioSesion") {
+            camino.length = 0;
+            return;
+        }
+        const ahora = datosDe(seccion);
+        const ultimo = camino[camino.length - 1];
+        // Al irse de Más, se anota la sección abierta: el atrás vuelve a ella.
+        if (ultimo && ultimo.pantalla === "pantallaConfiguracion" && seccion.id !== "pantallaConfiguracion") {
+            const caja = document.getElementById("configDetalle");
+            if (caja && !caja.classList.contains("oculto") && caja.dataset.seccion) ultimo.seccionMas = caja.dataset.seccion;
+            else delete ultimo.seccionMas;
+        }
+        if (ultimo && clave(ultimo) === clave(ahora)) {
+            camino[camino.length - 1] = ahora;
+            return;
+        }
+        if (seccion.id === "pantallaMenu") {
+            camino.length = 0;
+            camino.push(ahora);
+            return;
+        }
+        const yaEstaba = camino.findIndex(paso => clave(paso) === clave(ahora));
+        if (yaEstaba >= 0) camino.length = yaEstaba;
+        // Del Nuevo pedido a la lista de Pedidos (con su flecha o al
+        // guardar): el pedido ya no es un paso para volver.
+        else if (ultimo && clave(ultimo) === "pantallaPedido:nuevo" && clave(ahora) === "pantallaPedido:pedidos") camino.pop();
+        camino.push(ahora);
+        if (camino.length > 20) camino.splice(0, camino.length - 20);
     }
 
+    // La flecha de arriba saca de esta pantalla (no es un paso de adentro).
+    function vaAOtraPantalla(seccion, boton) {
+        if (!boton) return true;
+        if (seccion.id === "pantallaConfiguracion") return !seVe(document.getElementById("configDetalle"));
+        // Nuevo pedido: su flecha lleva a la lista de Pedidos (en la nube) o a
+        // Inicio; el atrás vuelve a donde estabas antes de empezarlo.
+        if (boton.id === "cerrarCargaPedido" || boton.matches(".botonVolverPedidos")) return true;
+        return boton.matches(".volverGenerico, [data-volver]") && boton.dataset.volver !== "propio";
+    }
+
+    function volverALaAnterior() {
+        anotarPantalla();
+        const anterior = camino[camino.length - 2];
+        if (!anterior || typeof mostrarPantalla !== "function") return false;
+        if (anterior.pantalla === "pantallaMenu") {
+            mostrarPantalla("menu");
+            return true;
+        }
+        try {
+            return abrirPantalla(anterior);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // Se mira solo lo que cambia arriba de todo: las pantallas y ventanas
+    // que se agregan al cuerpo y su clase (no lo de adentro), y la vista de Pedidos.
     let pedido = false;
     function pedirRevisar() {
         if (pedido) return;
@@ -487,7 +549,7 @@
         if (elemento.nodeType !== 1 || miradas.has(elemento)) return;
         if (!elemento.matches('section[id^="pantalla"], .tutorialCapa, ' + CAPAS)) return;
         miradas.add(elemento);
-        vigiaClases.observe(elemento, { attributes: true, attributeFilter: ["class", "hidden"] });
+        vigiaClases.observe(elemento, { attributes: true, attributeFilter: ["class", "hidden", "data-vista"] });
     }
     new MutationObserver(cambios => {
         cambios.forEach(cambio => cambio.addedNodes.forEach(mirar));

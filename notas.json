@@ -2,12 +2,20 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
-      "version": 239,
+      "version": 240,
       "fecha": "2026-10-27",
       "tipo": "nuevo",
       "icono": "chispa",
       "titulo": "Notas de cambios",
       "texto": "Tocá la tarjeta «Hay una versión nueva» y ves qué cambió, como en los juegos."
+    },
+    {
+      "version": 239,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "flechaIzquierda",
+      "titulo": "El atrás desanda el camino",
+      "texto": "En cualquier pantalla, el atrás del celular vuelve por donde viniste, paso a paso."
     },
     {
       "version": 238,
