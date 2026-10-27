@@ -47,3 +47,60 @@ test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page 
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await expect(aviso).toHaveCount(0);
 });
+
+// Mantener apretado el + abre el menú rápido (hoja desde abajo); el toque
+// corto sigue abriendo Nuevo pedido.
+async function mantenerApretado(page, localizador) {
+    const caja = await localizador.boundingBox();
+    await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(650);
+    await page.mouse.up();
+}
+
+test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) => {
+    await entrarSinCuenta(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    const mas = page.locator(".bottom-nav .nav-nuevo");
+
+    // Sin pedidos guardados: no ofrece repetir.
+    await mantenerApretado(page, mas);
+    const hoja = page.locator(".hojaMenuRapido");
+    await expect(hoja).toBeVisible();
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    await expect(hoja.getByRole("button", { name: /Repetir el último pedido/ })).toHaveCount(0);
+    const proxima = (await page.locator("#dashProximaParada .paradaInfo strong").textContent()).trim();
+    await expect(hoja.getByRole("button", { name: /Pedido para / })).toContainText(proxima);
+    await capturar(page, "agilidad-02-menu-rapido");
+
+    // Pedido para la próxima parada: Nuevo pedido con ese comercio.
+    await hoja.getByRole("button", { name: /Pedido para / }).click();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await expect(page.locator("#cliente")).toHaveValue(proxima);
+    if (await page.locator(".tituloMarca").first().getAttribute("aria-expanded") === "false") {
+        await page.locator(".tituloMarca").first().click();
+    }
+    await page.locator(".listaProdutos .fila").first().getByRole("button", { name: "Aumentar cantidad" }).click();
+    await page.locator("#generar").click();
+    const ventana = page.locator("#modalPedido");
+    await expect(ventana).toBeVisible();
+    await ventana.click({ position: { x: 10, y: 10 } });
+    await page.locator("#cerrarCargaPedido").click();
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+
+    // Repetir el último pedido: lo carga igual en Nuevo pedido.
+    await mantenerApretado(page, mas);
+    await expect(hoja.getByRole("button", { name: /Repetir el último pedido/ })).toContainText(proxima);
+    await hoja.getByRole("button", { name: /Repetir el último pedido/ }).click();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await expect(page.locator("#cliente")).toHaveValue(proxima);
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("1");
+    await page.getByRole("button", { name: "Entendido" }).click();
+    await page.locator("#cerrarCargaPedido").click();
+
+    // El toque corto abre Nuevo pedido, como siempre.
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    await mas.click();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await expect(page.locator(".hojaMenuRapido")).toHaveCount(0);
+});

@@ -660,7 +660,114 @@
     }
     setTimeout(() => { try { avisoMedioCargado(); } catch (error) { /* nada */ } }, 0);
 
+    // ---------- Menú rápido del + ----------
+    // Mantener apretado el + de la barra abre una hoja con lo de todos los
+    // días: pedido para la próxima parada, repetir el último y cobrar. El
+    // toque corto sigue abriendo Nuevo pedido, como siempre.
+    function proximaParada() {
+        try {
+            const navegacion = window.navegacionVendeFrio;
+            if (navegacion && (navegacion.abierta() || navegacion.minimizada())) {
+                const parada = navegacion.paradaActual();
+                const nombre = parada && (parada.nombre || parada.comercio?.nombre);
+                if (nombre) return { nombre, texto: "La parada de tu recorrido" };
+            }
+        } catch (error) {
+            // sin navegación: va la de Inicio
+        }
+        const nombre = document.querySelector("#dashProximaParada .paradaInfo strong")?.textContent?.trim();
+        return nombre ? { nombre, texto: "Tu próxima parada" } : null;
+    }
+
+    function ultimoPedido() {
+        if (typeof pedidosQueCuentanParaLeer !== "function") return null;
+        const historial = pedidosQueCuentanParaLeer();
+        const yo = typeof usaNubeReal === "function" && usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
+        const ultimo = yo ? historial.find(pedido => !pedido.autor || pedido.autor.idPersona === yo.idPersona) : historial[0];
+        if (!ultimo || (!ultimo.pedido && !Array.isArray(ultimo.productos))) return null;
+        return ultimo;
+    }
+
+    function accesoCobrar() {
+        const acceso = (window.accesosMasExtras || []).find(item => item && item.destino === "aCobrar");
+        try {
+            return acceso && (!acceso.mostrar || acceso.mostrar()) ? acceso : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function abrirMenuRapido() {
+        const parada = proximaParada();
+        const ultimo = ultimoPedido();
+        const cobrar = accesoCobrar();
+        const opcion = (clave, icono, titulo, texto) => `<button type="button" class="pzOpcion" data-rapido="${clave}">${p.ico(icono, 22)}<span>${p.esc(titulo)}${texto ? `<small class="opcionRapidaSub">${p.esc(texto)}</small>` : ""}</span></button>`;
+        const unidades = ultimo ? Number(ultimo.cantidad) || 0 : 0;
+        const caja = p.hoja({
+            titulo: "Rápido",
+            etiqueta: "Menú rápido",
+            clase: "hojaMenuRapido",
+            html: `<div class="pzOpciones">
+                ${parada ? opcion("parada", "navegar", "Pedido para " + parada.nombre, parada.texto) : ""}
+                ${ultimo ? opcion("repetir", "refrescar", "Repetir el último pedido", ultimo.comercio + (unidades ? " · " + unidades + (unidades === 1 ? " unidad" : " unidades") : "")) : ""}
+                ${cobrar ? opcion("cobrar", "moneda", "Cobrar", "A cobrar, por comercio") : ""}
+                ${opcion("nuevo", "documento", "Pedido nuevo vacío", "")}
+            </div>`
+        });
+        caja.addEventListener("click", evento => {
+            const elegida = evento.target.closest("[data-rapido]")?.dataset.rapido;
+            if (!elegida) return;
+            p.cerrar();
+            setTimeout(() => {
+                if (elegida === "parada" && typeof irAPedidoRapido === "function") irAPedidoRapido(parada.nombre);
+                if (elegida === "repetir") {
+                    window.abrirNuevoPedido?.();
+                    if (typeof repetirUltimoPedido === "function") repetirUltimoPedido();
+                }
+                if (elegida === "cobrar") cobrar.abrir();
+                if (elegida === "nuevo") window.abrirNuevoPedido?.();
+            }, 0);
+        });
+        return caja;
+    }
+
+    const botonMas = document.querySelector('.bottom-nav .nav-nuevo');
+    if (botonMas) {
+        let reloj = null;
+        let inicio = null;
+        let abrioMenu = false;
+        const soltar = () => {
+            clearTimeout(reloj);
+            reloj = null;
+        };
+        botonMas.addEventListener("pointerdown", evento => {
+            if (evento.button > 0) return;
+            abrioMenu = false;
+            inicio = { x: evento.clientX, y: evento.clientY };
+            soltar();
+            reloj = setTimeout(() => {
+                reloj = null;
+                abrioMenu = true;
+                if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(20);
+                abrirMenuRapido();
+            }, 450);
+        });
+        botonMas.addEventListener("pointermove", evento => {
+            if (reloj && inicio && Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) > 12) soltar();
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach(tipo => botonMas.addEventListener(tipo, soltar));
+        // El toque que abrió el menú no abre además Nuevo pedido.
+        botonMas.addEventListener("click", evento => {
+            if (!abrioMenu) return;
+            abrioMenu = false;
+            evento.preventDefault();
+            evento.stopImmediatePropagation();
+        }, true);
+        botonMas.setAttribute("title", "Mantené apretado para el menú rápido");
+    }
+
     window.nuevoPedidoVendeFrio = {
+        abrirMenuRapido,
         precioCambiado, puedeCambiarPrecio, ajustarProductos, textoParaMensaje, alGuardar,
         anotarCambio, elegirFecha, editarPrecio, abrirOpciones, detalleDe, textoFecha,
         listaElegida, elegirLista, hayListas,

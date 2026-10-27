@@ -1071,3 +1071,7 @@ html body > section > header > .campanaAvisos{width:44px;height:44px;}
 /* En Más la cabecera tenía 12 px entre botones y las demás 14: la campana
    quedaba 2 px corrida. Mismo espacio en todas. */
 html #pantallaConfiguracion .configHeader{gap:14px;}
+
+/* Menú rápido del + (mantener apretado): cada opción con su detalle abajo. */
+.hojaMenuRapido .pzOpcion{min-height:62px;padding-top:6px;padding-bottom:6px;}
+.opcionRapidaSub{display:block;color:var(--texto-sec);font-size:14px;font-weight:500;margin-top:2px;}
