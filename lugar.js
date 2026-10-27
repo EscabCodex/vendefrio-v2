@@ -10,7 +10,8 @@
 // 2) El botón (o el gesto) "atrás" del celular cierra la hoja o ventana de
 //    arriba, o vuelve a la pantalla anterior, igual que la flecha de arriba,
 //    en vez de cerrar la app. En Inicio, sin nada abierto, la cierra como
-//    siempre. En plena navegación no la corta.
+//    siempre. En plena navegación no la corta, ni con la navegación
+//    minimizada en la burbuja (el atrás la trae de vuelta).
 // =====================================================
 (function () {
     const CLAVE = "vendefrio_lugar";
@@ -283,17 +284,48 @@
     // Mientras haya algo para cerrar o no se esté en Inicio, arriba de la
     // historia queda una entrada nuestra ("guardia"): el atrás la saca, y en
     // vez de cerrar la app se da un paso atrás adentro.
+    // Chrome se saltea las entradas que una página agrega sin que la persona
+    // haya tocado nada: si la guardia se volviera a agregar después de cada
+    // atrás, el segundo atrás seguido cerraría la app. Por eso, después de
+    // un atrás no se agrega otra: se vuelve "adelante" a la misma guardia,
+    // que se agregó con un toque. Solo se agrega una nueva si no hay.
     let guardia = Boolean(window.history.state && window.history.state.vendefrio === "guardia");
     let ignorarVuelta = false;
     let relojIgnorar = null;
+    // Se acaba de salir de la guardia con un atrás: está "adelante".
+    let guardiaAdelante = false;
+    let yendoAdelante = false;
+    let relojAdelante = null;
+
+    // "abierta" (en pantalla) o "minimizada" (en la burbuja).
+    function navegacion(estado) {
+        try {
+            return Boolean(window.navegacionVendeFrio?.[estado]?.());
+        } catch (error) {
+            return false;
+        }
+    }
 
     function enLaBase() {
         if (tutorialAbierto() || capaDeArriba()) return false;
+        // Navegando, aunque esté minimizada, el atrás no cierra la app.
+        if (navegacion("abierta") || navegacion("minimizada")) return false;
         const seccion = pantallaVisible();
         return !seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion";
     }
 
+    function agregarGuardia() {
+        try {
+            window.history.pushState({ vendefrio: "guardia" }, "");
+            guardia = true;
+            guardiaAdelante = false;
+        } catch (error) {
+            // Sin historia: el atrás sigue como antes.
+        }
+    }
+
     function revisarGuardia() {
+        if (yendoAdelante) return;
         if (enLaBase()) {
             if (!guardia) return;
             guardia = false;
@@ -313,11 +345,25 @@
             return;
         }
         if (guardia) return;
+        if (!guardiaAdelante) {
+            agregarGuardia();
+            return;
+        }
+        yendoAdelante = true;
+        clearTimeout(relojAdelante);
+        // Si en un ratito no llegó, se agrega una nueva como antes.
+        relojAdelante = setTimeout(() => {
+            if (!yendoAdelante) return;
+            yendoAdelante = false;
+            guardiaAdelante = false;
+            revisarGuardia();
+        }, 600);
         try {
-            window.history.pushState({ vendefrio: "guardia" }, "");
-            guardia = true;
+            window.history.forward();
         } catch (error) {
-            // Sin historia: el atrás sigue como antes.
+            clearTimeout(relojAdelante);
+            yendoAdelante = false;
+            agregarGuardia();
         }
     }
 
@@ -347,23 +393,41 @@
             cerrarCapa(capa);
             return;
         }
-        const seccion = pantallaVisible();
-        if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") return;
         // En plena navegación, un atrás sin querer no la corta.
+        if (navegacion("abierta")) return;
+        const seccion = pantallaVisible();
+        if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") {
+            // En Inicio con la navegación en la burbuja: la trae de vuelta.
+            if (navegacion("minimizada")) window.navegacionVendeFrio.restaurar();
+            return;
+        }
         if (seccion.id === "pantallaNavegacion") return;
+        // Lo que se abrió desde Más (A cobrar, Historial, Rutas...) vuelve a
+        // Más, aunque su flecha de arriba lleve a Inicio.
+        if (vinoDe[seccion.id] === "pantallaConfiguracion" && typeof mostrarPantalla === "function") {
+            mostrarPantalla("mas");
+            return;
+        }
         const boton = botonVolverDe(seccion);
         if (boton) boton.click();
         else if (typeof mostrarPantalla === "function") mostrarPantalla("menu");
     }
 
     window.addEventListener("popstate", evento => {
+        if (evento.state && evento.state.vendefrio === "guardia") {
+            guardia = true;
+            guardiaAdelante = false;
+            yendoAdelante = false;
+            clearTimeout(relojAdelante);
+            // Mientras se volvía adelante pudo haberse cerrado lo último.
+            pedirRevisar();
+            return;
+        }
+        // Se salió de la guardia: quedó adelante, para volver sin agregar otra.
+        guardiaAdelante = true;
         if (ignorarVuelta) {
             ignorarVuelta = false;
             clearTimeout(relojIgnorar);
-            return;
-        }
-        if (evento.state && evento.state.vendefrio === "guardia") {
-            guardia = true;
             return;
         }
         guardia = false;
@@ -379,6 +443,16 @@
         setTimeout(revisarGuardia, 260);
     });
 
+    // De qué pantalla se llegó a cada una, para volver a esa.
+    const vinoDe = {};
+    let pantallaAntes = null;
+    function anotarPantalla() {
+        const id = pantallaVisible()?.id || null;
+        if (!id || id === pantallaAntes) return;
+        vinoDe[id] = pantallaAntes;
+        pantallaAntes = id;
+    }
+
     // Se mira solo lo que cambia arriba de todo: las pantallas y ventanas
     // que se agregan al cuerpo y su clase (no lo de adentro).
     let pedido = false;
@@ -387,6 +461,7 @@
         pedido = true;
         requestAnimationFrame(() => {
             pedido = false;
+            anotarPantalla();
             revisarGuardia();
         });
     }
