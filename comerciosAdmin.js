@@ -430,9 +430,23 @@ function renderizarComercios() {
             estado.title = "Archivado: no aparece para visitar";
         }
 
+        // Lo que debe, abajo de Pendiente o Visitado (informe del desconocido;
+        // solo para quien cobra, lo calcula "A cobrar").
+        const debe = window.saldosVendeFrio?.deudaDe?.(comercio.nombre) || 0;
+        let chips = estado;
+        if (debe > 0) {
+            chips = document.createElement("span");
+            chips.className = "chipsComercio";
+            const deuda = document.createElement("span");
+            deuda.className = "chipEstado chipDebe";
+            deuda.dataset.tono = "peligro";
+            deuda.textContent = "Debe " + window.piezas.plata(debe);
+            chips.append(estado, deuda);
+        }
+
         const filaTitulo = document.createElement("div");
         filaTitulo.className = "filaTituloComercio";
-        filaTitulo.append(titulo, estado);
+        filaTitulo.append(titulo, chips);
         informacion.append(filaTitulo, datosComercio);
         cabecera.append(avatar, informacion);
         card.appendChild(cabecera);

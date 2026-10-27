@@ -4,7 +4,7 @@
 // Valhalla no contesta, va el OSRM de respaldo.
 // Los dos servidores los contesta la prueba, así no hace falta internet.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -84,7 +84,7 @@ async function prepararServidores(page, valhallaContesta) {
 
 // Más > Cómo hacés el recorrido: Moto y Valhalla.
 async function elegirValhallaEnMoto(page) {
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="navegacion"]').click();
     const detalle = page.locator("#configDetalle");
     await expect(detalle).toBeVisible();

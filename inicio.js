@@ -246,14 +246,15 @@
         const comercios = leerLocal(DB_COMERCIOS);
         if (comercios !== undefined) {
             if (!Array.isArray(comercios)) return true;
-            if (nombresDeComercios(comercios) !== nombresDeComercios(COMERCIOS)) return true;
+            // Vacío (un celular nuevo) o la lista de fábrica de antes: no son datos propios.
+            if (comercios.length && nombresDeComercios(comercios) !== nombresDeComercios(COMERCIOS)) return true;
             if (!comercios.every(esComoEjemplo)) return true;
         }
 
         const productos = leerLocal(DB_PRODUCTOS);
         if (productos !== undefined) {
             if (!productos || typeof productos !== "object" || Array.isArray(productos)) return true;
-            if (nombresDeProductos(productos) !== nombresDeProductos(PRODUCTOS)) return true;
+            if (Object.keys(productos).length && nombresDeProductos(productos) !== nombresDeProductos(PRODUCTOS)) return true;
 
             const todosComoEjemplo = Object.keys(productos).every(marca =>
                 Array.isArray(productos[marca]) && productos[marca].every(esComoEjemplo)
@@ -947,6 +948,9 @@
 
         const desdeConfiguracion = personalDesdeConfiguracion;
         mostrarError(formulario, "");
+        // Arranca vacío: el tutorial enseña a cargar lo suyo, como al crear
+        // una cuenta (informe del desconocido).
+        if (!desdeConfiguracion && !celularTieneDatosPropios()) window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
         recordarSinSesion();
         cerrar();
         mostrarCartelPersonal();

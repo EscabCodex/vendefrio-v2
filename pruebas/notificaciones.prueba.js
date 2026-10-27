@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
-const { abrirMas, elegirComercio } = require("./recorridos");
+const { abrirMas, abrirAjustes, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -154,7 +154,7 @@ async function cargarPedido(page, comercio) {
 }
 
 async function abrirConfiguracionEn(page, seccion) {
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 

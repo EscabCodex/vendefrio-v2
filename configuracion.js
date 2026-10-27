@@ -347,6 +347,39 @@
         return `<p class="ajNota" data-tono="${tono}" ${extra}>${ico(tono === "alerta" ? "alerta" : "info", 16)}<span>${texto}</span></p>`;
     }
 
+    const filaMas = (seccion, icono, titulo, extra = "") => `
+                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
+                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
+                        <strong>${titulo}</strong>
+                        <small class="configValor" data-valor="${seccion}"></small>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                    </button>`;
+
+    // Todos los ajustes juntos, en su propia sección de Más.
+    function htmlAjustes() {
+        const fila = filaMas;
+        return `
+                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
+                    <div class="configLista">
+                        ${fila("avisos", "campana", "Qué avisos recibir", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("navegacion", "bicicleta", "Recorrido")}
+                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
+                    </div>
+
+                    <h2 class="configGrupoTitulo">Distribuidora</h2>
+                    <div class="configLista">
+                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("respaldo", "nube", "Datos y respaldo")}
+                    </div>
+
+                    <h2 class="configGrupoTitulo">App</h2>
+                    <div class="configLista">
+                        ${fila("apariencia", "luna", "Apariencia")}
+                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                    </div>`;
+    }
+
     function crear() {
         if (pantalla()) return pantalla();
 
@@ -355,14 +388,8 @@
         elemento.className = "oculto pantallaConfiguracion";
 
         // "Más" (T31): la persona y la conexión arriba, los accesos a otras
-        // secciones y la configuración en grupos, con filas de una línea.
-        const fila = (seccion, icono, titulo, extra = "") => `
-                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
-                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
-                        <strong>${titulo}</strong>
-                        <small class="configValor" data-valor="${seccion}"></small>
-                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
-                    </button>`;
+        // secciones y, abajo, una sola fila "Ajustes" (informe del desconocido,
+        // opción A que eligió el dueño).
 
         elemento.innerHTML = `
             <header class="configHeader">
@@ -388,24 +415,13 @@
 
                     <div class="masGruposAccesos" id="masAccesos"></div>
 
-                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
+                    <h2 class="configGrupoTitulo">Ajustes</h2>
                     <div class="configLista">
-                        ${fila("avisos", "campana", "Qué avisos recibir", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("navegacion", "bicicleta", "Recorrido")}
-                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
-                    </div>
-
-                    <h2 class="configGrupoTitulo">Distribuidora</h2>
-                    <div class="configLista">
-                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("respaldo", "nube", "Datos y respaldo")}
-                    </div>
-
-                    <h2 class="configGrupoTitulo">App</h2>
-                    <div class="configLista">
-                        ${fila("apariencia", "luna", "Apariencia")}
-                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                        <button class="configFila configFilaAjustes" data-config-seccion="ajustes" id="configFilaAjustes">
+                            <span class="configIcono" data-color="trabajo">${window.icono("engranaje", 20)}</span>
+                            <span class="configFilaTexto"><strong>Ajustes</strong><small>Recorrido, impresora, empleados, respaldo, apariencia y ayuda</small></span>
+                            <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                        </button>
                     </div>
                 </div>
 
@@ -582,21 +598,21 @@
                     try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
                 })
             ].filter(Boolean);
-            // Etapa 8: en tres grupos con título. Lo que no está en la lista va a Herramientas.
-            const GRUPOS = [
-                ["Plata", ["aCobrar", "cierre"]],
-                ["Ventas", ["estadisticas", "mapaVentas", "cambios", "historial"]],
-                ["Herramientas", []]
-            ];
-            const conocidos = GRUPOS.flatMap(([, destinos]) => destinos);
-            accesos.innerHTML = GRUPOS.map(([titulo, destinos]) => {
-                const delGrupo = destinos.length
-                    ? destinos.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean)
-                    : lista.filter(acceso => !conocidos.includes(acceso.destino));
-                if (!delGrupo.length) return "";
-                return `<h2 class="configGrupoTitulo masGrupoTitulo">${titulo}</h2><div class="masAccesos">` +
-                    delGrupo.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>";
-            }).join("");
+            // Informe del desconocido (opción A del dueño): lo de todos los
+            // días en cuadros grandes y el resto de las herramientas en una lista.
+            const DIARIOS = ["aCobrar", "cierre", "estadisticas", "rutas", "whatsapp", "listasPrecios"];
+            const ORDEN_HERRAMIENTAS = ["mapaVentas", "historial", "cambios", "importar"];
+            const diarios = DIARIOS.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean);
+            const posicion = destino => { const i = ORDEN_HERRAMIENTAS.indexOf(destino); return i < 0 ? ORDEN_HERRAMIENTAS.length : i; };
+            const herramientas = lista.filter(acceso => !DIARIOS.includes(acceso.destino))
+                .sort((a, b) => posicion(a.destino) - posicion(b.destino));
+            const filaHerramienta = (destino, icono, texto) =>
+                `<button type="button" class="configFila masFila" data-mas="${destino}"><span class="configIcono" data-color="${destino}">${window.icono(icono, 20)}</span><strong>${texto}</strong><b aria-hidden="true">${window.icono("chevDerecha", 18)}</b></button>`;
+            accesos.innerHTML =
+                (diarios.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">Lo de todos los días</h2><div class="masAccesos">` +
+                    diarios.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "") +
+                (herramientas.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">Más herramientas</h2><div class="configLista masHerramientas">` +
+                    herramientas.map(acceso => filaHerramienta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "");
         }
 
         const valores = {
@@ -2003,7 +2019,8 @@
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
             navegacion: ["Cómo hacés el recorrido", "Vehículo, navegación y voz"],
-            seguridad: ["Seguridad y aplicación", "Información y permisos"]
+            seguridad: ["Seguridad y aplicación", "Información y permisos"],
+            ajustes: ["Ajustes", "Cómo trabajás, tu distribuidora y la app"]
         };
 
         caja.innerHTML = `
@@ -2015,6 +2032,10 @@
 
         if (seccion === "cuenta") {
             caja.innerHTML += htmlCuenta();
+        }
+
+        if (seccion === "ajustes") {
+            caja.innerHTML += `<div class="configMenuAjustes">${htmlAjustes()}</div>`;
         }
 
         if (seccion === "empleados") {
@@ -2178,15 +2199,23 @@
             else control.value = valor;
         });
         dibujarMuestraTexto(caja);
+        if (seccion === "ajustes") {
+            actualizarFilasSegunCuenta();
+            actualizarMas();
+        }
 
         menu.classList.add("oculto");
         caja.classList.remove("oculto");
     }
 
+    // Una sección abierta desde Ajustes vuelve a Ajustes, no a Más.
+    let volverAAjustes = false;
+
     document.addEventListener("click", event => {
         const fila = event.target.closest("[data-config-seccion]");
 
         if (fila) {
+            volverAAjustes = Boolean(fila.closest(".configMenuAjustes"));
             detalle(fila.dataset.configSeccion);
             // La sección abre desde arriba, con el título a la vista, aunque
             // la lista de Más estuviera bajada (pedido del dueño, 2026-10-26).
@@ -2199,7 +2228,10 @@
             mostrarPantalla("menu");
         }
 
-        if (event.target.closest(".configSubVolver")) {
+        if (event.target.closest(".configSubVolver") && volverAAjustes && seccionAbierta !== "ajustes") {
+            volverAAjustes = false;
+            detalle("ajustes");
+        } else if (event.target.closest(".configSubVolver")) {
             document.getElementById("configDetalle")
                 ?.classList.add("oculto");
 

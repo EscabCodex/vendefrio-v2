@@ -8,6 +8,13 @@ const DB_PRODUCTOS = "vendefrio_productos";
 const DB_ORDEN_MARCAS = "vendefrio_orden_marcas";
 const DB_HISTORIAL = "vendefrio_historial";
 const DB_RUTAS_GUARDADAS = "vendefrio_rutas_guardadas";
+
+// Un celular nuevo arranca vacío, con el tutorial (pedido del dueño, informe
+// del desconocido). COMERCIOS y PRODUCTOS (comercios.js, productos.js) son la
+// lista de fábrica de antes: los celulares que ya la tienen guardada la
+// conservan, e inicio.js la usa para saber si son datos propios.
+const COMERCIOS_INICIALES = [];
+const PRODUCTOS_INICIALES = {};
 const DB_ULTIMO_RESPALDO = "vendefrio_ultimo_respaldo";
 const DB_RESPALDO_AUTOMATICO = "vendefrio_respaldo_automatico";
 const DB_ULTIMO_RESPALDO_AUTOMATICO = "vendefrio_ultimo_respaldo_automatico";
@@ -889,10 +896,10 @@ function asignarIdsProductos(productos) {
 // -----------------------------------------------------
 
 function obtenerComercios() {
-    let comercios = leerColeccion("comercios", COMERCIOS);
+    let comercios = leerColeccion("comercios", COMERCIOS_INICIALES);
 
     if (!Array.isArray(comercios)) {
-        comercios = clonarDatos(COMERCIOS);
+        comercios = clonarDatos(COMERCIOS_INICIALES);
     }
 
     // Limpia registros inv\u00e1lidos sin borrar datos \u00fatiles.
@@ -952,11 +959,11 @@ function comercioNormalizadoParaLeer(comercio) {
 }
 
 function comerciosParaLeer() {
-    // La primera vez, obtenerComercios() guarda los de ejemplo.
+    // La primera vez, obtenerComercios() guarda la lista inicial (vacía).
     if (!existeColeccion("comercios")) obtenerComercios();
     return recordarHastaQueCambie("comerciosParaLeer", ["comercios"], () => {
-        let comercios = leerColeccionParaLeer("comercios", COMERCIOS);
-        if (!Array.isArray(comercios)) comercios = congelarDatos(clonarDatos(COMERCIOS));
+        let comercios = leerColeccionParaLeer("comercios", COMERCIOS_INICIALES);
+        if (!Array.isArray(comercios)) comercios = congelarDatos(clonarDatos(COMERCIOS_INICIALES));
         return Object.freeze(comercios
             .filter(comercio => comercio && typeof comercio === "object")
             .map(comercioNormalizadoParaLeer)
@@ -1096,10 +1103,10 @@ function camposExtraDeProducto(producto) {
 }
 
 function obtenerProductos() {
-    let productos = leerColeccion("productos", PRODUCTOS);
+    let productos = leerColeccion("productos", PRODUCTOS_INICIALES);
 
     if (!productos || typeof productos !== "object" || Array.isArray(productos)) {
-        productos = clonarDatos(PRODUCTOS);
+        productos = clonarDatos(PRODUCTOS_INICIALES);
     }
 
     const productosLimpios = {};
@@ -1147,11 +1154,11 @@ function productoNormalizadoParaLeer(producto) {
 }
 
 function productosParaLeer() {
-    // La primera vez, obtenerProductos() guarda los de ejemplo.
+    // La primera vez, obtenerProductos() guarda la lista inicial (vacía).
     if (!existeColeccion("productos")) obtenerProductos();
     return recordarHastaQueCambie("productosParaLeer", ["productos"], () => {
-        let productos = leerColeccionParaLeer("productos", PRODUCTOS);
-        if (!productos || typeof productos !== "object" || Array.isArray(productos)) productos = congelarDatos(clonarDatos(PRODUCTOS));
+        let productos = leerColeccionParaLeer("productos", PRODUCTOS_INICIALES);
+        if (!productos || typeof productos !== "object" || Array.isArray(productos)) productos = congelarDatos(clonarDatos(PRODUCTOS_INICIALES));
         const limpios = {};
         Object.keys(productos).forEach(marca => {
             const nombreMarca = String(marca || "").trim();

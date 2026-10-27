@@ -159,6 +159,7 @@ test("raros: las letras sobre el color principal se leen", async ({ page }) => {
 
     // Más > Apariencia: el "Ir" de la vista previa.
     await page.locator(".bottom-nav").getByRole("button", { name: "Más" }).click();
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     const ir = page.locator("#configDetalle .ajVistaBoton").first();
     await expect(ir).toBeVisible();

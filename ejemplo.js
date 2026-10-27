@@ -11,14 +11,15 @@
     const DIA = 86400000;
 
     // Una distribuidora inventada y completa (pedido del dueño, informe "visto
-    // por un desconocido"): todo con precio, un solo rubro y comercios con
-    // dirección, teléfono y GPS. "stock" deja ver el stock simple (T90).
+    // por un desconocido"): un solo rubro, todo con precio, y cada casilla de
+    // la app usada: stock (T90), código de barras, listas de precios (T78),
+    // una oferta (T68), los datos de la ficha y dos rutas guardadas.
     const MARCAS = {
         "Frío Sur": [
             ["Helado 1 kg", 4500, 40], ["Helado 1/2 kg", 2600, 35], ["Helado 1/4 kg", 1600, 60],
             ["Palito bombón", 800, 120], ["Palito de agua", 500, 150], ["Cucurucho", 1200, 80]
         ],
-        "Frío Sur Postres": [
+        "Dulce Polar": [
             ["Torta helada", 6800, 12], ["Almendrado", 5200, 7], ["Bombón suizo", 900, 70], ["Copa helada", 1500, 30]
         ],
         "Hielo Austral": [
@@ -26,21 +27,29 @@
         ]
     };
     const MARCA = "Frío Sur";
+    // Kioscos paga un poco más y Supermercados un poco menos que la general.
+    const LISTAS = { Kioscos: 1.05, Supermercados: 0.92 };
+    const EN_OFERTA = { nombre: "Cucurucho", precio: 990, dias: 5 };
     const PRODUCTOS = Object.values(MARCAS).flat().map(([nombre, precio]) => [nombre, precio]);
     const MARCA_DE = Object.fromEntries(Object.entries(MARCAS).flatMap(([marca, lista]) => lista.map(([nombre]) => [nombre, marca])));
     const COMERCIOS = [
-        { nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "11 5555-1234", lat: -34.6045, lng: -58.3790, cada: 7, pide: [["Helado 1 kg", 3], ["Palito bombón", 20], ["Bolsa de hielo 2 kg", 4]] },
-        { nombre: "Kiosco Luna", direccion: "Belgrano 45", telefono: "11 4000-1111", lat: -34.6010, lng: -58.3810, cada: 4, pide: [["Palito de agua", 30], ["Cucurucho", 10]] },
-        { nombre: "Despensa Mary", direccion: "Mitre 900", telefono: "11 4444-2222", lat: -34.6080, lng: -58.3860, cada: 7, deja: 16, pide: [["Helado 1 kg", 2], ["Helado 1/4 kg", 6]] },
-        { nombre: "Maxikiosco 24", direccion: "Rivadavia 2100", telefono: "11 3333-7777", lat: -34.6098, lng: -58.3950, cada: 10, pide: [["Torta helada", 2], ["Palito bombón", 15]] },
-        { nombre: "Granja El Sol", direccion: "Moreno 550", telefono: "11 6666-0101", lat: -34.6125, lng: -58.3735, cada: 14, pide: [["Helado 1 kg", 4], ["Cucurucho", 12]] },
-        { nombre: "Autoservicio La Esquina", direccion: "Av. Corrientes 1450", telefono: "11 4321-5678", lat: -34.6037, lng: -58.3880, cada: 7, pide: [["Helado 1/2 kg", 6], ["Bombón suizo", 24], ["Bolsa de hielo 5 kg", 3]] },
-        { nombre: "Kiosco El Faro", direccion: "Tucumán 780", telefono: "11 4123-9090", lat: -34.6020, lng: -58.3770, cada: 5, pide: [["Palito bombón", 25], ["Palito de agua", 20]] },
-        { nombre: "Almacén Doña Rosa", direccion: "Sarmiento 1220", telefono: "11 4777-3030", lat: -34.6055, lng: -58.3905, cada: 7, deja: 9, pide: [["Helado 1/4 kg", 8], ["Almendrado", 2]] },
-        { nombre: "Súper Tres Hermanos", direccion: "Av. Callao 300", telefono: "11 4950-2020", lat: -34.6070, lng: -58.3925, cada: 7, pide: [["Helado 1 kg", 6], ["Torta helada", 3], ["Copa helada", 12]] },
-        { nombre: "Rotisería La Estación", direccion: "Lavalle 1600", telefono: "11 4372-1188", lat: -34.6030, lng: -58.3895, cada: 14, pide: [["Bolsa de hielo 5 kg", 6], ["Helado 1/2 kg", 4]] },
-        { nombre: "Kiosco Plaza", direccion: "Paraná 450", telefono: "11 4811-4545", lat: -34.6040, lng: -58.3920, cada: 4, pide: [["Palito de agua", 25], ["Cucurucho", 8], ["Bombón suizo", 12]] },
-        { nombre: "Mercadito Los Pinos", direccion: "Uruguay 950", telefono: "11 4816-6060", lat: -34.6005, lng: -58.3860, cada: 10, deja: 21, pide: [["Helado 1 kg", 3], ["Copa helada", 10]] }
+        { nombre: "Almacén Don Pepe", datos: { horario: "Lun a sáb · 8 a 13 y 17 a 21", diaVisita: "Lunes", contacto: "José Pérez", nota: "Descargar por el costado. El freezer grande está al fondo.", envases: { tiene: 3, devolvio: 1 }, listaPrecios: "Kioscos", topeDeuda: 40000 }, direccion: "San Martín 123", telefono: "11 5555-1234", lat: -34.6045, lng: -58.3790, cada: 7, pide: [["Helado 1 kg", 3], ["Palito bombón", 20], ["Bolsa de hielo 2 kg", 4]] },
+        { nombre: "Kiosco Luna", datos: { horario: "Todos los días · 7 a 23", diaVisita: "Lunes", contacto: "Luna Ríos", nota: "Pide más palitos los viernes.", listaPrecios: "Kioscos" }, direccion: "Belgrano 45", telefono: "11 4000-1111", lat: -34.6010, lng: -58.3810, cada: 4, pide: [["Palito de agua", 30], ["Cucurucho", 10]] },
+        { nombre: "Despensa Mary", datos: { horario: "Lun a sáb · 8 a 13", diaVisita: "Martes", contacto: "María Gómez", nota: "Paga en efectivo. Tocar timbre.", envases: { tiene: 2, devolvio: 2 }, topeDeuda: 25000 }, direccion: "Mitre 900", telefono: "11 4444-2222", lat: -34.6080, lng: -58.3860, cada: 7, deja: 16, pide: [["Helado 1 kg", 2], ["Helado 1/4 kg", 6]] },
+        { nombre: "Maxikiosco 24", datos: { horario: "Abierto las 24 horas", diaVisita: "Jueves", contacto: "Carlos Díaz", nota: "Estacionar en Rivadavia, la otra calle es mano única.", listaPrecios: "Kioscos" }, direccion: "Rivadavia 2100", telefono: "11 3333-7777", lat: -34.6098, lng: -58.3950, cada: 10, pide: [["Torta helada", 2], ["Palito bombón", 15]] },
+        { nombre: "Granja El Sol", datos: { horario: "Lun a sáb · 9 a 13 y 16 a 20", diaVisita: "Viernes", contacto: "Sol Martínez", nota: "Avisar por WhatsApp antes de ir." }, direccion: "Moreno 550", telefono: "11 6666-0101", lat: -34.6125, lng: -58.3735, cada: 14, pide: [["Helado 1 kg", 4], ["Cucurucho", 12]] },
+        { nombre: "Autoservicio La Esquina", datos: { horario: "Lun a dom · 8 a 22", diaVisita: "Lunes", contacto: "Wei Chen", nota: "Recibe por la puerta de atrás.", envases: { tiene: 4, devolvio: 0 }, listaPrecios: "Supermercados", topeDeuda: 80000 }, direccion: "Av. Corrientes 1450", telefono: "11 4321-5678", lat: -34.6037, lng: -58.3880, cada: 7, pide: [["Helado 1/2 kg", 6], ["Bombón suizo", 24], ["Bolsa de hielo 5 kg", 3]] },
+        { nombre: "Kiosco El Faro", datos: { horario: "Lun a vie · 7 a 21", diaVisita: "Martes", contacto: "Ana Torres", nota: "Cerca de la escuela: ir antes de las 12.", listaPrecios: "Kioscos" }, direccion: "Tucumán 780", telefono: "11 4123-9090", lat: -34.6020, lng: -58.3770, cada: 5, pide: [["Palito bombón", 25], ["Palito de agua", 20]] },
+        { nombre: "Almacén Doña Rosa", datos: { horario: "Lun a sáb · 8 a 13 y 17 a 20", diaVisita: "Jueves", contacto: "Rosa Fernández", nota: "Pide la torta helada para los cumpleaños del barrio." }, direccion: "Sarmiento 1220", telefono: "11 4777-3030", lat: -34.6055, lng: -58.3905, cada: 7, deja: 9, pide: [["Helado 1/4 kg", 8], ["Almendrado", 2]] },
+        { nombre: "Súper Tres Hermanos", datos: { horario: "Todos los días · 8 a 22", diaVisita: "Jueves", contacto: "Diego Rojas", nota: "Firma el remito el encargado.", envases: { tiene: 5, devolvio: 3 }, listaPrecios: "Supermercados", topeDeuda: 120000 }, direccion: "Av. Callao 300", telefono: "11 4950-2020", lat: -34.6070, lng: -58.3925, cada: 7, pide: [["Helado 1 kg", 6], ["Torta helada", 3], ["Copa helada", 12]] },
+        { nombre: "Rotisería La Estación", datos: { horario: "Mar a dom · 11 a 15 y 19 a 23", diaVisita: "Viernes", contacto: "Lucía Benítez", nota: "Usa mucho hielo los fines de semana." }, direccion: "Lavalle 1600", telefono: "11 4372-1188", lat: -34.6030, lng: -58.3895, cada: 14, pide: [["Bolsa de hielo 5 kg", 6], ["Helado 1/2 kg", 4]] },
+        { nombre: "Kiosco Plaza", datos: { horario: "Todos los días · 8 a 22", diaVisita: "Martes", contacto: "Martín Silva", nota: "Frente a la plaza, dejar en el mostrador.", listaPrecios: "Kioscos" }, direccion: "Paraná 450", telefono: "11 4811-4545", lat: -34.6040, lng: -58.3920, cada: 4, pide: [["Palito de agua", 25], ["Cucurucho", 8], ["Bombón suizo", 12]] },
+        { nombre: "Mercadito Los Pinos", datos: { horario: "Lun a sáb · 8 a 21", diaVisita: "Viernes", contacto: "Pablo Acosta", nota: "Paga con transferencia.", listaPrecios: "Supermercados" }, direccion: "Uruguay 950", telefono: "11 4816-6060", lat: -34.6005, lng: -58.3860, cada: 10, deja: 21, pide: [["Helado 1 kg", 3], ["Copa helada", 10]] }
+    ];
+    // Rutas guardadas: cada una con su día (Rutas > Guardadas).
+    const RUTAS = [
+        { nombre: "Centro · lunes", dia: "lunes", comercios: ["Almacén Don Pepe", "Kiosco Luna", "Autoservicio La Esquina", "Kiosco El Faro", "Kiosco Plaza", "Despensa Mary"] },
+        { nombre: "Once · jueves", dia: "jueves", comercios: ["Maxikiosco 24", "Almacén Doña Rosa", "Súper Tres Hermanos", "Rotisería La Estación", "Mercadito Los Pinos", "Granja El Sol"] }
     ];
 
     // La fecha, las unidades y el mensaje que guarda Nuevo pedido.
@@ -77,6 +86,11 @@
 
     function cargar() {
         if (hayDatosPropios()) throw new Error("Ya hay datos en este celular.");
+        // La lista de fábrica de antes (sin tocar) no se mezcla con el ejemplo.
+        if (window.inicioVendeFrio?.tieneDatosPropios?.() === false) {
+            guardarComercios([]);
+            guardarProductos({});
+        }
         const marcasNuevas = [];
         const agregados = [];
         Object.entries(MARCAS).forEach(([marca, lista]) => {
@@ -95,9 +109,18 @@
             const guardada = buscarMarcaGuardada(productos, marca);
             lista.forEach(([nombre, , stock]) => {
                 const producto = (productos[guardada] || []).find(item => item.nombre === nombre);
-                if (producto && agregados.includes(nombre) && producto.stock === undefined) {
+                if (!producto || !agregados.includes(nombre)) return;
+                if (producto.stock === undefined) {
                     producto.stock = stock;
                     producto.stockHora = contado;
+                }
+                // Un código de barras inventado (779 es el prefijo de Argentina).
+                producto.codigo = "7790000" + String(100000 + PRODUCTOS.findIndex(([item]) => item === nombre) * 7919).slice(-6);
+                producto.precios = Object.fromEntries(Object.entries(LISTAS)
+                    .map(([lista, factor]) => [lista, Math.round(producto.precio * factor / 10) * 10]));
+                if (nombre === EN_OFERTA.nombre) {
+                    const hasta = new Date(Date.now() + EN_OFERTA.dias * DIA);
+                    producto.oferta = { precio: EN_OFERTA.precio, hasta: fechaHoyISO(hasta) };
                 }
             });
         });
@@ -107,7 +130,16 @@
         COMERCIOS.forEach(comercio => {
             if (agregarComercio({ nombre: comercio.nombre, direccion: comercio.direccion, telefono: comercio.telefono, lat: comercio.lat, lng: comercio.lng })) {
                 agregadosComercios.push(comercio.nombre);
+                const guardado = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(comercio.nombre) : null;
+                if (guardado) actualizarComercioPorId(guardado.id, { envases: { tiene: 2, devolvio: 1 }, topeDeuda: 30000, ...comercio.datos, origenGps: "manual", favoritos: comercio.pide.map(([producto]) => producto) });
             }
+        });
+
+        const agregadasRutas = [];
+        const guardadas = typeof obtenerRutasGuardadas === "function" ? obtenerRutasGuardadas() : [];
+        RUTAS.forEach(ruta => {
+            if (guardadas.some(item => normal(item.nombre) === normal(ruta.nombre))) return;
+            if (agregarRutaConId(ruta.nombre, ruta.comercios, ruta.dia)) agregadasRutas.push(ruta.nombre);
         });
 
         // Un mes de pedidos, cada comercio con su ritmo.
@@ -147,6 +179,7 @@
             marcas: marcasNuevas,
             productos: agregados,
             comercios: agregadosComercios,
+            rutas: agregadasRutas,
             hora: Date.now()
         });
         revisar();
@@ -164,6 +197,10 @@
         (datos.comercios || []).forEach(nombre => {
             const tienePedidos = obtenerHistorial().some(pedido => pedido.comercio === nombre);
             if (!tienePedidos) eliminarComercio(nombre);
+        });
+        (datos.rutas || []).forEach(nombre => {
+            const ruta = obtenerRutasGuardadas().find(item => normal(item.nombre) === normal(nombre));
+            if (ruta) eliminarRutaPorId(ruta.id);
         });
         // Antes se guardaba una sola marca ("marca"); se sigue leyendo.
         const nuevas = (datos.marcas || (datos.marca ? [datos.marca] : [])).map(normal);

@@ -71,9 +71,18 @@ async function abrirMas(page) {
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
 }
 
-// Abre una sección de la configuración, que está en "Más".
-async function abrirConfiguracionEn(page, seccion) {
+// Más > Ajustes: todos los ajustes juntos (informe del desconocido).
+async function abrirAjustes(page) {
     await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
+    await expect(page.locator("#configDetalle .configMenuAjustes")).toBeVisible();
+}
+
+// Abre una sección de la configuración, que está en "Más" (la cuenta) o en
+// "Más > Ajustes" (las demás).
+async function abrirConfiguracionEn(page, seccion) {
+    if (seccion === "cuenta") await abrirMas(page);
+    else await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 
@@ -168,6 +177,7 @@ module.exports = {
     registrarDistribuidora,
     cargarPedido,
     abrirMas,
+    abrirAjustes,
     abrirConfiguracionEn,
     irAPedidos,
     entrarComoEmpleado,

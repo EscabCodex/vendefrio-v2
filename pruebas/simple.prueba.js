@@ -12,7 +12,7 @@
 // 7. Inicio con "¿Qué querés hacer?", Más en tres grupos y el Catálogo con
 //    "Productos" y "Editar marcas".
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -226,15 +226,29 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await expect(page.locator("#generar")).toBeVisible();
     await page.evaluate(() => mostrarPantalla("menu"));
 
-    // Más: Plata, Ventas y Herramientas; Preguntale ya no está ahí.
+    // Más (informe del desconocido, opción A): lo de todos los días en
+    // cuadros, el resto de las herramientas en lista y una sola fila
+    // "Ajustes" con todo lo demás. Preguntale ya no está ahí.
     await abrirMas(page);
     const grupos = page.locator("#masAccesos");
-    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Plata", "Ventas", "Herramientas"]);
-    await expect(grupos.locator(".masAccesos").nth(0)).toContainText("A cobrar");
-    await expect(grupos.locator(".masAccesos").nth(1)).toContainText("Estadísticas");
-    await expect(grupos.locator(".masAccesos").nth(2)).toContainText("Rutas");
+    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "Más herramientas"]);
+    await expect(grupos.locator(".masAccesos .masAcceso strong")).toHaveText(["A cobrar", "Cierre del día", "Estadísticas", "Rutas", "WhatsApp", "Listas de precios"]);
+    await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["Mapa de ventas", "Registro de cambios", "Importar planilla"]);
     await expect(grupos).not.toContainText("Preguntale");
+    await expect(page.locator(".configMenuPrincipal > .configLista .configFila")).toHaveCount(1);
+    await expect(page.locator("#configFilaAjustes")).toContainText("Ajustes");
     await capturar(page, "simple-10-mas-en-grupos");
+    await page.locator("#configFilaAjustes").click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await expect(page.locator("#configDetalle .configGrupoTitulo")).toHaveText(["Trabajo diario", "Distribuidora", "App"]);
+    await page.locator('#configDetalle [data-config-seccion="trabajo"]').click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Preferencias de trabajo");
+    // La flecha vuelve a Ajustes y, desde ahí, a Más.
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Más");
+    await expect(page.locator("#masAccesos")).toBeVisible();
 
     // Catálogo: "Productos" y "Editar marcas".
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
@@ -298,7 +312,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 4. Apariencia: apagar los nombres de arriba.
     await page.evaluate(() => mostrarPantalla("menu"));
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await page.locator("#configDetalle").getByRole("switch", { name: "Nombres en los íconos de arriba" }).uncheck();
     await expect(page.locator("html")).toHaveAttribute("data-nombres-arriba", "no");
@@ -311,7 +325,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
     });
     await page.evaluate(() => mostrarToast("Pedido guardado"));
     expect(await page.evaluate(() => window.dichos)).toEqual([]);
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     const llave = page.locator("#configDetalle").getByRole("switch", { name: "Decirlo en voz alta al guardar" });
     await expect(llave).not.toBeChecked();

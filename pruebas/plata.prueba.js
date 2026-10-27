@@ -31,6 +31,24 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
         .filter(pedido => pedido.comercio === "Almacén Don Pepe")
         .forEach(pedido => window.nubeVendeFrio.entregarPedido(pedido.id, {})));
 
+    // Informe del desconocido: "Te deben" en Inicio, debajo del resumen de
+    // hoy, y "Debe" abajo de Pendiente/Visitado en Comercios.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    const teDeben = page.locator("#pantallaMenu #avisoTeDeben");
+    await expect(teDeben).toContainText("Te deben $ 19.600");
+    await expect(teDeben).toContainText("1 comercio · el más viejo, hoy");
+    expect(await page.evaluate(() => document.getElementById("resumenHoy").nextElementSibling.id)).toBe("avisoTeDeben");
+    await teDeben.scrollIntoViewIfNeeded();
+    await capturar(page, "plata-00-te-deben-en-inicio");
+    await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
+    const tarjetaComercio = page.locator(".comercioCard", { hasText: "Almacén Don Pepe" });
+    await expect(tarjetaComercio.locator(".chipsComercio .estadoComercio")).toBeVisible();
+    await expect(tarjetaComercio.locator(".chipsComercio .chipDebe")).toHaveText("Debe $ 19.600");
+    await capturar(page, "plata-00-debe-en-comercios");
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await teDeben.click();
+    await expect(page.locator("#pantallaACobrar")).toBeVisible();
+
     // Pedidos > A cobrar: "Te deben" y "ver por comercio".
     await irAPedidos(page);
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();

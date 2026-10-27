@@ -1071,3 +1071,15 @@ html body > section > header > .campanaAvisos{width:44px;height:44px;}
 /* En Más la cabecera tenía 12 px entre botones y las demás 14: la campana
    quedaba 2 px corrida. Mismo espacio en todas. */
 html #pantallaConfiguracion .configHeader{gap:14px;}
+
+/* Informe del desconocido: Más con "Lo de todos los días", "Más herramientas"
+   en lista y una sola fila "Ajustes" con lo demás. */
+html .configLista .configFila.masFila,
+html .configLista .configFila.configFilaAjustes{grid-template-columns:40px minmax(0,1fr) 18px;}
+html .configFilaAjustes .configFilaTexto{display:grid;gap:2px;min-width:0;}
+html .configFilaAjustes .configFilaTexto small{font-size:13px;color:var(--texto-sec) !important;line-height:1.3;}
+html .masHerramientas{margin-bottom:8px;}
+html .configMenuAjustes > .configGrupoTitulo:first-child{margin-top:8px;}
+/* Lo que debe cada comercio, abajo de Pendiente o Visitado. */
+html .chipsComercio{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+html .chipEstado[data-tono="peligro"]{background:var(--peligro-bg);color:var(--peligro) !important;}

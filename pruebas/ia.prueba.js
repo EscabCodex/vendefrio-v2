@@ -16,7 +16,7 @@
 // 6. La función no atiende sin sesión y nunca devuelve comercios o
 //    productos que no estén en las listas.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true, claude: true });
 
@@ -120,7 +120,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function abrirTrabajo(page) {
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     await expect(page.locator("#configDetalle")).toBeVisible();
 }

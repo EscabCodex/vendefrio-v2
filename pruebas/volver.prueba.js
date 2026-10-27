@@ -3,7 +3,7 @@
 // bajar son los mismos botones los que se quedan quietos arriba. "Más"
 // también está en la barra de abajo, y en Rutas las tarjetas se pliegan.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -79,7 +79,7 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
 
     // En una sección de Más, la flecha y la casita quedan arriba al bajar:
     // son los mismos botones, en el mismo lugar.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator(".configHeader h1")).toHaveText("Apariencia");
     await expect(casita(page)).toBeVisible();
@@ -87,7 +87,10 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await bajarYMirar(page, flechaMas);
     await bajarYMirar(page, casita(page));
     await capturar(page, "volver-03-flotante");
-    // La flecha vuelve a la lista de Más; ahí ya no hace falta la casita.
+    // La flecha vuelve a Ajustes y después a la lista de Más; ahí ya no hace
+    // falta la casita.
+    await flechaMas.click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
     await flechaMas.click();
     await expect(page.locator("#configDetalle")).toBeHidden();
     await expect(page.locator(".configMenuPrincipal")).toBeVisible();
@@ -106,14 +109,14 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // La casita, después de bajar, va directo a Inicio.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="respaldo"]').click();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await casita(page).click();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // Se puede hacer que la flecha suba con la pantalla y sacar "Más" de la barra.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     const detalle = page.locator("#configDetalle");
     await detalle.getByRole("switch", { name: "Volver siempre a mano" }).uncheck();

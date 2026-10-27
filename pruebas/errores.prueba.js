@@ -1,7 +1,7 @@
 // VendeFrío - Errores chicos (T152): lo que encontró el barrido de todas las
 // pantallas, en claro y en oscuro y en un celular chico.
 const { test, expect, capturar } = require("./ayudas");
-const { abrirMas } = require("./recorridos");
+const { abrirAjustes } = require("./recorridos");
 
 // Contraste entre el texto y el fondo de un elemento (1 a 21). Se lee aunque
 // el elemento esté oculto.
@@ -48,6 +48,7 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     // ajustes dice "Qué avisos recibir".
     const kiosco = await page.evaluate(() => obtenerComercios().find(comercio => comercio.nombre === "Kiosco Luna"));
     expect(kiosco.ultimaVisita).toMatch(/^\d{1,2}\/\d{1,2}\/\d{4}$/);
+    await abrirAjustes(page);
     await expect(page.locator("#configFilaAvisos strong")).toHaveText("Qué avisos recibir");
 });
 
@@ -57,7 +58,7 @@ test("errores: en un celular chico los botones de arriba no se salen de la panta
     await page.getByRole("button", { name: "Probar con datos de ejemplo" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     const cabecera = page.locator("#pantallaConfiguracion > header");
     await expect(cabecera.locator("h1")).toHaveText("Preferencias de trabajo");

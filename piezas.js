@@ -346,9 +346,12 @@
         tocar.onclick = datos.alTocar || null;
         if (datos.etiqueta) tocar.setAttribute("aria-label", datos.etiqueta);
 
+        // "resumen": justo debajo del resumen de hoy (lo que te deben).
         const ancla = lugar === "arriba"
             ? contenedor.firstElementChild
-            : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
+            : lugar === "resumen"
+                ? (document.getElementById("resumenHoy")?.nextElementSibling || null)
+                : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
         const orden = Number(datos.orden) || 0;
         aviso.dataset.orden = String(orden);
         if (aviso.parentElement !== contenedor || aviso.dataset.lugar !== lugar) {

@@ -49,7 +49,7 @@
     // rehacerlas cada vez trababa la pantalla).
     let cuentasRecordadas = null;
 
-    function cuentas() {
+    function listaRecordada() {
         if (!nube() || typeof obtenerHistorial !== "function") return [];
         const marca = typeof marcaDeColeccion === "function" && extras.marca
             ? [marcaDeColeccion("historial"), marcaDeColeccion("comercios"), extras.marca("pagos")]
@@ -57,7 +57,49 @@
         const sirve = marca && cuentasRecordadas && marca[2] !== null &&
             marca.every((parte, i) => parte === cuentasRecordadas.marca[i]);
         if (!sirve) cuentasRecordadas = { marca, lista: calcularCuentas() };
-        return cuentasRecordadas.lista.map(grupo => ({ ...grupo, pedidos: grupo.pedidos.slice() }));
+        return cuentasRecordadas.lista;
+    }
+
+    function cuentas() {
+        return listaRecordada().map(grupo => ({ ...grupo, pedidos: grupo.pedidos.slice() }));
+    }
+
+    // Lo que debe cada comercio, para la lista de Comercios (informe del
+    // desconocido): un mapa por nombre, hecho una vez por cada cálculo de
+    // las cuentas, así cada tarjeta no recorre todas las cuentas.
+    let deudasRecordadas = { lista: null, mapa: new Map() };
+
+    function veDeudas() {
+        return typeof usaNubeReal === "function" && usaNubeReal() && Boolean(nube()?.puedeCobrar?.());
+    }
+
+    function deudaDe(nombre) {
+        if (!veDeudas()) return 0;
+        const lista = listaRecordada();
+        if (deudasRecordadas.lista !== lista) {
+            deudasRecordadas = { lista, mapa: new Map(lista.map(grupo => [normal(grupo.nombre), grupo.total])) };
+        }
+        return deudasRecordadas.mapa.get(normal(nombre)) || 0;
+    }
+
+    // "Te deben" en Inicio, debajo del resumen de hoy, para quien cobra.
+    function avisoTeDeben() {
+        const lista = veDeudas() ? listaRecordada().filter(grupo => grupo.total > 0) : [];
+        if (!lista.length) {
+            p.avisoInicio("avisoTeDeben", null);
+            return;
+        }
+        const total = lista.reduce((suma, grupo) => suma + grupo.total, 0);
+        const masViejo = Math.min(...lista.map(grupo => horaEntrega(grupo.pedidos[0])));
+        p.avisoInicio("avisoTeDeben", {
+            color: "Pri",
+            icono: "moneda",
+            titulo: "Te deben " + p.plata(total),
+            texto: (lista.length === 1 ? "1 comercio" : lista.length + " comercios") +
+                " · el más viejo, " + textoAntiguedad(masViejo).toLocaleLowerCase("es"),
+            etiqueta: "Te deben " + p.plata(total) + ". Ver a cobrar por comercio",
+            alTocar: abrirPantalla
+        }, "resumen");
     }
 
     function calcularCuentas() {
@@ -513,6 +555,14 @@
         return banner;
     });
     extras.escuchar("pagos", refrescar);
+    if (typeof window.actualizarDashboard === "function") {
+        const original = window.actualizarDashboard;
+        window.actualizarDashboard = function () {
+            const resultado = original.apply(this, arguments);
+            try { avisoTeDeben(); } catch (error) { console.error("Falló el aviso de lo que te deben.", error); }
+            return resultado;
+        };
+    }
     // Acceso en Más, para quien cobra.
     (window.accesosMasExtras = window.accesosMasExtras || []).push({
         destino: "aCobrar", icono: "moneda", texto: "A cobrar",
@@ -520,5 +570,5 @@
         abrir: abrirPantalla
     });
 
-    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
+    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, deudaDe, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
 }());

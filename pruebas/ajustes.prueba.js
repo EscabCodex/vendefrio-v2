@@ -2,12 +2,12 @@
 // filas, y los ajustes de Apariencia, Trabajo y Recorrido que cambian algo
 // de verdad. También "Comercios para esta ruta" en Rutas.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
 async function abrirSeccion(page, seccion) {
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));

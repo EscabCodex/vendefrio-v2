@@ -65,8 +65,10 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
     // En Inicio no queda nada nuestro en la historia: el próximo atrás cierra la app.
     await expect.poll(() => page.evaluate(() => history.state && history.state.vendefrio)).toBeFalsy();
 
-    // En Más > Apariencia: el atrás vuelve a la lista de Más y después a Inicio.
+    // En Más > Ajustes > Apariencia: si Android la cierra ahí, vuelve a
+    // Apariencia; el atrás vuelve a la lista de Más y después a Inicio.
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     // Si Android la cierra ahí, vuelve a Apariencia.
