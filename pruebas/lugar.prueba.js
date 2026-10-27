@@ -152,6 +152,28 @@ async function variosAtrasSeguidos(page) {
     await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
 }
 
+test("lugar: cada acceso de Más vuelve a Más con el atrás, y otro atrás va a Inicio", async ({ page }) => {
+    await entrarSinCuenta(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    const mas = () => page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await mas();
+    const accesos = await page.locator("#masAccesos button").evaluateAll(botones => botones.map(boton => boton.textContent.trim()));
+    expect(accesos.length).toBeGreaterThan(4);
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    for (const acceso of accesos) {
+        await mas();
+        await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+        await page.locator("#masAccesos button", { hasText: acceso }).first().click();
+        await expect(page.locator("#pantallaConfiguracion")).toBeHidden();
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaConfiguracion"), "atrás desde " + acceso).toBeVisible();
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaMenu"), "otro atrás desde " + acceso).toBeVisible();
+        await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
+    }
+});
+
 test("lugar: varios atrás seguidos dan un paso cada uno y terminan en Inicio", async ({ page }) => {
     expect(await page.evaluate(() => typeof CloseWatcher)).toBe("function");
     await variosAtrasSeguidos(page);
@@ -164,6 +186,18 @@ test("lugar: sin CloseWatcher (celulares viejos), lo mismo con la historia", asy
 
 test.describe("en la nube", () => {
     test.use({ nube: true });
+
+    test("lugar: Más > A cobrar, atrás vuelve a Más y otro atrás a Inicio", async ({ page }, testInfo) => {
+        await registrarDistribuidora(page, testInfo);
+        await page.locator('.bottom-nav [data-pantalla="menu"]').click();
+        await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+        await page.locator("#masAccesos button", { hasText: "A cobrar" }).click();
+        await expect(page.locator("#pantallaConfiguracion")).toBeHidden();
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaMenu")).toBeVisible();
+    });
 
     test("lugar: vuelve a Pedidos con la ficha del pedido abierta", async ({ page }, testInfo) => {
         await registrarDistribuidora(page, testInfo);
