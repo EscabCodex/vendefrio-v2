@@ -83,11 +83,29 @@ test("notas de cambios: «La app se actualizó» si actualizó sin mirarlas", as
 
     await tarjeta.click();
     const hoja = page.locator(".ventanaNotas");
-    await expect(hoja.locator(".notaFila")).toHaveCount(Math.min(15, NOTAS.length));
+    // Quien viene de una versión vieja (la de main) ve todo lo acumulado.
+    await expect(hoja.locator(".notaFila")).toHaveCount(NOTAS.length);
+    // Con tantas notas van en páginas que se pasan deslizando,
+    // y el botón queda siempre a la vista.
+    const entendido = hoja.getByRole("button", { name: "Entendido" });
+    await expect(entendido).toBeInViewport({ ratio: 1 });
+    const paginas = hoja.locator(".notasPagina");
+    const total = await paginas.count();
+    expect(total).toBeGreaterThan(1);
+    await expect(hoja.locator(".notasNumero")).toHaveText("1 de " + total);
+    await capturar(page, "notas-actualizada");
+    await hoja.locator(".notasLista").evaluate(el => { el.scrollLeft = el.clientWidth; });
+    await expect(hoja.locator(".notasNumero")).toHaveText("2 de " + total);
+    await expect(paginas.nth(1)).toBeInViewport({ ratio: 0.9 });
+    await capturar(page, "notas-pagina-2");
+    // Deslizar hasta la última: está la nota más vieja y el botón sigue ahí.
+    await hoja.locator(".notasLista").evaluate(el => { el.scrollLeft = el.scrollWidth; });
+    await expect(hoja.locator(".notasNumero")).toHaveText(total + " de " + total);
+    await expect(hoja.locator(".notaFila").last()).toBeInViewport();
+    await expect(entendido).toBeInViewport({ ratio: 1 });
     // Ya está actualizada: no ofrece actualizar, solo "Entendido".
     await expect(hoja.getByRole("button", { name: "Actualizar ahora" })).toBeHidden();
     await expect(tarjeta).toHaveCount(0);
-    await capturar(page, "notas-actualizada");
     await hoja.getByRole("button", { name: "Entendido" }).click();
     await expect(hoja).toBeHidden();
 
