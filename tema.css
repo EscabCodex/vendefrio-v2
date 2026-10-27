@@ -1119,6 +1119,22 @@ html.enNavegacion body{overflow:hidden;}
   background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
 }
 .botonFlotanteNav.apagado{color:var(--peligro);}
+/* T170: la burbuja de la navegación minimizada, como la de Messenger:
+   abajo a la derecha (al alcance del pulgar), arriba del botón de nuevo
+   pedido. Se arrastra a otro lugar y se queda pegada al borde. */
+.burbujaNavegacion{
+  position:fixed;z-index:1300;right:max(12px, env(safe-area-inset-right));bottom:calc(168px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;width:60px;height:60px;padding:0;margin:0;min-height:0;box-sizing:border-box;
+  border:3px solid var(--superficie);border-radius:50%;background:var(--acento);color:var(--acento-txt);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;
+}
+.burbujaNavegacion[hidden],html.enNavegacion .burbujaNavegacion{display:none !important;}
+.burbujaNavegacionIcono{display:grid;place-items:center;}
+.burbujaNavegacionDato{
+  position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);padding:1px 7px;border-radius:var(--radio-pildora);
+  background:var(--superficie);color:var(--texto);font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.burbujaNavegacionDato:empty{display:none;}
 .centrarNavegacion{position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(204px + env(safe-area-inset-bottom));}
 .centrarNavegacion.oculto{display:none;}
 

@@ -106,6 +106,43 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
     await capturar(page, "navegacion-02b-linea-recortada");
 
+    // T170: minimizar, usar otra pantalla y volver con la burbuja, donde estaba.
+    await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
+    await expect(navegacion).toBeHidden();
+    const burbuja = page.getByRole("button", { name: "Volver a la navegación" });
+    await expect(burbuja).toBeVisible();
+    await expect(burbuja).toContainText("min");
+    await expect(page.locator(".bottom-nav")).toBeVisible();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
+    await capturar(page, "navegacion-02c-minimizada");
+    // Sigue andando: el GPS avanza y la línea se sigue recortando.
+    const largoAntes = await largoDeLaLinea();
+    await page.context().setGeolocation({ latitude: SALIDA.latitude, longitude: -58.4008 });
+    await expect.poll(largoDeLaLinea).toBeLessThan(largoAntes);
+    // Arrastrarla al otro lado la deja pegada al borde izquierdo.
+    const caja = await burbuja.boundingBox();
+    await page.mouse.move(caja.x + 30, caja.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(60, caja.y - 40, { steps: 6 });
+    await page.mouse.up();
+    await expect(burbuja).toHaveCSS("left", "12px");
+    await expect(navegacion).toBeHidden();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_burbujaNavegacion")).lado)).toBe("izq");
+    await burbuja.click();
+    await expect(navegacion).toBeVisible();
+    await expect(burbuja).toBeHidden();
+    await expect(page.locator(".bottom-nav")).toBeHidden();
+    await expect(navegacion.locator(".nombreNavegacion")).toHaveText("Kiosco La Esquina");
+    await expect(navegacion.locator(".textoManiobra")).toHaveText("Doblá a la izquierda por Belgrano");
+    // «Ir» al mismo comercio con la navegación minimizada también la trae, sin empezar de nuevo.
+    await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
+    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
+    await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    await expect(navegacion).toBeVisible();
+    await expect(navegacion.locator("path.lineaHecha")).toHaveCount(1);
+    await expect.poll(largoDeLaLinea).toBeLessThan(largoAntes);
+
     expect(pedidosDeCamino.length).toBeGreaterThan(0);
     pedidosDeCamino.forEach(url => expect(url).toMatch(/^https:\/\/routing\.openstreetmap\.de\/routed-car\/route\/v1\/driving\//));
 

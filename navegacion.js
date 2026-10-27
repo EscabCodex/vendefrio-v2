@@ -55,6 +55,9 @@
     let proximaManiobra = -1;    // índice del paso que viene (para la voz)
     let calleActual = "";        // por dónde vas, para los avisos del equipo (T139)
     let valhallaEnPausaHasta = 0; // T163: si Valhalla falló, se usa OSRM un rato
+    let minimizada = false;      // T170: sigue andando debajo de la burbuja
+    let encuadrarAlVolver = false; // T170: un camino nuevo mientras estaba minimizada
+    let burbuja = null;
 
     // -------------------------------------------------
     // Preferencias (Más > Cómo hacés el recorrido)
@@ -669,6 +672,7 @@
             </div>
             <div class="velocimetroNavegacion" aria-hidden="true"><strong>0</strong><small>km/h</small></div>
             <div class="botonesNavegacion">
+                <button type="button" class="botonFlotanteNav minimizarNavegacion" aria-label="Minimizar la navegación">${window.icono("minimizar", 22)}</button>
                 <button type="button" class="botonFlotanteNav vozNavegacion" aria-label="Voz"></button>
                 <button type="button" class="botonFlotanteNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 22)}</button>
             </div>
@@ -725,6 +729,7 @@
         }
         // Voz y salir están flotando y, con la hoja abierta, arriba de la hoja.
         pantalla.querySelectorAll(".cerrarNavegacion").forEach(boton => boton.addEventListener("click", () => cerrar()));
+        pantalla.querySelector(".minimizarNavegacion").addEventListener("click", minimizar);
         pantalla.querySelectorAll(".vozNavegacion").forEach(boton => boton.addEventListener("click", alternarVoz));
         pantalla.querySelector(".saltearNavegacion").addEventListener("click", saltearParada);
         pantalla.querySelector(".salirNavegacion").addEventListener("click", () => cerrar());
@@ -782,7 +787,8 @@
         // entre la tarjeta de arriba y la hoja (T135). Se mide una vez, al
         // abrirla, y no con cada lectura del GPS.
         desplazoHoja = 0;
-        if (!mapa) return;
+        // Minimizada no hay nada que medir: se acomoda al volver (T170).
+        if (!mapa || minimizada) return;
         if (abierta) {
             // La hoja llega hasta «Salir» y asoma lo que sigue (pedidos y
             // paradas, deslizando la hoja): así queda mapa a la vista.
@@ -847,8 +853,14 @@
         lineaHecha = L.polyline([], { className: "lineaHecha", color: "#9AA7B8", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round", dashArray: "2 9", interactive: false });
         capaCamino = L.layerGroup([lineaHecha].concat(lineasCamino)).addTo(mapa);
         if ((seguir || !sigueSolo()) && camino.puntos.length > 1) {
-            mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 190], paddingBottomRight: [30, 140], maxZoom: zoomPreferido() });
+            // Un mapa escondido mide 0: se encuadra al volver (T170).
+            if (minimizada) encuadrarAlVolver = true;
+            else encuadrar();
         }
+    }
+
+    function encuadrar() {
+        mapa.fitBounds(L.latLngBounds(camino.puntos), { paddingTopLeft: [30, 190], paddingBottomRight: [30, 140], maxZoom: zoomPreferido() });
     }
 
     // T132: la línea azul arranca donde estás y lo ya hecho queda gris
@@ -928,9 +940,10 @@
                 enlace.href = window.yaLlegoVendeFrio.enlace(comercio, minutosQueFaltan);
             });
         }
+        // T170: cargar el pedido minimiza; la navegación sigue en la burbuja.
         acceso("documento", "Cargar pedido").addEventListener("click", () => {
             const nombre = comercio.nombre;
-            cerrar();
+            minimizar();
             if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
         });
 
@@ -1059,7 +1072,7 @@
             fila.querySelector("span").textContent = "Pedido N° " + String(pedido.id || "").slice(-6).toUpperCase();
             fila.querySelector("small").textContent = unidades + (unidades === 1 ? " unidad" : " unidades");
             fila.addEventListener("click", () => {
-                if (window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) cerrar();
+                if (window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) minimizar();
             });
             caja.appendChild(fila);
         });
@@ -1108,6 +1121,7 @@
         ponerTexto(pantalla.querySelector(".minutosTarjetaParada"), llego ? "Llegaste" : textoMinutos(segundos));
         ponerTexto(pantalla.querySelector(".detalleTarjetaParada"), llego ? "En la puerta" : textoDistancia(falta) + " · " + horaDeLlegada(segundos));
         ponerTexto(pantalla.querySelector(".velocimetroNavegacion strong"), String(Math.round(velocidad * 3.6)));
+        if (minimizada) ponerTexto(burbuja.querySelector(".burbujaNavegacionDato"), llego ? "Llegaste" : textoMinutos(segundos));
 
         // ¿Llegó?
         const alDestino = distancia(posicion, destinoDe(comercio));
@@ -1260,7 +1274,7 @@
         }
         // Mover el mapa por un par de metros no se nota y redibuja el camino
         // entero (T141): se mueve cuando el punto se corrió unos píxeles.
-        if (seguir && mapa && camino && !llego) {
+        if (seguir && mapa && camino && !llego && !minimizada) {
             const corrido = mapa.latLngToContainerPoint(posicion).distanceTo(mapa.getSize().divideBy(2).subtract([0, desplazoHoja]));
             if (corrido > 4) mapa.panTo(puntoParaCentrar(), { animate: velocidad < 8, duration: 0.4 });
         }
@@ -1369,6 +1383,20 @@
         const lista = conGps(nombres);
         if (!lista.length || usaGoogleMaps() || !window.mapaVendeFrio?.disponible?.()) return false;
 
+        // T170: con la navegación minimizada, «Ir» al mismo recorrido (o a
+        // la parada de ahora) la trae de vuelta donde estaba. A otro lado,
+        // termina esa y arranca la nueva.
+        if (minimizada) {
+            const pedidas = lista.map(comercio => comercio.nombre).join("\n");
+            const mismas = [paradas, paradas.slice(indiceParada), [paradaActual()]]
+                .some(grupo => grupo.map(comercio => comercio && comercio.nombre).join("\n") === pedidas);
+            if (mismas) {
+                restaurar();
+                return true;
+            }
+            cerrar();
+        }
+
         crearPantalla();
         paradas = lista;
         indiceParada = 0;
@@ -1413,6 +1441,9 @@
         pantalla.candado = null;
         pantalla.classList.add("oculto");
         document.documentElement.classList.remove("enNavegacion");
+        minimizada = false;
+        encuadrarAlVolver = false;
+        if (burbuja) burbuja.hidden = true;
         if (marcadorYo) { marcadorYo.remove(); marcadorYo = null; }
         rumbo = null;
         if (capaCamino) { capaCamino.remove(); capaCamino = null; }
@@ -1427,6 +1458,122 @@
 
     function abierta() {
         return Boolean(pantalla && !pantalla.classList.contains("oculto"));
+    }
+
+    // -------------------------------------------------
+    // Minimizar (T170): la navegación sigue (GPS, voz, parada y camino)
+    // mientras se usa el resto de la app; una burbuja flotante, como la de
+    // Messenger, la trae de vuelta. La burbuja se arrastra a otro lugar y
+    // se queda pegada al borde más cercano.
+    // -------------------------------------------------
+
+    const CLAVE_BURBUJA = "vendefrio_burbujaNavegacion";
+
+    function minimizar() {
+        if (!abierta()) return false;
+        minimizada = true;
+        pantalla.classList.add("oculto");
+        document.documentElement.classList.remove("enNavegacion");
+        crearBurbuja();
+        ponerTexto(burbuja.querySelector(".burbujaNavegacionDato"),
+            llego ? "Llegaste" : pantalla.querySelector(".minutosTarjetaParada").textContent);
+        burbuja.hidden = false;
+        return true;
+    }
+
+    function restaurar() {
+        if (!pantalla || !minimizada) return false;
+        minimizada = false;
+        if (burbuja) burbuja.hidden = true;
+        pantalla.classList.remove("oculto");
+        document.documentElement.classList.add("enNavegacion");
+        mapa.invalidateSize();
+        if (encuadrarAlVolver && camino && camino.puntos.length > 1) encuadrar();
+        encuadrarAlVolver = false;
+        // Lo que cambió afuera (un pedido cargado) y la hoja como estaba.
+        dibujarHoja();
+        abrirHoja(pantalla.querySelector(".hojaNavegacion").classList.contains("abierta"));
+        actualizar(false);
+        return true;
+    }
+
+    function lugarDeBurbuja() {
+        try {
+            const guardado = JSON.parse(localStorage.getItem(CLAVE_BURBUJA) || "null");
+            if (guardado && (guardado.lado === "izq" || guardado.lado === "der") && Number.isFinite(guardado.abajo)) return guardado;
+        } catch (error) {
+            // Sin lugar guardado: va el de siempre.
+        }
+        return null;
+    }
+
+    function ponerBurbuja(lugar) {
+        if (!lugar) return;
+        // Que no quede abajo de la barra de abajo ni arriba de todo.
+        const abajo = Math.round(Math.min(Math.max(lugar.abajo, 76), window.innerHeight - 140));
+        burbuja.style.bottom = abajo + "px";
+        burbuja.style.left = lugar.lado === "izq" ? "12px" : "auto";
+        burbuja.style.right = lugar.lado === "der" ? "12px" : "auto";
+    }
+
+    function crearBurbuja() {
+        if (burbuja) return burbuja;
+        burbuja = document.createElement("button");
+        burbuja.type = "button";
+        burbuja.className = "burbujaNavegacion";
+        burbuja.setAttribute("aria-label", "Volver a la navegación");
+        burbuja.hidden = true;
+        burbuja.innerHTML = '<span class="burbujaNavegacionIcono">' + window.icono("navegar", 26) + '</span><small class="burbujaNavegacionDato"></small>';
+        document.body.appendChild(burbuja);
+        ponerBurbuja(lugarDeBurbuja());
+
+        // Tocar la trae; arrastrar la mueve (se mueve con transform, que no
+        // redibuja la pantalla, y se guarda al soltar).
+        let inicio = null;
+        let arrastrada = false;
+        burbuja.addEventListener("pointerdown", evento => {
+            inicio = { x: evento.clientX, y: evento.clientY, caja: burbuja.getBoundingClientRect() };
+            arrastrada = false;
+            burbuja.setPointerCapture?.(evento.pointerId);
+        });
+        burbuja.addEventListener("pointermove", evento => {
+            if (!inicio) return;
+            const dx = evento.clientX - inicio.x;
+            const dy = evento.clientY - inicio.y;
+            if (!arrastrada && Math.hypot(dx, dy) < 10) return;
+            arrastrada = true;
+            burbuja.style.transform = "translate(" + dx + "px," + dy + "px)";
+        });
+        const soltar = evento => {
+            if (!inicio) return;
+            const { caja } = inicio;
+            if (arrastrada && evento.type === "pointerup") {
+                const centro = caja.left + caja.width / 2 + (evento.clientX - inicio.x);
+                const lugar = {
+                    lado: centro < window.innerWidth / 2 ? "izq" : "der",
+                    abajo: window.innerHeight - (caja.bottom + evento.clientY - inicio.y)
+                };
+                ponerBurbuja(lugar);
+                try {
+                    localStorage.setItem(CLAVE_BURBUJA, JSON.stringify(lugar));
+                } catch (error) {
+                    // Sin lugar para guardar: queda ahí hasta cerrar la app.
+                }
+            }
+            burbuja.style.transform = "";
+            inicio = null;
+        };
+        burbuja.addEventListener("pointerup", soltar);
+        burbuja.addEventListener("pointercancel", soltar);
+        burbuja.addEventListener("click", evento => {
+            if (arrastrada) {
+                arrastrada = false;
+                evento.preventDefault();
+                return;
+            }
+            restaurar();
+        });
+        return burbuja;
     }
 
     // T154: la primera vez que se toca "Ir" en este celular (sin el ajuste
@@ -1485,7 +1632,7 @@
     }, true);
 
     window.navegacionVendeFrio = {
-        abrir, cerrar, abierta, indicacion, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
+        abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
         // El Asistente (T160): las paradas que faltan y cambiar el orden.
         paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero,
         // Para los avisos y los compañeros del equipo (T139, T140).
