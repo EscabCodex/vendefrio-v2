@@ -190,8 +190,85 @@ test("lugar: sin CloseWatcher (celulares viejos), lo mismo con la historia", asy
     await variosAtrasSeguidos(page);
 });
 
+test("lugar: el atrás vuelve a la pantalla de la que se vino, no siempre a Inicio", async ({ page }) => {
+    await entrarSinCuenta(page);
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+    const nav = destino => page.locator(`.bottom-nav [data-pantalla="${destino}"]`).click();
+    const enInicio = async () => {
+        await expect(page.locator("#pantallaMenu")).toBeVisible();
+        await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
+    };
+
+    // Catálogo > Agregar al pedido: el atrás vuelve al Catálogo, y otro a Inicio.
+    await nav("catalogo");
+    await page.locator("#grillaCatalogo .btnCatalogoPedido").first().click();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaCatalogo")).toBeVisible();
+    await atrasDelCelular(page);
+    await enInicio();
+
+    // Comercios > Más (barra de abajo): vuelve a Comercios.
+    await nav("comercios");
+    await nav("mas");
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+    await atrasDelCelular(page);
+    await expect(page.locator("#pantallaComercios")).toBeVisible();
+    await atrasDelCelular(page);
+    await enInicio();
+
+    // Más > Cuenta > Comercios: vuelve a Cuenta, después a la lista de Más
+    // y después a Inicio.
+    await nav("mas");
+    await page.locator('.configFila[data-config-seccion="cuenta"]').click();
+    await expect(page.locator("#configDetalle")).toBeVisible();
+    await nav("comercios");
+    await expect(page.locator("#pantallaComercios")).toBeVisible();
+    await atrasDelCelular(page);
+    await expect(page.locator("#configDetalle")).toBeVisible();
+    await expect(page.locator("#configDetalle")).toHaveAttribute("data-seccion", "cuenta");
+    await atrasDelCelular(page);
+    await expect(page.locator("#configDetalle")).toBeHidden();
+    await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
+    await atrasDelCelular(page);
+    await enInicio();
+
+    // Inicio > Estadísticas (su flecha lleva a Más): el atrás vuelve a Inicio.
+    await page.evaluate(() => window.abrirEstadisticas());
+    await expect(page.locator("#pantallaEstadisticas")).toBeVisible();
+    await atrasDelCelular(page);
+    await enInicio();
+
+    // Ida y vuelta entre pantallas: el atrás no da vueltas, desanda el camino.
+    await nav("comercios");
+    await nav("catalogo");
+    await nav("comercios");
+    await atrasDelCelular(page);
+    await enInicio();
+});
+
 test.describe("en la nube", () => {
     test.use({ nube: true });
+
+    test("lugar: Nuevo pedido vuelve a donde estabas antes de empezarlo", async ({ page }, testInfo) => {
+        await registrarDistribuidora(page, testInfo);
+        await page.locator('.bottom-nav [data-pantalla="menu"]').click();
+        await expect(page.locator("#pantallaMenu")).toBeVisible();
+        // Desde Inicio: el atrás vuelve a Inicio, no a la lista de Pedidos.
+        await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+        await expect(page.locator("#pantallaPedido")).toHaveAttribute("data-vista", "nuevo");
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaMenu")).toBeVisible();
+        // Desde la lista de Pedidos: vuelve a la lista y después a Inicio.
+        await irAPedidos(page);
+        await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+        await expect(page.locator("#pantallaPedido")).toHaveAttribute("data-vista", "nuevo");
+        await atrasDelCelular(page);
+        await expect(page.locator("#vistaPedidos")).toBeVisible();
+        await atrasDelCelular(page);
+        await expect(page.locator("#pantallaMenu")).toBeVisible();
+        await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
+    });
 
     test("lugar: Más > A cobrar, atrás vuelve a Más y otro atrás a Inicio", async ({ page }, testInfo) => {
         await registrarDistribuidora(page, testInfo);
