@@ -2585,7 +2585,7 @@ html[data-tema="oscuro"] #pantallaRutas .caminoPlan.otro{stroke:#4A5562;}
 #pantallaRutas .barraMoverPin{z-index:1002;bottom:calc(12px + env(safe-area-inset-bottom));}
 /* «Paradas»: la lista y todo lo de antes, encima del mapa. */
 #pantallaRutas .panelParadasRutas{display:none;}
-/* T138: una hoja alta sobre el mapa oscurecido (sin desenfoque). */
+/* T138: una hoja alta sobre el mapa oscurecido (apenas difuminado: piezas.css). */
 #pantallaRutas.conParadasAbiertas .panelParadasRutas{
   display:block;position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1100;
   margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
