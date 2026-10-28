@@ -126,7 +126,12 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     });
     expect(delDueno).toEqual(["permission-denied", "permission-denied", "permission-denied"]);
 
-    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+    // Todo subió a la nube y no se ve ninguna etiqueta. Se miran solo las
+    // visibles: lo oculto (la ficha cerrada, otras pantallas) no se
+    // redibuja para no gastar y puede guardar una etiqueta vieja.
+    await expect.poll(() => page.evaluate(() => window.nubeVendeFrio.sincronizacion().sinSubir)).toBe(0);
+    await irAPedidos(page);
+    await expect(page.getByText("Pendiente de sincronizar").filter({ visible: true })).toHaveCount(0);
     await contexto.close();
     expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });
