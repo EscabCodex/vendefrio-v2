@@ -266,15 +266,15 @@ function dibujarKpisInicio(cuentas, nube, conPlata) {
     let kpis;
     if (nube) {
         kpis = [
-            { id: "cargados", texto: "Cargados", valor: cuentas.cargadosSemana, etapa: "paraArmar" },
+            { id: "cargados", texto: "Cargados", valor: cuentas.cargadosSemana, accion: "cargadosSemana" },
             { id: "entregados", texto: "Entregados", valor: cuentas.entregadosSemana, accion: "entregadosSemana" }
         ];
         const cobrado = conPlata && window.cierreVendeFrio?.disponible?.() ? cobradoHoyInicio() : null;
         if (cobrado !== null) kpis.push({ id: "cobradoHoy", texto: "Cobrado hoy", valor: textoPlataCortoInicio(cobrado), accion: "cobradoHoy" });
         kpis.push(
-            { id: "cargadosHoy", texto: "Cargados hoy", valor: cuentas.cargadosHoy.length, etapa: "paraArmar" },
+            { id: "cargadosHoy", texto: "Cargados hoy", valor: cuentas.cargadosHoy.length, accion: "cargadosHoy" },
             { id: "entregadosHoy", texto: "Entregados hoy", valor: cuentas.entregadosHoy, accion: "entregadosHoy" },
-            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosSemana" }
+            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosHoy" }
         );
     } else {
         kpis = [
@@ -282,7 +282,7 @@ function dibujarKpisInicio(cuentas, nube, conPlata) {
             { id: "pendientes", texto: "Sin visitar", valor: cuentas.comercios.length - cuentas.visitadosSemana, accion: "pendientesSemana" },
             { id: "hoy", texto: "Pedidos hoy", valor: cuentas.cargadosHoy.length, accion: "pedidosHoy" },
             { id: "comerciosHoy", texto: "Comercios hoy", valor: comerciosDistintosInicio(cuentas.cargadosHoy), accion: "pedidosHoy" },
-            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosSemana" }
+            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosHoy" }
         ];
     }
     // Sin "Cobrado hoy", la fila de arriba lleva dos cuadros más anchos.
@@ -918,7 +918,32 @@ function abrirComerciosConFiltroDashboard(filtro) {
     mostrarPantalla("comercios");
 }
 
+// Con la nube, los números de pedidos abren en Pedidos justo los pedidos
+// que contaron, en todos los pasos (los mismos de cuentasDeInicio).
+function listaDeInicio(accion) {
+    const cuentas = cuentasDeInicio();
+    const listas = {
+        cargadosSemana: () => ["Cargados esta semana, sin entregar", cuentas.pedidosSemana.filter(pedido => ESTADOS_EN_CAMINO_INICIO.includes(estadoInicio(pedido)))],
+        cargadosHoy: () => ["Cargados hoy", cuentas.cargadosHoy],
+        vendidoHoy: () => ["Vendido hoy", cuentas.cargadosHoy],
+        pedidosDeHoy: () => ["Pedidos de hoy", cuentas.pedidosHoy],
+        pedidosSemana: () => ["Pedidos de esta semana", cuentas.pedidosSemana],
+        vendidoSemana: () => ["Vendido esta semana", cuentas.pedidosSemana]
+    };
+    if (!listas[accion]) return null;
+    const [titulo, pedidos] = listas[accion]();
+    return { titulo, pedidos };
+}
+
 function ejecutarAccionTarjetaDashboard(accion) {
+    const lista = usaNubeReal() && listaDeInicio(accion);
+    if (lista && window.seguimientoVendeFrio?.abrirLista?.(lista)) return;
+
+    if (accion === "visitadosHoy") {
+        abrirComerciosConFiltroDashboard("visitadosHoy");
+        return;
+    }
+
     if (accion === "pedidosHoy" && typeof abrirHistorialPorPeriodo === "function") {
         abrirHistorialPorPeriodo("hoy");
         return;
@@ -953,9 +978,10 @@ function ejecutarAccionTarjetaDashboard(accion) {
         window.cierreVendeFrio.abrir();
     }
 
-    // Repasada: Estadísticas abre en el período del número que se tocó.
-    if (accion === "vendidoSemana" && typeof window.abrirEstadisticas === "function") {
-        window.abrirEstadisticas("semana");
+    // "vendido" de Esta semana: los pedidos de esta semana (de lunes a hoy),
+    // con su total abajo del título. Estadísticas cuenta los últimos 7 días.
+    if (accion === "vendidoSemana" && typeof abrirHistorialPorPeriodo === "function") {
+        abrirHistorialPorPeriodo("semana");
     }
 
     if (accion === "vendidoHoy" && typeof window.abrirEstadisticas === "function") {
@@ -1014,9 +1040,7 @@ prepararTarjetasDashboard();
 
 document.getElementById("botonAvatar")?.addEventListener("click", () => abrirMenuMas());
 document.getElementById("dashVerTodos")?.addEventListener("click", () => {
-    if (usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial) {
-        if (window.seguimientoVendeFrio.abrirEtapa("cargados")) return;
-    }
+    if (usaNubeReal() && window.seguimientoVendeFrio?.abrirLista?.(listaDeInicio("pedidosDeHoy"))) return;
     // Sin la nube, Historial en "Hoy" (antes quedaba en el último período elegido).
     if (!usaNubeReal() && typeof abrirHistorialPorPeriodo === "function") {
         abrirHistorialPorPeriodo("hoy");

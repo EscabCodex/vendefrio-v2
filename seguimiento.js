@@ -102,6 +102,10 @@
     let busquedaHistorial = "";
     let periodoHistorial = "todos";
     let comercioHistorial = "";
+    // Un número de Inicio ("Cargados hoy", "Vendido hoy"...) abre justo los
+    // pedidos que contó, en todos los pasos: { titulo, ids }. Se quita al
+    // tocar una pestaña, el cartel o la barra de abajo.
+    let listaElegida = null;
     let idPedidoHistorial = "";
 
     // Acciones en tanda (T29c): las etapas donde se eligen varios pedidos
@@ -557,6 +561,7 @@
     document.querySelectorAll('.nav-item[data-pantalla="pedido"]').forEach(boton => {
         boton.addEventListener("click", () => {
             entrarPorLaBarra = true;
+            listaElegida = null;
         }, true);
     });
 
@@ -853,6 +858,10 @@
         const visibles = etapasVisibles();
         if (!visibles.some(item => item.id === etapaActual)) etapaActual = visibles[0].id;
         const etapa = visibles.find(item => item.id === etapaActual) || visibles[0];
+        if (listaElegida) {
+            dibujarListaElegida(registros, historial);
+            return;
+        }
         const enHistorial = etapa.id === "historial";
         const deLaEtapa = (enHistorial
             ? historial.filter(coincideConElHistorial)
@@ -924,12 +933,70 @@
         }
     }
 
+    // Los pedidos que contó un número de Inicio, en todos los pasos: arriba un
+    // cartel con lo que son (tocarlo vuelve a las pestañas), ninguna pestaña
+    // marcada, y el total en pedidos, unidades y plata.
+    function dibujarListaElegida(registros, historial) {
+        const porId = new Map();
+        historial.concat(registros).forEach(registro => porId.set(String(registro.pedido.id || ""), registro));
+        const deLaLista = [...listaElegida.ids].map(id => porId.get(id)).filter(Boolean)
+            .sort((a, b) => horaParaOrdenar(b.pedido) - horaParaOrdenar(a.pedido));
+
+        dibujarFiltros(registros, historial);
+        filtros.querySelectorAll(".filtroEtapa").forEach(boton => {
+            boton.classList.remove("activo");
+            boton.setAttribute("aria-selected", "false");
+        });
+        if (!listaDibujadaUnaVez) recordarEstados(registros.concat(historial));
+        dibujarBarraHistorial(false);
+        dibujarBarraTanda(null, []);
+        lista.innerHTML = "";
+
+        const p = window.piezas;
+        const cartel = crear("button", "pzBanner pzBanInfo cartelListaElegida");
+        cartel.type = "button";
+        cartel.innerHTML = p.ico("lista", 22) + "<div><strong></strong><small>En todos los pasos. Tocá para volver a las pestañas.</small></div>" + p.ico("cerrarX", 18);
+        cartel.querySelector("strong").textContent = listaElegida.titulo;
+        lista.appendChild(cartel);
+
+        const unidades = deLaLista.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
+        const suma = deLaLista.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
+        resumen.textContent = (deLaLista.length === 1 ? "1 pedido" : deLaLista.length + " pedidos") + "  ·  " + textoUnidades(unidades) +
+            (suma > 0 && window.verPlataVendeFrio?.puedoVer?.() !== false ? "  ·  " + textoPrecio(suma) : "");
+
+        if (!deLaLista.length) {
+            const vacio = crear("div", "card seguimientoVacio");
+            vacio.append(crear("h3", "", "No hay pedidos"), crear("p", "", "Cuando se cargue uno, aparece acá al instante."));
+            lista.appendChild(vacio);
+            return;
+        }
+        deLaLista.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
+        recordarEstados(registros.concat(historial));
+        if (deLaLista.length > mostrando) {
+            const verMas = crear("button", "btnAccion secundario verMasSeguimiento", "Ver más (" + (deLaLista.length - mostrando) + ")");
+            verMas.type = "button";
+            lista.appendChild(verMas);
+        }
+    }
+
+    function quitarListaElegida() {
+        if (!listaElegida) return false;
+        listaElegida = null;
+        mostrando = TANDA;
+        return true;
+    }
+
     filtros.addEventListener("click", evento => {
         if (evento.target.closest(".filtroEtapaOtros")) {
             abrirOtros();
             return;
         }
         const boton = evento.target.closest("button[data-etapa]");
+        if (boton && quitarListaElegida()) {
+            etapaActual = boton.dataset.etapa;
+            dibujarLista();
+            return;
+        }
         if (!boton || boton.dataset.etapa === etapaActual) return;
 
         elegirEtapa(boton.dataset.etapa);
@@ -937,6 +1004,12 @@
     });
 
     lista.addEventListener("click", evento => {
+        if (evento.target.closest(".cartelListaElegida")) {
+            quitarListaElegida();
+            dibujarLista();
+            window.scrollTo(0, 0);
+            return;
+        }
         if (evento.target.closest(".verMasSeguimiento")) {
             mostrando += TANDA;
             dibujarLista();
@@ -4537,7 +4610,24 @@
         abrirEtapa(etapa) {
             etapa = ETAPAS_DE_ANTES[etapa] || etapa;
             if (!enLaNube() || !ETAPAS.some(item => item.id === etapa)) return false;
+            listaElegida = null;
             etapaActual = etapa;
+            if (idFichaAbierta) cerrarFicha();
+            if (pantalla.classList.contains("oculto")) {
+                entrarPorLaBarra = true;
+                mostrarPantalla("pedido");
+            } else {
+                cambiarVista("pedidos");
+            }
+            window.scrollTo(0, 0);
+            return true;
+        },
+
+        // Inicio: los pedidos que contó un número, en todos los pasos.
+        abrirLista({ titulo = "", pedidos = [] } = {}) {
+            if (!enLaNube()) return false;
+            listaElegida = { titulo: String(titulo), ids: new Set(pedidos.map(pedido => String(pedido && pedido.id || "")).filter(Boolean)) };
+            mostrando = TANDA;
             if (idFichaAbierta) cerrarFicha();
             if (pantalla.classList.contains("oculto")) {
                 entrarPorLaBarra = true;
@@ -4565,6 +4655,7 @@
             if (!enLaNube()) return false;
 
             etapaActual = "historial";
+            listaElegida = null;
             comercioHistorial = String(comercio || "").trim();
             idPedidoHistorial = String(idPedido || "");
             // Como antes: el buscador muestra el comercio elegido.

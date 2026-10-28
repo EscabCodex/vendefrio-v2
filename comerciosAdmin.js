@@ -29,6 +29,13 @@ function actualizarDatalist() {
     if (typeof actualizarDatalistPedido === "function") actualizarDatalistPedido();
 }
 
+// "Visitados hoy" de Inicio: la última visita es de hoy.
+function visitadoHoy(comercio) {
+    if (typeof comercioVisitadoHoyInicio === "function") return comercioVisitadoHoyInicio(comercio);
+    const fecha = comercio && comercio.ultimaVisita ? obtenerFechaLocalDesdeTexto(comercio.ultimaVisita) : null;
+    return Boolean(fecha) && fecha.toDateString() === new Date().toDateString();
+}
+
 function estaVisitadoEstaSemana(comercio) {
     return comercioEstaVisitadoEstaSemana(comercio);
 }
@@ -46,8 +53,10 @@ function actualizarResumenComercios(comercios, fueVisitado = estaVisitadoEstaSem
     if (filtrosEstadoComercios) {
         const cuentas = { todos: comercios.length, pendientes, visitados };
         const elegido = filtroEstadoComercios ? filtroEstadoComercios.value : "todos";
+        // "Visitados hoy" (desde Inicio) marca Visitados; el cartel dice que es de hoy.
+        const marcado = elegido === "visitadosHoy" ? "visitados" : elegido;
         filtrosEstadoComercios.querySelectorAll("[data-filtro]").forEach(boton => {
-            const activo = boton.dataset.filtro === elegido;
+            const activo = boton.dataset.filtro === marcado;
             boton.classList.toggle("activo", activo);
             boton.setAttribute("aria-pressed", String(activo));
             boton.querySelector(".filtroEtapaCantidad").textContent = String(cuentas[boton.dataset.filtro]);
@@ -345,6 +354,7 @@ function renderizarComercios() {
             const coincideEstado =
                 filtro === "todos" ||
                 (filtro === "visitados" && visitado) ||
+                (filtro === "visitadosHoy" && visitadoHoy(comercio)) ||
                 (filtro === "pendientes" && !visitado);
 
             return coincideTexto && coincideEstado;
@@ -379,6 +389,18 @@ function renderizarComercios() {
         volver.textContent = "Mostrar todos los comercios";
         volver.addEventListener("click", limpiarComercioIndividual);
         listaComerciosAdmin.appendChild(volver);
+    }
+
+    if (filtro === "visitadosHoy" && !verComerciosArchivados) {
+        const cartel = document.createElement("button");
+        cartel.type = "button";
+        cartel.className = "pzBanner pzBanInfo cartelVisitadosHoy";
+        cartel.innerHTML = window.piezas.ico("check", 22) + "<div><strong>Visitados hoy</strong><small>Tocá para ver los de toda la semana.</small></div>" + window.piezas.ico("cerrarX", 18);
+        cartel.addEventListener("click", () => {
+            filtroEstadoComercios.value = "visitados";
+            filtroEstadoComercios.dispatchEvent(new Event("change"));
+        });
+        listaComerciosAdmin.appendChild(cartel);
     }
 
     if (verComerciosArchivados) {
