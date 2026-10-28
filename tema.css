@@ -507,15 +507,17 @@ html .configPerfil .configPerfilConexion::before{content:"";width:8px;height:8px
 html .configPerfil .configPerfilConexion[data-estado="espera"]{color:var(--pendiente) !important;}
 html .configPerfil .configPerfilConexion[data-estado="error"]{color:var(--peligro) !important;}
 
-.masAccesos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px;}
+/* Repaso de diseño (opción B del dueño): botones anchos de a 2, el dibujito al lado del nombre. */
+.masAccesos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:8px;}
 .masAcceso{
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  min-width:0;padding:14px 6px 12px;
+  display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;
+  min-width:0;min-height:64px;padding:10px 12px;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);
   background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);cursor:pointer;
 }
-.masAcceso span{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
-.masAcceso strong{font-size:13px;font-weight:700;text-align:center;line-height:1.2;}
+.masAcceso span{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
+.masAcceso strong{font-size:14.5px;font-weight:700;text-align:left;line-height:1.2;}
+.masListaAjustes{margin-top:14px;}
 
 [data-color="estadisticas"],[data-color="empleados"],[data-color="seguridad"]{background:var(--info-bg) !important;color:var(--info) !important;}
 [data-color="cierre"],[data-color="respaldo"],[data-color="apariencia"]{background:var(--superficie-2) !important;color:var(--texto-sec) !important;}

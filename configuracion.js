@@ -415,11 +415,10 @@
 
                     <div class="masGruposAccesos" id="masAccesos"></div>
 
-                    <h2 class="configGrupoTitulo">Ajustes</h2>
-                    <div class="configLista">
+                    <div class="configLista masListaAjustes">
                         <button class="configFila configFilaAjustes" data-config-seccion="ajustes" id="configFilaAjustes">
                             <span class="configIcono" data-color="trabajo">${window.icono("engranaje", 20)}</span>
-                            <span class="configFilaTexto"><strong>Ajustes</strong><small>Recorrido, impresora, empleados, respaldo, apariencia y ayuda</small></span>
+                            <span class="configFilaTexto"><strong>Ajustes</strong><small>Cómo funciona la app: impresora, avisos, recorrido, empleados, respaldo y colores</small></span>
                             <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
                         </button>
                     </div>
@@ -611,7 +610,7 @@
             accesos.innerHTML =
                 (diarios.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">Lo de todos los días</h2><div class="masAccesos">` +
                     diarios.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "") +
-                (herramientas.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">Más herramientas</h2><div class="configLista masHerramientas">` +
+                (herramientas.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">De vez en cuando</h2><div class="configLista masHerramientas">` +
                     herramientas.map(acceso => filaHerramienta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "");
         }
 

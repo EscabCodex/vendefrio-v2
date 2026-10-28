@@ -634,10 +634,10 @@
         return boton;
     }
 
-    // Una campanita en el encabezado de cada pantalla (también las que se
-    // crean después, como Configuración, Catálogo y Estadísticas).
+    // La campanita va solo en Inicio y en Más (repaso de diseño, pedido del
+    // dueño); en las demás pantallas ese lugar lo ocupa el Asistente.
     function ponerCampanas() {
-        document.querySelectorAll('body > section[id^="pantalla"] > header').forEach(encabezado => {
+        document.querySelectorAll("#pantallaMenu > header, #pantallaConfiguracion > header").forEach(encabezado => {
             if (encabezado.querySelector(".campanaAvisos")) return;
 
             const lugar = encabezado.querySelector(".dashboardHeaderTop") || encabezado;

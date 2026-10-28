@@ -724,7 +724,7 @@ html[data-tema="oscuro"] .queHacerOpcion.principal .queHacerIcono{background:rgb
 }
 html[data-tema="oscuro"] .botonAyudaPantalla{background:var(--superficie-2);color:var(--acento);}
 body > section > header > .campanaAvisos{order:8;}
-html.conAvisos body > section > header > .botonAyudaPantalla{margin-left:6px;}
+html.conAvisos body > section > header:has(> .campanaAvisos) > .botonAyudaPantalla{margin-left:6px;}
 body > section:has(> .pzCabAccion) > header{padding-right:calc(72px + env(safe-area-inset-right));}
 /* En un celular chico, con "Avisos" y "?" en la cabecera, un título largo
    ("Estadísticas", "Preferencias de trabajo") empujaba esos botones fuera de

@@ -60,8 +60,9 @@
             const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", DESTINOS[destino] ? "Volver a " + DESTINOS[destino] : "Volver");
             generico.dataset.volver = destino;
             // T160: el Asistente, arriba a la derecha de cada pantalla.
-            const asistente = crearBoton("botonAsistentePantalla", "chispa", "Asistente");
+            const asistente = crearBoton("botonAsistentePantalla conNombre", "chispa", "Asistente");
             asistente.dataset.abrirAsistente = "";
+            asistente.dataset.nombre = "Asistente";
             barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"), asistente);
         }
         // Los que llegan tarde al encabezado (Pedidos agrega su flecha

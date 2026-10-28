@@ -472,8 +472,12 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     expect(await escribirDirecto(empleado, "cobrar")).toBe("permission-denied");
 
     // Al dueño le llega el aviso; al tocarlo abre Empleados y lo aprueba.
+    // La campanita está solo en Inicio y en Más (repaso de diseño).
     await irAPedidos(page);
-    await page.locator("#pantallaPedido .campanaAvisos").click();
+    await expect(page.locator("#pantallaPedido .campanaAvisos")).toHaveCount(0);
+    await expect(page.locator("#pantallaPedido .botonAsistentePantalla")).toBeVisible();
+    await page.evaluate(() => mostrarPantalla("menu"));
+    await page.locator("#pantallaMenu .campanaAvisos").click();
     const itemAviso = page.locator(".itemAviso[data-tipo=\"rolPendiente\"]");
     await expect(itemAviso).toContainText("Rol pendiente de aprobar");
     await expect(itemAviso).toContainText("Maxi");

@@ -231,7 +231,7 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     // "Ajustes" con todo lo demás. Preguntale ya no está ahí.
     await abrirMas(page);
     const grupos = page.locator("#masAccesos");
-    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "Más herramientas"]);
+    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "De vez en cuando"]);
     await expect(grupos.locator(".masAccesos .masAcceso strong")).toHaveText(["A cobrar", "Cierre del día", "Estadísticas", "Rutas", "WhatsApp", "Listas de precios"]);
     await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["Mapa de ventas", "Registro de cambios", "Importar planilla"]);
     await expect(grupos).not.toContainText("Preguntale");
