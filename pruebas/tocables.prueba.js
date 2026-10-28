@@ -95,14 +95,14 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(page.locator("#pantallaHistorial")).toBeVisible();
     await expect(page.locator("#filtroFechaHistorial")).toHaveValue("semana");
 
-    // Inicio (T178): "Visitados esta semana 2 de 4" -> los que faltan, y
+    // Inicio: "Visitados esta semana 2 de 4" -> los visitados, y
     // "Visitados hoy" -> los visitados.
     await barra.getByRole("button", { name: "Inicio" }).click();
     await expect(inicio).toBeVisible();
     await expect(page.locator("#dashVisitas")).toContainText("Visitados esta semana2 de 4");
     await page.locator("#dashVisitas").click();
     await expect(page.locator("#pantallaComercios")).toBeVisible();
-    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("pendientes");
+    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitados");
     await expect(page.locator("#listaComerciosAdmin .comercioCard")).toHaveCount(2);
     await barra.getByRole("button", { name: "Inicio" }).click();
     await page.locator('#dashKpis [data-kpi="visitadosHoy"]').click();

@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 250,
+      "fecha": "2026-10-28",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "La barra de visitados muestra los visitados",
+      "texto": "En Inicio, al tocar «Visitados esta semana» ahora ves los comercios que ya visitaste."
+    },
+    {
       "version": 249,
       "fecha": "2026-10-28",
       "tipo": "mejor",

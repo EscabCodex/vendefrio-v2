@@ -979,8 +979,8 @@ function prepararTarjetasDashboard() {
     if (!tocable) return;
     tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
     tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
-    // T178: la barra de visitados lleva a los que faltan; "Te deben", a A cobrar.
-    document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("pendientesSemana"));
+    // La barra dice "Visitados", así que lleva a los visitados; "Te deben", a A cobrar.
+    document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
     document.getElementById("dashDerechaHoy")?.addEventListener("click", evento => {
         ejecutarAccionTarjetaDashboard(evento.currentTarget.dataset.accion || "vendidoHoy");
     });
