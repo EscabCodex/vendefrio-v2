@@ -67,15 +67,22 @@ test("errores: en un celular chico los botones de arriba no se salen de la panta
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     const cabecera = page.locator("#pantallaConfiguracion > header");
     await expect(cabecera.locator("h1")).toHaveText("Preferencias de trabajo");
-    // El título largo pasa a su renglón y "?" queda entero a la vista.
-    await expect(cabecera).toHaveClass(/cabeceraDosFilas/);
+    // El título largo sigue al lado de la flechita (con letra más chica) y
+    // "?" queda entero a la vista.
     const ayuda = await cabecera.getByRole("button", { name: "Ayuda de esta pantalla" }).boundingBox();
     expect(ayuda.x + ayuda.width).toBeLessThanOrEqual(360);
     const titulo = await cabecera.locator("h1").boundingBox();
-    expect(titulo.y).toBeGreaterThanOrEqual(ayuda.y + ayuda.height - 1);
+    expect(titulo.y).toBeLessThan(ayuda.y + ayuda.height);
+    expect(titulo.x + titulo.width).toBeLessThanOrEqual(ayuda.x);
     await capturar(page, "errores-03-titulo-largo-celular-chico");
 
-    // Un título corto sigue al lado de los botones.
+    // Un título corto queda con su letra de siempre, al lado de la flecha.
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-    await expect(page.locator("#pantallaComercios > header")).not.toHaveClass(/cabeceraDosFilas/);
+    const comercios = page.locator("#pantallaComercios > header h1");
+    await expect(comercios).toHaveText("Comercios");
+    await expect(comercios).not.toHaveClass(/tituloDosRenglones/);
+    expect(await comercios.evaluate(h1 => h1.style.fontSize)).toBe("");
+    const flecha = await page.locator("#pantallaComercios > .barraVolver .volverGenerico").boundingBox();
+    const tituloComercios = await comercios.boundingBox();
+    expect(Math.abs((tituloComercios.y + tituloComercios.height / 2) - (flecha.y + flecha.height / 2))).toBeLessThan(6);
 });
