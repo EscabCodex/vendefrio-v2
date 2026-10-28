@@ -1058,6 +1058,24 @@ html.enNavegacion .cartelModoPersonal{display:none !important;}
 html.enNavegacion body{overflow:hidden;}
 .pantallaNavegacion{position:fixed;inset:0;z-index:1500;background:var(--fondo);overflow:hidden;}
 .pantallaNavegacion.oculto{display:none;}
+/* T179: Cargar pedido encima de la navegación. La sección Nuevo pedido es una
+   bandeja grande; arriba asoma el mapa apenas difuminado (solo esa franja, para
+   que el difuminado no gaste en celulares baratos). Tocar la franja la cierra. */
+.fondoPedidoNavegacion{position:fixed;left:0;right:0;top:0;height:calc(90px + env(safe-area-inset-top));z-index:1600;background:rgba(5,10,20,.32);}
+@supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){.fondoPedidoNavegacion{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}}
+.fondoPedidoNavegacion.oculto{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja{position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1601;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  margin:0;border-radius:28px 28px 0 0;background:var(--fondo);box-shadow:0 -10px 30px rgba(0,0,0,.25);animation:subirHoja .22s ease-out;}
+html[data-tema] #pantallaPedido.pedidoEnHoja.oculto{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja::before{content:"";position:sticky;top:0;display:block;margin:0 auto;width:40px;height:5px;border-radius:3px;background:var(--borde-fuerte);transform:translateY(8px);z-index:3;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header{position:static;display:flex;flex-wrap:nowrap;align-items:center !important;gap:10px;min-height:0;padding:22px 16px 6px !important;background:transparent;box-shadow:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > .barraVolver,
+html[data-tema] #pantallaPedido.pedidoEnHoja > header :is(#cerrarCargaPedido, .botonVolverPedidos, .botonAyudaPantalla, .campanaAvisos, .logo){display:none !important;}
+.cerrarPedidoEncima{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header > div{flex:1 1 auto !important;min-width:0;margin-left:0 !important;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header h1{font-size:22px;line-height:1.15;text-align:left;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header p{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header .cerrarPedidoEncima{display:grid;place-items:center;flex-shrink:0;order:9;width:44px;height:44px;min-height:0;padding:0;border:1px solid var(--borde);border-radius:50%;background:var(--superficie);color:var(--texto);}
 .mapaNavegacion{position:absolute;inset:0;background:var(--superficie-2);}
 .pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 6px);}
 .pantallaNavegacion .leaflet-control-attribution{font-size:10px;border-radius:8px 0 0 8px;}

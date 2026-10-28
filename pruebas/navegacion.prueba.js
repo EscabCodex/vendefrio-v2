@@ -159,20 +159,44 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await expect.poll(() => page.evaluate(() => window.__dichos.join(" | "))).toContain("Llegaste a Kiosco La Esquina");
     await capturar(page, "navegacion-03-llegaste");
 
-    // En ruta: «Cargar pedido» minimiza, y al guardarlo y cerrar la ventana
-    // del pedido se vuelve sola a la navegación.
+    // En ruta (T179): «Cargar pedido» abre el Nuevo pedido como bandeja
+    // encima de la navegación. El atrás del celular, tocar el mapa de arriba
+    // o su X la cierran y se sigue navegando; al guardarlo también.
     const cargarPedido = navegacion.getByRole("button", { name: "Cargar pedido" });
-    if (!(await cargarPedido.isVisible())) await navegacion.locator(".tarjetaParada, .cartelParada").first().click();
-    await cargarPedido.click();
-    await expect(navegacion).toBeHidden();
-    await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
+    const bandeja = page.locator("#pantallaPedido.pedidoEnHoja");
+    const abrirBandeja = async () => {
+        if (!(await cargarPedido.isVisible())) await navegacion.locator(".tarjetaParada, .cartelParada").first().click();
+        await cargarPedido.click();
+        await expect(bandeja).toBeVisible();
+        await expect(navegacion).toBeVisible();
+        await expect(page.locator("#cliente")).toHaveValue("Kiosco La Esquina");
+    };
+    await abrirBandeja();
+    await page.evaluate(() => window.lugarVendeFrio.atrasDelCelular());
+    await expect(bandeja).toBeHidden();
+    await expect(navegacion).toBeVisible();
+    await expect(burbuja).toBeHidden();
+    await abrirBandeja();
+    await page.locator("#fondoPedidoNavegacion").click({ position: { x: 20, y: 20 } });
+    await expect(bandeja).toBeHidden();
+    await expect(navegacion).toBeVisible();
+    await abrirBandeja();
+    // Solo su X arriba: ni flechas ni casita que lleven a otra pantalla.
+    await expect(bandeja.getByRole("button", { name: /^(Volver|Ir a Inicio)/ })).toHaveCount(0);
+    await bandeja.getByRole("button", { name: "Cerrar el pedido" }).click();
+    await expect(bandeja).toBeHidden();
+    await expect(navegacion).toBeVisible();
+    await abrirBandeja();
     if (await page.locator(".tituloMarca").first().getAttribute("aria-expanded") === "false") {
         await page.locator(".tituloMarca").first().click();
     }
     await page.locator(".listaProdutos .fila").first().getByRole("button", { name: "Aumentar cantidad" }).click();
+    await capturar(page, "navegacion-03b-pedido-encima");
     await page.locator("#generar").click();
+    await expect(bandeja).toBeHidden();
     const ventanaPedido = page.locator("#modalPedido");
     await expect(ventanaPedido).toBeVisible();
+    await expect(navegacion).toBeVisible();
     await ventanaPedido.click({ position: { x: 10, y: 10 } });
     await expect(navegacion).toBeVisible();
     await expect(page.getByRole("button", { name: "Volver a la navegación" })).toBeHidden();

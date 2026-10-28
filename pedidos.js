@@ -1200,7 +1200,9 @@ function limpiarPedido() {
     actualizarResumenPedido();
 }
 
-function abrirPedidoNuevoParaComercio(nombreComercio) {
+// Con { encima: true } (T179, desde la navegación) no se cambia de pantalla:
+// quien la llama ya muestra la sección como bandeja.
+function abrirPedidoNuevoParaComercio(nombreComercio, opciones) {
     // Este acceso siempre empieza desde cero, sin recuperar el borrador anterior.
     limpiarPedido();
 
@@ -1208,7 +1210,12 @@ function abrirPedidoNuevoParaComercio(nombreComercio) {
         buscadorProductosPedido.value = "";
     }
 
-    if (typeof mostrarPantalla === "function") {
+    if (opciones && opciones.encima) {
+        const seccion = document.getElementById("pantallaPedido");
+        if (seccion) seccion.classList.remove("oculto");
+        if (typeof cargarListaClientes === "function") cargarListaClientes();
+        if (typeof renderizarProductosPedido === "function") renderizarProductosPedido();
+    } else if (typeof mostrarPantalla === "function") {
         mostrarPantalla("pedido");
     }
 

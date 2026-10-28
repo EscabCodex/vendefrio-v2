@@ -15,7 +15,7 @@
 (function () {
     const CLAVE = "vendefrio_lugar";
     const DURA = 2 * 60 * 60 * 1000;
-    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear";
+    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear, .fondoPedidoNavegacion";
     // Ventanas que no se cierran tocando afuera: se usa su "X".
     const CERRAR = ".cerrarEscanear, .cerrarModalCatalogo, .fichaCerrar";
     // Las flechas de volver de cada pantalla (volver.js las junta arriba).
@@ -33,7 +33,7 @@
 
     function pantallaVisible() {
         return [...document.querySelectorAll('body > section[id^="pantalla"]')]
-            .find(seccion => !seccion.classList.contains("oculto")) || null;
+            .find(seccion => !seccion.classList.contains("oculto") && !seccion.classList.contains("pedidoEnHoja")) || null;
     }
 
     function cuenta() {

@@ -979,12 +979,9 @@
                 enlace.href = window.yaLlegoVendeFrio.enlace(comercio, minutosQueFaltan);
             });
         }
-        // T170: cargar el pedido minimiza; la navegación sigue en la burbuja.
-        acceso("documento", "Cargar pedido").addEventListener("click", () => {
-            const nombre = comercio.nombre;
-            minimizar();
-            if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
-        });
+        // T179: el pedido se carga en una bandeja grande encima del mapa, sin
+        // salir de la navegación.
+        acceso("documento", "Cargar pedido").addEventListener("click", () => abrirPedidoEncima(comercio.nombre));
         // "Visité, sin pedido" (T65, como en Próxima parada de Inicio): pide
         // el motivo, la deja visitada y sigue con la próxima parada.
         if (window.visitasVendeFrio) {
@@ -1325,7 +1322,7 @@
         }
         // Mover el mapa por un par de metros no se nota y redibuja el camino
         // entero (T141): se mueve cuando el punto se corrió unos píxeles.
-        if (seguir && mapa && camino && !llego && !minimizada) {
+        if (seguir && mapa && camino && !llego && !minimizada && !pedidoEncima) {
             const corrido = mapa.latLngToContainerPoint(posicion).distanceTo(mapa.getSize().divideBy(2).subtract([0, desplazoHoja]));
             if (corrido > 4) mapa.panTo(puntoParaCentrar(), { animate: velocidad < 8, duration: 0.4 });
         }
@@ -1486,6 +1483,7 @@
     // el recorrido"); si no, se calla enseguida.
     function cerrar(opciones) {
         if (!pantalla) return;
+        cerrarPedidoEncima();
         if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
         if (opciones && opciones.despedida === true) {
@@ -1552,6 +1550,67 @@
         actualizar(false);
         return true;
     }
+
+    // Cargar pedido encima (T179): la sección Nuevo pedido sube como una
+    // bandeja grande sobre el mapa. Arriba asoma el mapa apenas difuminado;
+    // tocarlo, deslizar la bandeja hacia abajo o el atrás del celular la
+    // cierran y se sigue navegando. Al guardar se cierra sola. Mientras está
+    // encima, el mapa no se mueve (no se ve y así no gasta).
+    // -------------------------------------------------
+
+    let pedidoEncima = false;
+    let fondoPedido = null;
+
+    function abrirPedidoEncima(nombre) {
+        const seccion = document.getElementById("pantallaPedido");
+        if (!seccion || typeof abrirPedidoNuevoParaComercio !== "function") {
+            minimizar();
+            if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
+            return;
+        }
+        if (!fondoPedido) {
+            fondoPedido = document.createElement("div");
+            fondoPedido.id = "fondoPedidoNavegacion";
+            fondoPedido.className = "fondoPedidoNavegacion oculto";
+            fondoPedido.addEventListener("click", cerrarPedidoEncima);
+            document.body.appendChild(fondoPedido);
+            // Su propia X: las flechas y la casita de la pantalla no se ven acá.
+            const cerrarX = document.createElement("button");
+            cerrarX.type = "button";
+            cerrarX.className = "cerrarPedidoEncima";
+            cerrarX.setAttribute("aria-label", "Cerrar el pedido");
+            cerrarX.innerHTML = window.icono ? window.icono("cerrarX", 22) : "×";
+            cerrarX.addEventListener("click", cerrarPedidoEncima);
+            seccion.querySelector(":scope > header")?.appendChild(cerrarX);
+        }
+        pedidoEncima = true;
+        seccion.dataset.fondo = fondoPedido.id;
+        seccion.classList.add("pedidoEnHoja");
+        seccion.scrollTop = 0;
+        fondoPedido.classList.remove("oculto");
+        abrirPedidoNuevoParaComercio(nombre, { encima: true });
+    }
+
+    function cerrarPedidoEncima() {
+        if (!pedidoEncima) return;
+        pedidoEncima = false;
+        const seccion = document.getElementById("pantallaPedido");
+        if (seccion) {
+            seccion.classList.add("oculto");
+            seccion.classList.remove("pedidoEnHoja");
+            seccion.style.transform = "";
+        }
+        if (fondoPedido) fondoPedido.classList.add("oculto");
+        if (!abierta()) return;
+        // Lo que cambió (un pedido cargado) y la hoja como estaba.
+        dibujarHoja();
+        abrirHoja(pantalla.querySelector(".hojaNavegacion").classList.contains("abierta"));
+        actualizar(false);
+    }
+
+    // Guardado: se cierra antes de que salga "Pedido generado", que queda
+    // arriba de la navegación.
+    window.addEventListener("pedidoGuardadoVendeFrio", cerrarPedidoEncima);
 
     // Con la navegación minimizada (en ruta), al guardar un pedido y cerrar
     // la ventana "Pedido generado" se vuelve sola a la navegación.
@@ -1703,7 +1762,7 @@
     }, true);
 
     window.navegacionVendeFrio = {
-        abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
+        abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, pedidoEncima: () => pedidoEncima, cerrarPedidoEncima, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
         // El Asistente (T160): las paradas que faltan y cambiar el orden.
         paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero,
         // Para los avisos y los compañeros del equipo (T139, T140).

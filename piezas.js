@@ -613,7 +613,7 @@
     // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
     // hacia abajo, como en las apps del celular. Solo mueve la hoja con
     // transform, para que ande fluido en celulares baratos.
-    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido, .ventanaNotas > .notasCaja";
+    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido, .ventanaNotas > .notasCaja, #pantallaPedido.pedidoEnHoja";
     let arrastre = null;
     const BOTONES_CERRAR = /^(Cancelar|Cerrar|Volver|Ahora no|Entendido)$/;
 
@@ -625,7 +625,8 @@
     }
 
     function fondoDe(hoja) {
-        return hoja.closest(".pzFondo") || hoja.closest(".modal");
+        // Una bandeja suelta (el pedido en la navegación, T179) dice cuál es su fondo.
+        return hoja.closest(".pzFondo") || hoja.closest(".modal") || (hoja.dataset.fondo ? document.getElementById(hoja.dataset.fondo) : null);
     }
 
     function sigueAbierta(fondo) {
