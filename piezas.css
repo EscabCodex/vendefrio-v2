@@ -273,7 +273,6 @@ html[data-tema="oscuro"] .pzFiltro[aria-pressed="true"]{background:var(--acento)
 .pzFilaLarga .pzFilaTxt strong{white-space:normal;}
 
 /* ---------- Tanda 2: visitas, pedido sugerido, ofertas, ficha ---------- */
-.paradaAcciones .paradaSinPedido{grid-column:1/-1;min-height:46px;font-size:15px;}
 html .fichaAccesoWa .fichaAccesoIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
 html .fichaAccesoSinPedido .fichaAccesoIcono{background:var(--pendiente-bg);color:var(--pendiente);}
 html[data-tema="oscuro"] .fichaAccesoWa .fichaAccesoIcono{color:var(--pz-wa);}
@@ -358,9 +357,6 @@ html[data-tema="oscuro"] .hojaDevolucion .controlesCantidad[data-cantidad="0"] .
 .hojaDevolucion .pzFiltros{flex-wrap:wrap;}
 .pzMontoNegativo{color:var(--peligro);}
 .seccionDevoluciones .pzTarjeta{box-shadow:none;border:1px solid var(--borde);}
-.paradaAcciones.conYaLlego{grid-template-columns:1fr auto auto;}
-.paradaAcciones .paradaYaLlego{min-height:50px;padding:0 18px;font-size:15px;text-decoration:none;}
-.paradaAcciones .botonIr.soloIcono{width:50px;padding:0;border-radius:50%;}
 html .accesoYaLlego .accesoNavegacionIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
 .pzMapa{height:340px;margin:0 0 14px;border-radius:var(--radius-lg);overflow:hidden;background:var(--superficie-2);}
 .pinRepartidor{background:none;border:0;}
@@ -758,10 +754,6 @@ input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable 
 
 /* Celulares chicos (360 px o menos): que nada se corte ni se salga. */
 @media (max-width:360px){
-  html .paradaAcciones.conYaLlego{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;}
-  html .paradaAcciones .paradaYaLlego{padding:0 10px;}
-  html .paradaAcciones .btnAccion{min-width:0;}
-  html .btnUbicacionDashboard{width:auto;max-width:100%;white-space:normal;text-align:left;}
   html div.pzBanner{flex-wrap:wrap;}
   html div.pzBanner > div{flex-basis:calc(100% - 40px);}
   html div.pzBanner > .pzBtn{margin-left:auto;}
@@ -1133,3 +1125,45 @@ html[data-tema] .ventanaNotas .notasBanda h2{margin:4px 0 0;font-size:22px;font-
 .ventanaNotas .notasActualizar[hidden]{display:none;}
 .ventanaNotas.notasSinActualizar .notasPie{grid-template-columns:1fr;}
 .ventanaNotas.notasSinActualizar .notasCerrar{background:var(--acento);color:var(--acento-txt);}
+
+/* ---------- Repaso de diseño de Inicio (T178) ---------- */
+/* "¿Qué querés hacer?": el principal a lo ancho, los otros lado a lado. */
+#queHacerInicio .queHacerLista{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+#queHacerInicio .queHacerOpcion.principal,
+#queHacerInicio .queHacerOpcion:only-child,
+#queHacerInicio .queHacerOpcion.principal + .queHacerOpcion:last-child{grid-column:1/-1;}
+#queHacerInicio .queHacerOpcion:not(.principal){flex-direction:column;align-items:flex-start;gap:10px;padding:14px;min-height:0;}
+#queHacerInicio .queHacerOpcion:not(.principal) .queHacerIcono{width:40px;height:40px;}
+#queHacerInicio .queHacerOpcion:not(.principal) strong{font-size:16px;}
+#queHacerInicio .queHacerOpcion:not(.principal) small{font-size:13px;}
+#queHacerInicio .queHacerOpcion:not(.principal):is(:only-child, .principal + :last-child){flex-direction:row;align-items:center;gap:14px;}
+/* Más > Apariencia: qué botones lleva (se ve solo con la llave prendida). */
+.ajChipsQueHacer{display:flex;flex-wrap:wrap;gap:8px;padding:2px 16px 14px 64px;}
+html[data-inicio-sin~="queHacer"] .ajChipsQueHacer{display:none;}
+html .configDetalle .ajChipsQueHacer .ajChip{position:relative;display:inline-flex;gap:0;width:auto;min-height:0;margin:0;padding:0;border:0;box-shadow:none;background:none;cursor:pointer;}
+html .configDetalle .ajChipsQueHacer .ajChip::before,html .configDetalle .ajChipsQueHacer .ajChip::after{display:none;}
+.ajChip input{position:absolute;opacity:0;pointer-events:none;}
+.ajChip span{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--borde);color:var(--texto-sec);font-size:13.5px;font-weight:700;}
+.ajChip input:checked + span{border-color:transparent;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .ajChip input:checked + span{background:var(--superficie-2);color:var(--acento);}
+.ajChip input:focus-visible + span{outline:2px solid var(--acento);outline-offset:2px;}
+/* Avisos fijos arriba de la lista (el respaldo). */
+.avisoFijo{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:12px 14px;border-radius:18px;background:var(--visitado-bg);}
+.avisoFijoIcono{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.6);color:var(--visitado);}
+html[data-tema="oscuro"] .avisoFijoIcono{background:rgba(255,255,255,.06);}
+.avisoFijoTextos{flex:1;min-width:0;display:flex;flex-direction:column;}
+.avisoFijoTextos strong{font-size:15px;color:var(--texto);}
+.avisoFijoTextos small{font-size:13px;color:var(--texto-sec);}
+.avisoFijoBoton{flex:none;height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);font-weight:700;font-size:14px;cursor:pointer;}
+/* En oscuro, styles.css pinta todo texto con --texto (!important): estos
+   colores tienen que ganarle. */
+html[data-tema="oscuro"] .paradaAccesoIcono{color:var(--acento) !important;}
+html[data-tema="oscuro"] .paradaAcceso.agregar .paradaAccesoIcono{color:var(--acento-txt) !important;}
+html[data-tema="oscuro"] .paradaYaLlego .paradaAccesoIcono{color:var(--pz-wa) !important;}
+html[data-tema="oscuro"] .paradaSinPedido .paradaAccesoIcono{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .paradaAccesoTexto,
+html[data-tema="oscuro"] .chipDatoParada,
+html[data-tema="oscuro"] .avisoFijoTextos small{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .chipDebeParada{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .avisoFijoIcono{color:var(--visitado) !important;}
+html[data-tema="oscuro"] .resumenHoyDeben .resumenHoyTotal{color:#FFB547 !important;}

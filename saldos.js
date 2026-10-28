@@ -82,24 +82,12 @@
         return deudasRecordadas.mapa.get(normal(nombre)) || 0;
     }
 
-    // "Te deben" en Inicio, debajo del resumen de hoy, para quien cobra.
-    function avisoTeDeben() {
-        const lista = veDeudas() ? listaRecordada().filter(grupo => grupo.total > 0) : [];
-        if (!lista.length) {
-            p.avisoInicio("avisoTeDeben", null);
-            return;
-        }
-        const total = lista.reduce((suma, grupo) => suma + grupo.total, 0);
-        const masViejo = Math.min(...lista.map(grupo => horaEntrega(grupo.pedidos[0])));
-        p.avisoInicio("avisoTeDeben", {
-            color: "Pri",
-            icono: "moneda",
-            titulo: "Te deben " + p.plata(total),
-            texto: (lista.length === 1 ? "1 comercio" : lista.length + " comercios") +
-                " · el más viejo, " + textoAntiguedad(masViejo).toLocaleLowerCase("es"),
-            etiqueta: "Te deben " + p.plata(total) + ". Ver a cobrar por comercio",
-            alTocar: abrirPantalla
-        }, "resumen");
+    // "Te deben" en Inicio (T178): va grande en la tarjeta azul, al lado de
+    // "Vendido hoy", solo para quien cobra. null si no lo ve.
+    function resumenDeudas() {
+        if (!veDeudas()) return null;
+        const lista = listaRecordada().filter(grupo => grupo.total > 0);
+        return { total: lista.reduce((suma, grupo) => suma + grupo.total, 0), comercios: lista.length };
     }
 
     function calcularCuentas() {
@@ -555,14 +543,10 @@
         return banner;
     });
     extras.escuchar("pagos", refrescar);
-    if (typeof window.actualizarDashboard === "function") {
-        const original = window.actualizarDashboard;
-        window.actualizarDashboard = function () {
-            const resultado = original.apply(this, arguments);
-            try { avisoTeDeben(); } catch (error) { console.error("Falló el aviso de lo que te deben.", error); }
-            return resultado;
-        };
-    }
+    // Un pago cambia "Te deben" de Inicio.
+    extras.escuchar("pagos", () => {
+        if (typeof pedirActualizarDashboard === "function") pedirActualizarDashboard();
+    });
     // Acceso en Más, para quien cobra.
     (window.accesosMasExtras = window.accesosMasExtras || []).push({
         destino: "aCobrar", icono: "moneda", texto: "A cobrar",
@@ -570,5 +554,5 @@
         abrir: abrirPantalla
     });
 
-    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, deudaDe, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
+    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, deudaDe, resumenDeudas, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
 }());

@@ -2922,8 +2922,6 @@ html[data-tema="oscuro"] #pantallaMenu #dashProximaParada h3{color:var(--texto)!
 html[data-tema="oscuro"] #pantallaMenu #dashProximaParada p,html[data-tema="oscuro"] #pantallaMenu #dashUltimoPedido p{color:var(--texto-sec)!important;}
 html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{background:var(--superficie)!important;border-color:var(--borde)!important;color:var(--texto)!important;}
 
-.btnUbicacionDashboard{display:inline-flex;align-items:center;width:max-content;min-height:34px;margin-top:5px;padding:6px 9px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:11px;font-weight:700;}
-html[data-tema="oscuro"] .btnUbicacionDashboard{background:var(--visitado-bg);border-color:#166534;color:var(--visitado);}
 
 /* Rework visual de Pedido: compacto y táctil */
 #pantallaPedido>.container{padding-top:8px;}

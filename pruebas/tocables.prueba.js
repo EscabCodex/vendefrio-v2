@@ -95,20 +95,30 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(page.locator("#pantallaHistorial")).toBeVisible();
     await expect(page.locator("#filtroFechaHistorial")).toHaveValue("semana");
 
-    // Inicio: "2 de 4 comercios visitados" -> Comercios en "Visitados".
+    // Inicio (T178): "Visitados esta semana 2 de 4" -> los que faltan, y
+    // "Visitados hoy" -> los visitados.
     await barra.getByRole("button", { name: "Inicio" }).click();
     await expect(inicio).toBeVisible();
-    await expect(page.locator("#dashSemanaVisitados")).toContainText("2 de 4 comercios visitados");
-    await page.locator("#dashSemanaVisitados").click();
+    await expect(page.locator("#dashVisitas")).toContainText("Visitados esta semana2 de 4");
+    await page.locator("#dashVisitas").click();
     await expect(page.locator("#pantallaComercios")).toBeVisible();
-    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitados");
+    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("pendientes");
     await expect(page.locator("#listaComerciosAdmin .comercioCard")).toHaveCount(2);
-
-    // "vendido" de la semana -> Estadísticas de la semana.
     await barra.getByRole("button", { name: "Inicio" }).click();
-    await page.locator('[data-dashboard-accion="vendidoSemana"]').click();
+    await page.locator('#dashKpis [data-kpi="visitadosHoy"]').click();
+    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitados");
+
+    // "Pedidos" de la semana (sin cuenta) -> los pedidos de esta semana, y
+    // "Productos distintos" -> Estadísticas de hoy.
+    await barra.getByRole("button", { name: "Inicio" }).click();
+    await page.locator('#dashKpis [data-kpi="semana"]').click();
+    await expect(page.locator("#pantallaHistorial")).toBeVisible();
+    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("semana");
+    await barra.getByRole("button", { name: "Inicio" }).click();
+    await expect(page.locator("#dashDerechaHoy")).toContainText("Productos distintos");
+    await page.locator("#dashDerechaHoy").click();
     await expect(estadisticas).toBeVisible();
-    await expect(estadisticas.locator('[data-periodo="semana"]')).toHaveClass(/activo/);
+    await expect(estadisticas.locator('[data-periodo="hoy"]')).toHaveClass(/activo/);
 
     // Ficha de un comercio: sus números y productos llevan a sus pedidos.
     await barra.getByRole("button", { name: "Comercios" }).click();

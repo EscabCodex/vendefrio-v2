@@ -2,12 +2,36 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
-      "version": 244,
+      "version": 245,
       "fecha": "2026-10-28",
       "tipo": "mejor",
       "icono": "documento",
       "titulo": "Pedido sin salir del mapa",
       "texto": "Navegando, «Cargar pedido» abre una bandeja arriba del mapa. Tocá afuera o deslizala y seguís navegando."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "grafico",
+      "titulo": "Inicio más claro",
+      "texto": "La tarjeta azul junta lo vendido, quién te debe, los visitados de la semana y accesos a lo de hoy."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Próxima parada renovada",
+      "texto": "El comercio sin visitar más cerca tuyo, con Pedido, Llamar, Ya llego, Ir y Sin pedido."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "campana",
+      "titulo": "El respaldo, en Avisos",
+      "texto": "El recordatorio del respaldo pasó a la campanita. Tocando el VF o tu nombre vas a tu cuenta."
     },
     {
       "version": 243,

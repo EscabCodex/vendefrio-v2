@@ -129,8 +129,10 @@
             orden: 1
         } : null, "arriba");
 
+        // T178: en la nube el recordatorio queda fijo en Avisos (la campanita
+        // marca 1) en vez de en Inicio. Sin cuenta no hay Avisos: va en Inicio.
         const dias = diasSinRespaldo();
-        pz().avisoInicio("avisoRespaldo", dias === null ? null : {
+        const respaldo = dias === null ? null : {
             color: "Ok",
             icono: "disquete",
             titulo: dias < 0 ? "Todavía no guardaste un respaldo" : "Hace " + dias + " días que no guardás un respaldo",
@@ -139,7 +141,10 @@
             claseBoton: "pzBtnSec",
             alTocar: guardarRespaldo,
             orden: 5
-        }, "abajo");
+        };
+        const enAvisos = enLaNube() && typeof window.avisosVendeFrio?.fijar === "function";
+        if (enAvisos) window.avisosVendeFrio.fijar("respaldo", respaldo && { ...respaldo, texto: "Queda acá hasta que lo guardes" });
+        pz().avisoInicio("avisoRespaldo", enAvisos ? null : respaldo, "abajo");
 
         if (document.getElementById("pantallaSinSubir")?.classList.contains("oculto") === false) dibujarSinSubir();
     }

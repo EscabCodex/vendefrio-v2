@@ -31,13 +31,14 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
         .filter(pedido => pedido.comercio === "Almacén Don Pepe")
         .forEach(pedido => window.nubeVendeFrio.entregarPedido(pedido.id, {})));
 
-    // Informe del desconocido: "Te deben" en Inicio, debajo del resumen de
-    // hoy, y "Debe" abajo de Pendiente/Visitado en Comercios.
+    // "Te deben" grande en la tarjeta azul, al lado de "Vendido hoy" (T178),
+    // y "Debe" abajo de Pendiente/Visitado en Comercios.
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    const teDeben = page.locator("#pantallaMenu #avisoTeDeben");
-    await expect(teDeben).toContainText("Te deben $ 19.600");
-    await expect(teDeben).toContainText("1 comercio · el más viejo, hoy");
-    expect(await page.evaluate(() => document.getElementById("resumenHoy").nextElementSibling.id)).toBe("avisoTeDeben");
+    const teDeben = page.locator("#resumenHoy #dashDerechaHoy");
+    await expect(teDeben).toContainText("Te deben");
+    await expect(teDeben).toContainText("$ 19.600");
+    await expect(teDeben).toContainText("1 comercio");
+    await expect(page.locator("#avisoTeDeben")).toHaveCount(0);
     await teDeben.scrollIntoViewIfNeeded();
     await capturar(page, "plata-00-te-deben-en-inicio");
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();

@@ -67,7 +67,7 @@ async function elegirComercio(page, comercio) {
 // Abre "Más" desde el avatar de Inicio (estilo nuevo, T31).
 async function abrirMas(page) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
 }
 

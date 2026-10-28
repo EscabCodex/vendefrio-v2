@@ -646,8 +646,40 @@
         actualizarCampanas();
     }
 
+    // Avisos fijos (T178): quedan arriba de la lista, con su botón, hasta
+    // que se resuelven (por ejemplo, "Todavía no guardaste un respaldo").
+    // Cuentan en la campanita.
+    const fijos = new Map();
+
+    function fijar(id, datos) {
+        if (datos) fijos.set(id, datos);
+        else if (!fijos.delete(id)) return;
+        actualizarCampanas();
+        if (listaAbierta()) dibujarLista();
+    }
+
+    function crearFijo(id, datos) {
+        const fijo = crear("div", "avisoFijo");
+        fijo.dataset.fijo = id;
+        const icono = crear("span", "avisoFijoIcono");
+        icono.innerHTML = window.icono ? window.icono(datos.icono || "info", 20) : "";
+        const textos = crear("div", "avisoFijoTextos");
+        textos.append(crear("strong", "", datos.titulo || ""), crear("small", "", datos.texto || ""));
+        fijo.append(icono, textos);
+        if (datos.boton) {
+            const boton = crear("button", "avisoFijoBoton", datos.boton);
+            boton.type = "button";
+            boton.addEventListener("click", evento => {
+                evento.stopPropagation();
+                if (typeof datos.alTocar === "function") datos.alTocar();
+            });
+            fijo.appendChild(boton);
+        }
+        return fijo;
+    }
+
     function actualizarCampanas() {
-        const cantidad = yo ? sinLeer() : 0;
+        const cantidad = yo ? sinLeer() + fijos.size : 0;
         const lleno = cantidad >= MAXIMO_EN_LISTA;
         const texto = lleno ? MAXIMO_EN_LISTA + "+" : String(cantidad);
 
@@ -780,6 +812,7 @@
         const visibles = avisosVisibles();
         cuerpo.innerHTML = "";
         if (todos) todos.classList.toggle("oculto", !visibles.some(aviso => !aviso.leido));
+        fijos.forEach((datos, id) => cuerpo.appendChild(crearFijo(id, datos)));
 
         if (estado === "sinPermiso" || estado === "error") {
             const vacio = crear("div", "avisosVacio");
@@ -792,6 +825,8 @@
             cuerpo.appendChild(vacio);
             return;
         }
+
+        if (!visibles.length && fijos.size) return;
 
         if (!visibles.length) {
             const vacio = crear("div", "avisosVacio");
@@ -924,6 +959,7 @@
         cambiarPreferencia,
         sinLeer: () => (yo ? sinLeer() : 0),
         abrirLista,
+        fijar,
         // T29: lo usa notificaciones.js al abrir el pedido de una notificación.
         marcarLeido,
         // T29d: lo llama empleados.js cuando el empleado elige un rol con "Cobra".

@@ -29,7 +29,7 @@
 <section id="pantallaMenu">
   <header class="dashboardHeader">
     <div class="dashboardHeaderTop">
-      <div class="inicioLogo" aria-hidden="true">VF</div>
+      <div class="inicioLogo" aria-hidden="true" title="Tu cuenta">VF</div>
       <div class="dashboardMarca">
         <p class="inicioDistribuidora"><span id="dashNombreDistribuidora" class="dashNombreDistribuidora">VendeFrío</span><span class="puntoConexion oculto" data-conexion role="img" aria-label="Conexión"></span></p>
         <h1 id="dashSaludo">Hola</h1>
@@ -43,11 +43,22 @@
 
     <section class="resumenHoy" id="resumenHoy" aria-label="Resumen de hoy">
       <p class="resumenHoyFecha" id="dashFechaHoy">Hoy</p>
-      <div class="resumenHoyVendido" id="dashHoyVendido">
-        <small id="dashTituloHoy">Vendido hoy</small>
-        <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
-        <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+      <div class="resumenHoyGrandes">
+        <div class="resumenHoyVendido" id="dashHoyVendido">
+          <small id="dashTituloHoy">Vendido hoy</small>
+          <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
+          <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+        </div>
+        <button type="button" class="resumenHoyDerecha" id="dashDerechaHoy">
+          <small>Productos distintos</small>
+          <strong class="resumenHoyTotal">0</strong>
+          <span class="resumenHoySub">vendidos hoy</span>
+        </button>
       </div>
+      <button type="button" class="resumenVisitas" id="dashVisitas" aria-label="Comercios visitados esta semana. Ver los que faltan">
+        <span class="resumenVisitasFila"><span>Visitados esta semana</span><b><span id="dashVisitasHechas">0</span> <small id="dashVisitasTotal">de 0</small></b></span>
+        <span class="resumenVisitasBarra"><span id="dashVisitasBarra"></span></span>
+      </button>
       <div class="kpisHoy" id="dashKpis"></div>
     </section>
 
@@ -641,7 +652,8 @@
       const tarjetas = { inicioVerAvisos: "avisos", inicioVerResumen: "resumen", inicioVerQueHacer: "queHacer", inicioVerProxima: "proxima",
         inicioVerSuelenPedir: "suelenPedir", inicioVerPedidosHoy: "pedidosHoy", inicioVerSemana: "semana" };
       raiz.inicioSin = Object.keys(tarjetas)
-        .filter(campo => campo === "inicioVerSuelenPedir" ? d[campo] !== true : d[campo] === false)
+        // Arrancan apagadas: "Suelen pedir los…", "¿Qué querés hacer?" y "Esta semana" (T178).
+        .filter(campo => ["inicioVerSuelenPedir", "inicioVerQueHacer", "inicioVerSemana"].includes(campo) ? d[campo] !== true : d[campo] === false)
         .map(campo => tarjetas[campo]).join(" ");
       const propias = d.acento === "propio" && d.acentoPropioVars && d.acentoPropioVars[temaVisual];
       if (propias) Object.keys(propias).forEach(nombre => document.documentElement.style.setProperty(nombre, propias[nombre]));
