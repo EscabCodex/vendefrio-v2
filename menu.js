@@ -267,13 +267,13 @@ function dibujarKpisInicio(cuentas, nube, conPlata) {
     if (nube) {
         kpis = [
             { id: "cargados", texto: "Cargados", valor: cuentas.cargadosSemana, etapa: "paraArmar" },
-            { id: "entregados", texto: "Entregados", valor: cuentas.entregadosSemana, etapa: "historial" }
+            { id: "entregados", texto: "Entregados", valor: cuentas.entregadosSemana, accion: "entregadosSemana" }
         ];
         const cobrado = conPlata && window.cierreVendeFrio?.disponible?.() ? cobradoHoyInicio() : null;
         if (cobrado !== null) kpis.push({ id: "cobradoHoy", texto: "Cobrado hoy", valor: textoPlataCortoInicio(cobrado), accion: "cobradoHoy" });
         kpis.push(
             { id: "cargadosHoy", texto: "Cargados hoy", valor: cuentas.cargadosHoy.length, etapa: "paraArmar" },
-            { id: "entregadosHoy", texto: "Entregados hoy", valor: cuentas.entregadosHoy, etapa: "historial" },
+            { id: "entregadosHoy", texto: "Entregados hoy", valor: cuentas.entregadosHoy, accion: "entregadosHoy" },
             { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosSemana" }
         );
     } else {
@@ -712,7 +712,7 @@ function dibujarDerechaResumenInicio(cuentas, vePlata) {
     const deudas = vePlata && window.saldosVendeFrio?.resumenDeudas?.();
     const debe = Boolean(deudas);
     caja.classList.toggle("resumenHoyDeben", debe);
-    caja.dataset.accion = debe ? "teDeben" : "vendidoHoy";
+    caja.dataset.accion = debe ? "teDeben" : "productosHoy";
     const textos = debe
         ? ["Te deben", textoPlataInicio(deudas.total),
             deudas.comercios ? deudas.comercios + (deudas.comercios === 1 ? " comercio" : " comercios") : "Nadie te debe"]
@@ -878,6 +878,24 @@ function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
 }
 
 function irAPedidoRapido(nombreComercio) {
+    // Repaso de Catálogo: con un pedido a medio hacer se pregunta si seguir
+    // con ese (para este comercio) o empezar uno nuevo. Así no se pierde nada.
+    if (window.pedidoEnHoja && window.pedidoEnHoja.resumen() && typeof abrirPedidoNuevoParaComercio === "function") {
+        window.pedidoEnHoja.preguntarSiHayOtro(nombreComercio, seguir => {
+            if (!seguir) {
+                abrirPedidoNuevoParaComercio(nombreComercio);
+                return;
+            }
+            mostrarPantalla("pedido");
+            const cliente = document.getElementById("cliente");
+            if (cliente && nombreComercio) {
+                cliente.value = nombreComercio;
+                cliente.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            if (typeof guardarBorradorPedido === "function") guardarBorradorPedido();
+        });
+        return;
+    }
     if (typeof abrirPedidoNuevoParaComercio === "function") {
         abrirPedidoNuevoParaComercio(nombreComercio);
         return;
@@ -891,6 +909,8 @@ function irAPedidoRapido(nombreComercio) {
 function abrirComerciosConFiltroDashboard(filtro) {
     const selector = document.getElementById("filtroEstadoComercios");
     const buscador = document.getElementById("buscarComercio");
+    // La lista entera: sin el comercio solo que dejó Historial ni los archivados.
+    if (typeof verTodaLaListaDeComercios === "function") verTodaLaListaDeComercios();
 
     if (selector) selector.value = filtro || "todos";
     if (buscador) buscador.value = "";
@@ -906,6 +926,13 @@ function ejecutarAccionTarjetaDashboard(accion) {
 
     if (accion === "pedidosSemana" && typeof abrirHistorialPorPeriodo === "function") {
         abrirHistorialPorPeriodo("semana");
+        return;
+    }
+
+    // "Entregados" y "Entregados hoy" abren Terminados en ese período (antes,
+    // Terminados de siempre).
+    if ((accion === "entregadosSemana" || accion === "entregadosHoy") && window.seguimientoVendeFrio?.abrirHistorial) {
+        window.seguimientoVendeFrio.abrirHistorial({ periodo: accion === "entregadosHoy" ? "hoy" : "semana" });
         return;
     }
 
@@ -934,6 +961,13 @@ function ejecutarAccionTarjetaDashboard(accion) {
     if (accion === "vendidoHoy" && typeof window.abrirEstadisticas === "function") {
         window.abrirEstadisticas("hoy");
     }
+
+    // "Productos distintos vendidos hoy": Estadísticas de hoy, en Lo más
+    // pedido > Productos.
+    if (accion === "productosHoy" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas("hoy");
+        window.estadisticasVendeFrio?.irAlRanking?.("productos");
+    }
 }
 
 function prepararTarjetasDashboard() {
@@ -961,8 +995,8 @@ function prepararTarjetasDashboard() {
     if (!tocable) return;
     tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
     tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
-    // T178: la barra de visitados lleva a los que faltan; "Te deben", a A cobrar.
-    document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("pendientesSemana"));
+    // La barra dice "Visitados", así que lleva a los visitados; "Te deben", a A cobrar.
+    document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
     document.getElementById("dashDerechaHoy")?.addEventListener("click", evento => {
         ejecutarAccionTarjetaDashboard(evento.currentTarget.dataset.accion || "vendidoHoy");
     });
@@ -982,6 +1016,11 @@ document.getElementById("botonAvatar")?.addEventListener("click", () => abrirMen
 document.getElementById("dashVerTodos")?.addEventListener("click", () => {
     if (usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial) {
         if (window.seguimientoVendeFrio.abrirEtapa("cargados")) return;
+    }
+    // Sin la nube, Historial en "Hoy" (antes quedaba en el último período elegido).
+    if (!usaNubeReal() && typeof abrirHistorialPorPeriodo === "function") {
+        abrirHistorialPorPeriodo("hoy");
+        return;
     }
     mostrarPantalla(usaNubeReal() ? "pedido" : "historial");
 });

@@ -76,7 +76,7 @@ test.describe("nube", () => {
         // Cambios: un precio (desde el catálogo), un producto archivado y un tope.
         await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
         await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-        await page.getByRole("button", { name: "Editar precio o foto" }).click();
+        await page.getByRole("button", { name: "Editar datos" }).click();
         await page.locator(".precioCatalogoEdicion").fill("4800");
         await page.locator(".guardarEdicionCatalogo").click();
         await page.evaluate(() => {

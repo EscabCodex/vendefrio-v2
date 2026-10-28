@@ -28,20 +28,29 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(tarjeta("Helado 1 kg")).toHaveClass(/tono0/);
     await expect(tarjeta("Ravioles de verdura")).toHaveClass(/tono1/);
     await expect(tarjeta("Helado 1 kg").locator("b")).toHaveText("$ 4.500");
-    await expect(tarjeta("Ñoquis de papa").locator("b.sinPrecioCatalogo")).toHaveText("Sin precio");
-    const aviso = catalogo.locator("#avisoSinPrecio");
-    await expect(aviso).toContainText("1 producto sin precio");
+    await expect(tarjeta("Ñoquis de papa").locator("b.sinPrecioCatalogo")).toHaveText("+ Agregar precio");
+    // Repaso de Catálogo: filtros con el número adentro arriba del buscador,
+    // las marcas primero y "Sin precio" al final.
+    const filtros = catalogo.locator("#chipsMarcasCatalogo .filtroEtapa");
+    await expect(filtros).toHaveText([/Todas\s*5/, /Frío Sur\s*3/, /Pastas Doña Rosa\s*2/, /Sin precio\s*1/]);
+    await expect(catalogo.locator("#vistaCatalogo")).toContainText("+ Agregar producto");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "catalogo-01-productos");
-    await aviso.click();
+    const sinPrecio = catalogo.locator("#chipsMarcasCatalogo .filtroEtapa", { hasText: "Sin precio" });
+    await sinPrecio.click();
     await expect(catalogo.locator(".itemCatalogo")).toHaveCount(1);
-    await expect(aviso).toContainText("Ver todos");
-    await aviso.click();
+    await expect(sinPrecio).toHaveAttribute("aria-pressed", "true");
+    await sinPrecio.click();
     await expect(catalogo.locator(".itemCatalogo")).toHaveCount(5);
 
     // Editar precio o foto: hoja nueva, con el "$" adelante.
+    // El ⋯ abre el menú flotante, con "Editar datos" resaltado arriba.
     await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-    await page.getByRole("button", { name: "Editar precio o foto" }).click();
+    const menu = page.getByRole("menu", { name: "Helado 1 kg" });
+    await expect(menu.locator(".menuFlotanteItem").first()).toHaveText("Editar datos");
+    await expect(menu.getByRole("button", { name: "Agregar al pedido" })).toHaveCount(0);
+    await capturar(page, "catalogo-01b-menu-producto");
+    await menu.getByRole("button", { name: "Editar datos" }).click();
     const hoja = page.getByRole("dialog", { name: "Editar producto" });
     await expect(hoja.getByText("Poner foto")).toBeVisible();
     await hoja.locator(".precioCatalogoEdicion").fill("4800");
@@ -50,15 +59,24 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(hoja).toBeHidden();
     await expect(tarjeta("Helado 1 kg").locator("b")).toHaveText("$ 4.800");
 
-    // Editar marcas: tarjetas con las iniciales, filas que se tocan.
+    // Editar marcas: tarjetas cerradas con las iniciales y la flechita.
     await page.getByRole("tab", { name: "Editar marcas" }).click();
     const marcas = page.locator("#listaProductosAdmin");
     const friosur = marcas.locator(".tarjetaMarca", { hasText: "Frío Sur" });
     await expect(friosur.locator(".inicialesMarca")).toHaveText("FS");
     await expect(marcas.locator(".tarjetaMarca", { hasText: "Pastas Doña Rosa" })).toContainText("2 productos · 1 sin precio");
-    await expect(friosur.getByRole("button", { name: "Editar Palito bombón" })).toContainText("$ 800");
+    await expect(friosur.getByRole("button", { name: "Editar Palito bombón" })).toBeHidden();
+    await expect(marcas.getByRole("button", { name: /^Subir|^Bajar|^Opciones de/ })).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "catalogo-03-editar-marcas");
+    await friosur.getByRole("button", { name: "Ver productos de Frío Sur" }).click();
+    await expect(friosur.getByRole("button", { name: "Editar Palito bombón" })).toContainText("$ 800");
+    const rosa = marcas.locator(".tarjetaMarca", { hasText: "Pastas Doña Rosa" });
+    await rosa.getByRole("button", { name: "Ver productos de Pastas Doña Rosa" }).click();
+    await expect(rosa.locator(".filaProducto", { hasText: "+ Agregar precio" })).toHaveCount(1);
+    await capturar(page, "catalogo-03b-marca-abierta");
+    await rosa.getByRole("button", { name: "Ocultar productos de Pastas Doña Rosa" }).click();
+    await expect(rosa.locator(".filaProducto").first()).toBeHidden();
 
     // Tocar el producto: nombre, precio y "Archivar producto".
     await friosur.getByRole("button", { name: "Editar Palito bombón" }).click();
@@ -76,15 +94,29 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(page.locator("#archivarDesdeModal")).toBeHidden();
     await page.locator("#cancelarProducto").click();
 
-    // Opciones de la marca: cambiar el nombre.
-    await page.getByRole("button", { name: "Opciones de Pastas Doña Rosa" }).click();
-    const opciones = page.getByRole("dialog", { name: "Pastas Doña Rosa" });
+    // El nombre abre la ficha de la marca: sus números y sus productos.
+    await page.getByRole("button", { name: "Ficha de Pastas Doña Rosa" }).click();
+    const ficha = page.getByRole("dialog", { name: "Pastas Doña Rosa" });
+    await expect(ficha).toBeVisible();
+    await expect(ficha.locator(".fichaNumeros > div")).toHaveCount(6);
+    await expect(ficha.locator(".fichaNumeros")).toContainText("sin precio");
+    await expect(ficha.locator(".filaFichaMarca", { hasText: "+ Agregar precio" })).toHaveCount(1);
+    await capturar(page, "catalogo-05-ficha-de-la-marca");
+    // Su ⋯: lo que se hace con la marca (cambiar el nombre).
+    await page.locator(".modalFichaMarca").getByRole("button", { name: "Más opciones" }).click();
+    const opciones = page.getByRole("dialog", { name: "Opciones de Pastas Doña Rosa" });
+    await expect(opciones.locator(".fichaMenuItem").first()).toHaveText("Agregar producto");
     await expect(opciones.getByRole("button", { name: "Eliminar marca" })).toBeVisible();
-    await capturar(page, "catalogo-05-opciones-de-la-marca");
+    await capturar(page, "catalogo-05b-opciones-de-la-marca");
     await opciones.getByRole("button", { name: "Cambiar el nombre" }).click();
     await page.locator("#productoNombre").fill("Pastas Rosa");
     await page.locator("#guardarProducto").click();
+    await expect(page.getByRole("dialog", { name: "Pastas Rosa" })).toBeVisible();
     await expect(marcas.locator(".tarjetaMarca", { hasText: "Pastas Rosa" }).locator(".inicialesMarca")).toHaveText("PR");
+    // El atrás del celular la cierra.
+    await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(true);
+    await page.evaluate(() => window.lugarVendeFrio.atrasDelCelular());
+    await expect(page.locator(".modalFichaMarca")).toHaveCount(0);
 
     // Nuevo comercio: hoja nueva (antes se espera que se vaya el "Deshacer").
     await expect(page.locator(".pzDeshacer.visible")).toHaveCount(0, { timeout: 10000 });

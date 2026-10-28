@@ -350,8 +350,9 @@ function abrirHistorialEnPedidos(opciones) {
     return usaNubeReal() && Boolean(window.seguimientoVendeFrio?.abrirHistorial?.(opciones));
 }
 
-function abrirHistorialDeComercio(nombre) {
-    if (abrirHistorialEnPedidos({ comercio: nombre })) return;
+// periodo (opcional): "mes" para los números "este mes" de la ficha.
+function abrirHistorialDeComercio(nombre, periodo = "todos") {
+    if (abrirHistorialEnPedidos({ comercio: nombre, periodo })) return;
 
     pedidoHistorialActivo = null;
     comercioHistorialActivo = String(nombre || "").trim();
@@ -361,7 +362,7 @@ function abrirHistorialDeComercio(nombre) {
     }
 
     if (filtroFechaHistorial) {
-        filtroFechaHistorial.value = "todos";
+        filtroFechaHistorial.value = periodo || "todos";
     }
 
     if (typeof mostrarPantalla === "function") {

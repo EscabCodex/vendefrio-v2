@@ -88,7 +88,8 @@
             else mostrarPantalla("pedido");
         } else if (accion === "pedidosHoy") {
             if (enLaNube() && window.seguimientoVendeFrio?.abrirEtapa?.("paraArmar")) return;
-            mostrarPantalla(enLaNube() ? "pedido" : "historial");
+            if (!enLaNube() && typeof abrirHistorialPorPeriodo === "function") abrirHistorialPorPeriodo("hoy");
+            else mostrarPantalla(enLaNube() ? "pedido" : "historial");
         } else if (accion === "cobrar") {
             window.saldosVendeFrio?.abrirPantalla?.();
         }

@@ -238,16 +238,16 @@
             const debe = window.saldosVendeFrio.deudaDe(nombre) || 0;
             numeros.push({ valor: p.plata(debe), texto: "debe", clase: debe > 0 ? "fichaNumeroDebe" : "", alTocar: debe > 0 ? () => window.saldosVendeFrio.verCuenta(nombre) : null });
         } else {
-            numeros.push({ valor: String(delMes.length), texto: delMes.length === 1 ? "pedido este mes" : "pedidos este mes", verPedidos: true });
+            numeros.push({ valor: String(delMes.length), texto: delMes.length === 1 ? "pedido este mes" : "pedidos este mes", verPedidos: true, delMes: true });
         }
         if (veoPlata) {
             const delMesPlata = delMes.reduce((suma, pedido) => suma + total(pedido), 0);
             const todos = pedidos.reduce((suma, pedido) => suma + total(pedido), 0);
-            numeros.push({ valor: p.plata(delMesPlata), texto: "compró este mes", verPedidos: true });
+            numeros.push({ valor: p.plata(delMesPlata), texto: "compró este mes", verPedidos: true, delMes: true });
             numeros.push({ valor: pedidos.length ? p.plata(Math.round(todos / pedidos.length)) : "—", texto: "compra promedio", verPedidos: true });
         } else {
             const delMesUnidades = delMes.reduce((suma, pedido) => suma + unidades(pedido), 0);
-            numeros.push({ valor: String(delMesUnidades), texto: "unidades este mes", verPedidos: true });
+            numeros.push({ valor: String(delMesUnidades), texto: "unidades este mes", verPedidos: true, delMes: true });
             numeros.push({ valor: pedidos.length ? String(Math.round(datos.totalUnidades / pedidos.length)) : "—", texto: "unidades por pedido", verPedidos: true });
         }
         numeros.push({
@@ -305,6 +305,8 @@
         // Repasada: los números y los productos habituales llevan a sus pedidos
         // (lo mismo que "Ver sus pedidos").
         const verPedidos = () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); };
+        // Los números "este mes" abren sus pedidos en "Mes".
+        const verPedidosDelMes = () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre, "mes"); };
         const tocable = window.piezas?.tocable;
         const cajaNumeros = modalFicha.querySelector(".fichaNumeros");
         numerosDeLaFicha(comercio.nombre, datos).forEach(numero => {
@@ -315,7 +317,7 @@
             const chico = document.createElement("small");
             chico.textContent = numero.texto;
             caja.append(fuerte, chico);
-            const alTocar = numero.alTocar || (numero.verPedidos && datos.pedidos > 0 ? verPedidos : null);
+            const alTocar = numero.alTocar || (numero.verPedidos && datos.pedidos > 0 ? (numero.delMes ? verPedidosDelMes : verPedidos) : null);
             if (alTocar && tocable) tocable(caja, alTocar);
             cajaNumeros.appendChild(caja);
         });
