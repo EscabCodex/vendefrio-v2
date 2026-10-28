@@ -1326,3 +1326,16 @@ html[data-tema] #pantallaCatalogo .agregarFotoCatalogo{position:absolute;left:50
 /* El "+" con la cantidad que ya va en el pedido a medio hacer. */
 html[data-tema] #pantallaCatalogo .btnCatalogoPedido.conCantidad{background:#16a34a;color:#fff;font-size:17px;font-weight:800;box-shadow:none;}
 html[data-tema="oscuro"] #pantallaCatalogo .btnCatalogoPedido.conCantidad{background:#22c55e;color:#06240f;}
+
+/* Regla del dueño: todo lo que se abre encima (hojas, bandejas, fichas y
+   ventanas del medio) difumina apenas el fondo, lo mismo que la ficha desde
+   Inicio y las notas de cambios. Un solo desenfoque chico en la capa quieta
+   de atrás, sin animarlo: no traba un celular barato. Sin soporte queda
+   solo el oscurecido de siempre. Selectores simples a propósito, para que
+   los casos con su propio desenfoque (ficha con menú) sigan mandando. */
+@supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
+  .pzFondo,.modal,.modalCatalogo{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+  /* Rutas: «Paradas» es una hoja alta encima del mapa; se difumina la franja
+     de mapa que asoma arriba con una capa fija aparte. */
+  #pantallaRutas.conParadasAbiertas::before{content:"";position:fixed;inset:0;z-index:1099;pointer-events:none;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+}

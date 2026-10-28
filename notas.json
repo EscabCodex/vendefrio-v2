@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 248,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "ojo",
+      "titulo": "Fondo apenas borroso",
+      "texto": "Todo lo que se abre encima (hojas, bandejas y ventanas) difumina un poquito lo de atrás."
+    },
+    {
       "version": 247,
       "fecha": "2026-10-28",
       "tipo": "mejor",
