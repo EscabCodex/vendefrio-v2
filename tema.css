@@ -1140,6 +1140,16 @@ html[data-tema] #pantallaPedido.pedidoEnHoja > header{position:static;display:fl
 html[data-tema] #pantallaPedido.pedidoEnHoja > .barraVolver,
 html[data-tema] #pantallaPedido.pedidoEnHoja > header :is(#cerrarCargaPedido, .botonVolverPedidos, .botonAyudaPantalla, .campanaAvisos, .logo){display:none !important;}
 .cerrarPedidoEncima{display:none;}
+/* "+ Agregar dirección" y otros datos que faltan, en Rutas y en la navegación
+   (como en Comercios): se completan ahí mismo con la hoja "Datos del comercio". */
+.agregarDatoRuta,.agregarDatoNavegacion{display:inline-flex;align-items:center;gap:3px;color:var(--acento-oscuro, var(--acento));font-weight:700;white-space:nowrap;cursor:pointer;}
+html[data-tema="oscuro"] :is(.agregarDatoRuta,.agregarDatoNavegacion){color:var(--acento);}
+.agregarDatoNavegacion{min-height:32px;margin:0;padding:2px 0;border:0;background:none;box-shadow:none;font:inherit;font-weight:700;}
+.accesoNavegacion.accesoAgregarDato small{color:var(--acento-oscuro, var(--acento));}
+html[data-tema="oscuro"] .accesoNavegacion.accesoAgregarDato small{color:var(--acento);}
+.faltanDatosRuta{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px;}
+.faltanDatosRuta .agregarDatoChip{min-height:36px;border:1px dashed var(--borde-fuerte);background:transparent;color:var(--acento-oscuro, var(--acento));font-weight:700;cursor:pointer;}
+html[data-tema="oscuro"] .faltanDatosRuta .agregarDatoChip{color:var(--acento);}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header > div{flex:1 1 auto !important;min-width:0;margin-left:0 !important;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header h1{font-size:22px;line-height:1.15;text-align:left;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header p{display:none;}

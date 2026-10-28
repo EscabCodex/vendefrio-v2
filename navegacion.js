@@ -933,8 +933,13 @@
         const comercio = paradaActual();
         if (!comercio) return;
         pantalla.querySelector(".nombreNavegacion").textContent = comercio.nombre;
-        pantalla.querySelector(".direccionNavegacion").textContent = (comercio.direccion || "Sin dirección cargada") +
-            (paradas.length > 1 ? " · parada " + (indiceParada + 1) + " de " + paradas.length : "");
+        const lineaDireccion = pantalla.querySelector(".direccionNavegacion");
+        lineaDireccion.textContent = (comercio.direccion || "") +
+            (paradas.length > 1 ? (comercio.direccion ? " · " : "") + "parada " + (indiceParada + 1) + " de " + paradas.length : "");
+        // Sin dirección: se agrega ahí mismo, sin salir de la navegación.
+        if (!comercio.direccion && typeof window.abrirDatosComercio === "function") {
+            lineaDireccion.prepend(botonAgregarDato(comercio, "direccion", "Agregar dirección"), " ");
+        }
         const avatar = pantalla.querySelector(".hojaAvatar");
         avatar.textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
         if (typeof colorAvatar === "function") avatar.style.background = colorAvatar(comercio.nombre);
@@ -957,6 +962,12 @@
             acciones.appendChild(elemento);
             return elemento;
         };
+        if (!comercio.telefono && typeof window.abrirDatosComercio === "function") {
+            const sumarTelefono = acceso("telefono", "+ Teléfono");
+            sumarTelefono.classList.add("accesoAgregarDato");
+            sumarTelefono.setAttribute("aria-label", "Agregar teléfono");
+            sumarTelefono.addEventListener("click", () => agregarDato(comercio, "telefono"));
+        }
         if (comercio.telefono) {
             acceso("telefono", "Llamar", "a").href = "tel:" + String(comercio.telefono).replace(/[^\d+]/g, "");
             const whatsapp = enlaceWhatsapp(comercio.telefono);
@@ -1014,6 +1025,29 @@
         dibujarParadas();
         dibujarTarjetasParada();
         dibujarBarraDelDia();
+    }
+
+    // "+ Agregar …" (como en Comercios): abre la hoja "Datos del comercio"
+    // arriba de la navegación y, al guardar, la parada queda con el dato nuevo.
+    function agregarDato(comercio, campo) {
+        const nombre = comercio.nombre;
+        window.abrirDatosComercio(nombre, campo, nombreFinal => {
+            const nuevo = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreFinal || nombre) : null;
+            if (nuevo) paradas = paradas.map(parada => parada.nombre === nombre ? { ...parada, ...nuevo } : parada);
+            if (!abierta()) return;
+            dibujarHoja();
+            dibujarTarjetasParada();
+        });
+    }
+
+    function botonAgregarDato(comercio, campo, texto) {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "agregarDatoNavegacion";
+        boton.innerHTML = window.icono("mas", 14) + " ";
+        boton.append(texto);
+        boton.addEventListener("click", () => agregarDato(comercio, campo));
+        return boton;
     }
 
     // Abajo, la tarjeta chica de la parada y la siguiente asomando (T134).

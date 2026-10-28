@@ -1373,6 +1373,31 @@ function dibujarResumenPinesMapa(comerciosConGps) {
     resumen.innerHTML = `<span class="puntoPinResumen enRuta"></span><span><b>${enRuta}</b> en la ruta</span><span class="separadorResumenPines"></span><span class="ayudaResumenPines">Tocá un pin para sumar o sacar</span>`;
 }
 
+// "+ Agregar dirección" (y otros datos que falten) en Rutas: abre la hoja
+// "Datos del comercio" en ese dato y, al guardar, se redibuja la ruta.
+function textoAgregarDato(nombre, campo, texto) {
+    return `<span class="agregarDatoRuta" data-agregar-dato="${campo}" data-nombre="${window.piezas.esc(nombre)}">${window.icono("mas", 13)} ${texto}</span>`;
+}
+
+function agregarDatoEnRuta(nombre, campo) {
+    if (typeof window.abrirDatosComercio !== "function") return false;
+    window.abrirDatosComercio(nombre, campo, nombreFinal => {
+        rutaOrdenada = rutaOrdenada.map(comercio => buscarComercioPorNombre(comercio.nombre === nombre ? nombreFinal || nombre : comercio.nombre) || comercio);
+        renderizarSeleccionRuta();
+        mostrarRutaEnLista();
+    });
+    return true;
+}
+
+// Va antes que el toque de la parada (la línea está adentro de su botón).
+document.addEventListener("click", evento => {
+    const dato = evento.target.closest?.("[data-agregar-dato]");
+    if (!dato || !dato.closest("#pantallaRutas")) return;
+    evento.preventDefault();
+    evento.stopPropagation();
+    agregarDatoEnRuta(dato.dataset.nombre, dato.dataset.agregarDato);
+}, true);
+
 function abrirOpcionesPin(nombre) {
     const comercio = buscarComercioPorNombre(nombre);
     if (!comercio || !window.piezas) return;
@@ -1381,14 +1406,16 @@ function abrirOpcionesPin(nombre) {
     const orden = rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
     const carga = cargaParaParada(comercio.nombre);
     const estado = orden >= 0 ? "Parada " + (orden + 1) + " de la ruta" : enRuta ? "Está en la ruta" : "No está en la ruta";
-    const detalle = [comercio.direccion || "Sin dirección", "Ubicación: " + obtenerEtiquetaOrigenGps(comercio).toLowerCase()];
+    const detalle = [comercio.direccion || "", "Ubicación: " + obtenerEtiquetaOrigenGps(comercio).toLowerCase()].filter(Boolean);
     if (carga.pedidos.length) detalle.push("Lleva " + carga.unidades + " u" + (carga.total ? " · " + p.plata(carga.total) : ""));
+    const faltan = [["direccion", "Agregar dirección"], ["telefono", "Agregar teléfono"]].filter(([campo]) => !String(comercio[campo] || "").trim());
     const caja = p.hoja({
         titulo: comercio.nombre,
         sub: estado,
         clase: "hojaPinRuta",
         etiqueta: "Opciones de " + comercio.nombre,
         html: `<p class="detallePinRuta">${detalle.map(texto => p.esc(texto)).join("<br>")}</p>
+            ${faltan.length && window.abrirDatosComercio ? `<div class="faltanDatosRuta">${faltan.map(([campo, texto]) => `<button type="button" class="pzChip agregarDatoChip sinPunto" data-pin="dato" data-campo="${campo}">${p.ico("mas", 14)} ${texto}</button>`).join("")}</div>` : ""}
             <button type="button" class="pzBtn ${enRuta ? "pzBtnGris" : "pzBtnPri"} botonRutaPin" data-pin="ruta">${p.ico(enRuta ? "cerrarX" : "mas", 18)} ${enRuta ? "Sacar de la ruta" : "Sumar a la ruta"}</button>
             <div class="pzOpciones opcionesPinRuta">
                 <button type="button" class="pzOpcion" data-pin="mover">${p.ico("ubicacion", 22)}Mover el pin</button>
@@ -1397,9 +1424,11 @@ function abrirOpcionesPin(nombre) {
             </div>`
     });
     caja.addEventListener("click", evento => {
-        const accion = evento.target.closest("[data-pin]")?.dataset.pin;
+        const boton = evento.target.closest("[data-pin]");
+        const accion = boton?.dataset.pin;
         if (!accion) return;
         p.cerrar();
+        if (accion === "dato") setTimeout(() => agregarDatoEnRuta(comercio.nombre, boton.dataset.campo), 200);
         if (accion === "ruta") cambiarPinEnRuta(comercio.nombre);
         else if (accion === "mover") moverPinDesdeMapa(comercio.nombre);
         else if (accion === "pedido" && typeof irAPedidoRapido === "function") irAPedidoRapido(comercio.nombre);
@@ -2205,7 +2234,7 @@ function mostrarRutaEnLista() {
             <div class="cajaParada">
                 <button type="button" class="textoParada pedidoParadaRuta" data-nombre="${window.piezas.esc(comercio.nombre)}" aria-label="Pedido de ${window.piezas.esc(comercio.nombre)}">
                     <strong>${window.piezas.esc(comercio.nombre)}</strong>
-                    <small>${window.piezas.esc(comercio.direccion || "Sin dirección")} · ${textoDistanciaCorta(distanciasRuta[indice])}</small>
+                    <small>${comercio.direccion ? window.piezas.esc(comercio.direccion) : textoAgregarDato(comercio.nombre, "direccion", "Agregar dirección")} · ${textoDistanciaCorta(distanciasRuta[indice])}</small>
                     <span class="llevaParada">${chips.join("")}</span>
                 </button>
                 <span class="agarreParada" role="button" tabindex="0" aria-label="Mover ${window.piezas.esc(comercio.nombre)}. Mantené apretado y arrastrá">${window.icono("menu", 20)}</span>
@@ -2277,7 +2306,7 @@ function dibujarSinUbicacionParadas() {
     }
     caja.innerHTML = `<h3>${window.icono("alerta", 16)} Sin ubicación (${sinUbicacion.length})</h3>` + sinUbicacion.slice(0, 20).map(comercio => {
         const nombre = window.piezas.esc(comercio.nombre);
-        return `<div class="filaSinUbicacion"><span><strong>${nombre}</strong><small>${window.piezas.esc(comercio.direccion || "Sin dirección")}</small></span>
+        return `<div class="filaSinUbicacion"><span><strong>${nombre}</strong><small>${comercio.direccion ? window.piezas.esc(comercio.direccion) : textoAgregarDato(comercio.nombre, "direccion", "Agregar dirección")}</small></span>
             <button type="button" class="pzBtn pzBtnSec" data-poner-pin="${nombre}" aria-label="Poner pin a ${nombre}">${window.icono("ubicacion", 16)} Poner pin</button></div>`;
     }).join("") + (sinUbicacion.length > 20 ? `<p class="ayudaParadas">Y ${sinUbicacion.length - 20} más: buscalos en «Ubicaciones de los comercios».</p>` : "");
 }
@@ -2393,13 +2422,14 @@ function dibujarProximaParada() {
         if (paradaHecha(comercio)) continue;
         const carga = cargaParaParada(comercio.nombre);
         const saldo = verPlata ? saldoParaParada(comercio.nombre) : 0;
-        const detalle = [comercio.direccion || "Sin dirección", horas[i]];
+        const detalle = [comercio.direccion || "", horas[i]];
         if (carga.pedidos.length) detalle.push("lleva " + carga.unidades + " u");
         if (saldo > 0) detalle.push("cobrar " + window.piezas.plata(saldo));
         const nombre = window.piezas.esc(comercio.nombre);
+        const sinDireccion = comercio.direccion ? "" : textoAgregarDato(comercio.nombre, "direccion", "Agregar dirección") + " · ";
         tarjetas.push(`<article class="paradaCarrusel${i === indice ? " actual" : ""}" data-nombre="${nombre}" aria-label="Parada ${i + 1} de ${rutaOrdenada.length}: ${nombre}">
             <span class="numeroCarrusel">${i + 1}</span>
-            <button type="button" class="datosCarrusel" data-parada="ver"><strong>${nombre}</strong><small>${window.piezas.esc(detalle.filter(Boolean).join(" · "))}</small></button>
+            <button type="button" class="datosCarrusel" data-parada="ver"><strong>${nombre}</strong><small>${sinDireccion}${window.piezas.esc(detalle.filter(Boolean).join(" · "))}</small></button>
             <button type="button" class="masCarrusel" data-parada="opciones" aria-label="Opciones de ${nombre}">${window.icono("puntos", 18)}</button>
         </article>`);
     }
