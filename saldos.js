@@ -248,7 +248,8 @@
             titulo: grupo.nombre,
             sub,
             html: `<div class="pzOpciones">
-                ${telefono ? `<button type="button" class="pzOpcion pzOpcionWa" data-opcion="recordar">${p.ico("whatsapp", 22)}Mandar recordatorio por WhatsApp</button>` : ""}
+                ${telefono ? `<button type="button" class="pzOpcion pzOpcionWa" data-opcion="recordar">${p.ico("whatsapp", 22)}Mandar recordatorio por WhatsApp</button>`
+                    : grupo.comercio && window.agregarDatoVendeFrio ? `<button type="button" class="pzOpcion pzOpcionAgregar" data-agregar-dato="telefono" data-comercio="${p.esc(grupo.nombre)}">${p.ico("mas", 22)}<span>Agregar teléfono<small>Para mandarle recordatorios por WhatsApp</small></span></button>` : ""}
                 ${puedeCobrar ? `<button type="button" class="pzOpcion" data-opcion="pago">${p.ico("moneda", 22)}Registrar un pago</button>` : ""}
                 ${puedeCobrar && window.cobrarQrVendeFrio?.hay() ? `<button type="button" class="pzOpcion" data-opcion="qr">${p.ico("qr", 22)}Cobrar con alias o QR</button>` : ""}
                 <button type="button" class="pzOpcion" data-opcion="cuenta">${p.ico("recibo", 22)}Ver la cuenta completa</button>

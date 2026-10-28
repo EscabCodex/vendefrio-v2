@@ -1167,3 +1167,24 @@ html[data-tema="oscuro"] .avisoFijoTextos small{color:var(--texto-sec) !importan
 html[data-tema="oscuro"] .chipDebeParada{color:var(--peligro) !important;}
 html[data-tema="oscuro"] .avisoFijoIcono{color:var(--visitado) !important;}
 html[data-tema="oscuro"] .resumenHoyDeben .resumenHoyTotal{color:#FFB547 !important;}
+
+/* T180: «+ Agregar ...» donde falta un dato del comercio. Borde de rayitas:
+   se nota que es un lugar para completar, no un dato. */
+.agregarDato{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 14px 6px 10px;border:1.5px dashed var(--acento);border-radius:var(--radio-pildora,999px);background:transparent;color:var(--pz-pri-fuerte,var(--acento));font:inherit;font-size:14px;font-weight:700;line-height:1.1;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+html[data-tema="oscuro"] .agregarDato{color:var(--acento);}
+.agregarDato:active{background:var(--acento-bg);}
+.agregarDato svg{flex-shrink:0;}
+.paradaFaltan{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 12px 58px;}
+.paradaAgregarDato .paradaAccesoIcono,
+html[data-tema="oscuro"] .paradaAgregarDato .paradaAccesoIcono{background:transparent;border:1.5px dashed var(--acento);color:var(--pz-pri-fuerte,var(--acento));}
+html[data-tema="oscuro"] .paradaAgregarDato .paradaAccesoIcono{color:var(--acento);}
+.direccionFichaPedido.faltaDato{margin-top:6px;}
+.pzOpcionAgregar{color:var(--pz-pri-fuerte,var(--acento));}
+html[data-tema="oscuro"] .pzOpcionAgregar{color:var(--acento);}
+.pzOpcionAgregar > span{display:flex;flex-direction:column;gap:2px;text-align:left;}
+.pzOpcionAgregar small{font-size:13px;font-weight:500;color:var(--texto-sec);}
+.botonWaEnfriando.agregarTelEnfriando{background:transparent;border:1.5px dashed var(--acento);color:var(--pz-pri-fuerte,var(--acento));cursor:pointer;}
+html[data-tema="oscuro"] .botonWaEnfriando.agregarTelEnfriando{color:var(--acento);}
+.waComercio > span{flex:1;min-width:0;}
+.waComercio.sinTelefono{opacity:1;}
+.waComercio.sinTelefono > input,.waComercio.sinTelefono > span{opacity:.6;}

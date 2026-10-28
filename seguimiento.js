@@ -1861,7 +1861,12 @@
         // Encabezado (T35): número, comercio con su estado y la línea de pasos.
         const numero = crear("p", "numeroFichaPedido", "Pedido N° " + numeroCortoDelPedido(pedido));
         const comercio = comercioParaLeerPorNombre(String(pedido.comercio || ""));
-        const direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
+        let direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
+        // T180: sin dirección, se carga desde la ficha del pedido.
+        if (comercio && !comercio.direccion && window.agregarDatoVendeFrio) {
+            direccion = crear("p", "direccionFichaPedido faltaDato");
+            direccion.appendChild(window.agregarDatoVendeFrio.boton(comercio.nombre, "direccion"));
+        }
         const tarjeta = crear("div", "tarjetaFichaPedido");
         tarjeta.append(numero, titulo);
         if (direccion) tarjeta.appendChild(direccion);

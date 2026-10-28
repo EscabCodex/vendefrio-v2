@@ -73,7 +73,9 @@
             return `<div class="statsFila filaEnfriando" data-ficha="${p.esc(perfil.nombre)}">
                 <span class="pzIni ${p.colorIni(perfil.nombre)}">${p.esc(p.iniciales(perfil.nombre))}</span>
                 <div class="statsFilaTexto"><strong>${p.esc(perfil.nombre)}</strong><small>Pedía ${cadaCuanto(perfil.promedioDias)} · hace ${perfil.diasDesdeUltimo} días que no</small></div>
-                ${enlace ? `<a class="botonWaEnfriando" href="${enlace}" target="_blank" rel="noopener" aria-label="WhatsApp a ${p.esc(perfil.nombre)}">${p.ico("whatsapp", 20)}</a>` : ""}
+                ${enlace ? `<a class="botonWaEnfriando" href="${enlace}" target="_blank" rel="noopener" aria-label="WhatsApp a ${p.esc(perfil.nombre)}">${p.ico("whatsapp", 20)}</a>`
+                    : window.agregarDatoVendeFrio && typeof buscarComercioPorNombre === "function" && buscarComercioPorNombre(perfil.nombre)
+                        ? `<button type="button" class="botonWaEnfriando agregarTelEnfriando" data-agregar-dato="telefono" data-comercio="${p.esc(perfil.nombre)}" aria-label="Agregar teléfono de ${p.esc(perfil.nombre)}">${p.ico("mas", 20)}</button>` : ""}
             </div>`;
         }).join("");
         const verTodos = enfriando.length > 3 && !verTodosEnfriando

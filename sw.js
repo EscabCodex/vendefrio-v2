@@ -9,6 +9,7 @@ const ARCHIVOS = [
   "./tema.css",
   "./piezas.css",
   "./piezas.js",
+  "./agregarDato.js",
   "./iconos.js",
   "./productos.js",
   "./comercios.js",

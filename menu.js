@@ -517,12 +517,14 @@ function dibujarProximaParadaInicio(comercios, pedidos = [], vePlata = true) {
     info.setAttribute("aria-label", "Ver ficha de " + sugerido.nombre);
     info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small></span>`;
     info.querySelector("strong").textContent = sugerido.nombre;
-    const partes = [sugerido.direccion || "Dirección pendiente"];
+    // T180: sin dirección, abajo va «Agregar dirección» en vez del texto.
+    const partes = sugerido.direccion ? [sugerido.direccion] : [];
     if (ubicacionDashboard && tieneGpsValidoDashboard(sugerido)) {
         const km = distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(sugerido.lat), Number(sugerido.lng));
         partes.push(km < 1 ? "a " + Math.round(km * 100) * 10 + " m" : "a " + km.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " km");
     }
     info.querySelector("small").textContent = partes.join(" · ");
+    if (!partes.length) info.querySelector("small").remove();
     info.querySelector(".paradaTexto").appendChild(chipsProximaParadaInicio(sugerido, pedidos, vePlata));
     info.addEventListener("click", () => {
         if (typeof window.abrirFichaComercio === "function") window.abrirFichaComercio(sugerido.nombre);
@@ -561,6 +563,12 @@ function dibujarProximaParadaInicio(comercios, pedidos = [], vePlata = true) {
         const llamar = accesoParadaInicio("a", "telefono", "Llamar", "paradaLlamar");
         llamar.href = "tel:" + telefono;
         acciones.appendChild(llamar);
+    } else if (window.agregarDatoVendeFrio) {
+        // T180: sin teléfono, el lugar de «Llamar» sirve para cargarlo.
+        const agregarTel = accesoParadaInicio("button", "mas", "Agregar tel.", "paradaAgregarDato");
+        agregarTel.setAttribute("aria-label", "Agregar teléfono de " + sugerido.nombre);
+        agregarTel.addEventListener("click", () => window.agregarDatoVendeFrio.abrir(sugerido.nombre, "telefono"));
+        acciones.appendChild(agregarTel);
     }
 
     // "Ya llego" por WhatsApp (T72), con teléfono.
@@ -593,7 +601,15 @@ function dibujarProximaParadaInicio(comercios, pedidos = [], vePlata = true) {
         acciones.appendChild(sinPedido);
     }
     acciones.style.setProperty("--accesos", String(acciones.children.length));
-    contenedor.append(cabeza, acciones);
+    contenedor.appendChild(cabeza);
+    // T180: sin dirección, se carga desde acá mismo.
+    if (!sugerido.direccion && window.agregarDatoVendeFrio) {
+        const faltan = document.createElement("div");
+        faltan.className = "paradaFaltan";
+        faltan.appendChild(window.agregarDatoVendeFrio.boton(sugerido.nombre, "direccion"));
+        contenedor.appendChild(faltan);
+    }
+    contenedor.appendChild(acciones);
 }
 
 function actualizarEncabezadoInicio() {

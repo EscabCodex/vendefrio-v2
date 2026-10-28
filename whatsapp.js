@@ -577,7 +577,8 @@
             return `
                 <label class="waComercio${numero ? "" : " sinTelefono"}">
                     <input type="checkbox" class="waElegir" value="${id}" ${elegidos.has(String(comercio.id)) && numero ? "checked" : ""} ${numero ? "" : "disabled"} aria-label="${escapar(comercio.nombre)}">
-                    <span><strong>${escapar(comercio.nombre)}</strong><small>${numero ? escapar(comercio.telefono) : "Sin teléfono: cargalo en la ficha del comercio"}</small></span>
+                    <span><strong>${escapar(comercio.nombre)}</strong><small>${numero ? escapar(comercio.telefono) : "Sin teléfono"}</small></span>
+                    ${numero || !window.agregarDatoVendeFrio ? "" : window.agregarDatoVendeFrio.html(comercio.nombre, "telefono", "Agregar")}
                 </label>`;
         }).join("");
     }
