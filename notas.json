@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 251,
+      "fecha": "2026-10-28",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Cada número te lleva a lo que dice",
+      "texto": "«Entregados» abre los terminados de la semana o de hoy, «Productos distintos» abre lo más vendido hoy, «Ver todos» abre los pedidos de hoy y los números «este mes» de un comercio abren sus pedidos del mes."
+    },
+    {
       "version": 250,
       "fecha": "2026-10-28",
       "tipo": "arreglado",
