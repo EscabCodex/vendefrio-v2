@@ -244,9 +244,11 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await expect(page.locator(".pinRuta")).toHaveCount(3);
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
     await expect(page.locator("#resumenPinesMapa")).toContainText("3 en la ruta");
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#btnOptimizarRuta").click();
     await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
 
@@ -258,14 +260,19 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(paradas.first()).toContainText("min");
     await expect(paradas.first()).toContainText("Sin pedido para entregar");
     await expect(paradas.filter({ hasText: "Kiosco Luna" })).toContainText("Lleva 3 u · $ 9.800");
-    const proxima = page.locator("#proximaParadaRuta");
-    await expect(proxima).toContainText("Próxima parada · 1 de 3");
-    await expect(proxima).toContainText("Despensa Mary");
-    await expect(proxima.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
-    await page.locator("#listaRutaOrdenada").evaluate(lista => window.scrollBy(0, lista.getBoundingClientRect().top - 200));
+    // La próxima es la primera tarjeta del carrusel; en su ⋯, Hacer pedido
+    // y Ya pasé (T137).
+    const proxima = page.locator("#proximaParadaRuta .paradaCarrusel.actual");
+    await expect(proxima).toHaveAttribute("aria-label", "Parada 1 de 3: Despensa Mary");
+    await proxima.getByRole("button", { name: "Opciones de Despensa Mary" }).click();
+    const opcionesParada = page.getByRole("dialog", { name: "Opciones de la parada Despensa Mary" });
+    await expect(opcionesParada.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
+    await opcionesParada.getByRole("button", { name: "Ya pasé" }).click();
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 2 de 3: /);
+    // La lista se abre con «Paradas» (T136).
+    await page.locator("#btnParadasRutas").click();
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
     await capturar(page, "mejoras-12-paradas-de-la-ruta");
-    await proxima.getByRole("button", { name: /Ya pasé/ }).click();
-    await expect(proxima).toContainText("Próxima parada · 2 de 3");
 
     // T126: tocando la parada se carga su pedido y, al volver, queda tildada sola.
     const conPedido = await paradas.nth(1).getAttribute("data-nombre");
@@ -282,9 +289,10 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(paradas.filter({ hasText: conPedido })).toHaveClass(/hecha/);
-    await expect(proxima).toContainText("Próxima parada · 3 de 3");
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 3 de 3: /);
 
     // Cambiar el orden con el teclado (con el dedo es arrastrar ≡).
+    await page.locator("#btnParadasRutas").click();
     const segunda = await paradas.nth(1).getAttribute("data-nombre");
     await paradas.nth(1).locator(".agarreParada").focus();
     await page.keyboard.press("ArrowUp");
@@ -292,7 +300,13 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(page.locator(".encabezadoParadas")).toContainText("Orden a tu gusto");
 
     // Tocar un pin: sacarlo de la ruta y moverlo.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
+    // El carrusel mueve el mapa: el pin puede quedar debajo de la cabecera.
+    const centrarEnPin = () => page.evaluate(() => {
+        const comercio = buscarComercioPorNombre("Despensa Mary");
+        mapaLeaflet.setView([Number(comercio.lat), Number(comercio.lng)], mapaLeaflet.getZoom(), { animate: false });
+    });
+    await centrarEnPin();
     await page.locator('.pinRuta[title="Despensa Mary"]').click();
     const opciones = page.getByRole("dialog", { name: "Opciones de Despensa Mary" });
     await expect(opciones).toContainText("Parada");
@@ -300,7 +314,12 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await opciones.getByRole("button", { name: "Sacar de la ruta" }).click();
     await expect(paradas).toHaveCount(2);
     await expect(page.locator("#resumenPinesMapa")).toContainText("2 en la ruta");
-    await page.locator('.pinRuta[title="Despensa Mary"]').click();
+    // Al sacar la parada el mapa vuelve a encuadrar la ruta un rato después:
+    // si se lleva el pin, se vuelve a centrar y se toca de nuevo.
+    await expect(async () => {
+        await centrarEnPin();
+        await page.locator('.pinRuta[title="Despensa Mary"]').click({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
     await page.getByRole("dialog", { name: "Opciones de Despensa Mary" }).getByRole("button", { name: "Sumar a la ruta" }).click();
     await expect(paradas).toHaveCount(3);
     await expect(paradas.last()).toHaveAttribute("data-nombre", "Despensa Mary");

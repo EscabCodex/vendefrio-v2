@@ -63,9 +63,10 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.locator("#datosTicketTelefono").fill("11 4444-5555");
     await page.locator("#datosTicketDireccion").fill("Belgrano 456, Quilmes");
     await page.locator("#datosTicketCuit").fill("20-12345678-9");
+    await expect(page.locator(".hojaDatosTicket .vistaTicket")).toContainText("Belgrano 456, QuilmesTel.: 11 4444-5555CUIT: 20-12345678-9");
     await page.locator("#formDatosTicket").evaluate(form => form.scrollIntoView({ block: "center" }));
     await capturar(page, "impresion-01-cargar-datos-ticket");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     const datos = page.locator("#cuentaDatosTicket");
     await expect(datos).toContainText("Teléfono: 11 4444-5555");
     await expect(datos).toContainText("Dirección: Belgrano 456, Quilmes");
@@ -85,7 +86,7 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.getByRole("button", { name: "Cambiar datos del ticket" }).click();
     await page.locator("#datosTicketDireccion").fill("");
     await page.locator("#datosTicketCuit").fill("");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.locator("#cuentaDatosTicket")).not.toContainText("CUIT");
     await irAPedidos(page);
     ticket = await imprimirTicket(page, "Almacén Don Pepe", "Una copia");
@@ -125,7 +126,12 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     });
     expect(delDueno).toEqual(["permission-denied", "permission-denied", "permission-denied"]);
 
-    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+    // Todo subió a la nube y no se ve ninguna etiqueta. Se miran solo las
+    // visibles: lo oculto (la ficha cerrada, otras pantallas) no se
+    // redibuja para no gastar y puede guardar una etiqueta vieja.
+    await expect.poll(() => page.evaluate(() => window.nubeVendeFrio.sincronizacion().sinSubir)).toBe(0);
+    await irAPedidos(page);
+    await expect(page.getByText("Pendiente de sincronizar").filter({ visible: true })).toHaveCount(0);
     await contexto.close();
     expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });
@@ -225,12 +231,14 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     const aviso = page.locator("#modalAviso");
-    // "Comercios para esta ruta" es desplegable (T51).
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
+    // «Elegir» abre «Comercios para esta ruta» (T136).
+    await page.locator("#btnElegirRutas").click();
     await page.locator("#seleccionarTodosRuta").click();
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#btnOptimizarRuta").click();
     await expect(aviso).toContainText("1. Kiosco Luna");
     await aviso.getByRole("button", { name: "Entendido" }).click();
+    await page.locator("#btnParadasRutas").click();
 
     const boton = page.getByRole("button", { name: "Imprimir hoja de reparto" });
     await expect(boton).toBeVisible();

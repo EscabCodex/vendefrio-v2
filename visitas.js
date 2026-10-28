@@ -35,7 +35,8 @@
     }
 
     // ---------- La hoja "¿Por qué no hubo pedido?" ----------
-    function abrir(nombreComercio) {
+    // alGuardar (opcional): la navegación lo usa para pasar a la parada que sigue.
+    function abrir(nombreComercio, alGuardar) {
         const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreComercio) : null;
         if (!comercio) return;
         if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();
@@ -56,7 +57,11 @@
                 texto: "Guardar visita",
                 icono: "check",
                 id: "guardarVisita",
-                alTocar: caja => guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value)
+                alTocar: caja => {
+                    const guardada = guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value);
+                    if (guardada && typeof alGuardar === "function") alGuardar();
+                    return guardada;
+                }
             }]
         });
         const botonGuardar = caja.querySelector("#guardarVisita");
@@ -122,11 +127,15 @@
                     <span class="statsPista"><i style="width:${Math.round(cuenta[motivo.clave] / max * 100)}%"></i></span></div>
                 <b class="statsFilaValor">${cuenta[motivo.clave]}</b>
             </div>`).join("");
-        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila">
+        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila" data-ficha="${esc(visita.comercio)}">
                 <span class="statsAvatar">${esc(window.piezas.iniciales(visita.comercio))}</span>
                 <div class="statsFilaTexto"><strong>${esc(visita.comercio)}</strong><small>${esc(textoMotivo(visita))} · ${esc(window.piezas.fechaCorta(visita.horaCelular))}${visita.persona && visita.persona.nombre ? " · " + esc(visita.persona.nombre) : ""}</small></div>
             </div>`).join("");
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div><p class="statsSubtitulo">Últimas</p><div class="statsLista">${ultimas}</div>`);
+        // Repasada: cada visita abre la ficha de ese comercio.
+        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
+            window.piezas.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha));
+        });
         return card;
     }
 

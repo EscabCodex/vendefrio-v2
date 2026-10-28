@@ -215,7 +215,7 @@ html .nav-item{
 }
 html .nav-item .nav-icon{
   width:auto;height:30px;padding:3px 14px;
-  border-radius:999px;
+  border-radius:var(--radio-pildora);
   background:transparent;
   color:inherit;
 }
@@ -226,7 +226,7 @@ html[data-tema="oscuro"] .nav-item.activo{color:var(--acento);}
 /* ---------- Etiquetas de estado (chips) ---------- */
 
 html .filtroEtapa{
-  border-radius:999px;
+  border-radius:var(--radio-pildora);
   border:var(--borde-tarjeta);
   background:var(--superficie);
   color:var(--texto-sec);
@@ -245,7 +245,7 @@ html .botonNuevoPedido{
 
 /* ---------- Avisos cortos ---------- */
 
-html .toast{border-radius:999px;}
+html .toast{border-radius:var(--radio-pildora);}
 
 /* ---------- Lo que se apoya arriba de la barra flotante ---------- */
 /* La barra ahora termina 80px arriba del borde (antes 64px). */
@@ -266,7 +266,7 @@ html .modal{padding-bottom:calc(92px + env(safe-area-inset-bottom));}
 html .estadoSeguimiento,
 html .chipEstado{
   display:inline-flex;align-items:center;gap:6px;
-  padding:4px 10px;border-radius:999px;
+  padding:4px 10px;border-radius:var(--radio-pildora);
   font-size:12px;font-weight:700;white-space:nowrap;
   background:var(--acento-bg);color:var(--acento-oscuro) !important;
 }
@@ -356,7 +356,14 @@ html .botonAvatar{
 
 /* ---------- Inicio (T32) ---------- */
 
-html #pantallaMenu main.container{padding-top:10px !important;}
+/* T178: menos aire entre el saludo y la tarjeta azul; sin el botón "Más"
+   (está en la barra de abajo): el logo y el nombre llevan a Tu cuenta. */
+html #pantallaMenu main.container{padding-top:2px !important;}
+html #pantallaMenu .dashboardHeader{padding-bottom:0 !important;}
+html #botonAvatar{display:none !important;}
+/* Si se sacó «Más» de la barra, el botón de arriba vuelve: si no, no hay cómo llegar. */
+html[data-mas-barra="no"] #botonAvatar{display:grid !important;}
+html #pantallaMenu .inicioLogo,html #pantallaMenu .dashboardMarca{cursor:pointer;}
 .resumenHoy{
   position:relative;overflow:hidden;
   display:flex;flex-direction:column;
@@ -374,52 +381,119 @@ html[data-tema="oscuro"] .resumenHoy::after{
 .resumenHoyFecha{margin:0 0 10px;font-size:13px;font-weight:600;opacity:.9;}
 .resumenHoyFecha::first-letter{text-transform:uppercase;}
 html[data-tema="oscuro"] .resumenHoyFecha{color:var(--texto-ter);opacity:1;}
-.resumenHoy > small{font-size:13px;opacity:.9;}
+/* Repasada: título, total y pedidos van juntos para tocarlos (Estadísticas de hoy). */
+.resumenHoyVendido{display:flex;flex-direction:column;}
+.resumenHoyVendido > small{font-size:13px;opacity:.9;}
 .resumenHoyTotal{font-size:38px;line-height:1.1;font-weight:800;letter-spacing:-.03em;margin:2px 0 4px;}
 html[data-tema="oscuro"] .resumenHoyTotal{color:var(--acento);}
 .resumenHoySub{font-size:13px;opacity:.9;}
-.kpisHoy{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));grid-auto-flow:column;gap:8px;margin-top:16px;}
+/* T178: "Vendido hoy" y "Te deben" (o "Productos distintos") lado a lado,
+   la barra de visitados de la semana y dos filas de cuadritos, que son
+   accesos (llevan una flechita). */
+.resumenHoyGrandes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;}
+.resumenHoyGrandes .resumenHoyTotal{font-size:28px;white-space:nowrap;}
+.resumenHoyDerecha{
+  display:flex;flex-direction:column;align-items:flex-start;min-width:0;
+  margin:0;padding:0 0 0 12px;border:0;border-left:1px solid rgba(255,255,255,.28);border-radius:0;
+  background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;
+}
+html[data-tema="oscuro"] .resumenHoyDerecha{border-left-color:var(--borde);}
+.resumenHoyDerecha > small{font-size:13px;opacity:.9;}
+html[data-tema="oscuro"] .resumenHoyDerecha:not(.resumenHoyDeben) .resumenHoyTotal{color:var(--texto);}
+html[data-tema="oscuro"] .resumenHoyDeben .resumenHoyTotal{color:#FFB547;}
+.resumenVisitas{
+  position:relative;display:block;width:100%;margin:14px 0 0;padding:11px 12px;
+  border:0;border-radius:16px;background:rgba(255,255,255,.16);color:inherit;
+  font:inherit;text-align:left;cursor:pointer;
+}
+html[data-tema="oscuro"] .resumenVisitas{background:var(--superficie-2);}
+.resumenVisitasFila{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-right:16px;}
+.resumenVisitasFila > span{font-size:13px;opacity:.92;white-space:nowrap;}
+.resumenVisitasFila b{font-size:17px;font-weight:800;white-space:nowrap;}
+.resumenVisitasFila b small{font-size:13px;font-weight:600;opacity:.85;}
+.resumenVisitasBarra{display:block;height:7px;margin-top:8px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;}
+html[data-tema="oscuro"] .resumenVisitasBarra{background:rgba(255,255,255,.1);}
+.resumenVisitasBarra > span{display:block;width:0;height:100%;border-radius:99px;background:#fff;transition:width .3s ease;}
+html[data-tema="oscuro"] .resumenVisitasBarra > span{background:var(--acento);}
+.resumenVisitas::after,.kpiHoy::after{
+  content:"";position:absolute;right:13px;top:17px;width:6px;height:6px;
+  border-right:2px solid currentColor;border-top:2px solid currentColor;transform:rotate(45deg);opacity:.7;
+}
+.kpisHoy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.25fr);gap:8px;margin-top:10px;}
+.kpisHoy.kpisDosArriba{grid-template-columns:repeat(6,minmax(0,1fr));}
+.kpisHoy.kpisDosArriba .kpiHoy{grid-column:span 2;}
+.kpisHoy.kpisDosArriba .kpiHoy:nth-child(-n+2){grid-column:span 3;}
 .kpiHoy{
+  position:relative;
   display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-  min-width:0;padding:10px 10px 9px;
+  min-width:0;padding:11px 12px 10px;
   border:0;border-radius:16px;
   background:var(--hero-kpi);color:inherit;
   text-align:left;cursor:pointer;
 }
-.kpiHoy strong{font-size:22px;font-weight:800;line-height:1.1;}
-.kpiHoy span{font-size:11.5px;font-weight:500;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-html[data-tema="oscuro"] .kpiHoy[data-kpi="aPreparar"] strong{color:var(--pendiente);}
-html[data-tema="oscuro"] .kpiHoy[data-kpi="preparados"] strong{color:var(--acento);}
-html[data-tema="oscuro"] .kpiHoy[data-kpi="enReparto"] strong{color:var(--info);}
+.kpiHoy::after{top:15px;right:11px;}
+.kpiHoy strong{font-size:18px;font-weight:800;line-height:1.1;padding-right:10px;white-space:nowrap;}
+.kpiHoy span{font-size:11.5px;font-weight:500;line-height:1.2;opacity:.92;overflow-wrap:anywhere;max-width:100%;}
+html[data-tema="oscuro"] .kpiHoy[data-kpi="cargados"] strong{color:var(--pendiente);}
 html[data-tema="oscuro"] .kpiHoy[data-kpi="entregados"] strong{color:var(--visitado);}
+html[data-tema="oscuro"] .kpiHoy[data-kpi="cobradoHoy"] strong{color:var(--acento);}
 
 .bloqueCabecera{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .bloqueCabecera .seccionTitulo{flex:1;}
 .enlaceVerTodos{border:0;background:transparent;color:var(--acento-oscuro);font-size:14px;font-weight:700;padding:8px 2px;margin-top:10px;cursor:pointer;}
 html[data-tema="oscuro"] .enlaceVerTodos{color:var(--acento);}
 
-html .cardProximaParada{display:grid;gap:14px;padding:18px !important;border-left:var(--borde-tarjeta) !important;}
-.paradaInfo{display:flex;align-items:flex-start;gap:14px;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;}
+/* T178: Próxima parada compacta. El nombre abre la ficha; el botoncito
+   redondo pide la ubicación; abajo, los accesos de la ficha del comercio. */
+html .cardProximaParada{display:grid;gap:12px;padding:14px 14px 12px !important;border-left:var(--borde-tarjeta) !important;}
+.paradaCabeza{display:flex;align-items:center;gap:10px;min-width:0;}
+.paradaInfo{display:flex;align-items:center;gap:12px;flex:1;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;}
 .paradaIcono{
   width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;
   border-radius:16px;background:var(--acento-bg);color:var(--acento-oscuro);
 }
 html[data-tema="oscuro"] .paradaIcono{color:var(--acento);}
 .paradaIcono[data-tono="ok"]{background:var(--visitado-bg);color:var(--visitado);}
-.paradaTexto{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;}
+.paradaTexto{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;width:100%;}
 .paradaTexto strong{font-size:17px;font-weight:700;overflow-wrap:anywhere;}
 .paradaTexto small{font-size:14px;color:var(--texto-sec);overflow-wrap:anywhere;}
-.paradaTexto .chipEstado{margin-top:6px;}
-.paradaAcciones{display:grid;grid-template-columns:1fr auto;gap:10px;}
-.paradaAcciones .btnAccion{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;font-size:15px;text-decoration:none;}
-.paradaAcciones .botonIr{padding:0 22px;}
+/* Los datos cortos van en una sola línea: lo que no entra no se ve. */
+.paradaChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;max-width:100%;max-height:22px;overflow:hidden;}
+.paradaChips > *{flex:none;white-space:nowrap;}
+.paradaChips .chipEstado{margin:0;font-size:12px;padding:3px 9px;}
+.chipDebeParada,.chipDatoParada{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;}
+.chipDebeParada{background:var(--peligro-bg);color:var(--peligro);}
+.chipDatoParada{background:var(--superficie-2);color:var(--texto-sec);}
+.paradaAcciones{display:grid;grid-template-columns:repeat(var(--accesos,5),minmax(0,1fr));gap:4px;}
+.paradaAcceso{
+  display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;
+  padding:0;border:0;background:transparent;color:var(--texto);
+  font:inherit;text-decoration:none;cursor:pointer;
+}
+.paradaAccesoIcono{width:44px;height:44px;display:grid;place-items:center;border-radius:15px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .paradaAccesoIcono{background:var(--superficie-2);color:var(--acento);}
+.paradaAcceso.agregar .paradaAccesoIcono,
+html[data-tema="oscuro"] .paradaAcceso.agregar .paradaAccesoIcono{background:var(--acento);color:var(--acento-txt);box-shadow:0 8px 16px -8px var(--acento);}
+.paradaYaLlego .paradaAccesoIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
+html[data-tema="oscuro"] .paradaYaLlego .paradaAccesoIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
+.paradaSinPedido .paradaAccesoIcono,
+html[data-tema="oscuro"] .paradaSinPedido .paradaAccesoIcono{background:var(--pendiente-bg);color:var(--pendiente);}
+.paradaAccesoTexto{max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:600;color:var(--texto-sec);white-space:nowrap;}
 .paradaListo{display:flex;align-items:center;gap:12px;}
 .paradaListo p{margin:0;font-weight:600;color:var(--texto);}
 html .btnUbicacionDashboard{
-  justify-self:start;display:inline-flex;align-items:center;gap:6px;
-  margin:0;padding:6px 2px;border:0;background:transparent;
-  color:var(--texto-sec);font-size:12.5px;font-weight:600;
+  flex:none;width:38px;height:38px;min-height:0;margin:0;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  border:0;border-radius:50%;background:var(--superficie-2);color:var(--acento-oscuro);cursor:pointer;
 }
+html[data-tema="oscuro"] .btnUbicacionDashboard{color:var(--acento);}
+html .btnUbicacionDashboard svg{display:block;}
+html .btnUbicacionDashboard.buscando svg{animation:latidoUbicacion 1s ease-in-out infinite;}
+@keyframes latidoUbicacion{50%{opacity:.35;}}
+html[data-movimiento="reducido"] .btnUbicacionDashboard.buscando svg{animation:none;opacity:.5;}
+/* La ficha abierta desde Inicio, con el fondo apenas difuminado. */
+html #pantallaMenu:not(.oculto) ~ .modalFichaComercio{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);background:rgba(15,20,30,.28);}
+.pasosPermiso{margin:0 0 12px;padding-left:22px;display:grid;gap:8px;font-size:15px;line-height:1.4;color:var(--texto);}
 
 html .listaInicio{padding:0 !important;overflow:hidden;}
 .filaInicio{
@@ -453,10 +527,12 @@ html .listaInicio{padding:0 !important;overflow:hidden;}
 .filaCambio{animation:filaCambio 2.4s ease-out;}
 
 html .semanaInicio{display:grid;gap:12px;}
+/* Repasada: "23 de 80" y su barra van juntos para tocarlos (los visitados). */
+.semanaVisitados{display:grid;gap:12px;}
 .semanaTexto{margin:0;font-size:14px;color:var(--texto-sec);}
 .semanaTexto strong{font-size:16px;color:var(--texto);}
-.barraSemana{height:8px;border-radius:999px;background:var(--superficie-2);overflow:hidden;}
-.barraSemana span{display:block;height:100%;width:0;border-radius:999px;background:var(--acento);transition:width .4s ease;}
+.barraSemana{height:8px;border-radius:var(--radio-pildora);background:var(--superficie-2);overflow:hidden;}
+.barraSemana span{display:block;height:100%;width:0;border-radius:var(--radio-pildora);background:var(--acento);transition:width .4s ease;}
 .miniSemana{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
 .miniSemana button{
   display:flex;flex-direction:column;align-items:flex-start;gap:1px;
@@ -503,15 +579,17 @@ html .configPerfil .configPerfilConexion::before{content:"";width:8px;height:8px
 html .configPerfil .configPerfilConexion[data-estado="espera"]{color:var(--pendiente) !important;}
 html .configPerfil .configPerfilConexion[data-estado="error"]{color:var(--peligro) !important;}
 
-.masAccesos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:8px;}
+/* Repaso de diseño (opción B del dueño): botones anchos de a 2, el dibujito al lado del nombre. */
+.masAccesos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:8px;}
 .masAcceso{
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  min-width:0;padding:14px 6px 12px;
+  display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;
+  min-width:0;min-height:64px;padding:10px 12px;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);
   background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);cursor:pointer;
 }
-.masAcceso span{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
-.masAcceso strong{font-size:13px;font-weight:700;text-align:center;line-height:1.2;}
+.masAcceso span{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
+.masAcceso strong{font-size:14.5px;font-weight:700;text-align:left;line-height:1.2;}
+.masListaAjustes{margin-top:14px;}
 
 [data-color="estadisticas"],[data-color="empleados"],[data-color="seguridad"]{background:var(--info-bg) !important;color:var(--info) !important;}
 [data-color="cierre"],[data-color="respaldo"],[data-color="apariencia"]{background:var(--superficie-2) !important;color:var(--texto-sec) !important;}
@@ -552,7 +630,7 @@ html .configMenuPrincipal .configIcono{
 html .configSubVolver{
   display:inline-flex;align-items:center;gap:6px;
   min-height:44px;padding:0 16px 0 12px;margin-bottom:6px;
-  border:var(--borde-tarjeta);border-radius:999px;
+  border:var(--borde-tarjeta);border-radius:var(--radio-pildora);
   background:var(--superficie);color:var(--texto);
   font-size:16px;font-weight:700;box-shadow:var(--sombra);
 }
@@ -560,13 +638,9 @@ html .configSubVolver{
 html #pantallaMenu .seccionTitulo,
 html .seccionTitulo{font-size:19px !important;margin:22px 2px 10px !important;}
 html .bloqueCabecera .seccionTitulo{margin-bottom:10px !important;}
-.kpiHoy{padding:10px 8px 9px;}
-.kpiHoy span{white-space:normal;line-height:1.2;font-size:11.5px;}
 html .nav-item.nav-nuevo .nav-icon{color:var(--acento-txt) !important;}
 html .filtroEtapa.activo,
 html .filtroEtapa.activo .filtroEtapaCantidad{color:var(--acento-txt) !important;}
-.kpiHoy{padding:10px 6px 9px;}
-.kpiHoy span{font-size:10.5px;}
 
 /* ---------- Cargar pedido (T34) ---------- */
 
@@ -590,19 +664,19 @@ html #pantallaPedido > header p{display:none;}
 html .clientePedido{display:grid;gap:8px;}
 .clientePedidoCabecera{display:flex;align-items:center;justify-content:space-between;}
 html .clientePedido label{font-size:13px;font-weight:700;color:var(--texto-sec);margin:0;}
-html #reset.vaciarPedido{flex:0 0 auto;width:auto;min-height:0;margin:0;box-shadow:none;border-radius:999px;border:0;background:transparent;color:var(--peligro);font-size:14px;font-weight:700;padding:6px 2px;cursor:pointer;}
+html #reset.vaciarPedido{flex:0 0 auto;width:auto;min-height:0;margin:0;box-shadow:none;border-radius:var(--radio-pildora);border:0;background:transparent;color:var(--peligro);font-size:14px;font-weight:700;padding:6px 2px;cursor:pointer;}
 html #cliente{min-height:52px;font-size:16px;font-weight:600;}
 
 html .accionesBusquedaPedido{display:grid;gap:10px;margin:4px 0 12px;}
 html .buscadorPedido,
 html[data-tema] input.buscadorPedido{
-  min-height:52px;border-radius:999px !important;
+  min-height:52px;border-radius:var(--radio-pildora) !important;
   padding-left:44px !important;
   background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px !important;
 }
 html .botonRepetirPedido{
   justify-self:start;display:inline-flex;align-items:center;gap:6px;
-  min-height:38px;padding:0 14px;border:0;border-radius:999px;
+  min-height:38px;padding:0 14px;border:0;border-radius:var(--radio-pildora);
   background:var(--acento-bg) !important;color:var(--acento-oscuro) !important;font-size:13.5px;font-weight:700;
 }
 html[data-tema="oscuro"] .botonRepetirPedido{color:var(--acento) !important;}
@@ -617,7 +691,7 @@ html[data-tema="oscuro"] .botonRepetirPedido{color:var(--acento) !important;}
 .chipMarca{
   display:inline-flex;align-items:center;gap:8px;flex-shrink:0;
   min-height:40px;padding:0 16px;
-  border:1px solid var(--borde);border-radius:999px;
+  border:1px solid var(--borde);border-radius:var(--radio-pildora);
   background:var(--superficie);color:var(--texto);
   font-size:14.5px;font-weight:600;cursor:pointer;
 }
@@ -655,7 +729,7 @@ html #pantallaPedido .listaProdutos .fila:last-child{border-bottom:0;}
 /* El "+" que se convierte en contador. */
 html #pantallaPedido .controlesCantidad{
   display:flex;align-items:center;flex-shrink:0;gap:0;
-  height:46px;padding:0;border-radius:999px;
+  height:46px;padding:0;border-radius:var(--radio-pildora);
   background:transparent;
 }
 html #pantallaPedido .controlesCantidad .botonCantidad{
@@ -697,14 +771,14 @@ html #pantallaPedido[data-vista="pedidos"] footer.piePedido{display:none !import
 .piePedidoResumen strong{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--texto);}
 html #pantallaPedido footer.piePedido #generar{
   flex-shrink:0;min-height:52px;padding:0 24px;
-  border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);
+  border:0;border-radius:var(--radio-pildora);background:var(--acento);color:var(--acento-txt);
   font-size:16px;font-weight:800;box-shadow:var(--sombra-acento);
 }
 
 /* ---------- Ficha del pedido (T35) ---------- */
 
 html .fichaPedido{background:var(--fondo);padding:14px 16px 16px;}
-html .fichaPedido .modalBotones .btnModalSecundario{border-radius:999px;}
+html .fichaPedido .modalBotones .btnModalSecundario{border-radius:var(--radio-pildora);}
 .tarjetaFichaPedido{
   display:grid;gap:4px;margin-bottom:12px;padding:16px;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);
@@ -748,11 +822,11 @@ html .observacionesFichaPedido{
 }
 
 html .accionesFichaPedido{gap:10px;}
-html .accionesFichaPedido .pasoSiguientePedido{min-height:54px;font-size:16px;border-radius:999px;box-shadow:var(--sombra-acento);}
+html .accionesFichaPedido .pasoSiguientePedido{min-height:54px;font-size:16px;border-radius:var(--radio-pildora);box-shadow:var(--sombra-acento);}
 html .pistaChecklist{text-align:center;font-size:13px;color:var(--texto-sec);}
 .botonMenuFicha{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  min-height:46px;border:var(--borde-tarjeta);border-radius:999px;
+  min-height:46px;border:var(--borde-tarjeta);border-radius:var(--radio-pildora);
   background:var(--superficie);color:var(--texto);font-size:15px;font-weight:700;cursor:pointer;
   box-shadow:var(--sombra);
 }
@@ -779,11 +853,11 @@ html .menuFichaPedido .opcionMenuFicha:active{background:var(--superficie-2) !im
 
 html .segmentoPeriodo{
   display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;
-  padding:4px;border-radius:999px;
+  padding:4px;border-radius:var(--radio-pildora);
   background:var(--superficie-2);
 }
 html .segmentoPeriodo button{
-  border:0;border-radius:999px;padding:8px 4px;
+  border:0;border-radius:var(--radio-pildora);padding:8px 4px;
   background:transparent;color:var(--texto-sec);
   font:inherit;font-size:13px;font-weight:600;cursor:pointer;
 }
@@ -793,7 +867,7 @@ html .segmentoPeriodo button.activo{
 }
 html[data-tema="oscuro"] .segmentoPeriodo button.activo{background:var(--acento);color:var(--acento-txt);}
 html .filtrosHistorial{display:flex;flex-direction:column;gap:10px;}
-html .filtrosHistorial input[type="search"]{border-radius:999px;}
+html .filtrosHistorial input[type="search"]{border-radius:var(--radio-pildora);}
 
 html .tarjetaSeguimiento{
   align-items:center;gap:12px;
@@ -805,11 +879,11 @@ html .filaSeguimientoArriba{align-items:center;}
 html .filaSeguimientoArriba h3{font-size:15px;font-weight:700;}
 html .infoSeguimiento .subtitulo{color:var(--texto-sec);}
 html .infoSeguimiento .autorSeguimiento{color:var(--texto-ter);font-size:11.5px;}
-html .infoSeguimiento .badge{margin-top:6px;margin-right:4px;border-radius:999px;font-size:11.5px;}
+html .infoSeguimiento .badge{margin-top:6px;margin-right:4px;border-radius:var(--radio-pildora);font-size:11.5px;}
 html .seguimientoVacio{text-align:center;padding:28px 18px;}
 html .seguimientoVacio h3{font-size:16px;margin-bottom:4px;}
 html .seguimientoVacio p{color:var(--texto-sec);}
-html .verMasSeguimiento{width:100%;border-radius:999px;}
+html .verMasSeguimiento{width:100%;border-radius:var(--radio-pildora);}
 @keyframes tarjetaCambio{
   0%,70%{box-shadow:0 0 0 2px var(--acento),var(--sombra);}
   100%{box-shadow:var(--sombra);}
@@ -824,11 +898,11 @@ html .clientePedidoCabecera label{margin:0;}
 
 html .segmentoCatalogo{
   display:grid;grid-template-columns:1fr 1fr;gap:4px;
-  padding:4px;margin-bottom:12px;border-radius:999px;
+  padding:4px;margin-bottom:12px;border-radius:var(--radio-pildora);
   background:var(--superficie-2);
 }
 html .segmentoCatalogo button{
-  border:0;border-radius:999px;padding:10px 6px;min-height:0;margin:0;
+  border:0;border-radius:var(--radio-pildora);padding:10px 6px;min-height:0;margin:0;
   background:transparent;color:var(--texto-sec);box-shadow:none;
   font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
 }
@@ -839,7 +913,7 @@ html #pantallaCatalogo .extraVolver{display:none;}
 html .catalogoFiltros{gap:10px;margin-bottom:12px;}
 html .catalogoFiltros .buscadorCatalogo,
 html[data-tema] .catalogoFiltros input.buscadorCatalogo{
-  min-height:52px;border-radius:999px;padding-left:44px;
+  min-height:52px;border-radius:var(--radio-pildora);padding-left:44px;
   background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px;
   border:var(--borde-tarjeta);color:var(--texto);
 }
@@ -899,9 +973,9 @@ html[data-tema="oscuro"] .chipMarca.activo small{color:var(--acento-txt) !import
 /* ---------- Comercios y ficha del comercio (T37) ---------- */
 
 html #pantallaComercios .filtrosComercios{display:flex;flex-direction:column;gap:10px;}
-html #pantallaComercios #buscarComercio{border-radius:999px;}
+html #pantallaComercios #buscarComercio{border-radius:var(--radio-pildora);}
 html #pantallaComercios .resumenComercios{margin:0;font-size:12.5px;font-weight:600;color:var(--texto-sec);}
-html #pantallaComercios #agregarComercio{border-radius:999px;}
+html #pantallaComercios #agregarComercio{border-radius:var(--radio-pildora);}
 html #pantallaComercios .comercioCard{
   margin:0 0 10px !important;padding:14px !important;
   border-radius:var(--radius-md) !important;box-shadow:var(--sombra) !important;
@@ -963,7 +1037,7 @@ html .fichaUbicacionIcono{display:grid;place-items:center;width:36px;height:36px
 html .fichaUbicacion div{display:grid;gap:1px;}
 html .fichaUbicacion strong{font-size:14px;}
 html .fichaUbicacion small{font-size:12px;color:var(--texto-sec);}
-html .fichaUbicacion .botonGpsComercio{grid-column:1/-1;margin-top:8px;width:100%;border-radius:999px;justify-content:center;gap:6px;}
+html .fichaUbicacion .botonGpsComercio{grid-column:1/-1;margin-top:8px;width:100%;border-radius:var(--radio-pildora);justify-content:center;gap:6px;}
 
 html .modalFichaComercio .fichaComercioNueva .fichaProductos{
   padding:12px;margin:0;border-radius:16px;
@@ -980,7 +1054,7 @@ html .modalFichaComercio .fichaComercioNueva .fichaAcciones{
   grid-template-columns:1fr 1fr;gap:8px;
   background:var(--superficie) !important;
 }
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton{border-radius:999px;border:0;background:var(--superficie-2);color:var(--texto);font-size:13px;}
+html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton{border-radius:var(--radio-pildora);border:0;background:var(--superficie-2);color:var(--texto);font-size:13px;}
 html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.ver{background:var(--visitado-bg);color:var(--visitado);}
 html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.eliminar{background:var(--peligro-bg);color:var(--peligro);}
 
@@ -990,14 +1064,14 @@ html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.eliminar
 html .extraVolver{
   display:inline-flex;align-items:center;gap:6px;
   min-height:40px;padding:0 16px 0 12px;margin:0 0 10px;
-  border:var(--borde-tarjeta) !important;border-radius:999px !important;
+  border:var(--borde-tarjeta) !important;border-radius:var(--radio-pildora) !important;
   background:var(--superficie) !important;color:var(--texto) !important;
   font-size:14px;font-weight:700;box-shadow:var(--sombra);
 }
 
 /* Rutas: mapa arriba, paradas y, plegadas abajo, las ubicaciones. */
 html .tarjetaMapaRuta #mapaRuta{height:300px !important;border-radius:18px !important;background:var(--superficie-2) !important;}
-html .tarjetaMapaRuta .btnAccion{border-radius:999px;}
+html .tarjetaMapaRuta .btnAccion{border-radius:var(--radio-pildora);}
 html .encabezadoTarjetaRuta{gap:12px;}
 html .iconoTarjetaRuta{border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .iconoTarjetaRuta{color:var(--acento);}
@@ -1006,7 +1080,7 @@ html .encabezadoTarjetaRuta p{color:var(--texto-sec);}
 html .accionesSeleccionRuta{display:flex;gap:8px;flex-wrap:wrap;}
 html .accionesSeleccionRuta .btnAccion{
   flex:0 0 auto;min-height:38px;padding:0 16px;
-  border:1px solid var(--borde) !important;border-radius:999px;
+  border:1px solid var(--borde) !important;border-radius:var(--radio-pildora);
   background:var(--superficie) !important;color:var(--texto) !important;font-size:13.5px;
 }
 html .opcionSeleccionRuta{
@@ -1017,7 +1091,7 @@ html .opcionSeleccionRuta:last-child{border-bottom:0 !important;}
 html .opcionSeleccionRuta span{color:var(--texto);font-weight:600;}
 html .opcionSeleccionRuta input{accent-color:var(--acento);width:20px;height:20px;}
 html .opcionSeleccionRuta .seleccionRutaGps,
-html .opcionSeleccionRuta .seleccionRutaSinGps{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+html .opcionSeleccionRuta .seleccionRutaSinGps{padding:3px 9px;border-radius:var(--radio-pildora);font-size:11px;font-weight:700;}
 html .opcionSeleccionRuta .seleccionRutaGps{background:var(--visitado-bg);color:var(--visitado);}
 html .opcionSeleccionRuta .seleccionRutaSinGps{background:var(--pendiente-bg);color:var(--pendiente);}
 html .tarjetaUbicacionesRuta > summary{list-style:none;cursor:pointer;}
@@ -1026,7 +1100,7 @@ html .tarjetaUbicacionesRuta > summary::after{content:"";margin-left:auto;width:
 html .tarjetaUbicacionesRuta[open] > summary{margin-bottom:12px;}
 html .tarjetaUbicacionesRuta[open] > summary::after{transform:rotate(-135deg);}
 html .tarjetaUbicacionesRuta select{border-radius:14px !important;background:var(--superficie);color:var(--texto);border:1px solid var(--borde-fuerte);}
-html .tarjetaUbicacionesRuta .btnAccion{border-radius:999px !important;}
+html .tarjetaUbicacionesRuta .btnAccion{border-radius:var(--radio-pildora) !important;}
 html .notaGpsFicha{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:var(--info-bg);color:var(--info);font-size:13px;}
 html .resumenRuta{border-radius:12px;background:var(--superficie-2) !important;color:var(--texto-sec) !important;}
 
@@ -1034,13 +1108,15 @@ html .resumenRuta{border-radius:12px;background:var(--superficie-2) !important;c
 html .configDetalle button.configCuentaIngresar,
 html .configDetalle .btnAccion,
 html .modalAvisos button,
-html .contenidoAvisos button{border-radius:999px !important;}
+html .contenidoAvisos button{border-radius:var(--radio-pildora) !important;}
 html .tarjetaMapaRuta > div:has(#btnOptimizarRuta){display:grid !important;grid-template-columns:1fr 1fr;gap:8px !important;}
+/* T129: en la hoja de partes de Google Maps, "Cancelar" sin fondo para que no se confunda con una parte. */
+.hojaPartesGoogleMaps > .pzBtn:last-child{background:transparent;color:var(--texto-sec);}
 html .tarjetaMapaRuta #btnOptimizarRuta{grid-column:1/-1;}
 html .tarjetaMapaRuta .btnAccion{min-height:46px;font-size:14px;}
 html .botonNavegacion3D{background:var(--superficie-2) !important;color:var(--texto) !important;}
 html .extraVolver{width:auto !important;align-self:flex-start;}
-html .modalBotones button{border-radius:999px !important;}
+html .modalBotones button{border-radius:var(--radio-pildora) !important;}
 
 /* ---------- Navegación propia (Etapa 5, T41 y T42) ---------- */
 
@@ -1050,88 +1126,261 @@ html.enNavegacion .cartelModoPersonal{display:none !important;}
 html.enNavegacion body{overflow:hidden;}
 .pantallaNavegacion{position:fixed;inset:0;z-index:1500;background:var(--fondo);overflow:hidden;}
 .pantallaNavegacion.oculto{display:none;}
+/* T179: Cargar pedido encima de la navegación. La sección Nuevo pedido es una
+   bandeja grande; arriba asoma el mapa apenas difuminado (solo esa franja, para
+   que el difuminado no gaste en celulares baratos). Tocar la franja la cierra. */
+.fondoPedidoNavegacion{position:fixed;left:0;right:0;top:0;height:calc(90px + env(safe-area-inset-top));z-index:1600;background:rgba(5,10,20,.32);}
+@supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){.fondoPedidoNavegacion{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}}
+.fondoPedidoNavegacion.oculto{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja{position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1601;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  margin:0;border-radius:28px 28px 0 0;background:var(--fondo);box-shadow:0 -10px 30px rgba(0,0,0,.25);animation:subirHoja .22s ease-out;}
+html[data-tema] #pantallaPedido.pedidoEnHoja.oculto{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja::before{content:"";position:sticky;top:0;display:block;margin:0 auto;width:40px;height:5px;border-radius:3px;background:var(--borde-fuerte);transform:translateY(8px);z-index:3;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header{position:static;display:flex;flex-wrap:nowrap;align-items:center !important;gap:10px;min-height:0;padding:22px 16px 6px !important;background:transparent;box-shadow:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > .barraVolver,
+html[data-tema] #pantallaPedido.pedidoEnHoja > header :is(#cerrarCargaPedido, .botonVolverPedidos, .botonAyudaPantalla, .campanaAvisos, .logo){display:none !important;}
+.cerrarPedidoEncima{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header > div{flex:1 1 auto !important;min-width:0;margin-left:0 !important;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header h1{font-size:22px;line-height:1.15;text-align:left;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header p{display:none;}
+html[data-tema] #pantallaPedido.pedidoEnHoja > header .cerrarPedidoEncima{display:grid;place-items:center;flex-shrink:0;order:9;width:44px;height:44px;min-height:0;padding:0;border:1px solid var(--borde);border-radius:50%;background:var(--superficie);color:var(--texto);}
+/* Repaso de Catálogo: el mismo pedido en hoja, encima de cualquier pantalla
+   (Catálogo, la ficha del comercio, que está a 2500). */
+.fondoPedidoNavegacion.fondoPedidoEnHoja{z-index:2600;}
+html[data-tema] #pantallaPedido.pedidoEnHoja.pedidoSobreTodo{z-index:2601;}
+/* La barrita del pedido a medio hacer, arriba de la barra de abajo. */
+.barraPedidoMedio{position:fixed;left:max(16px, env(safe-area-inset-left));right:max(16px, env(safe-area-inset-right));bottom:calc(90px + env(safe-area-inset-bottom));z-index:900;
+  display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 10px 8px 14px;border-radius:20px;background:var(--superficie);border:var(--borde-tarjeta);box-shadow:0 10px 28px rgba(0,0,0,.22);cursor:pointer;animation:subirHoja .2s ease-out;}
+.barraPedidoMedio.oculto{display:none;}
+.barraPedidoMedio::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:3px;background:var(--borde-fuerte);}
+.iconoPedidoMedio{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:12px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .iconoPedidoMedio{background:var(--superficie-2);color:var(--acento);}
+.textoPedidoMedio{flex:1;min-width:0;display:flex;flex-direction:column;}
+.textoPedidoMedio strong,.textoPedidoMedio small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.textoPedidoMedio strong{font-size:15px;color:var(--texto);}
+.textoPedidoMedio small{font-size:13px;color:var(--texto-sec);}
+html[data-tema] .verPedidoMedio{flex-shrink:0;min-height:42px;padding:0 16px;border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);font:inherit;font-size:14.5px;font-weight:800;box-shadow:none;}
+html.conPedidoMedio body > section > main.container::after{content:"";display:block;height:72px;}
 .mapaNavegacion{position:absolute;inset:0;background:var(--superficie-2);}
-.pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(130px + env(safe-area-inset-top));}
+.pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 6px);}
 .pantallaNavegacion .leaflet-control-attribution{font-size:10px;border-radius:8px 0 0 8px;}
 
-.cartelManiobra{
-  position:absolute;z-index:1100;
-  top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:calc(72px + env(safe-area-inset-right));
-  display:grid;grid-template-columns:48px 1fr;align-items:center;gap:12px;
-  padding:14px 16px;border-radius:22px;
-  background:var(--acento);color:var(--acento-txt);box-shadow:0 10px 30px rgba(0,0,0,.25);
+/* T134 «Manejando»: mapa completo; arriba la barra del día y la tarjeta
+   grande de la maniobra; abajo la tarjeta chica de la parada. Sombras cortas
+   (T141): nada pesado sobre el mapa en movimiento. */
+.barraDiaNavegacion{
+  position:absolute;z-index:1100;display:flex;gap:3px;
+  top:calc(10px + env(safe-area-inset-top));left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
 }
-.iconoManiobra{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.18);}
-html[data-tema="oscuro"] .iconoManiobra{background:rgba(0,0,0,.12);}
-.cartelManiobra div{display:grid;gap:2px;min-width:0;}
-.distanciaManiobra{font-size:24px;font-weight:800;line-height:1.05;}
+.barraDiaNavegacion.oculto{display:none;}
+.rayaDia{flex:1;height:6px;border-radius:3px;background:var(--borde-fuerte);}
+.rayaDia.hecha{background:var(--visitado);}
+.rayaDia.actual{background:var(--acento);}
+.rayaDia.continua{background:linear-gradient(90deg, var(--visitado) var(--avance), var(--borde-fuerte) var(--avance));}
+
+.cartelManiobra{
+  position:absolute;z-index:1100;overflow:hidden;
+  top:calc(24px + env(safe-area-inset-top));left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
+  border-radius:26px;background:var(--acento);color:var(--acento-txt);box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+.pantallaNavegacion:has(.barraDiaNavegacion.oculto) .cartelManiobra{top:calc(12px + env(safe-area-inset-top));}
+.filaManiobra{display:flex;align-items:center;gap:14px;padding:14px 16px 12px;}
+.iconoManiobra{flex:0 0 auto;display:grid;place-items:center;width:56px;height:56px;}
+.iconoManiobra svg{width:52px;height:52px;}
+.textosManiobra{flex:1;display:grid;gap:3px;min-width:0;}
+.distanciaManiobra{font-size:40px;font-weight:900;line-height:.95;letter-spacing:-0.03em;}
 .distanciaManiobra:empty{display:none;}
-.textoManiobra{font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;}
+.textoManiobra{font-size:19px;font-weight:800;line-height:1.2;overflow-wrap:anywhere;}
+.carrilesManiobra{flex:0 0 auto;display:flex;gap:2px;padding:6px;border-radius:12px;background:rgba(0,0,0,.16);}
+.carrilesManiobra.oculto{display:none;}
+.pieManiobra{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:9px 16px;background:rgba(0,0,0,.16);font-size:14px;font-weight:700;line-height:1.3;}
+.pieManiobra.vacio{display:none;}
+/* T131: lo que dice la voz, escrito mientras lo dice. Si no entra al lado
+   de «Luego …», «Luego» baja a otra línea. */
+.vozManiobra{flex:1 1 13em;display:flex;align-items:center;gap:8px;min-width:0;}
+.vozManiobra.oculto{display:none;}
+.vozManiobra svg{flex:0 0 auto;}
+.fraseManiobra{margin:0;min-width:0;overflow-wrap:anywhere;}
+.fraseManiobra::before{content:"«";}
+.fraseManiobra::after{content:"»";}
+.luegoManiobra{flex:0 1 auto;min-width:0;margin-left:auto;opacity:.85;text-align:right;overflow-wrap:anywhere;}
+.luegoManiobra:empty{display:none;}
+
+.velocimetroNavegacion{
+  position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(128px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;align-content:center;width:64px;height:64px;box-sizing:border-box;border-radius:50%;
+  background:var(--superficie);color:var(--texto);border:4px solid var(--peligro);box-shadow:0 2px 6px rgba(0,0,0,.22);line-height:1;
+}
+.velocimetroNavegacion strong{font-size:22px;font-weight:900;}
+.velocimetroNavegacion small{font-size:10px;font-weight:700;color:var(--texto-sec);}
 
 .botonesNavegacion{
-  position:absolute;z-index:1100;display:grid;gap:10px;
-  top:calc(12px + env(safe-area-inset-top));right:max(12px, env(safe-area-inset-right));
+  position:absolute;z-index:1100;display:grid;gap:10px;justify-items:center;
+  right:max(14px, env(safe-area-inset-right));bottom:calc(128px + env(safe-area-inset-bottom));
 }
 .botonFlotanteNav{
-  display:grid;place-items:center;width:50px;height:50px;padding:0;margin:0;min-height:0;
+  display:grid;place-items:center;width:52px;height:52px;padding:0;margin:0;min-height:0;
   border:0;border-radius:50%;cursor:pointer;
-  background:var(--superficie);color:var(--texto);box-shadow:0 6px 18px rgba(0,0,0,.2);
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
 }
 .botonFlotanteNav.apagado{color:var(--peligro);}
-.centrarNavegacion{position:absolute;z-index:1100;right:max(12px, env(safe-area-inset-right));bottom:calc(208px + env(safe-area-inset-bottom));}
+/* T170: la burbuja de la navegación minimizada, como la de Messenger:
+   abajo a la derecha (al alcance del pulgar), arriba del botón de nuevo
+   pedido. Se arrastra a otro lugar y se queda pegada al borde. */
+.burbujaNavegacion{
+  position:fixed;z-index:1300;right:max(12px, env(safe-area-inset-right));bottom:calc(168px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;width:60px;height:60px;padding:0;margin:0;min-height:0;box-sizing:border-box;
+  border:3px solid var(--superficie);border-radius:50%;background:var(--acento);color:var(--acento-txt);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;
+}
+.burbujaNavegacion[hidden],html.enNavegacion .burbujaNavegacion{display:none !important;}
+.burbujaNavegacionIcono{display:grid;place-items:center;}
+.burbujaNavegacionDato{
+  position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);padding:1px 7px;border-radius:var(--radio-pildora);
+  background:var(--superficie);color:var(--texto);font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.burbujaNavegacionDato:empty{display:none;}
+.centrarNavegacion{position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));bottom:calc(204px + env(safe-area-inset-bottom));}
 .centrarNavegacion.oculto{display:none;}
+
+.paradasNavegacion{
+  position:absolute;z-index:1100;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;padding-left:max(14px, env(safe-area-inset-left));overflow:hidden;
+}
+.paradaActualNavegacion{
+  flex:0 0 calc(100% - 72px);max-width:420px;box-sizing:border-box;display:flex;align-items:center;gap:12px;
+  min-height:0;margin:0;padding:14px 16px;border:0;border-radius:24px;text-align:left;font:inherit;cursor:pointer;
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);
+}
+.datosTarjetaParada{flex:1;display:grid;gap:1px;min-width:0;}
+.numeroTarjetaParada{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--acento-oscuro, var(--acento));}
+html[data-tema="oscuro"] .numeroTarjetaParada{color:var(--acento);}
+.nombreTarjetaParada{font-size:19px;font-weight:900;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.direccionTarjetaParada{font-size:13px;font-weight:600;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tiempoTarjetaParada{flex:0 0 auto;display:grid;justify-items:end;gap:3px;text-align:right;}
+.minutosTarjetaParada{font-size:24px;font-weight:900;line-height:1;color:var(--visitado);}
+.detalleTarjetaParada{font-size:12px;font-weight:600;color:var(--texto-sec);white-space:nowrap;}
+.siguienteParadaNavegacion{
+  flex:0 0 260px;box-sizing:border-box;display:grid;gap:1px;align-content:center;padding:14px 16px;border-radius:24px;
+  background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.22);opacity:.7;
+}
+.siguienteParadaNavegacion.oculto{display:none;}
+.paradasNavegacion.sinSiguiente{padding-right:max(14px, env(safe-area-inset-right));}
+.paradasNavegacion.sinSiguiente .paradaActualNavegacion{flex:1;max-width:none;}
+/* El camino como en la maqueta: azul con borde oscuro de día, lima de noche. */
+html[data-tema="oscuro"] .pantallaNavegacion .bordeCamino{stroke:#4E6112;}
+html[data-tema="oscuro"] .pantallaNavegacion .lineaCamino{stroke:#C8F04A;}
+html[data-tema="oscuro"] .pantallaNavegacion .lineaHecha{stroke:#4A5562;}
+/* Tu posición: la flecha hacia donde vas, con un halo (sin sombras). */
+.marcadorYoNav{background:none;border:0;}
+.flechaYo{display:grid;place-items:center;width:44px;height:44px;box-sizing:border-box;border-radius:50%;
+  background:#1F5FE0;color:#fff;border:4px solid #fff;outline:8px solid rgba(31,95,224,.18);}
+html[data-tema="oscuro"] .flechaYo{background:#3D8BFF;outline-color:rgba(108,182,255,.2);}
+.siguienteParadaNavegacion small{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+.siguienteParadaNavegacion strong{font-size:19px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* En modo oscuro, la regla general pinta todos los textos de claro: en la
+   tarjeta de la maniobra (lima) van del color del texto sobre el acento. */
+html[data-tema="oscuro"] .cartelManiobra :is(strong, span, p, small){color:inherit !important;}
+html[data-tema="oscuro"] .numeroTarjetaParada{color:var(--acento) !important;}
+html[data-tema="oscuro"] .minutosTarjetaParada{color:var(--visitado) !important;}
+html[data-tema="oscuro"] :is(.direccionTarjetaParada, .detalleTarjetaParada, .siguienteParadaNavegacion small){color:var(--texto-sec) !important;}
+/* Con la hoja abierta no se ven las tarjetas ni los botones de abajo. */
+.pantallaNavegacion.conHojaAbierta .paradasNavegacion,
+.pantallaNavegacion.conHojaAbierta .velocimetroNavegacion,
+.pantallaNavegacion.conHojaAbierta .botonesNavegacion,
+.pantallaNavegacion.conHojaAbierta .centrarNavegacion{display:none;}
 
 .hojaNavegacion{
   position:absolute;z-index:1100;left:0;right:0;bottom:0;
-  display:grid;gap:14px;
-  max-height:78vh;overflow-y:auto;overscroll-behavior:contain;
-  padding:4px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  display:none;gap:10px;
+  max-height:76vh;overflow-y:auto;overscroll-behavior:contain;
+  padding:0 max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   border-radius:28px 28px 0 0;
-  background:var(--superficie);color:var(--texto);box-shadow:0 -10px 30px rgba(0,0,0,.18);
+  background:var(--fondo);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
   touch-action:pan-y;
 }
-.asaHoja{display:grid;place-items:center;width:100%;height:24px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
+.cabezaHoja{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:8px;padding-top:8px;touch-action:none;}
+.botonChicoNav{display:grid;place-items:center;width:40px;height:40px;padding:0;margin:0;min-height:0;border:0;border-radius:50%;cursor:pointer;background:var(--superficie);color:var(--texto);}
+.botonChicoNav.apagado{color:var(--peligro);}
+.asaHoja{display:grid;place-items:center;width:100%;height:40px;padding:0;margin:0;min-height:0;border:0;background:transparent;cursor:pointer;}
 .asaHoja span{width:44px;height:5px;border-radius:99px;background:var(--borde-fuerte);}
-.hojaResumen{display:grid;gap:12px;}
+.hojaResumen{display:grid;gap:8px;}
 .hojaTiempo{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .tiempoNavegacion{font-size:28px;font-weight:800;line-height:1;color:var(--visitado);}
 .detalleTiempo{font-size:14px;font-weight:600;color:var(--texto-sec);}
-.hojaComercio{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;}
-.hojaAvatar{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;color:#fff;font-weight:700;background:var(--acento);}
-.hojaComercio h2{margin:0;font-size:18px;font-weight:800;line-height:1.15;overflow-wrap:anywhere;}
-.hojaComercio p{margin:2px 0 0;font-size:13.5px;color:var(--texto-sec);}
-.hojaAcciones{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;}
+.hojaComercio{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;}
+.hojaAvatar{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;color:#fff;font-size:16px;font-weight:900;background:var(--acento);}
+.hojaComercio h2{margin:0;font-size:20px;font-weight:900;line-height:1.15;overflow-wrap:anywhere;}
+.hojaComercio p{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--texto-sec);}
+/* T135 «Llegando»: lo que hay para entregar y cobrar, cuatro botones
+   grandes, deslizar para marcar Llegué y, abajo, Saltear parada y Salir. */
+.chipsHoja{display:flex;flex-wrap:wrap;gap:6px;}
+.chipsHoja:empty{display:none;}
+.chipHoja{padding:5px 10px;border-radius:var(--radio-pildora);font-size:12px;font-weight:800;}
+.chipPedido{background:var(--acento-bg);color:var(--acento-oscuro);}
+.chipSaldo{background:var(--visitado-bg);color:var(--visitado);}
+html[data-tema="oscuro"] .chipPedido{color:var(--acento) !important;}
+html[data-tema="oscuro"] .chipSaldo{color:var(--visitado) !important;}
+.hojaAcciones{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:8px;}
 .accesoNavegacion{
-  display:grid;justify-items:center;gap:6px;padding:0;margin:0;min-height:0;
-  border:0;background:transparent;color:var(--texto);text-decoration:none;font:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;height:54px;padding:0 8px;margin:0;min-height:0;box-sizing:border-box;
+  border:0;border-radius:18px;background:var(--superficie);color:var(--texto);text-decoration:none;font:inherit;cursor:pointer;
 }
-.accesoNavegacionIcono{display:grid;place-items:center;width:52px;height:52px;border-radius:18px;background:var(--acento-bg);color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .accesoNavegacionIcono{color:var(--acento);}
-.accesoNavegacionPrincipal .accesoNavegacionIcono{background:var(--visitado);color:#fff;}
-.accesoNavegacion small{font-size:12px;font-weight:600;color:var(--texto-sec);}
+.pantallaNavegacion .hojaAcciones .accesoNavegacionIcono{display:grid;place-items:center;width:auto;height:auto;background:none;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .pantallaNavegacion .hojaAcciones .accesoNavegacionIcono{color:var(--acento);}
+.pantallaNavegacion .hojaAcciones a[href^="https://wa.me"] .accesoNavegacionIcono,
+.pantallaNavegacion .hojaAcciones .accesoYaLlego .accesoNavegacionIcono{color:var(--pz-wa, var(--visitado));}
+.accesoNavegacion small{font-size:15px;font-weight:800;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+html[data-tema="oscuro"] .accesoNavegacion small{color:var(--texto) !important;}
+/* «Visité, sin pedido»: si queda sola en la fila ocupa todo el ancho y, en
+   un celular chico, baja a dos renglones en vez de cortarse. */
+.hojaAcciones .accesoSinPedido:nth-child(odd){grid-column:1 / -1;}
+.accesoNavegacion.accesoSinPedido small{white-space:normal;line-height:1.1;text-align:left;}
+.llegueHoja .deslizador{height:62px;margin-top:0;background:var(--visitado-bg);}
+.llegueHoja .rellenoDeslizador{background:var(--visitado);}
+.llegueHoja .textoDeslizador{color:var(--visitado);font-size:15.5px;}
+html[data-tema="oscuro"] .llegueHoja .textoDeslizador{color:var(--visitado) !important;}
+.llegueHoja .tiradorDeslizador{width:54px;height:54px;background:#14804A;color:#fff;}
+html[data-tema="oscuro"] .llegueHoja .tiradorDeslizador{background:#1E9E57;color:#fff;}
+.llegueNavegacion{width:100%;background:var(--visitado) !important;color:#fff !important;}
+.pieHoja{display:flex;gap:8px;}
+.botonPieHoja{
+  flex:1;height:46px;padding:0 12px;margin:0;min-height:0;border:0;border-radius:var(--radio-pildora);cursor:pointer;
+  background:var(--superficie);color:var(--texto);font:inherit;font-size:13.5px;font-weight:700;
+}
+.pieHoja.unaSola .saltearNavegacion{display:none;}
+/* Llegando o en la puerta, la tarjeta de arriba ya dice cuánto falta. */
+.pantallaNavegacion:is(.llegando, .llego) .hojaTiempo{display:none;}
+.pantallaNavegacion.llegando .distanciaManiobra{font-size:26px;line-height:1.05;letter-spacing:-0.01em;}
+.pantallaNavegacion.llegando .textoManiobra{font-size:15.5px;font-weight:700;}
+/* Con la hoja abierta (y llegando, donde la voz dice lo mismo que la
+   tarjeta) va sin la franja de abajo: queda más mapa y la tarjeta no cambia de alto. */
+.pantallaNavegacion:is(.llegando, .conHojaAbierta) .pieManiobra{display:none;}
 .hojaMas{display:none;gap:12px;}
 .hojaNavegacion.abierta .hojaMas{display:grid;}
+.hojaNavegacion.abierta{display:grid;}
 .hojaParadas:empty{display:none;}
-.hojaPedidos,.hojaParadas{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--superficie-2);}
+.hojaPedidos,.hojaParadas{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--superficie);}
 .hojaPedidos strong,.hojaParadas strong{font-size:13.5px;}
 .pedidoNavegacion{
   display:flex;justify-content:space-between;align-items:center;gap:8px;
   min-height:44px;padding:0 12px;margin:0;border:0;border-radius:12px;
-  background:var(--superficie);color:var(--texto);font:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  background:var(--superficie-2);color:var(--texto);font:inherit;font-size:14px;font-weight:600;cursor:pointer;
 }
 .pedidoNavegacion small{color:var(--texto-sec);font-weight:500;}
 .hojaParadas ol{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px;}
 .hojaParadas li.hecha{color:var(--texto-ter);text-decoration:line-through;}
 .hojaParadas li.actual{font-weight:800;}
-.abrirEnGoogle{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;border-radius:999px !important;}
+.abrirEnGoogle{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;border-radius:var(--radio-pildora) !important;}
 .avisoNavegacion{margin:0;font-size:13px;color:var(--pendiente);}
 .avisoNavegacion:empty{display:none;}
 .pantallaNavegacion.llego .tiempoNavegacion{color:var(--visitado);}
 
+/* T141: sombras cortas sobre el mapa en movimiento (las largas traban un celular barato). */
 .pinNavegacion{background:none;border:0;}
 .pinNavegacionCabeza{
   position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;
-  background:var(--peligro);color:#fff;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);
+  background:var(--peligro);color:#fff;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.3);
 }
 .pinNavegacionCabeza::after{
   content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
@@ -1146,20 +1395,8 @@ html .botonNavegarRuta{background:var(--superficie-2) !important;color:var(--tex
   border:0;border-radius:50%;background:var(--superficie);color:var(--acento-oscuro);box-shadow:var(--sombra);cursor:pointer;
 }
 html[data-tema="oscuro"] .botonVozInicio{color:var(--acento);}
-.ventanaVoz .contenidoVoz{display:grid;justify-items:center;gap:10px;text-align:center;}
-.botonMicrofonoGrande{
-  display:grid;place-items:center;width:84px;height:84px;padding:0;margin:6px 0;border:0;border-radius:50%;
-  background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);cursor:pointer;
-}
-.ventanaVoz.escuchando .botonMicrofonoGrande,
-.ventanaVoz.pensando .botonMicrofonoGrande,
 .ventanaDictado.escuchando .botonDictar{animation:latidoVoz 1.2s ease-in-out infinite;}
 @keyframes latidoVoz{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--acento) 55%, transparent);}50%{box-shadow:0 0 0 16px color-mix(in srgb, var(--acento) 0%, transparent);}}
-.contenidoVoz h2{margin:0;font-size:20px;}
-.textoVoz{margin:0;min-height:22px;font-size:16px;font-weight:600;color:var(--texto);}
-.ejemplosVoz{display:grid;gap:4px;width:100%;padding:12px;border-radius:16px;background:var(--superficie-2);text-align:left;}
-.ejemplosVoz small{color:var(--texto-sec);font-weight:600;}
-.ejemplosVoz span{font-size:14px;color:var(--texto);}
 
 .filaAccionesRapidasPedido{display:flex;gap:8px;flex-wrap:wrap;}
 .contenidoDictado{display:grid;gap:10px;}
@@ -1182,10 +1419,9 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 .ventanaDictado .productoDictado span{font-weight:600;}
 .ventanaDictado .productoDictado small{grid-column:3;color:var(--texto-sec);font-size:12px;}
 .sinEntenderDictado{margin:0;font-size:13px;color:var(--pendiente);}
-/* T54: IA para la voz */
+/* T54 y T155: el Asistente lee lo que faltó */
 .botonEntenderIA{align-self:flex-start;margin-top:8px;}
 .cambiosDictado{margin:0;font-size:13px;color:var(--texto-sec);}
-.ventanaVoz.pensando .textoVoz{opacity:.75;}
 
 /* ---------- Primeros pasos y "Suelen pedir hoy" (Etapa 6, T45 y T46) ---------- */
 
@@ -1212,7 +1448,7 @@ html[data-tema="oscuro"] .comercioDictado{color:var(--acento);}
 /* ---------- Qué hay de nuevo y ayuda (Etapa 6, T45 y T49) ---------- */
 
 .contenidoNovedades{display:grid;gap:12px;}
-.etiquetaVersion{justify-self:start;padding:4px 10px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:12px;font-weight:700;}
+.etiquetaVersion{justify-self:start;padding:4px 10px;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--acento-oscuro);font-size:12px;font-weight:700;}
 html[data-tema="oscuro"] .etiquetaVersion{color:var(--acento);}
 .contenidoNovedades h2{margin:0;font-size:21px;}
 .listaNovedades{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-height:55vh;overflow-y:auto;}
@@ -1283,7 +1519,7 @@ html .configDetalle .ajPeligro .ajTexto strong{color:var(--peligro);}
 /* Desplegable chico, a la derecha. */
 html .configDetalle .ajFila select{
   width:auto;max-width:9.5em;min-height:38px;padding:0 30px 0 12px;margin:0;
-  border:1px solid var(--borde-fuerte);border-radius:999px;
+  border:1px solid var(--borde-fuerte);border-radius:var(--radio-pildora);
   background:var(--superficie-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 11px center;
   -webkit-appearance:none;appearance:none;
   color:var(--texto);font-size:14px;font-weight:600;text-overflow:ellipsis;
@@ -1293,7 +1529,7 @@ html .configDetalle .ajFila select{
 .ajLlave{
   -webkit-appearance:none;appearance:none;flex-shrink:0;
   position:relative;width:50px !important;height:30px !important;min-height:0 !important;margin:0 !important;
-  border-radius:999px;background:var(--borde-fuerte);cursor:pointer;transition:background .2s;
+  border-radius:var(--radio-pildora);background:var(--borde-fuerte);cursor:pointer;transition:background .2s;
 }
 .ajLlave::after{
   content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;
@@ -1308,13 +1544,13 @@ html[data-tema="oscuro"] .ajLlave:checked::after{background:var(--acento-txt);}
 /* Botones en fila (pocas opciones). */
 html .configDetalle .ajApilada{grid-template-columns:minmax(0,1fr);gap:10px;}
 .ajCabeza{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:12px;}
-.ajSegmento{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--superficie-2);}
+.ajSegmento{display:flex;gap:4px;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);}
 html .configDetalle .ajSegmento label{
   flex:1 1 0;display:block;min-width:0;margin:0;padding:0;border:0;position:relative;cursor:pointer;
 }
 .ajSegmento input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;}
 .ajSegmento span{
-  display:grid;place-items:center;min-height:38px;padding:0 6px;border-radius:999px;
+  display:grid;place-items:center;min-height:38px;padding:0 6px;border-radius:var(--radio-pildora);
   font-size:13.5px;font-weight:600;line-height:1.1;text-align:center;color:var(--texto-sec);
 }
 .ajSegmento input:checked + span{background:var(--superficie);color:var(--texto);box-shadow:0 1px 3px rgba(15,27,45,.12);}
@@ -1349,14 +1585,14 @@ html .configDetalle .ajEditar{
 .ajEditar span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
 
 /* Botón principal dentro de una tarjeta. */
-html .configDetalle .ajBotonPrincipal{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:999px !important;}
+html .configDetalle .ajBotonPrincipal{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:var(--radio-pildora) !important;}
 
 /* Pasos (limpieza de datos viejos). */
 .ajPasos{display:grid;gap:10px;padding:4px 14px 14px;}
 .ajPaso{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:10px;}
 .ajNumeroPaso{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--superficie-2);color:var(--texto-sec);font-size:13px;font-weight:800;}
 .ajPaso.hecho .ajNumeroPaso{background:var(--visitado-bg);color:var(--visitado);}
-html .configDetalle .ajPaso button{border-radius:999px;}
+html .configDetalle .ajPaso button{border-radius:var(--radio-pildora);}
 html .configDetalle .ajPasos .configEstado{grid-column:1/-1;}
 
 /* Avisos y notificaciones. */
@@ -1368,7 +1604,7 @@ html .configDetalle .bloqueNotificaciones{
 .cabezaNotificaciones{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:12px;}
 html .configDetalle .cabezaNotificaciones strong{font-size:16px;color:var(--texto);}
 html .configDetalle .bloqueNotificaciones .configEstado{padding:0;background:transparent;font-size:13.5px;color:var(--texto-sec);}
-html .configDetalle .bloqueNotificaciones button{border-radius:999px;min-height:48px;}
+html .configDetalle .bloqueNotificaciones button{border-radius:var(--radio-pildora);min-height:48px;}
 html .configDetalle .bloqueNotificaciones[data-estado="apagadas"] button{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);font-weight:700;}
 
 /* Empleados. */
@@ -1395,10 +1631,10 @@ html .configDetalle .empleadoBotones .empleadoBaja{background:var(--peligro-bg);
 html .configDetalle .empleadoDeBaja{opacity:.7;box-shadow:none;border:1.5px dashed var(--borde-fuerte);background:transparent;}
 html .configDetalle .empleadoFila button.empleadoBaja[data-accion="anularCodigo"]{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;width:auto;justify-self:start;
-  min-height:38px;padding:0 14px;border:0;border-radius:999px;background:var(--peligro-bg);color:var(--peligro);
+  min-height:38px;padding:0 14px;border:0;border-radius:var(--radio-pildora);background:var(--peligro-bg);color:var(--peligro);
 }
 html .configDetalle .empleadoCodigoTexto{font-size:20px;letter-spacing:.08em;}
-html .configDetalle .configAcciones button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;}
+html .configDetalle .configAcciones button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--radio-pildora);}
 
 /* Lo viejo que queda suelto en Cuenta y en la migración, con el estilo nuevo. */
 html .configDetalle > .configEstado,
@@ -1410,7 +1646,7 @@ html .configDetalle .migracionResumen{
 }
 html .configDetalle > button:not(.configSubVolver),
 html .configDetalle .configCuentaFormulario button,
-html .configDetalle .configMigracion > button{border-radius:999px;min-height:48px;}
+html .configDetalle .configMigracion > button{border-radius:var(--radio-pildora);min-height:48px;}
 html .configDetalle .configCuentaFormulario{
   display:grid;gap:10px;padding:16px;margin:8px 0;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);background:var(--superficie);box-shadow:var(--sombra);
@@ -1552,22 +1788,22 @@ html[data-precios="no"] #pantallaPedido .nombreProductoPedido small{display:none
 /* ---------- Rutas: "Comercios para esta ruta" (T50) ---------- */
 html .estadoSeleccionRuta{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;background:transparent !important;border:0;font-size:inherit;}
 .chipResumenRuta{
-  display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 11px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 11px;border-radius:var(--radio-pildora);
   background:var(--acento-bg);color:var(--acento-oscuro);font-size:12.5px;font-weight:700;
 }
 html[data-tema="oscuro"] .chipResumenRuta{color:var(--acento);}
 .chipResumenRuta[data-tono="listo"]{background:var(--visitado-bg);color:var(--visitado) !important;}
 .chipResumenRuta[data-tono="falta"]{background:var(--pendiente-bg);color:var(--pendiente) !important;}
-html .accionesSeleccionRuta{display:flex;gap:6px;margin:12px 0 0;padding:4px;border-radius:999px;background:var(--superficie-2);flex-wrap:nowrap;}
+html .accionesSeleccionRuta{display:flex;gap:6px;margin:12px 0 0;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);flex-wrap:nowrap;}
 html .accionesSeleccionRuta .btnAccion{
   flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  min-height:38px;padding:0 8px;border:0 !important;border-radius:999px;
+  min-height:38px;padding:0 8px;border:0 !important;border-radius:var(--radio-pildora);
   background:transparent !important;color:var(--texto-sec) !important;font-size:13.5px;font-weight:700;box-shadow:none !important;
 }
 html .accionesSeleccionRuta .btnAccion:active{background:var(--superficie) !important;color:var(--texto) !important;}
 .buscadorSeleccionRuta{
   display:flex;align-items:center;gap:8px;margin:10px 0 4px;padding:0 14px;min-height:46px;
-  border:1px solid var(--borde-fuerte);border-radius:999px;background:var(--superficie);color:var(--texto-ter);
+  border:1px solid var(--borde-fuerte);border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto-ter);
 }
 html .buscadorSeleccionRuta input{flex:1;min-width:0;min-height:44px;margin:0;padding:0;border:0 !important;background:transparent !important;box-shadow:none !important;color:var(--texto);font-size:15px;outline:0;}
 html .listaSeleccionRuta{display:grid;max-height:none;margin-top:4px;}
@@ -1605,13 +1841,13 @@ html .filaRutaGuardada{
   padding:0 !important;border:0 !important;background:transparent !important;box-shadow:none !important;
 }
 html .filaRutaGuardada input,html .filaRutaGuardada select{
-  min-height:46px;margin:0;border:1px solid var(--borde-fuerte) !important;border-radius:999px !important;
+  min-height:46px;margin:0;border:1px solid var(--borde-fuerte) !important;border-radius:var(--radio-pildora) !important;
   background:var(--superficie) !important;color:var(--texto) !important;font-size:15px;padding:0 14px;width:100%;
 }
 html .filaRutaGuardada > *{grid-column:1/-1 !important;grid-row:auto !important;order:0 !important;}
 html .filaRutaGuardada .btnAccion{
   grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100% !important;height:auto !important;min-height:48px;border-radius:999px !important;aspect-ratio:auto !important;
+  width:100% !important;height:auto !important;min-height:48px;border-radius:var(--radio-pildora) !important;aspect-ratio:auto !important;
 }
 html .listaRutasGuardadas{margin-top:10px;}
 html .sinRutasGuardadas{margin:0;padding:12px;border-radius:14px;border:1.5px dashed var(--borde-fuerte);color:var(--texto-sec);font-size:13.5px;text-align:center;background:transparent;}
@@ -1701,6 +1937,25 @@ html .tarjetaRutasGuardadas .filaRutaGuardadaItem{background:var(--superficie-2)
 html .opcionSeleccionRuta{grid-template-columns:24px 40px minmax(0,1fr);column-gap:16px !important;padding-left:4px !important;}
 html body > nav.bottom-nav .nav-item{font-size:10.5px;letter-spacing:-.01em;}
 html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 8px;}
+/* Repasada: con la letra grande del celular la barra queda angosta y
+   "Comercios" se montaba sobre "Catálogo". Ningún botón queda más angosto que
+   su nombre; si no entran, cada uno arranca del ancho de su nombre (sin
+   relleno a los costados) y se reparte lo que sobra. Con la letra todavía más
+   grande, los nombres achican un poco. Con letra normal no cambia nada. */
+@media (min-width:320px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){min-width:min-content;}
+}
+@media (max-width:319px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){flex:1 1 auto;padding-left:0;padding-right:0;letter-spacing:-.3px;}
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo) .nav-icon{padding:3px;}
+}
+@media (max-width:279px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){font-size:9px;}
+}
+@media (max-width:249px){
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo){font-size:8px;}
+  html body > nav.bottom-nav .nav-item:not(.nav-nuevo) .nav-icon{padding:3px 1px;}
+}
 /* Botones + y − del mapa legibles en los dos temas (T51). */
 html .leaflet-bar{border:var(--borde-tarjeta) !important;border-radius:12px !important;overflow:hidden;box-shadow:var(--sombra) !important;}
 html .leaflet-bar a{background:var(--superficie) !important;color:var(--texto) !important;border-bottom-color:var(--borde) !important;}
@@ -1711,8 +1966,8 @@ html[data-tema="oscuro"] .leaflet-control-attribution a{color:var(--acento) !imp
 html .pantallaExtra .extraVolver,html #pantallaEstadisticas .extraVolver{display:none !important;}
 
 /* ---------- Estadísticas (T52) ---------- */
-html .selectorPeriodoEstadisticas{margin:4px 0 12px;padding:4px;border-radius:999px;background:var(--superficie-2);gap:4px;}
-html .selectorPeriodoEstadisticas button{min-height:40px;border-radius:999px;background:transparent;color:var(--texto-sec);font-size:13.5px;font-weight:700;}
+html .selectorPeriodoEstadisticas{margin:4px 0 12px;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);gap:4px;}
+html .selectorPeriodoEstadisticas button{min-height:40px;border-radius:var(--radio-pildora);background:transparent;color:var(--texto-sec);font-size:13.5px;font-weight:700;}
 html .selectorPeriodoEstadisticas button.activo{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
 html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:var(--acento);color:var(--acento-txt);}
 .informeEstadisticas{display:grid;gap:12px;}
@@ -1756,8 +2011,8 @@ html[data-tema="oscuro"] .statsColumna.hoy .statsValor{color:var(--acento);}
 .statsColumna small{font-size:11px;font-weight:600;color:var(--texto-ter);}
 .statsColumna.hoy small{color:var(--texto);font-weight:800;}
 
-.statsPestanas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin-bottom:6px;border-radius:999px;background:var(--superficie-2);}
-.statsPestanas button{min-height:36px;border:0;border-radius:999px;background:transparent;color:var(--texto-sec);font-size:13px;font-weight:700;cursor:pointer;}
+.statsPestanas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin-bottom:6px;border-radius:var(--radio-pildora);background:var(--superficie-2);}
+.statsPestanas button{min-height:36px;border:0;border-radius:var(--radio-pildora);background:transparent;color:var(--texto-sec);font-size:13px;font-weight:700;cursor:pointer;}
 .statsPestanas button[aria-selected="true"]{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
 html[data-tema="oscuro"] .statsPestanas button[aria-selected="true"]{background:var(--acento);color:var(--acento-txt);}
 .statsLista,.statsListaRanking{display:grid;}
@@ -1778,6 +2033,10 @@ html[data-tema="oscuro"] .statsPestanas button[aria-selected="true"]{background:
 .statsMes{font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .statsMes{color:var(--acento);}
 .statsFilaRanking[data-puesto="1"] .statsAvatar{background:var(--acento);color:var(--acento-txt);}
+/* Repasada: la regla vieja del modo oscuro (styles.css, con !important)
+   pintaba de blanco estas letras sobre el verde lima y no se leían. */
+html[data-tema="oscuro"] .statsFilaRanking[data-puesto="1"] .statsAvatar,
+html[data-tema="oscuro"] .ajVistaBoton{color:var(--acento-txt) !important;}
 .statsFilaRanking[data-puesto="2"] .statsAvatar,.statsFilaRanking[data-puesto="3"] .statsAvatar{background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[data-tema="oscuro"] .statsFilaRanking[data-puesto="3"] .statsAvatar{color:var(--acento);}
 .statsAvatar[data-tono="atrasado"]{background:var(--peligro-bg);color:var(--peligro);}
@@ -1788,15 +2047,15 @@ html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[da
 .statsFilaTexto b{flex-shrink:0;font-size:14.5px;font-weight:800;color:var(--texto);}
 .statsFilaTexto b small,.statsFilaValor small{font-size:11.5px;font-weight:600;color:var(--texto-sec);}
 .statsFilaTexto > small{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--texto-sec);flex-wrap:wrap;line-height:1.3;}
-.statsPista{display:block;height:6px;margin-top:3px;border-radius:999px;background:var(--superficie-2);overflow:hidden;}
-.statsPista i{display:block;height:100%;border-radius:999px;background:var(--acento);}
+.statsPista{display:block;height:6px;margin-top:3px;border-radius:var(--radio-pildora);background:var(--superficie-2);overflow:hidden;}
+.statsPista i{display:block;height:100%;border-radius:var(--radio-pildora);background:var(--acento);}
 .statsFilaValor{flex-shrink:0;font-size:18px;font-weight:800;color:var(--texto);}
-.statsCambio{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;min-width:58px;justify-content:center;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;}
+.statsCambio{display:inline-flex;align-items:center;gap:2px;flex-shrink:0;min-width:58px;justify-content:center;padding:4px 8px;border-radius:var(--radio-pildora);font-size:12px;font-weight:800;}
 .statsCambio[data-tono="sube"]{background:var(--visitado-bg);color:var(--visitado);}
 .statsCambio[data-tono="baja"]{background:var(--peligro-bg);color:var(--peligro);}
 .statsCambio[data-tono="igual"]{background:var(--superficie-2);color:var(--texto-sec);}
 .statsChips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;}
-.statsChip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:var(--superficie-2);color:var(--texto-sec);font-size:11.5px;font-weight:700;white-space:nowrap;}
+.statsChip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto-sec);font-size:11.5px;font-weight:700;white-space:nowrap;}
 .statsChip[data-tono="falta"]{background:var(--peligro-bg);color:var(--peligro);flex-shrink:0;}
 .statsPlanilla{
   display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:14px 16px;
@@ -1856,14 +2115,14 @@ html[data-tema="oscuro"] .waBotonGrande,html[data-tema="oscuro"] .waBotonPrincip
 html[data-tema="oscuro"] .waBotonAuto{background:var(--visitado);color:#0C0F13;}
 .waBotonSecundario{min-height:46px;background:var(--superficie-2);color:var(--texto);}
 .waProgreso{margin:0;font-size:15px;}
-.waBarra{height:8px;overflow:hidden;border-radius:999px;background:var(--superficie-2);}
+.waBarra{height:8px;overflow:hidden;border-radius:var(--radio-pildora);background:var(--superficie-2);}
 .waBarra span{display:block;height:100%;border-radius:inherit;background:var(--visitado);transition:width .3s;}
 .waListo{display:flex;align-items:center;gap:8px;margin:0;padding:12px 14px;border-radius:var(--radius-md);background:var(--visitado-bg);color:var(--visitado);font-weight:800;}
 .waListaRonda{display:grid;border:1px solid var(--borde);border-radius:var(--radius-md);}
 .waFilaRonda{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:4px 8px 4px 14px;border-bottom:1px solid var(--borde);}
 .waFilaRonda:last-child{border-bottom:0;}
 .waFilaRonda span{overflow:hidden;font-weight:600;text-overflow:ellipsis;white-space:nowrap;}
-.waFilaRonda a{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;min-height:40px;padding:0 14px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:14px;font-weight:800;text-decoration:none;}
+.waFilaRonda a{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;min-height:40px;padding:0 14px;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--acento-oscuro);font-size:14px;font-weight:800;text-decoration:none;}
 html[data-tema="oscuro"] .waFilaRonda a{color:var(--acento);}
 .waFilaRonda.hecho span{color:var(--texto-sec);}
 .waFilaRonda.hecho a{background:var(--visitado-bg);color:var(--visitado);}
@@ -1881,7 +2140,7 @@ html[data-tema="oscuro"] .waFilaRonda a{color:var(--acento);}
 .waMensaje header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;}
 .waMensaje header strong{font-size:15px;}
 .waMensaje header small{color:var(--texto-ter);font-size:12.5px;}
-.waEtiqueta{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:800;}
+.waEtiqueta{margin-left:auto;padding:3px 9px;border-radius:var(--radio-pildora);font-size:11.5px;font-weight:800;}
 .waEtiqueta.entendido{background:var(--visitado-bg);color:var(--visitado);}
 .waEtiqueta.revisar{background:var(--pendiente-bg);color:var(--pendiente);}
 .waTextoMensaje{display:flex;gap:6px;align-items:flex-start;margin:0;color:var(--texto-sec);font-size:14px;font-style:italic;line-height:1.45;}
@@ -1915,7 +2174,7 @@ html .pantallaWhatsapp label.waFilaLlave{margin:0;}
 [data-color="preguntale"]{background:var(--info-bg) !important;color:var(--info) !important;}
 [data-color="heladeras"]{background:var(--pendiente-bg) !important;color:var(--pendiente) !important;}
 /* Estadísticas contra el período anterior (T80) */
-.statsDelta{display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:800;vertical-align:middle;background:rgba(255,255,255,.85);}
+.statsDelta{display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;border-radius:var(--radio-pildora);font-size:12px;font-weight:800;vertical-align:middle;background:rgba(255,255,255,.85);}
 .statsDelta[data-tono="sube"]{color:var(--visitado);background:var(--visitado-bg);}
 .statsDelta[data-tono="baja"]{color:var(--peligro);background:var(--peligro-bg);}
 .statsVendido .statsCambio{margin-top:6px;min-width:0;}
@@ -1945,6 +2204,7 @@ html[data-tema="oscuro"] .billeteCobro[aria-pressed="true"]{background:var(--sup
 .vueltoCobro{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:14px;background:var(--visitado-bg);color:var(--visitado);font-weight:650;}
 .vueltoCobro strong{font-size:24px;font-weight:800;}
 .vueltoCobro.faltaPlata{background:var(--pendiente-bg);color:var(--pendiente);}
+.vueltoCobro.oculto{display:none;}
 .pagaConCobro .etiquetaCobro{margin-top:0;}
 
 /* Faltante en dos toques (T111). */
@@ -2026,7 +2286,7 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 /* T114: Cierre del día: contar la plata, números en una línea y mandarlo */
 .pantallaCierre .kpisCierre{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;margin:12px 0;}
 .pantallaCierre .kpisCierre::-webkit-scrollbar{display:none;}
-.pantallaCierre .kpisCierre>div{display:flex;align-items:baseline;gap:4px;flex-shrink:0;padding:7px 11px;border-radius:999px;white-space:nowrap;}
+.pantallaCierre .kpisCierre>div{display:flex;align-items:baseline;gap:4px;flex-shrink:0;padding:7px 11px;border-radius:var(--radio-pildora);white-space:nowrap;}
 .pantallaCierre .kpisCierre strong{font-size:15px;}
 .pantallaCierre .kpisCierre span{font-size:12.5px;}
 .pantallaCierre .kpisCierre>div.kpiAviso{background:var(--pendiente-bg);border-color:transparent;}
@@ -2055,6 +2315,18 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 .filaTodaLista{min-height:62px;}
 .filaTodaLista .bajaLista{color:var(--visitado);}
 .filaTodaLista .subeLista{color:var(--pendiente);}
+
+/* T161: Más > Listas de precios y la lista de cada pedido */
+[data-color="listasPrecios"]{background:var(--acento-bg) !important;color:var(--pz-pri-fuerte) !important;}
+.filaListaMas{min-height:66px;}
+.opcionesListaPrecios{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto-sec);cursor:pointer;}
+.pzComercioElegido .listaDelPedido{display:grid;grid-template-columns:16px minmax(0,1fr) 16px;align-items:center;justify-items:start;gap:10px;width:100%;min-height:44px;margin:0;padding:8px 16px;border:0;border-top:1px solid var(--borde);border-radius:0;background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;}
+.pzComercioElegido .listaDelPedido span{width:100%;text-align:left;}
+.chipsListas{flex-wrap:wrap;overflow:visible;}
+.listaDelPedido b{color:var(--texto);font-weight:700;}
+.listaDelPedido.otraLista,.listaDelPedido.otraLista b{color:var(--pz-pri-fuerte);}
+.opcionListaPedido small{color:var(--texto-ter);font-size:12.5px;margin-left:4px;}
+.opcionListaPedido[aria-pressed="true"]{color:var(--pz-pri-fuerte);font-weight:700;}
 
 /* T116: Estadísticas: qué mirar, período anterior y tocar una barra */
 .statsMedidas{margin:4px 0 12px;}
@@ -2134,7 +2406,7 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .pinRuta{background:none;border:0;}
 .globoPinRuta{
   display:grid;place-items:center;width:34px;height:34px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);
-  background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 2px 6px rgba(0,0,0,.25);
+  background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 1px 3px rgba(0,0,0,.25);
 }
 .globoPinRuta b{transform:rotate(45deg);font-size:13px;font-weight:800;color:#5B6573;}
 .globoPinRuta.enRuta{background:var(--acento);border-color:#fff;}
@@ -2142,7 +2414,7 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .leaflet-marker-draggable .globoPinRuta{outline:3px solid var(--pendiente);outline-offset:2px;}
 .resumenPinesMapa{
   position:absolute;top:10px;left:54px;z-index:800;display:flex;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 64px);
-  padding:7px 11px;border-radius:999px;background:var(--superficie);color:var(--texto-sec);font-size:12.5px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;
+  padding:7px 11px;border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto-sec);font-size:12.5px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;
 }
 .resumenPinesMapa b{color:var(--texto);}
 .puntoPinResumen{width:10px;height:10px;border-radius:50%;background:var(--acento);flex:none;}
@@ -2171,3 +2443,539 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .badge.tipoTiene{background:var(--pendiente-bg);color:var(--pendiente);}
 .badge.tipoQuiere{background:var(--acento-bg);color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .badge.tipoQuiere{color:var(--acento);}
+
+/* T141: en Rutas, sin desenfoque detrás de los botones de volver y la barrita
+   del título: recalcularlo en cada cuadro al bajar traba un celular barato.
+   Fondo casi lleno en su lugar (se ve igual). */
+html.volverDespegado #pantallaRutas .barraVolver > button{
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:var(--superficie);
+}
+html.volverConBarra #pantallaRutas .barraVolver::before{
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:color-mix(in srgb, var(--fondo) 97%, transparent);
+}
+
+/* T153: en modo oscuro, lo que va sobre el color de acento (lima) usa el
+   texto oscuro del acento: la regla general de texto claro lo dejaba casi
+   invisible ("Cargar un pedido", "Para armar"). */
+html[data-tema="oscuro"] :is(.queHacerOpcion.principal, .filtroEtapa.activo, .chipMarca.activo, .btnAccion.pasoSiguientePedido) :is(strong, span, small, b, p, h3){
+  color:var(--acento-txt) !important;
+}
+html[data-tema="oscuro"] .pasoFichaNumero{color:var(--acento-txt) !important;}
+/* ---------- T136: Rutas como vista previa ----------
+   El mapa ocupa toda la pantalla; arriba, desde dónde y hasta dónde y cómo
+   se arma el camino; abajo, la hoja con cuánto tarda, Iniciar y Paradas.
+   Sombras cortas y nada de desenfoque sobre el mapa (T141). La lista de
+   paradas y lo demás de antes se abre encima con «Paradas». */
+html:has(#pantallaRutas:not(.oculto)) nav.bottom-nav,
+html:has(#pantallaRutas:not(.oculto)) .indicadorNube,
+html:has(#pantallaRutas:not(.oculto)) .cartelModoPersonal{display:none !important;}
+html:has(#pantallaRutas:not(.oculto)) body{overflow:hidden;}
+#pantallaRutas{min-height:100vh;}
+#pantallaRutas > header,
+#pantallaRutas > .barraVolver{display:none !important;}
+.vistaPreviaRutas{position:fixed;inset:0;z-index:700;background:var(--superficie-2);overflow:hidden;}
+#pantallaRutas #mapaRuta{position:absolute;inset:0;width:100%;height:100%;background:var(--superficie-2);}
+.cabezaRutas{
+  position:absolute;z-index:1000;display:flex;align-items:center;gap:6px;padding:8px 10px 8px 4px;
+  top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+  border-radius:22px;background:var(--superficie);color:var(--texto);box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+.volverRutas{
+  display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;margin:0;min-height:0;
+  border:0;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;
+}
+.filasCabezaRutas{flex:1;min-width:0;display:grid;gap:5px;}
+.filaCabezaRutas{
+  display:flex;align-items:center;gap:8px;min-width:0;padding:7px 10px;border-radius:10px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;white-space:nowrap;
+}
+.filaCabezaRutas > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.puntoDesdeRutas{flex:none;width:9px;height:9px;box-sizing:border-box;border-radius:50%;border:2px solid var(--acento);}
+.puntoHastaRutas{flex:none;width:9px;height:9px;border-radius:3px;background:var(--peligro);}
+.chipsRutas{
+  position:absolute;z-index:1000;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  top:calc(116px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+}
+.chipsRutas::-webkit-scrollbar{display:none;}
+.chipRutas{
+  display:inline-flex;align-items:center;gap:6px;flex:none;min-height:36px;margin:0;padding:0 13px;border:0;border-radius:var(--radio-pildora);
+  background:var(--superficie);color:var(--texto);font:inherit;font-size:13px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer;
+}
+.chipRutas[aria-pressed="true"]{background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font-weight:800;}
+html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
+/* Cuántos van en la ruta ya lo dice la cabecera. */
+#pantallaRutas .resumenPinesMapa{display:none;}
+/* Desde dónde sale: tu posición al optimizar. */
+#pantallaRutas .yoPlanRutas{fill:var(--acento);stroke:#fff;}
+.hojaPlanRutas{
+  position:absolute;z-index:1000;left:0;right:0;bottom:0;box-sizing:border-box;
+  padding:10px max(16px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
+}
+.asaPlanRutas{width:44px;height:5px;margin:0 auto 8px;border-radius:3px;background:var(--borde-fuerte);}
+.resumenPlanRutas{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;margin:0;}
+#minutosPlanRutas{font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--visitado);}
+#minutosPlanRutas:empty{display:none;}
+#detallePlanRutas{font-size:16px;font-weight:600;color:var(--texto-sec);}
+.botonesPlanRutas{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px;}
+.botonesPlanRutas .pzBtn{min-height:54px;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
+.iniciarRutas.sinRuta{opacity:.55;}
+/* Repasada: con la letra grande del celular los cuatro no entraban y se
+   cortaban ("Opti…", "El…"): ahora, si no entran, pasan a otra fila. */
+.herramientasRutas{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.herramientasRutas button{
+  flex:1 1 auto;min-width:max-content;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);
+  font:inherit;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
+/* T137: carrusel de paradas, justo arriba de la hoja. Se desliza de costado
+   y cada tarjeta se frena en su lugar. */
+.carruselParadas{position:absolute;z-index:1001;left:0;right:0;bottom:calc(var(--altoHojaPlan, 200px) + 10px);}
+.pistaCarrusel{
+  display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;
+  padding:2px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left));scroll-padding-left:max(14px, env(safe-area-inset-left));
+}
+.pistaCarrusel::-webkit-scrollbar{display:none;}
+.paradaCarrusel{
+  flex:0 0 min(304px, calc(100% - 44px));box-sizing:border-box;display:flex;align-items:center;gap:10px;
+  padding:10px 10px 10px 14px;border-radius:22px;background:var(--superficie);color:var(--texto);
+  box-shadow:0 1px 5px rgba(0,0,0,.2);scroll-snap-align:start;
+}
+.paradaCarrusel:not(.actual){opacity:.8;}
+.numeroCarrusel{
+  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;
+  background:var(--superficie-2);color:var(--texto);font-size:15px;font-weight:900;
+}
+.paradaCarrusel.actual .numeroCarrusel{background:var(--acento);color:var(--acento-txt, #fff);}
+.datosCarrusel{
+  flex:1;min-width:0;display:grid;gap:1px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;
+}
+.datosCarrusel strong{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.datosCarrusel small{
+  font-size:12px;line-height:1.3;color:var(--texto-sec);overflow:hidden;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+.masCarrusel{
+  display:grid;place-items:center;flex:none;width:40px;height:40px;margin:0;padding:0;min-height:0;border:0;border-radius:50%;
+  background:var(--superficie-2);color:var(--texto);cursor:pointer;
+}
+.paradaCarrusel.terminada{flex-basis:calc(100% - 28px);justify-content:space-between;opacity:1;}
+.paradaCarrusel.terminada strong{display:inline-flex;align-items:center;gap:6px;color:var(--visitado);}
+.paradaCarrusel.terminada .pzBtn{width:auto;min-height:42px;padding:0 14px;}
+/* El pin de la tarjeta que se ve, más grande. */
+.pinDestacado .globoPinRuta{transform:rotate(-45deg) scale(1.3);}
+/* Camino por calles: azul con borde oscuro de día, lima de noche; el otro, gris. */
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.borde{stroke:#4E6112;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.elegido,
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.recto{stroke:#C8F04A;}
+html[data-tema="oscuro"] #pantallaRutas .caminoPlan.otro{stroke:#4A5562;}
+/* El cartelito queda arriba del punto del camino, sin tapar los pines. */
+.etiquetaCaminoPlan{width:0 !important;height:0 !important;background:none;border:0;}
+.globoEtiquetaPlan{
+  display:grid;width:max-content;padding:5px 10px;border-radius:12px;transform:translate(-50%, calc(-100% - 10px));
+  background:var(--superficie);color:var(--texto-sec);box-shadow:0 1px 4px rgba(0,0,0,.25);line-height:1.15;white-space:nowrap;
+}
+.globoEtiquetaPlan span{font-size:14px;font-weight:850;}
+.globoEtiquetaPlan small{font-size:10px;font-weight:700;}
+.etiquetaCaminoPlan.elegida .globoEtiquetaPlan{background:var(--acento);color:var(--acento-txt, #fff);}
+/* Mover un pin: la barra de guardar va abajo de todo, sin la hoja. */
+.vistaPreviaRutas:has(.barraMoverPin:not(.oculto)) .hojaPlanRutas,
+#pantallaRutas:has(.barraMoverPin:not(.oculto)) .carruselParadas{display:none;}
+#pantallaRutas .barraMoverPin{z-index:1002;bottom:calc(12px + env(safe-area-inset-bottom));}
+/* «Paradas»: la lista y todo lo de antes, encima del mapa. */
+#pantallaRutas .panelParadasRutas{display:none;}
+/* T138: una hoja alta sobre el mapa oscurecido (apenas difuminado: piezas.css). */
+#pantallaRutas.conParadasAbiertas .panelParadasRutas{
+  display:block;position:fixed;left:0;right:0;bottom:0;top:calc(56px + env(safe-area-inset-top));z-index:1100;
+  margin:0;max-width:none;overflow-y:auto;overscroll-behavior:contain;
+  padding:10px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  border-radius:28px 28px 0 0;background:var(--fondo);box-shadow:0 0 0 100vmax rgba(0,0,0,.35);
+}
+/* Sin relleno abajo: el pie con «Listo, ver mapa» queda pegado al borde. */
+html #pantallaRutas.conParadasAbiertas main.panelParadasRutas{padding-bottom:0 !important;}
+#pantallaRutas.conParadasAbiertas .carruselParadas{display:none;}
+.cabezaPanelParadas{display:flex;align-items:center;gap:2px;margin:0 0 10px -8px;}
+.cabezaPanelParadas .volverRutas{width:40px;height:40px;}
+.cabezaPanelParadas h2{flex:1;min-width:0;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.optimizarOrden{
+  flex:none;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:var(--radio-pildora);
+  background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font:inherit;font-size:13px;font-weight:800;cursor:pointer;
+}
+html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
+.numerosParadas{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:6px;}
+.numeroParadas{display:grid;gap:5px;padding:9px 8px;border-radius:16px;background:var(--superficie);min-width:0;}
+.numeroParadas strong{font-size:20px;font-weight:900;letter-spacing:-0.03em;line-height:1;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.numeroParadas small{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+#pantallaRutas .filtrosParadas{display:flex;align-items:center;gap:6px;margin:12px 0 0;padding:0;border-radius:0;background:none;}
+#pantallaRutas .filtrosParadas button{
+  min-height:36px;margin:0;padding:0 12px;border:0;border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);
+  font:inherit;font-size:13px;font-weight:650;cursor:pointer;
+}
+#pantallaRutas .filtrosParadas button:first-child{background:var(--texto);color:var(--fondo);font-weight:800;}
+#pantallaRutas .filtrosParadas .buscarParadas{display:grid;place-items:center;width:36px;padding:0;margin-left:auto;}
+/* La línea de tiempo: hora, número sobre la línea y la tarjeta de la parada. */
+#pantallaRutas .tarjetaMapaRuta{margin:8px 0 0;padding:0;overflow:visible;background:none !important;box-shadow:none !important;border:0 !important;}
+#pantallaRutas .ayudaParadas{padding:0 4px;}
+#pantallaRutas .encabezadoParadas{margin:0 0 2px;padding:0 4px;}
+#pantallaRutas .paradaOrden{align-items:stretch;gap:10px;padding:0;border:0;background:none;}
+.horaParada{flex:none;width:40px;padding-top:16px;font-size:13px;font-weight:700;color:var(--texto-sec);text-align:right;}
+.lineaParada{position:relative;flex:none;display:flex;justify-content:center;width:26px;padding-top:12px;}
+.lineaParada::before{content:"";position:absolute;top:0;bottom:0;left:12px;width:2px;background:var(--borde);}
+.paradaOrden:first-child .lineaParada::before{top:12px;}
+.paradaOrden:last-child .lineaParada::before{bottom:auto;height:12px;}
+#pantallaRutas .numeroParada{position:relative;width:26px;height:26px;font-size:11px;font-weight:900;border:0;background:var(--superficie-2);color:var(--texto);}
+#pantallaRutas .paradaOrden.proxima .numeroParada{background:var(--acento);color:var(--acento-txt, #fff);}
+#pantallaRutas .paradaOrden.hecha .numeroParada{background:var(--visitado-bg);color:var(--visitado);}
+.cajaParada{flex:1;min-width:0;display:flex;align-items:center;gap:8px;margin:4px 0;padding:9px 6px 9px 12px;border-radius:16px;background:var(--superficie);}
+#pantallaRutas .paradaOrden.arrastrando{box-shadow:none;}
+#pantallaRutas .paradaOrden.arrastrando .cajaParada{box-shadow:var(--sombra-flotante);}
+.chipCobrarParada{background:var(--pendiente-bg);color:var(--pendiente);}
+.llevaParada{display:flex;flex-wrap:wrap;gap:6px;}
+.vacioParadas{margin:12px 2px;font-size:14px;color:var(--texto-sec);}
+.sinUbicacionParadas{margin:12px 0 0;padding:12px;border-radius:18px;background:var(--superficie);}
+.sinUbicacionParadas.oculto{display:none;}
+.sinUbicacionParadas h3{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:14px;font-weight:800;color:var(--pendiente);}
+.filaSinUbicacion{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--borde);}
+.filaSinUbicacion > span{flex:1;min-width:0;display:grid;}
+.filaSinUbicacion strong{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.filaSinUbicacion small{font-size:12px;color:var(--texto-sec);}
+.filaSinUbicacion .pzBtn{width:auto;flex:none;min-height:40px;padding:0 12px;font-size:13px;}
+#pantallaRutas .panelParadasRutas > details{margin:12px 0 0;}
+.pieParadas{
+  position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:12px calc(-1 * max(14px, env(safe-area-inset-left))) 0;
+  padding:12px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:var(--fondo);box-shadow:0 -8px 14px -10px rgba(0,0,0,.3);
+}
+.pieParadas .pzBtn{min-height:56px;border-radius:var(--radio-pildora);}
+.pieParadas .pzBtn:first-child{flex:1;font-size:14px;}
+.pieParadas .pzBtn:last-child{flex:1.4;font-size:17px;font-weight:900;}
+
+/* ---------- T139 y T140: el equipo en los mapas ----------
+   Avisos de la calle y compañeros, con los colores de la maqueta
+   (H-avisar, H-nav, H-plan). Sombras cortas, sin desenfoque (T141). */
+:root{--equipo:#7B4DDB;--avisar:#E8590C;--lento-bg:#FFEBD3;--lento-txt:#9A4D00;}
+html[data-tema="oscuro"]{--equipo:#8B6CF0;--lento-bg:#2E2412;--lento-txt:#FFB547;}
+.pinAvisoCalle,.pinCompanero{background:none;border:0;}
+.cabezaAvisoCalle{
+  display:grid;place-items:center;width:40px;height:40px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.cabezaCompanero{
+  display:grid;place-items:center;width:38px;height:38px;box-sizing:border-box;border-radius:50%;
+  border:3px solid #fff;background:var(--equipo);color:#fff;font-size:12px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+/* Navegando: el botón grande naranja abajo a la derecha, al lado de la
+   columna de voz y salir (así la columna no crece y no llega a la maniobra). */
+.avisarNavegacion{
+  position:absolute;z-index:1100;right:calc(max(14px, env(safe-area-inset-right)) + 62px);bottom:calc(128px + env(safe-area-inset-bottom));
+  display:grid;place-items:center;align-content:center;gap:2px;width:72px;height:72px;box-sizing:border-box;padding:0;margin:0;min-height:0;
+  border:4px solid #fff;border-radius:50%;background:var(--avisar);color:#fff;font:inherit;font-size:11px;font-weight:800;line-height:1;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;
+}
+/* «Lucas avisó…» debajo de la maniobra, sin tapar los créditos del mapa. */
+.tarjetaEquipoNav{
+  position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));right:max(14px, env(safe-area-inset-right));
+  top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 34px);
+  display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:0;border-radius:18px;text-align:left;
+  background:var(--superficie);color:var(--texto);font:inherit;box-shadow:0 2px 6px rgba(0,0,0,.22);cursor:pointer;
+}
+.tarjetaEquipoNav.oculto{display:none;}
+.pantallaNavegacion.conHojaAbierta .avisarNavegacion{display:none;}
+.pantallaNavegacion.conHojaAbierta .tarjetaEquipoNav{display:none;}
+.inicialEquipoNav{
+  display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;
+  background:var(--equipo);color:#fff;font-size:12px;font-weight:900;
+}
+.textoEquipoNav{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.3;}
+/* Vista previa de Rutas: el aviso más nuevo, arriba de Iniciar. */
+.avisoEquipoRutas{
+  display:flex;align-items:center;gap:8px;width:100%;margin:8px 0 0;padding:8px 11px;min-height:0;border:0;border-radius:14px;
+  background:var(--lento-bg);color:var(--lento-txt);font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer;
+}
+.avisoEquipoRutas[hidden]{display:none;}
+.avisoEquipoRutas svg{flex:none;}
+.avisoEquipoRutas span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* La hoja «¿Qué querés avisar?». */
+.hojaAvisar .pzHojaTit{font-size:24px;font-weight:900;letter-spacing:-0.02em;}
+.tiposAvisar{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-top:6px;}
+.tipoAvisar{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;margin:0;padding:6px;
+  border:0;border-radius:22px;background:var(--superficie-2);color:var(--texto);font:inherit;font-size:13px;font-weight:800;
+  line-height:1.15;text-align:center;cursor:pointer;
+}
+.circuloAvisar{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#fff;}
+.vozAvisar{
+  display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:18px;
+  background:var(--superficie-2);font-size:14px;font-weight:600;
+}
+.vozAvisar em{font-style:normal;color:var(--texto-sec);}
+
+/* ==============================================
+   Apariencia a gusto (T158) y qué se ve en Inicio (T156).
+   Todo es cambiar variables o atributos de <html>: nada se vuelve a
+   dibujar y no se usa nada caro (ni :has, ni fondos fijos, ni filtros).
+   ===================================================== */
+
+/* ---------- Más colores principales ---------- */
+[data-acento-muestra="turquesa"]{--m-claro:#0E8494;--m-noche:#4FD8E6;}
+[data-acento-muestra="rojo"]{--m-claro:#CC2F2A;--m-noche:#FF8A7A;}
+[data-acento-muestra="dorado"]{--m-claro:#A87300;--m-noche:#FFD25E;}
+[data-acento-muestra="oliva"]{--m-claro:#5E7D12;--m-noche:#B9E05A;}
+[data-acento-muestra="grafito"]{--m-claro:#37414F;--m-noche:#E2E6EB;}
+html[data-acento="turquesa"]{
+  --acento-claro:#0E8494;--acento-noche:#4FD8E6;
+  --acento:#0E8494;--acento-oscuro:#0A6D7A;--acento-bg:#D4EFF2;--acento-txt:#FFFFFF;
+  --hero-bg:linear-gradient(135deg,#0E8494 0%,#17A2B0 55%,#34BFC9 100%);
+  --sombra-acento:0 6px 16px -4px rgba(14,132,148,.55);
+}
+html[data-acento="rojo"]{
+  --acento-claro:#CC2F2A;--acento-noche:#FF8A7A;
+  --acento:#CC2F2A;--acento-oscuro:#AD231F;--acento-bg:#FBE1DF;--acento-txt:#FFFFFF;
+  --hero-bg:linear-gradient(135deg,#CC2F2A 0%,#DE4A3B 55%,#EC6A52 100%);
+  --sombra-acento:0 6px 16px -4px rgba(204,47,42,.55);
+}
+html[data-acento="dorado"]{
+  --acento-claro:#A87300;--acento-noche:#FFD25E;
+  --acento:#A87300;--acento-oscuro:#875C00;--acento-bg:#FBEFCF;--acento-txt:#FFFFFF;
+  --hero-bg:linear-gradient(135deg,#A87300 0%,#C08B12 55%,#D6A533 100%);
+  --sombra-acento:0 6px 16px -4px rgba(168,115,0,.55);
+}
+html[data-acento="oliva"]{
+  --acento-claro:#5E7D12;--acento-noche:#B9E05A;
+  --acento:#5E7D12;--acento-oscuro:#4A640C;--acento-bg:#E6F0CF;--acento-txt:#FFFFFF;
+  --hero-bg:linear-gradient(135deg,#5E7D12 0%,#76981F 55%,#91B335 100%);
+  --sombra-acento:0 6px 16px -4px rgba(94,125,18,.55);
+}
+html[data-acento="grafito"]{
+  --acento-claro:#37414F;--acento-noche:#E2E6EB;
+  --acento:#37414F;--acento-oscuro:#262E39;--acento-bg:#E3E7EC;--acento-txt:#FFFFFF;
+  --hero-bg:linear-gradient(135deg,#37414F 0%,#4D5869 55%,#667184 100%);
+  --sombra-acento:0 6px 16px -4px rgba(55,65,79,.5);
+}
+html[data-tema="oscuro"][data-acento="turquesa"]{--acento:#4FD8E6;--acento-oscuro:#4FD8E6;--acento-bg:#10303A;--acento-txt:#0C0F13;--hero-bg:#151A20;--sombra-acento:0 6px 18px -4px rgba(79,216,230,.4);}
+html[data-tema="oscuro"][data-acento="rojo"]{--acento:#FF8A7A;--acento-oscuro:#FF8A7A;--acento-bg:#3A1A17;--acento-txt:#0C0F13;--hero-bg:#151A20;--sombra-acento:0 6px 18px -4px rgba(255,138,122,.4);}
+html[data-tema="oscuro"][data-acento="dorado"]{--acento:#FFD25E;--acento-oscuro:#FFD25E;--acento-bg:#33290F;--acento-txt:#0C0F13;--hero-bg:#151A20;--sombra-acento:0 6px 18px -4px rgba(255,210,94,.4);}
+html[data-tema="oscuro"][data-acento="oliva"]{--acento:#B9E05A;--acento-oscuro:#B9E05A;--acento-bg:#262F12;--acento-txt:#0C0F13;--hero-bg:#151A20;--sombra-acento:0 6px 18px -4px rgba(185,224,90,.4);}
+html[data-tema="oscuro"][data-acento="grafito"]{--acento:#E2E6EB;--acento-oscuro:#E2E6EB;--acento-bg:#262B32;--acento-txt:#0C0F13;--hero-bg:#151A20;--sombra-acento:0 6px 18px -4px rgba(226,230,235,.25);}
+.ajColores{grid-template-columns:repeat(4,minmax(0,1fr));row-gap:14px;}
+@media (min-width:380px){.ajColores{grid-template-columns:repeat(6,minmax(0,1fr));}}
+.muestraPropia{background:conic-gradient(#E04545,#E0C045,#45E07A,#45C8E0,#5A45E0,#E045B8,#E04545);}
+.muestraPropia i{visibility:hidden;}
+.muestraPropia[data-elegido] i{visibility:visible;}
+html[data-acento="propio"] .ajColorPropio .muestraColor{box-shadow:0 0 0 3px var(--superficie),0 0 0 5px var(--texto);}
+.ajColorPropio input{width:100%;height:100%;padding:0;border:0;}
+
+/* ---------- Tonos del tema ---------- */
+html[data-tema="claro"][data-tono-dia="calido"]{
+  --fondo:#F6F0E6;--superficie:#FFFDF9;--superficie-2:#EEE5D6;--borde:#E9DFCF;--borde-fuerte:#D6C8B3;
+  --texto:#2A2118;--texto-sec:#6B5E4F;--texto-ter:#978A79;--gris-claro:#EEE5D6;
+}
+html[data-tema="claro"][data-tono-dia="gris"]{
+  --fondo:#F1F2F4;--superficie:#FFFFFF;--superficie-2:#E7E9EC;--borde:#E2E4E8;--borde-fuerte:#CBCFD5;
+  --texto:#16181C;--texto-sec:#5A616B;--texto-ter:#888F99;--gris-claro:#E7E9EC;
+}
+html[data-tema="claro"][data-tono-dia="blanco"]{
+  --fondo:#FFFFFF;--superficie:#F2F4F7;--superficie-2:#E6E9EE;--borde:#E3E7EC;--borde-fuerte:#CED4DC;--gris-claro:#E6E9EE;
+}
+html[data-tema="oscuro"][data-tono-noche="negro"]{
+  --fondo:#000000;--superficie:#0E1013;--superficie-2:#181B1F;--borde:#1D2126;--borde-fuerte:#2B3038;--gris-claro:#181B1F;
+  --hero-bg:var(--superficie);--hero-kpi:var(--superficie-2);--borde-tarjeta:1px solid var(--borde);
+}
+html[data-tema="oscuro"][data-tono-noche="azul"]{
+  --fondo:#0B1220;--superficie:#13203A;--superficie-2:#1B2A48;--borde:#20304F;--borde-fuerte:#30426A;
+  --texto-sec:#9DAAC2;--texto-ter:#6F7E99;--gris-claro:#1B2A48;
+  --hero-bg:var(--superficie);--hero-kpi:var(--superficie-2);--borde-tarjeta:1px solid var(--borde);
+}
+.ajTonos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+html .configDetalle .ajTono{display:grid;justify-items:center;gap:5px;margin:0;padding:0;border:0;position:relative;cursor:pointer;}
+.ajTono input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;}
+.muestraTono{
+  display:grid;place-items:end center;width:100%;max-width:72px;height:44px;padding:0 8px;border-radius:var(--radius-sm);
+  background:var(--t-fondo);box-shadow:0 0 0 1px var(--borde-fuerte);
+}
+.muestraTono i{display:block;width:100%;height:24px;border-radius:7px 7px 0 0;background:var(--t-tarjeta);box-shadow:0 0 0 1px rgba(128,128,128,.25);}
+.ajTono input:checked + .muestraTono{box-shadow:0 0 0 2px var(--superficie),0 0 0 4px var(--texto);}
+.ajTono input:focus-visible + .muestraTono{outline:2px solid var(--texto);outline-offset:4px;}
+html .configDetalle .ajTono small{font-size:11.5px;font-weight:600;line-height:1.15;text-align:center;color:var(--texto-sec);}
+
+/* ---------- Forma de los botones (y las esquinas de las tarjetas) ---------- */
+html[data-forma="suaves"]{--radio-pildora:14px;--radius-lg:18px;--radius-md:13px;--radius-sm:10px;}
+html[data-forma="rectos"]{--radio-pildora:6px;--radius-lg:10px;--radius-md:8px;--radius-sm:6px;}
+
+/* ---------- Estilo de las tarjetas ---------- */
+html:root[data-tarjetas="borde"]{--sombra:none;--borde-tarjeta:1px solid var(--borde-fuerte);}
+html:root[data-tarjetas="planas"]{--sombra:none;--borde-tarjeta:0 solid transparent;}
+html:root[data-tarjetas="elevadas"]{--sombra:0 2px 4px rgba(15,27,45,.06),0 14px 30px -12px rgba(15,27,45,.28);--borde-tarjeta:0 solid transparent;}
+html:root[data-tema="oscuro"][data-tarjetas="elevadas"]{--sombra:0 14px 30px -10px rgba(0,0,0,.85);--borde-tarjeta:1px solid var(--borde-fuerte);}
+
+/* ---------- Tamaño de los íconos ----------
+   Solo los íconos de la app (los que arma iconos.js); los mapas no. */
+html[data-iconos="chicos"] svg.ico{zoom:.85;}
+html[data-iconos="grandes"] svg.ico{zoom:1.2;}
+html[data-iconos] .leaflet-container svg.ico{zoom:1;}
+
+/* ---------- Fondo de Inicio ---------- */
+html[data-fondo-inicio="degrade"] #pantallaMenu,
+html[data-fondo-inicio="degrade"] .ajVistaFondo{background:linear-gradient(180deg,var(--acento-bg) 0,var(--fondo) 460px) no-repeat,var(--fondo);}
+html[data-fondo-inicio="puntos"] #pantallaMenu,
+html[data-fondo-inicio="puntos"] .ajVistaFondo{background:radial-gradient(var(--borde-fuerte) 1.2px,transparent 1.6px) 0 0/18px 18px,var(--fondo);}
+html[data-fondo-inicio="color"] #pantallaMenu,
+html[data-fondo-inicio="color"] .ajVistaFondo{background:var(--acento-bg);}
+html:not([data-fondo-inicio="liso"]) #pantallaMenu{min-height:100vh;}
+
+/* ---------- Vista previa ---------- */
+/* Queda debajo de la flecha y la casita, que también quedan arriba al bajar. */
+.ajVistaPrevia{
+  position:sticky;top:calc(68px + env(safe-area-inset-top, 0px));z-index:6;margin:0 0 14px;padding:8px 0 10px;background:var(--fondo);
+}
+html[data-volver-flotante="no"] .ajVistaPrevia{top:0;}
+.ajVistaTitulo{display:block;margin:0 4px 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--texto-ter);}
+.ajVistaFondo{display:grid;gap:8px;padding:10px;border-radius:var(--radius-lg);background:var(--fondo);box-shadow:0 0 0 1px var(--borde);}
+.ajVistaHero{
+  display:grid;grid-template-columns:1fr auto;align-items:end;column-gap:8px;padding:10px 14px;border-radius:var(--radius-md);
+  border:var(--borde-tarjeta);background:var(--hero-bg);color:var(--hero-txt);
+}
+.ajVistaHero small{grid-column:1/-1;font-size:11.5px;opacity:.9;}
+.ajVistaHero strong{font-size:20px;font-weight:800;line-height:1.1;}
+.ajVistaHero span{font-size:11.5px;opacity:.9;}
+.ajVistaTarjeta{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-md);
+  border:var(--borde-tarjeta);background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);
+}
+.ajVistaIcono{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:var(--radius-sm);background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .ajVistaIcono{color:var(--acento);}
+.ajVistaTexto{display:grid;flex:1;min-width:0;}
+.ajVistaTexto strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ajVistaTexto small{font-size:12px;color:var(--texto-sec);}
+.ajVistaBoton{
+  display:inline-flex;align-items:center;gap:5px;flex:none;min-height:34px;padding:0 14px;border-radius:var(--radio-pildora);
+  background:var(--acento);color:var(--acento-txt);font-size:13.5px;font-weight:800;box-shadow:var(--sombra-acento);
+}
+
+/* ---------- Qué se ve en Inicio (T156) ---------- */
+html[data-inicio-sin~="resumen"] #resumenHoy,
+html[data-inicio-sin~="queHacer"] #queHacerInicio,
+html[data-inicio-sin~="proxima"] #tituloProximaParada,
+html[data-inicio-sin~="proxima"] #dashProximaParada,
+html[data-inicio-sin~="suelenPedir"] #dashVisitarHoy,
+html[data-inicio-sin~="pedidosHoy"] #cabeceraPedidosHoy,
+html[data-inicio-sin~="pedidosHoy"] #dashPedidosDeHoy,
+html[data-inicio-sin~="semana"] #tituloSemana,
+html[data-inicio-sin~="semana"] #dashSemana,
+html[data-inicio-sin~="avisos"] #pantallaMenu .pzBanner:not(#avisoVersionNueva):not(#avisoNotasCambios):not(#avisoSinSubir):not(#avisoDatosEjemplo):not(#avisoModoPersonal),
+html[data-inicio-sin~="avisos"] #dashWhatsapp{display:none !important;}
+.inicioVacio{display:none;}
+html[data-inicio-sin~="resumen"][data-inicio-sin~="queHacer"][data-inicio-sin~="proxima"][data-inicio-sin~="pedidosHoy"][data-inicio-sin~="semana"] .inicioVacio{
+  display:grid;gap:6px;justify-items:start;
+}
+.inicioVacio strong{font-size:16px;}
+.inicioVacio small{font-size:13.5px;color:var(--texto-sec);}
+.inicioVacio .btnAccion{width:auto;margin-top:6px;padding:0 18px;}
+=======
+/* Tutorial interactivo (T157): una capa fija con el recuadro sobre el
+   botón, cuatro tapas alrededor y el globo con la explicación. Sin
+   animaciones ni desenfoques, para que ande fluido en celulares baratos. */
+.recorridoPrimeros{background:var(--acento-bg);color:var(--texto);}
+.recorridoPrimeros .tildePaso{border-color:var(--acento);color:var(--acento);}
+.tutorialCapa{position:fixed;inset:0;z-index:10060;pointer-events:none;}
+.tutorialTapa{position:fixed;pointer-events:auto;touch-action:none;}
+.tutorialCapa[data-modo="centro"] .tutorialTapa{background:rgba(5,10,20,.62);}
+.tutorialFoco{position:fixed;border-radius:16px;border:3px solid var(--acento);box-shadow:0 0 0 200vmax rgba(5,10,20,.62);pointer-events:none;}
+.tutorialCapa[data-modo="hacer"] .tutorialFoco{border-width:4px;}
+.tutorialFoco[hidden]{display:none;}
+.tutorialGlobo{
+  position:fixed;left:12px;right:12px;max-width:440px;margin:0 auto;display:grid;gap:6px;
+  padding:16px;border-radius:18px;background:var(--superficie);color:var(--texto);
+  box-shadow:0 10px 30px rgba(0,0,0,.3);pointer-events:auto;
+}
+.tutorialCapa[data-modo="centro"] .tutorialGlobo{top:50%;transform:translateY(-50%);}
+.tutorialCapa[data-modo="mientras"] .tutorialGlobo,
+.tutorialCapa[data-modo="listo"] .tutorialGlobo{top:calc(8px + env(safe-area-inset-top));gap:2px;padding:10px 14px;border:2px solid var(--acento);}
+.tutorialCapa .tutorialGlobo.abajo{top:auto;bottom:calc(10px + env(safe-area-inset-bottom));}
+.tutorialCapa[data-modo="mientras"] .tutorialPaso,
+.tutorialCapa[data-modo="listo"] .tutorialPaso{display:none;}
+.tutorialCapa[data-modo="mientras"] .tutorialTitulo,
+.tutorialCapa[data-modo="listo"] .tutorialTitulo{font-size:15px;}
+.tutorialCapa[data-modo="mientras"] .tutorialTexto,
+.tutorialCapa[data-modo="listo"] .tutorialTexto{font-size:14px;}
+.tutorialCapa[data-modo="mientras"] .tutorialBotones button,
+.tutorialCapa[data-modo="listo"] .tutorialBotones button{min-height:38px;font-size:13.5px;}
+.tutorialPaso{color:var(--texto-sec);font-size:12.5px;font-weight:700;}
+.tutorialTitulo{font-size:19px;}
+.tutorialTexto{margin:0;font-size:15px;line-height:1.4;}
+.tutorialBotones{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.tutorialBotones button{min-height:46px;margin:0;padding:0 16px;border-radius:14px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;}
+.tutorialBotones button[hidden]{display:none;}
+.tutorialSaltear{margin-right:auto !important;padding:0 6px !important;border:0;background:transparent;color:var(--texto-sec);}
+.tutorialAtras,.tutorialMostrar,.tutorialSaltarPaso{border:1px solid var(--borde);background:var(--superficie-2);color:var(--texto);}
+.tutorialSiguiente{border:0;background:var(--acento);color:var(--acento-txt);}
+/* Durante el tutorial las pantallas entran sin animación: así el recuadro
+   cae justo sobre el botón y no se trabaja de más. */
+.conTutorial .entrada-pantalla{animation:none;}
+
+/* ---------- Folleto de una lista de precios (T162) ----------
+   Siempre en papel blanco, igual en modo claro y oscuro. Al imprimir se
+   esconde toda la app y queda solo #folletoImprimir (listasPrecios.js). */
+.folletoVista{margin:12px 0 96px;border-radius:12px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.18);}
+.folletoHoja{--texto:#16202a;--texto-sec:#3d4a56;--texto-ter:#5a6672;background:#fff;color:#16202a;padding:20px 18px 16px;font-size:14px;line-height:1.35;text-align:left;}
+.folletoHoja *{color:inherit;background:none;box-shadow:none;}
+.folletoHoja .folletoCab{display:block;position:static;text-align:center;border-bottom:3px solid #1b6fa8;padding-bottom:10px;}
+.folletoHoja .folletoCab h1{margin:0;font-size:24px;line-height:1.15;color:#0f3f63;}
+.folletoHoja .folletoCab p{margin:6px 0 0;font-size:13px;color:#3d4a56;}
+.folletoTitulo{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin:12px 0 6px;}
+.folletoTitulo strong{font-size:17px;}
+.folletoHoja .folletoTitulo span{font-size:12px;color:#5a6672;}
+.folletoMarca{break-inside:avoid;margin-top:12px;}
+.folletoHoja .folletoMarca h2{margin:0 0 4px;padding:4px 8px;font-size:14px;letter-spacing:.02em;text-transform:uppercase;background:#e6f1f9;color:#0f3f63;border-radius:6px;}
+.folletoMarca ul{list-style:none;margin:0;padding:0 8px;}
+.folletoMarca li{display:flex;align-items:baseline;gap:6px;padding:3px 0;}
+.folletoMarca li span{min-width:0;overflow-wrap:break-word;}
+.folletoMarca li i{flex:1;min-width:12px;border-bottom:1px dotted #9aa5b0;}
+.folletoMarca li b{white-space:nowrap;font-variant-numeric:tabular-nums;}
+.folletoVacio{color:#5a6672;}
+.folletoHoja .folletoPie{position:static;margin-top:16px;padding-top:8px;border-top:1px solid #d5dbe1;font-size:11px;color:#5a6672;text-align:center;}
+#folletoImprimir{display:none;}
+@media print{
+  @page{margin:12mm;}
+  html:has(body.imprimiendoFolleto),body.imprimiendoFolleto{background:#fff !important;}
+  body.imprimiendoFolleto > :not(#folletoImprimir){display:none !important;}
+  body.imprimiendoFolleto #folletoImprimir{display:block;}
+  #folletoImprimir .folletoHoja{padding:0;font-size:12pt;}
+}
+@media print and (min-width:560px){
+  #folletoImprimir .folletoMarcas{column-count:2;column-gap:10mm;}
+  #folletoImprimir *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+/* ---------- T160: el Asistente en todas las pantallas ----------
+   Arriba a la derecha de cada pantalla (en la misma barrita del volver), en
+   Rutas, en las fichas y navegando. Sin desenfoque ni animaciones nuevas:
+   liviano para celulares baratos. */
+html .barraVolver{padding-right:max(16px, env(safe-area-inset-right, 0px));}
+html .barraVolver .botonAsistentePantalla{
+  width:44px !important;height:44px !important;min-height:44px !important;flex-shrink:0;margin-left:auto !important;
+  display:grid;place-items:center;padding:0 !important;
+  border:var(--borde-tarjeta);border-radius:50%;
+  background:var(--superficie);color:var(--acento-oscuro);box-shadow:var(--sombra);cursor:pointer;font-size:0;
+}
+html[data-tema="oscuro"] .barraVolver .botonAsistentePantalla{color:var(--acento);}
+html.volverConBarra .barraVolver::before{padding-right:calc(max(16px, env(safe-area-inset-right, 0px)) + 56px);}
+body > section[data-botones-volver] > header{padding-right:calc(max(16px, env(safe-area-inset-right, 0px)) + 56px) !important;}
+.asistenteRutas{
+  display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;margin:0;min-height:0;
+  border:0;border-radius:50%;background:var(--superficie-2);color:var(--acento-oscuro);cursor:pointer;
+}
+html[data-tema="oscuro"] .asistenteRutas{color:var(--acento);}
+html .fichaComercioNueva .fichaAsistente{
+  position:absolute;top:16px;right:62px;width:38px;height:38px;padding:0;border:0;border-radius:50%;
+  display:grid;place-items:center;background:var(--superficie-2);color:var(--acento-oscuro);cursor:pointer;
+}
+html[data-tema="oscuro"] .fichaComercioNueva .fichaAsistente{color:var(--acento);}
+html .fichaComercioNueva .fichaEncabezado{padding-right:96px;}
+.modalBotones .botonAsistenteFicha{flex:0 0 52px !important;width:52px;min-width:52px;padding:0 !important;display:grid;place-items:center;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .modalBotones .botonAsistenteFicha{color:var(--acento);}
+.burbujaPlan{max-width:94%;}
+.burbujaPlan .pasosAsistente li{font-weight:650;}
+.avisoPlanAsistente{margin:8px 0 0;font-size:13.5px;color:var(--pendiente);font-weight:650;}
+.botonesPlanAsistente{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;margin-top:12px;}
+.botonesPlanAsistente .pzBtn{min-height:48px;}

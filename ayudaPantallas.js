@@ -25,7 +25,8 @@
             "Para sumar uno nuevo, tocá «Agregar comercio»."] },
         pantallaProductos: { titulo: "Productos y marcas", pasos: [
             "Acá sumás productos y marcas nuevos.",
-            "Tocá los tres puntos de un producto para editarlo o archivarlo.",
+            "Tocá un producto para cambiarle el nombre o el precio, o archivarlo.",
+            "Con las flechas de cada marca cambiás el orden; con sus tres puntos, el nombre.",
             "Lo archivado deja de salir en Nuevo pedido, pero se puede recuperar."] },
         pantallaCatalogo: { titulo: "Catálogo", pasos: [
             "Acá ves todo lo que vendés, con su precio.",
@@ -38,7 +39,7 @@
         pantallaHistorial: { titulo: "Historial", pasos: [
             "Acá están los pedidos terminados, del más nuevo al más viejo.",
             "Buscá por comercio o filtrá por fecha.",
-            "Tocá uno para ver el detalle."] },
+            "Tocá uno para ver el detalle. Con los tres puntitos lo podés eliminar."] },
         pantallaEstadisticas: { titulo: "Estadísticas", pasos: [
             "Arriba elegí el período: hoy, la semana, el mes o todo.",
             "Ves cuánto vendiste y lo más pedido.",
@@ -91,6 +92,11 @@
             "Acá están los problemas que informaron en tu distribuidora.",
             "Cada uno dice quién, cuándo y en qué pantalla estaba.",
             "Para informar uno nuevo, entrá a Más › Seguridad y ayuda."] },
+        pantallaListasPrecios: { titulo: "Listas de precios", pasos: [
+            "Cada lista tiene un precio distinto para cada producto (por ejemplo, Supermercados, Almacenes y Kioscos).",
+            "Tocá una lista para cargar sus precios, o «Lista nueva» para crear otra.",
+            "Con los tres puntitos le cambiás el nombre o la borrás.",
+            "En la ficha de cada comercio elegís qué lista usa. Al armar un pedido podés usar otra."] },
         pantallaPreciosLista: { titulo: "Precios por lista", pasos: [
             "Cada lista puede tener un precio distinto para este producto.",
             "Escribí el precio de cada lista.",
@@ -98,7 +104,8 @@
         pantallaNavegacion: { titulo: "Navegación", pasos: [
             "Seguí la línea del mapa.",
             "Si está prendida, la voz te avisa cuándo doblar.",
-            "Al llegar, tocá «Llegué»."] },
+            "Al llegar, tocá «Llegué».",
+            "Para usar otra parte de la app sin cortarla, tocá la flecha para abajo: queda una burbuja que la trae de vuelta."] },
         pantallaEscanear: { titulo: "Escanear", pasos: [
             "Apuntá la cámara al código de barras.",
             "Cuando lo lee, la app busca el producto.",
@@ -121,7 +128,7 @@
         const titulo = seccion.querySelector(":scope > header h1")?.textContent?.trim() || "Esta pantalla";
         return { titulo, pasos: [
             "Leé el título de arriba: dice para qué es esta pantalla.",
-            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa en Inicio).",
+            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa, arriba a la derecha).",
             "Volvé con la flecha de arriba o con la barra de abajo."] };
     }
 
@@ -187,17 +194,31 @@
         if (boton) abrirAyuda(boton.closest('body > section[id^="pantalla"]'));
     });
 
-    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se mira
-    // todo el cuerpo, una vez por cuadro.
+    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se miran
+    // las pantallas nuevas del cuerpo y lo que cambia justo debajo de cada
+    // una (donde va el encabezado), una vez por cuadro. Lo de adentro (las
+    // listas, un mapa, cada posición del GPS) no agrega encabezados: no se
+    // mira, así no se trabaja de más con cada tarjeta que se dibuja (T141).
     let pendiente = false;
-    new MutationObserver(() => {
+    const miradas = new WeakSet();
+    const vigia = new MutationObserver(() => {
         if (pendiente) return;
         pendiente = true;
         requestAnimationFrame(() => {
             pendiente = false;
+            mirarPantallas();
             ponerBotones();
         });
-    }).observe(document.body, { childList: true, subtree: true });
+    });
+    function mirarPantallas() {
+        document.querySelectorAll('body > section[id^="pantalla"]').forEach(seccion => {
+            if (miradas.has(seccion)) return;
+            miradas.add(seccion);
+            vigia.observe(seccion, { childList: true });
+        });
+    }
+    vigia.observe(document.body, { childList: true });
+    mirarPantallas();
     ponerBotones();
 
     // ---------- Confirmación hablada al guardar (opcional) ----------

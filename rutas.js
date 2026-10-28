@@ -32,7 +32,7 @@ function actualizarResumenRuta() {
     const resumen = document.getElementById("resumenRuta");
     if (!resumen) return;
 
-    const comercios = comerciosActivos();
+    const comercios = comerciosActivosParaLeer();
     const conGps = comercios.filter(comercioTieneGps).length;
     const sinGps = comercios.length - conGps;
 
@@ -135,6 +135,8 @@ function configurarCierreModalAviso() {
 }
 
 function inicializarPantallaRutas() {
+    // Rutas abre siempre en el mapa (T136); la lista se abre con «Paradas».
+    document.getElementById("pantallaRutas")?.classList.remove("conParadasAbiertas");
     actualizarResumenRuta();
     cargarSelectComerciosRuta();
     inicializarSeleccionRuta();
@@ -143,6 +145,7 @@ function inicializarPantallaRutas() {
     crearControlesRutasGuardadas();
     crearModalOpcionesRutaGuardada();
     crearBotonNavegarRuta();
+    prepararVistaPreviaRutas();
     renderizarPines();
     mostrarRutaEnLista();
 }
@@ -204,7 +207,7 @@ function crearModalOpcionesRutaGuardada() {
 
     const modal = document.createElement("div");
     modal.id = "modalOpcionesRutaGuardada";
-    modal.className = "modal oculto";
+    modal.className = "modal modalHoja oculto";
 
     const contenido = document.createElement("div");
     contenido.className = "modalContenido";
@@ -275,7 +278,7 @@ function crearModalOpcionesRutaGuardada() {
         const nuevoNombre = entradaEdicion
             ? entradaEdicion.value.trim()
             : "";
-        const ruta = obtenerRutasGuardadas().find(item => {
+        const ruta = rutasGuardadasParaLeer().find(item => {
             return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
         });
 
@@ -313,7 +316,7 @@ function crearModalOpcionesRutaGuardada() {
         cargarRutaGuardada(nombreOriginal, false);
         const entrada = document.getElementById("nombreRutaGuardada");
         const selectorDia = document.getElementById("diaRutaGuardada");
-        const ruta = obtenerRutasGuardadas().find(item => {
+        const ruta = rutasGuardadasParaLeer().find(item => {
             return normalizarTexto(item.nombre) === normalizarTexto(nombreOriginal);
         });
         if (entrada) entrada.value = nuevoNombre;
@@ -329,7 +332,7 @@ function abrirOpcionesRutaGuardada(nombre) {
     const titulo = document.getElementById("tituloOpcionesRutaGuardada");
     const mensaje = document.getElementById("mensajeOpcionesRutaGuardada");
     const entradaNombre = document.getElementById("nombreRutaEnEdicion");
-    const ruta = obtenerRutasGuardadas().find(item => {
+    const ruta = rutasGuardadasParaLeer().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
 
@@ -347,18 +350,14 @@ function abrirOpcionesRutaGuardada(nombre) {
 // "Navegar la ruta" (Etapa 5, T41): la navegación propia, parada por parada,
 // en el orden de "Optimizar ruta". Reemplaza a la vista 3D de prueba (que
 // dependía de una librería de internet).
+// T136: «Iniciar» ya está en la hoja de abajo de la vista previa.
 function crearBotonNavegarRuta() {
-    const botonMaps = document.getElementById("btnGoogleMaps");
-    if (!botonMaps || document.getElementById("btnNavegarRuta")) return;
-
-    const boton = document.createElement("button");
-    boton.id = "btnNavegarRuta";
-    boton.type = "button";
-    boton.className = "btnAccion botonNavegarRuta";
-    boton.innerHTML = window.icono("navegar", 16) + " Navegar la ruta";
+    const boton = document.getElementById("btnNavegarRuta");
+    if (!boton || boton.dataset.listo) return;
+    boton.dataset.listo = "1";
     boton.addEventListener("click", () => {
         if (!rutaOrdenada.length) {
-            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar ruta\u00bb y despu\u00e9s \u00abNavegar la ruta\u00bb.");
+            mostrarAviso("Primero, la ruta", "Tocá \u00abOptimizar\u00bb y despu\u00e9s \u00abIniciar\u00bb.");
             return;
         }
         const nombres = rutaOrdenada.map(parada => parada.nombre);
@@ -366,7 +365,6 @@ function crearBotonNavegarRuta() {
             mostrarAviso("No se pudo navegar", "Las paradas necesitan su ubicaci\u00f3n GPS. Si elegiste Google Maps en M\u00e1s, us\u00e1 el bot\u00f3n de Google Maps.");
         }
     });
-    botonMaps.insertAdjacentElement("afterend", boton);
 }
 
 function actualizarEstadoNavegacionApp(texto) {
@@ -408,7 +406,9 @@ async function cargarRutaPorCallesNavegacion(posicion) {
         ...rutaOrdenada.slice(indiceParadaNavegacion).map(parada => [Number(parada.lng), Number(parada.lat)])
     ];
     const coordenadas = puntos.map(punto => punto.join(",")).join(";");
-    const url = "https://router.project-osrm.org/route/v1/driving/" +
+    // T133: solo calles de auto, el mismo servidor y perfil que navegacion.js
+    // (el OSRM de demostración mezclaba pasos peatonales).
+    const url = "https://routing.openstreetmap.de/routed-car/route/v1/driving/" +
         coordenadas + "?overview=full&geometries=geojson&steps=true";
 
     try {
@@ -594,7 +594,7 @@ function crearControlesRutasGuardadas() {
     renderizarRutasGuardadas();
 }
 
-function buscarRutaGuardadaPorNombre(nombre, rutas = obtenerRutasGuardadas()) {
+function buscarRutaGuardadaPorNombre(nombre, rutas = rutasGuardadasParaLeer()) {
     if (!nombre) return null;
     return rutas.find(ruta => {
         return normalizarTexto(ruta.nombre) === normalizarTexto(nombre);
@@ -606,7 +606,7 @@ function buscarRutaGuardadaPorNombre(nombre, rutas = obtenerRutasGuardadas()) {
 // el nombre. Si el nombre ya es de otra ruta, esa otra se reemplaza y la
 // editada se borra, igual que antes.
 function guardarRutaRegistro(nombreOriginal, nombre, comercios, dia) {
-    const rutas = obtenerRutasGuardadas();
+    const rutas = rutasGuardadasParaLeer();
     const editada = buscarRutaGuardadaPorNombre(nombreOriginal, rutas);
     const destino = buscarRutaGuardadaPorNombre(nombre, rutas) || editada;
 
@@ -649,7 +649,7 @@ function guardarRutaActual() {
     if (selectorDia) selectorDia.value = "";
     renderizarRutasGuardadas();
 
-    const comerciosSinGps = obtenerComercios()
+    const comerciosSinGps = comerciosParaLeer()
         .filter(comercio => {
             return comercios.includes(comercio.nombre) && !comercioTieneGps(comercio);
         })
@@ -669,7 +669,7 @@ function guardarRutaActual() {
 }
 
 function cargarRutaGuardada(nombre, mostrarMensaje = true) {
-    const ruta = obtenerRutasGuardadas().find(item => {
+    const ruta = rutasGuardadasParaLeer().find(item => {
         return normalizarTexto(item.nombre) === normalizarTexto(nombre);
     });
 
@@ -719,7 +719,7 @@ function renderizarRutasGuardadas() {
     if (!lista) return;
 
     lista.innerHTML = "";
-    const rutas = obtenerRutasGuardadas();
+    const rutas = rutasGuardadasParaLeer();
     const resumen = document.getElementById("resumenRutasGuardadas");
     if (resumen) {
         resumen.textContent = rutas.length === 0
@@ -735,8 +735,8 @@ function renderizarRutasGuardadas() {
         return;
     }
 
-    rutas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
-    rutas.forEach(ruta => {
+    // Las rutas vienen congeladas (repasada): se ordena una copia.
+    rutas.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).forEach(ruta => {
         const fila = document.createElement("div");
         fila.className = "filaRutaGuardadaItem";
         fila.dataset.nombre = ruta.nombre;
@@ -756,7 +756,7 @@ function renderizarRutasGuardadas() {
         const datos = document.createElement("div");
         const nombre = document.createElement("strong");
         nombre.textContent = ruta.nombre;
-        const comerciosRuta = obtenerComercios().filter(comercio => {
+        const comerciosRuta = comerciosParaLeer().filter(comercio => {
             return ruta.comercios.includes(comercio.nombre);
         });
         const conUbicacion = comerciosRuta.filter(comercioTieneGps).length;
@@ -817,8 +817,7 @@ function cargarSelectComerciosRuta() {
     opcionInicial.textContent = "Eleg\u00ed un comercio...";
     select.appendChild(opcionInicial);
 
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+    comerciosActivosOrdenadosParaLeer()
         .forEach(comercio => {
             const opcion = document.createElement("option");
             opcion.value = comercio.nombre;
@@ -840,8 +839,7 @@ function cargarSelectComerciosRuta() {
 }
 
 function obtenerComerciosSeleccionRuta() {
-    return comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    return comerciosActivosOrdenadosParaLeer().slice();
 }
 
 function actualizarEstadoSeleccionRuta() {
@@ -873,8 +871,9 @@ function actualizarEstadoSeleccionRuta() {
         estado.appendChild(chip);
     });
     // Los pines y las paradas siguen a la lista (T123).
-    if (mapaLeaflet && capaMarcadores) renderizarPines(false);
+    refrescarPines();
     if (!rutaOrdenada.length) mostrarRutaEnLista();
+    else dibujarSinUbicacionParadas();
 }
 
 function renderizarSeleccionRuta() {
@@ -973,13 +972,28 @@ function inicializarSeleccionRuta() {
     renderizarSeleccionRuta();
 }
 
+// Todos, Pendientes y Ninguno solo cambian las tildes (T141): la lista ya
+// está armada y no hace falta rehacerla.
+function actualizarCasillasSeleccionRuta() {
+    const casillas = document.querySelectorAll("#listaSeleccionRuta input[type=checkbox]");
+    if (!casillas.length) {
+        renderizarSeleccionRuta();
+        return;
+    }
+    casillas.forEach(casilla => {
+        const marcada = comerciosSeleccionadosRuta.has(casilla.dataset.nombre);
+        if (casilla.checked !== marcada) casilla.checked = marcada;
+    });
+    actualizarEstadoSeleccionRuta();
+}
+
 function seleccionarTodosLosComerciosRuta() {
     obtenerComerciosSeleccionRuta().forEach(comercio => {
         comerciosSeleccionadosRuta.add(comercio.nombre);
     });
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function seleccionarPendientesRuta() {
@@ -989,14 +1003,14 @@ function seleccionarPendientesRuta() {
         .forEach(comercio => comerciosSeleccionadosRuta.add(comercio.nombre));
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function limpiarSeleccionRuta() {
     comerciosSeleccionadosRuta.clear();
     rutaOrdenada = [];
     distanciasRuta = [];
-    renderizarSeleccionRuta();
+    actualizarCasillasSeleccionRuta();
 }
 
 function obtenerComerciosElegidosParaRuta() {
@@ -1027,6 +1041,8 @@ function activarModoPinManual() {
 
     modoPinManual = true;
     mapaLeaflet.getContainer().style.cursor = "crosshair";
+    // El pin se pone en el mapa, que está detrás de las paradas (T136).
+    cerrarPanelParadas();
 
     const boton = document.getElementById("btnPinManual");
     if (boton) boton.innerHTML = window.icono("ubicacion", 14) + " Tocá el punto exacto en el mapa";
@@ -1119,6 +1135,7 @@ function guardarPinManual() {
 
 function manejarClickMapaManual(evento) {
     if (!modoPinManual || !mapaLeaflet) return;
+    const select = document.getElementById("selectComercioGps");
 
     const lat = Number(evento.latlng.lat.toFixed(7));
     const lng = Number(evento.latlng.lng.toFixed(7));
@@ -1146,6 +1163,7 @@ function manejarClickMapaManual(evento) {
 
     finalizarModoPinManual();
     mostrarControlesEdicionPin();
+    mostrarBarraMoverPin(select ? select.value : "");
 
     mostrarAviso(
         "Pin colocado",
@@ -1225,7 +1243,9 @@ function iniciarMapa() {
         return;
     }
 
-    mapaLeaflet = L.map("mapaRuta").setView(
+    // T136: sin los botones + y − (se agranda con dos dedos): arriba y abajo
+    // van la cabecera y la hoja de la vista previa.
+    mapaLeaflet = L.map("mapaRuta", { zoomControl: false }).setView(
         [LATITUD_POR_DEFECTO, LONGITUD_POR_DEFECTO],
         13
     );
@@ -1240,10 +1260,16 @@ function iniciarMapa() {
 // Pines del mapa (T123): azul con número si el comercio está en la ruta,
 // gris si no. Tocar un pin abre sus opciones: sumarlo o sacarlo de la
 // ruta, mover el pin, borrar la ubicación o hacerle un pedido.
-function iconoPinRuta(comercio) {
+function textoPinRuta(comercio, ordenes) {
     const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
-    const orden = rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
-    const texto = orden >= 0 ? String(orden + 1) : (enRuta ? "✓" : "");
+    const orden = ordenes ? (ordenes.has(comercio.nombre) ? ordenes.get(comercio.nombre) : -1)
+        : rutaOrdenada.findIndex(item => item.nombre === comercio.nombre);
+    return orden >= 0 ? String(orden + 1) : (enRuta ? "✓" : "");
+}
+
+function iconoPinRuta(comercio, ordenes) {
+    const enRuta = comerciosSeleccionadosRuta.has(comercio.nombre);
+    const texto = textoPinRuta(comercio, ordenes);
     return L.divIcon({
         className: "pinRuta",
         html: `<span class="globoPinRuta${enRuta ? " enRuta" : ""}"><b>${texto}</b></span>`,
@@ -1259,7 +1285,7 @@ function renderizarPines(ajustar = true) {
     capaMarcadores.clearLayers();
     marcadoresPorNombre.clear();
 
-    const comerciosConGps = comerciosActivos().filter(
+    const comerciosConGps = comerciosActivosParaLeer().filter(
         comercioTieneGps
     );
 
@@ -1286,18 +1312,47 @@ function renderizarPines(ajustar = true) {
             abrirOpcionesPin(comercio.nombre);
         });
 
+        marcador.clavePinRuta = textoPinRuta(comercio) + (comerciosSeleccionadosRuta.has(comercio.nombre) ? "+" : "-");
         capaMarcadores.addLayer(marcador);
         marcadoresPorNombre.set(comercio.nombre, marcador);
         limites.extend(coordenadas);
     });
 
+    destacarPinRuta(paradaDestacadaRuta);
     if (ajustar) {
-        // Arriba queda lugar para el resumen, que no tape ningún pin.
-        mapaLeaflet.fitBounds(limites, {
-            paddingTopLeft: [30, 70],
-            paddingBottomRight: [30, 30]
-        });
+        // Arriba la cabecera y abajo la hoja de la vista previa: que no tapen ningún pin.
+        mapaLeaflet.fitBounds(limites, margenesMapaRutas());
     }
+}
+
+// T141: al tildar, ordenar o sacar una parada no se rearman los 80 pines
+// (en un celular barato el mapa se trababa): se cambia solo el dibujo de los
+// que cambiaron. Si hay comercios nuevos, movidos o un pin en edición, se
+// rearman todos como antes.
+function refrescarPines() {
+    if (!mapaLeaflet || !capaMarcadores) return;
+    const comerciosConGps = comerciosActivosParaLeer().filter(comercioTieneGps);
+    const igual = !coordenadasPinPendientes && comerciosConGps.length === marcadoresPorNombre.size &&
+        comerciosConGps.every(comercio => {
+            const marcador = marcadoresPorNombre.get(comercio.nombre);
+            if (!marcador) return false;
+            const lugar = marcador.getLatLng();
+            return lugar.lat === Number(comercio.lat) && lugar.lng === Number(comercio.lng);
+        });
+    if (!igual) {
+        renderizarPines(false);
+        return;
+    }
+    const ordenes = new Map(rutaOrdenada.map((comercio, indice) => [comercio.nombre, indice]));
+    comerciosConGps.forEach(comercio => {
+        const marcador = marcadoresPorNombre.get(comercio.nombre);
+        const clave = textoPinRuta(comercio, ordenes) + (comerciosSeleccionadosRuta.has(comercio.nombre) ? "+" : "-");
+        if (marcador.clavePinRuta === clave) return;
+        marcador.setIcon(iconoPinRuta(comercio, ordenes));
+        marcador.clavePinRuta = clave;
+    });
+    dibujarResumenPinesMapa(comerciosConGps);
+    destacarPinRuta(paradaDestacadaRuta);
 }
 
 // Arriba del mapa: cuántos van en la ruta.
@@ -1375,8 +1430,7 @@ function cambiarPinEnRuta(nombre) {
         }
     }
     renderizarSeleccionRuta();
-    renderizarPines(false);
-    mostrarRutaEnLista();
+    if (rutaOrdenada.length) mostrarRutaEnLista();
     const cuantos = comerciosSeleccionadosRuta.size;
     if (typeof mostrarToast === "function") {
         mostrarToast((sumar ? "Sumaste " : "Sacaste ") + nombre + (sumar ? " a la ruta" : " de la ruta") + " (" + cuantos + (cuantos === 1 ? " comercio)" : " comercios)"));
@@ -1387,8 +1441,19 @@ function cambiarPinEnRuta(nombre) {
 function moverPinDesdeMapa(nombre) {
     editarPinGuardado(nombre, { sinAviso: true });
     if (!coordenadasPinPendientes) return;
+    mostrarBarraMoverPin(nombre);
+    // El pin queda en el centro, un poco arriba, para que la barra no lo tape.
+    const marcador = marcadoresPorNombre.get(nombre);
+    if (marcador && mapaLeaflet) {
+        mapaLeaflet.setView(marcador.getLatLng(), Math.max(mapaLeaflet.getZoom(), 16), { animate: false });
+        mapaLeaflet.panBy([0, 50], { animate: false });
+    }
+}
+
+// Barra de abajo del mapa para guardar o cancelar el pin que se está moviendo.
+function mostrarBarraMoverPin(nombre) {
     const contenedor = document.getElementById("mapaRuta");
-    if (!contenedor) return;
+    if (!contenedor || !nombre) return;
     let barra = document.getElementById("barraMoverPin");
     if (!barra) {
         barra = document.createElement("div");
@@ -1406,13 +1471,6 @@ function moverPinDesdeMapa(nombre) {
     barra.querySelector("#cancelarMoverPin").onclick = () => cancelarEdicionPin();
     barra.querySelector("#guardarMoverPin").onclick = () => guardarPinManual();
     document.getElementById("resumenPinesMapa")?.classList.add("oculto");
-    // El pin queda en el centro, un poco arriba, para que la barra no lo tape.
-    const marcador = marcadoresPorNombre.get(nombre);
-    if (marcador && mapaLeaflet) {
-        mapaLeaflet.setView(marcador.getLatLng(), Math.max(mapaLeaflet.getZoom(), 16), { animate: false });
-        mapaLeaflet.panBy([0, 50], { animate: false });
-    }
-    contenedor.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function guardarGpsActual(boton) {
@@ -1626,6 +1684,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 const MAX_PARADAS_RUTA_EXACTA = 9;
+// Google Maps acepta hasta 10 puntos por enlace: tu ubicación (el origen vacío
+// de "dir//") y 9 paradas. Con más, el resto no aparece.
+const MAX_PARADAS_GOOGLE_MAPS = 9;
 
 function calcularRutaExacta(comercios, latitudInicial, longitudInicial) {
     let mejorDistanciaTotal = Infinity;
@@ -1681,6 +1742,83 @@ function calcularRutaExacta(comercios, latitudInicial, longitudInicial) {
     };
 }
 
+// Con muchas paradas: arranca por la más cercana cada vez y después mueve
+// paradas y da vuelta tramos del recorrido mientras eso lo acorte. El punto de partida
+// queda fijo y el final es libre, como en calcularRutaExacta.
+function calcularRutaAproximada(comercios, latitudInicial, longitudInicial) {
+    const puntos = [{ lat: latitudInicial, lng: longitudInicial }].concat(comercios);
+    const distancia = (a, b) => calcularDistancia(puntos[a].lat, puntos[a].lng, puntos[b].lat, puntos[b].lng);
+
+    const orden = [0];
+    const pendientes = new Set(comercios.map((comercio, indice) => indice + 1));
+    while (pendientes.size) {
+        const ultimo = orden[orden.length - 1];
+        let mejor = null;
+        pendientes.forEach(indice => {
+            if (mejor === null || distancia(ultimo, indice) < distancia(ultimo, mejor)) mejor = indice;
+        });
+        orden.push(mejor);
+        pendientes.delete(mejor);
+    }
+
+    // Desde cada punto del camino, cuánto cuesta ir hasta el siguiente (0 si es el último).
+    const tramo = (a, b) => (b === undefined ? 0 : distancia(a, b));
+
+    let mejoro = true;
+    let vueltas = 0;
+    while (mejoro && vueltas < 50) {
+        mejoro = false;
+        vueltas += 1;
+        // Mover 1 a 3 paradas seguidas a otro lugar del camino (o-opt), al derecho o al revés.
+        for (let largo = 1; largo <= 3; largo += 1) {
+            for (let i = 1; i + largo <= orden.length; i += 1) {
+                const tramoMovido = orden.slice(i, i + largo);
+                const resto = orden.slice(0, i).concat(orden.slice(i + largo));
+                const ahorro = distancia(orden[i - 1], tramoMovido[0]) +
+                    tramo(tramoMovido[largo - 1], orden[i + largo]) -
+                    tramo(orden[i - 1], orden[i + largo]);
+                let mejorLugar = null;
+                for (let lugar = 0; lugar < resto.length; lugar += 1) {
+                    if (lugar === i - 1) continue;
+                    [tramoMovido, tramoMovido.slice().reverse()].forEach(version => {
+                        const costo = distancia(resto[lugar], version[0]) +
+                            tramo(version[largo - 1], resto[lugar + 1]) -
+                            tramo(resto[lugar], resto[lugar + 1]);
+                        if (costo < ahorro - 0.01 && (!mejorLugar || costo < mejorLugar.costo)) {
+                            mejorLugar = { lugar, version, costo };
+                        }
+                    });
+                }
+                if (mejorLugar) {
+                    resto.splice(mejorLugar.lugar + 1, 0, ...mejorLugar.version);
+                    orden.splice(0, orden.length, ...resto);
+                    mejoro = true;
+                }
+            }
+        }
+        // Dar vuelta un tramo del camino (2-opt).
+        for (let i = 1; i < orden.length - 1; i += 1) {
+            for (let j = i + 1; j < orden.length; j += 1) {
+                const antes = distancia(orden[i - 1], orden[i]) +
+                    (j + 1 < orden.length ? distancia(orden[j], orden[j + 1]) : 0);
+                const despues = distancia(orden[i - 1], orden[j]) +
+                    (j + 1 < orden.length ? distancia(orden[i], orden[j + 1]) : 0);
+                if (despues < antes - 0.01) {
+                    orden.splice(i, j - i + 1, ...orden.slice(i, j + 1).reverse());
+                    mejoro = true;
+                }
+            }
+        }
+    }
+
+    const distancias = orden.slice(1).map((indice, posicion) => distancia(orden[posicion], indice));
+    return {
+        comercios: orden.slice(1).map(indice => puntos[indice]),
+        distancias,
+        distanciaTotal: distancias.reduce((total, metros) => total + metros, 0)
+    };
+}
+
 function optimizarRuta() {
     const comerciosElegidos = obtenerComerciosElegidosParaRuta();
 
@@ -1708,16 +1846,6 @@ function optimizarRuta() {
         return;
     }
 
-    if (comerciosConGps.length > MAX_PARADAS_RUTA_EXACTA) {
-        mostrarAviso(
-            "Demasiadas paradas para c\u00e1lculo exacto",
-            "La ruta exacta est\u00e1 limitada a " +
-                MAX_PARADAS_RUTA_EXACTA +
-                " paradas para no bloquear el celular. Reduc\u00ed la selecci\u00f3n y no se usar\u00e1 una ruta aproximada."
-        );
-        return;
-    }
-
     if (!navigator.geolocation) {
         mostrarAviso(
             "GPS no disponible",
@@ -1728,7 +1856,10 @@ function optimizarRuta() {
 
     navigator.geolocation.getCurrentPosition(
         posicion => {
-            const resultado = calcularRutaExacta(
+            // Hasta MAX_PARADAS_RUTA_EXACTA se prueban todas las combinaciones;
+            // con más paradas sería eterno, así que se busca un orden muy bueno.
+            const exacta = comerciosConGps.length <= MAX_PARADAS_RUTA_EXACTA;
+            const resultado = (exacta ? calcularRutaExacta : calcularRutaAproximada)(
                 comerciosConGps,
                 posicion.coords.latitude,
                 posicion.coords.longitude
@@ -1749,6 +1880,8 @@ function optimizarRuta() {
             paradasHechasRuta = new Set();
             paradasConPedidosRuta = new Set(rutaOrdenada.filter(comercio => cargaParaParada(comercio.nombre).pedidos.length).map(comercio => comercio.nombre));
             pedidosAlArmarRuta = idsDePedidosRuta();
+            // El índice de recién se armó con los pedidos de la ruta anterior.
+            indicePedidosRuta = null;
             comerciosSinGpsRuta = comerciosElegidos
                 .filter(comercio => !comercioTieneGps(comercio))
                 .map(comercio => comercio.nombre);
@@ -1765,15 +1898,17 @@ function optimizarRuta() {
                 : "";
 
             mostrarAviso(
-                "Ruta m\u00ednima calculada",
-                "Se revisaron todas las combinaciones posibles.\n\n" +
+                exacta ? "Ruta m\u00ednima calculada" : "Ruta optimizada",
+                (exacta
+                    ? "Se revisaron todas las combinaciones posibles.\n\n"
+                    : "Se busc\u00f3 el orden m\u00e1s corto para las " + rutaOrdenada.length + " paradas.\n\n") +
                     "Orden de paradas:\n" +
                     listaOrdenada +
                     detalleSinGps
             );
 
             mostrarRutaEnLista();
-            renderizarPines(false);
+            refrescarPines();
         },
         () => {
             mostrarAviso(
@@ -1811,6 +1946,57 @@ function abrirGoogleMaps() {
         return;
     }
 
+    if (paradas.length <= MAX_PARADAS_GOOGLE_MAPS) {
+        abrirParadasEnGoogleMaps(paradas);
+        return;
+    }
+
+    // Google Maps no acepta más paradas: se pasa la ruta en partes, en el mismo orden.
+    const partes = [];
+    for (let desde = 0; desde < paradas.length; desde += MAX_PARADAS_GOOGLE_MAPS) {
+        partes.push(paradas.slice(desde, desde + MAX_PARADAS_GOOGLE_MAPS));
+    }
+    const titulo = "Google Maps acepta hasta " + MAX_PARADAS_GOOGLE_MAPS + " paradas";
+    const explicacion = "Tu ruta tiene " + paradas.length + " paradas. Te la paso en " + partes.length +
+        " partes: abr\u00ed la Parte 1 y, cuando la termines, volv\u00e9 y abr\u00ed la siguiente.";
+
+    if (!window.piezas?.hoja) {
+        mostrarAviso(titulo, explicacion + " Ahora te abro la Parte 1.");
+        abrirParadasEnGoogleMaps(partes[0]);
+        return;
+    }
+
+    const proxima = Math.min(ultimaParteGoogleMaps.paradas === claveParadasGoogleMaps(paradas) ? ultimaParteGoogleMaps.parte + 1 : 0, partes.length - 1);
+    let numero = 0;
+    window.piezas.hoja({
+        titulo,
+        sub: explicacion,
+        clase: "hojaPartesGoogleMaps",
+        botones: partes.map((parte, indice) => {
+            const primera = numero + 1;
+            numero += parte.length;
+            return {
+                id: "btnParteGoogleMaps" + (indice + 1),
+                texto: "Parte " + (indice + 1) + " \u00b7 paradas " + primera + (parte.length > 1 ? " a " + numero : ""),
+                icono: "auto",
+                clase: indice === proxima ? "pzBtnPri" : "pzBtnSec",
+                alTocar: () => {
+                    ultimaParteGoogleMaps = { paradas: claveParadasGoogleMaps(paradas), parte: indice };
+                    abrirParadasEnGoogleMaps(parte);
+                }
+            };
+        }).concat([{ texto: "Cancelar", clase: "pzBtnGris" }])
+    });
+}
+
+// Para resaltar la parte que sigue la próxima vez que se toca "Google Maps".
+let ultimaParteGoogleMaps = { paradas: "", parte: -1 };
+
+function claveParadasGoogleMaps(paradas) {
+    return paradas.map(comercio => comercio.nombre).join("|");
+}
+
+function abrirParadasEnGoogleMaps(paradas) {
     const paradasFormateadas = paradas
         .map(comercio => {
             if (comercioTieneGps(comercio)) {
@@ -1869,31 +2055,63 @@ let rutaReordenadaAMano = false;
 let pedidosAlArmarRuta = null;
 
 function idsDePedidosRuta() {
-    if (typeof obtenerHistorial !== "function") return new Set();
-    return new Set(obtenerHistorial().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
+    if (typeof historialParaLeer !== "function") return new Set();
+    return new Set(historialParaLeer().filter(pedido => pedido && pedido.id != null).map(pedido => String(pedido.id)));
+}
+
+// T141: leer el historial es caro (cientos de pedidos) y la lista de paradas
+// lo pedía 3 veces por parada; en un celular barato, 80 paradas tardaban
+// segundos. Se arma una vez por dibujo un índice por comercio y se tira
+// apenas termina (el próximo dibujo ve los pedidos nuevos).
+let indicePedidosRuta = null;
+
+function pedidosRutaPorComercio() {
+    if (indicePedidosRuta) return indicePedidosRuta;
+    const indice = { carga: new Map(), nuevos: new Set() };
+    const historial = typeof historialParaLeer === "function" ? historialParaLeer() : [];
+    historial.forEach(pedido => {
+        if (!pedido || pedido.eliminado === true) return;
+        const clave = String(pedido.comercio || "").trim().toLocaleLowerCase("es");
+        if (pedidosAlArmarRuta && pedido.id != null && !pedidosAlArmarRuta.has(String(pedido.id))) indice.nuevos.add(clave);
+        const estado = typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : "";
+        if (!ESTADOS_PARA_ENTREGAR_RUTA.includes(estado)) return;
+        const carga = indice.carga.get(clave) || { pedidos: [], unidades: 0, total: 0 };
+        carga.pedidos.push(pedido);
+        carga.unidades += (pedido.productos || []).reduce((t, item) => t + (Number(item.cantidad) || 0), 0);
+        carga.total += typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0;
+        indice.carga.set(clave, carga);
+    });
+    indicePedidosRuta = indice;
+    setTimeout(() => { indicePedidosRuta = null; }, 0);
+    return indice;
 }
 
 function tienePedidoNuevoRuta(nombre) {
-    if (!pedidosAlArmarRuta || typeof obtenerHistorial !== "function") return false;
-    return obtenerHistorial().some(pedido => pedido && pedido.eliminado !== true && pedido.id != null &&
-        !pedidosAlArmarRuta.has(String(pedido.id)) && mismoNombreRuta(pedido.comercio, nombre));
+    if (!pedidosAlArmarRuta) return false;
+    return pedidosRutaPorComercio().nuevos.has(String(nombre || "").trim().toLocaleLowerCase("es"));
 }
 
 const ESTADOS_PARA_ENTREGAR_RUTA = ["cargado", "enPreparacion", "preparado", "enReparto", "enVehiculo"];
 
-function mismoNombreRuta(a, b) {
-    return String(a || "").trim().toLocaleLowerCase("es") === String(b || "").trim().toLocaleLowerCase("es");
-}
-
 // Lo que lleva para un comercio: pedidos sin entregar, unidades y plata.
 function cargaParaParada(nombre) {
-    if (typeof obtenerHistorial !== "function") return { pedidos: [], unidades: 0, total: 0 };
-    const pedidos = obtenerHistorial().filter(pedido => pedido && pedido.eliminado !== true &&
-        mismoNombreRuta(pedido.comercio, nombre) &&
-        ESTADOS_PARA_ENTREGAR_RUTA.includes(typeof estadoActualDelPedido === "function" ? estadoActualDelPedido(pedido) : ""));
-    const unidades = pedidos.reduce((suma, pedido) => suma + (pedido.productos || []).reduce((t, item) => t + (Number(item.cantidad) || 0), 0), 0);
-    const total = pedidos.reduce((suma, pedido) => suma + (typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0), 0);
-    return { pedidos, unidades, total };
+    const carga = pedidosRutaPorComercio().carga.get(String(nombre || "").trim().toLocaleLowerCase("es"));
+    return carga ? { pedidos: carga.pedidos.slice(), unidades: carga.unidades, total: carga.total } : { pedidos: [], unidades: 0, total: 0 };
+}
+
+// Lo que debe cada comercio (saldos.js). Pedirlo por parada leía el historial
+// entero cada vez: con 80 paradas, optimizar tardaba 12 s en un celular
+// barato. Se arma una vez por dibujo, como los pedidos (T141).
+let indiceSaldosRuta = null;
+
+function saldoParaParada(nombre) {
+    if (!indiceSaldosRuta) {
+        indiceSaldosRuta = new Map();
+        const cuentas = window.saldosVendeFrio?.cuentas?.() || [];
+        cuentas.forEach(grupo => indiceSaldosRuta.set(String(grupo.nombre || "").trim().toLocaleLowerCase("es"), Number(grupo.total) || 0));
+        setTimeout(() => { indiceSaldosRuta = null; }, 0);
+    }
+    return indiceSaldosRuta.get(String(nombre || "").trim().toLocaleLowerCase("es")) || 0;
 }
 
 // Minutos aproximados en auto (línea recta: más lento en la ciudad).
@@ -1927,29 +2145,32 @@ function indiceProximaParada() {
     return rutaOrdenada.findIndex(comercio => !paradaHecha(comercio));
 }
 
+// T138: las paradas del día como línea de tiempo: la hora de llegada, el
+// número y lo que lleva o cobra cada una; se ordenan arrastrando ≡. Arriba,
+// 4 números del día; abajo, los elegidos sin ubicación con «Poner pin».
 function mostrarRutaEnLista() {
     const contenedor = document.getElementById("listaRutaOrdenada");
     if (!contenedor) return;
     contenedor.innerHTML = "";
     contenedor.classList.toggle("conParadas", rutaOrdenada.length > 0);
 
+    dibujarVistaPreviaRutas();
+    dibujarNumerosParadas();
+    dibujarSinUbicacionParadas();
     if (rutaOrdenada.length === 0) {
+        const vacio = document.createElement("p");
+        vacio.className = "vacioParadas";
+        vacio.textContent = "Elegí los comercios y tocá «Optimizar orden» para armar la ruta.";
+        contenedor.appendChild(vacio);
         dibujarProximaParada();
         return;
     }
 
-    const distanciaTotal = distanciasRuta.reduce((total, distancia) => total + (Number(distancia) || 0), 0);
-    const minutosTotal = distanciasRuta.reduce((total, distancia) => total + minutosAproximados(distancia), 0);
     const encabezado = document.createElement("div");
     encabezado.className = "encabezadoParadas";
-    const titulo = document.createElement("h3");
-    titulo.textContent = rutaOrdenada.length + (rutaOrdenada.length === 1 ? " parada" : " paradas") + " · " +
-        formatearDistanciaTotal(distanciaTotal).replace(" totales", "") + " · unos " + minutosTotal + " min";
     const subtitulo = document.createElement("small");
     subtitulo.textContent = rutaReordenadaAMano ? "Orden a tu gusto" : "Ruta mínima exacta";
-    const textos = document.createElement("div");
-    textos.append(titulo, subtitulo);
-    encabezado.appendChild(textos);
+    encabezado.appendChild(subtitulo);
 
     // Hoja de reparto impresa (T28e): solo en la nube y con Web Bluetooth.
     if (window.impresionVendeFrio?.disponible?.()) {
@@ -1966,22 +2187,29 @@ function mostrarRutaEnLista() {
     const lista = document.createElement("ol");
     lista.className = "listaParadas";
     const proxima = indiceProximaParada();
+    const horas = horasDeLlegadaRuta();
+    const verPlata = !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
     rutaOrdenada.forEach((comercio, indice) => {
         const carga = cargaParaParada(comercio.nombre);
         const hecha = paradaHecha(comercio);
+        const saldo = verPlata ? saldoParaParada(comercio.nombre) : 0;
         const fila = document.createElement("li");
         fila.className = "paradaOrden" + (indice === proxima ? " proxima" : "") + (hecha ? " hecha" : "");
         fila.dataset.nombre = comercio.nombre;
-        const lleva = carga.pedidos.length
-            ? `<span class="pzChip pzChipGris sinPunto">${window.icono("paquete", 13)} Lleva ${carga.unidades} u${carga.total ? " · " + window.piezas.plata(carga.total) : ""}</span>`
-            : `<span class="pzChip pzChipGris sinPunto">Sin pedido para entregar</span>`;
-        fila.innerHTML = `<span class="numeroParada">${hecha ? window.icono("check", 16) : indice + 1}</span>
-            <button type="button" class="textoParada pedidoParadaRuta" data-nombre="${window.piezas.esc(comercio.nombre)}" aria-label="Pedido de ${window.piezas.esc(comercio.nombre)}">
-                <strong>${window.piezas.esc(comercio.nombre)}</strong>
-                <small>${window.piezas.esc(comercio.direccion || "Sin dirección")} · ${textoDistanciaCorta(distanciasRuta[indice])}</small>
-                <span class="llevaParada">${lleva}</span>
-            </button>
-            <span class="agarreParada" role="button" tabindex="0" aria-label="Mover ${window.piezas.esc(comercio.nombre)}. Mantené apretado y arrastrá">${window.icono("menu", 20)}</span>`;
+        const chips = [];
+        if (carga.pedidos.length) chips.push(`<span class="pzChip pzChipGris sinPunto">${window.icono("paquete", 13)} Lleva ${carga.unidades} u${carga.total && verPlata ? " · " + window.piezas.plata(carga.total) : ""}</span>`);
+        if (saldo > 0) chips.push(`<span class="pzChip chipCobrarParada sinPunto">Cobrar ${window.piezas.plata(saldo)}</span>`);
+        if (!chips.length) chips.push(`<span class="pzChip pzChipGris sinPunto">Sin pedido para entregar</span>`);
+        fila.innerHTML = `<span class="horaParada">${horas[indice]}</span>
+            <span class="lineaParada" aria-hidden="true"><span class="numeroParada">${hecha ? window.icono("check", 14) : indice + 1}</span></span>
+            <div class="cajaParada">
+                <button type="button" class="textoParada pedidoParadaRuta" data-nombre="${window.piezas.esc(comercio.nombre)}" aria-label="Pedido de ${window.piezas.esc(comercio.nombre)}">
+                    <strong>${window.piezas.esc(comercio.nombre)}</strong>
+                    <small>${window.piezas.esc(comercio.direccion || "Sin dirección")} · ${textoDistanciaCorta(distanciasRuta[indice])}</small>
+                    <span class="llevaParada">${chips.join("")}</span>
+                </button>
+                <span class="agarreParada" role="button" tabindex="0" aria-label="Mover ${window.piezas.esc(comercio.nombre)}. Mantené apretado y arrastrá">${window.icono("menu", 20)}</span>
+            </div>`;
         lista.appendChild(fila);
     });
     contenedor.appendChild(lista);
@@ -1993,6 +2221,65 @@ function mostrarRutaEnLista() {
 
     conectarArrastreParadas(lista);
     dibujarProximaParada();
+}
+
+// Paradas, km, horas y plata a cobrar del día.
+function dibujarNumerosParadas() {
+    const caja = document.getElementById("numerosParadas");
+    if (!caja) return;
+    const elegido = rutaOrdenada.length ? recorridoElegidoPlan() : null;
+    let paradas = rutaOrdenada.length;
+    let km = "—";
+    let horas = "—";
+    let cobrar = 0;
+    const verPlata = !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
+    if (rutaOrdenada.length) {
+        const metros = elegido ? elegido.distancia : distanciasRuta.reduce((total, distancia) => total + (Number(distancia) || 0), 0);
+        const segundos = elegido ? elegido.duracion : distanciasRuta.reduce((total, distancia) => total + minutosAproximados(distancia), 0) * 60;
+        const kilometros = metros / 1000;
+        km = kilometros < 10 ? kilometros.toFixed(1).replace(".", ",") : String(Math.round(kilometros));
+        const minutos = Math.max(1, Math.round(segundos / 60));
+        horas = Math.floor(minutos / 60) + ":" + String(minutos % 60).padStart(2, "0");
+        if (verPlata) {
+            rutaOrdenada.forEach(comercio => {
+                cobrar += cargaParaParada(comercio.nombre).total + (saldoParaParada(comercio.nombre));
+            });
+        }
+    } else {
+        paradas = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
+    }
+    const plata = !verPlata || !rutaOrdenada.length ? "—" : cobrar < 1000 ? String(Math.round(cobrar)) : cobrar < 1e6 ? Math.round(cobrar / 1000) + "k" : (cobrar / 1e6).toFixed(1).replace(".", ",") + "M";
+    caja.innerHTML = [[paradas, "Paradas"], [km, "Km"], [horas, "Horas"], [plata, "$ Cobrar"]]
+        .map(([valor, nombre]) => `<div class="numeroParadas"><strong>${valor}</strong><small>${nombre}</small></div>`).join("");
+    // Repasada: las paradas llevan a la próxima de la lista, y los km y las
+    // horas al mapa con el recorrido.
+    const tocable = window.piezas && window.piezas.tocable;
+    if (!tocable || !rutaOrdenada.length) return;
+    const [numeroParadas, numeroKm, numeroHoras] = caja.querySelectorAll(".numeroParadas");
+    tocable(numeroParadas, () => {
+        const parada = document.querySelector("#listaRutaOrdenada .paradaOrden.proxima") || document.querySelector("#listaRutaOrdenada .paradaOrden");
+        if (parada) parada.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    const verMapa = () => document.getElementById("btnCerrarParadas")?.click();
+    tocable(numeroKm, verMapa);
+    tocable(numeroHoras, verMapa);
+}
+
+// Los elegidos sin ubicación no entran a la ruta: «Poner pin» los ubica a mano.
+function dibujarSinUbicacionParadas() {
+    const caja = document.getElementById("sinUbicacionParadas");
+    if (!caja) return;
+    const sinUbicacion = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && !comercioTieneGps(comercio));
+    caja.classList.toggle("oculto", !sinUbicacion.length);
+    if (!sinUbicacion.length) {
+        caja.innerHTML = "";
+        return;
+    }
+    caja.innerHTML = `<h3>${window.icono("alerta", 16)} Sin ubicación (${sinUbicacion.length})</h3>` + sinUbicacion.slice(0, 20).map(comercio => {
+        const nombre = window.piezas.esc(comercio.nombre);
+        return `<div class="filaSinUbicacion"><span><strong>${nombre}</strong><small>${window.piezas.esc(comercio.direccion || "Sin dirección")}</small></span>
+            <button type="button" class="pzBtn pzBtnSec" data-poner-pin="${nombre}" aria-label="Poner pin a ${nombre}">${window.icono("ubicacion", 16)} Poner pin</button></div>`;
+    }).join("") + (sinUbicacion.length > 20 ? `<p class="ayudaParadas">Y ${sinUbicacion.length - 20} más: buscalos en «Ubicaciones de los comercios».</p>` : "");
 }
 
 // Arrastrar ≡ para cambiar el orden (con el dedo o el mouse).
@@ -2013,7 +2300,7 @@ function conectarArrastreParadas(lista) {
         rutaReordenadaAMano = true;
         recalcularDistanciasRuta();
         mostrarRutaEnLista();
-        renderizarPines(false);
+        refrescarPines();
     };
 
     lista.addEventListener("pointerdown", evento => {
@@ -2053,71 +2340,508 @@ function conectarArrastreParadas(lista) {
         rutaReordenadaAMano = true;
         recalcularDistanciasRuta();
         mostrarRutaEnLista();
-        renderizarPines(false);
+        refrescarPines();
         document.querySelector(`.paradaOrden[data-nombre="${CSS.escape(movido.nombre)}"] .agarreParada`)?.focus();
     });
 }
 
-// La próxima parada, fija abajo (dentro de la pantalla de Rutas).
+// Carrusel de paradas (T137): arriba de la hoja de la vista previa, una
+// tarjeta por parada que falta, empezando por la próxima. Al deslizar, el
+// mapa va a ese comercio y su pin se agranda. En el ⋯ de cada tarjeta:
+// Hacer pedido o Entregar, Ir con Google Maps, Ya pasé, Ir primero y Sacar
+// de la ruta.
+let paradaDestacadaRuta = "";
+let esperaCarrusel = null;
+
 function dibujarProximaParada() {
     const pantalla = document.getElementById("pantallaRutas");
     if (!pantalla) return;
-    let tarjeta = document.getElementById("proximaParadaRuta");
+    let carrusel = document.getElementById("proximaParadaRuta");
     const indice = indiceProximaParada();
-    if (!rutaOrdenada.length || indice < 0 || navegacionActiva) {
-        tarjeta?.remove();
+    if (!rutaOrdenada.length || navegacionActiva) {
+        carrusel?.remove();
         pantalla.classList.remove("conProximaParada");
-        if (rutaOrdenada.length && indice < 0 && !navegacionActiva) {
-            tarjeta = document.createElement("div");
-            tarjeta.id = "proximaParadaRuta";
-            tarjeta.className = "proximaParada terminada";
-            tarjeta.innerHTML = `<strong>${window.icono("check", 18)} Terminaste la ruta</strong><button type="button" class="pzBtn pzBtnGris" data-parada="reiniciar">Empezar de nuevo</button>`;
-            tarjeta.onclick = evento => {
-                if (!evento.target.closest('[data-parada="reiniciar"]')) return;
-                paradasHechasRuta.clear();
-                paradasConPedidosRuta.clear();
-                pedidosAlArmarRuta = idsDePedidosRuta();
-                mostrarRutaEnLista();
-            };
-            pantalla.appendChild(tarjeta);
-            pantalla.classList.add("conProximaParada");
-        }
+        destacarPinRuta("");
         return;
     }
-    const comercio = rutaOrdenada[indice];
-    const carga = cargaParaParada(comercio.nombre);
-    if (!tarjeta) {
-        tarjeta = document.createElement("div");
-        tarjeta.id = "proximaParadaRuta";
-        pantalla.appendChild(tarjeta);
-    }
-    tarjeta.className = "proximaParada";
-    tarjeta.setAttribute("role", "region");
-    tarjeta.setAttribute("aria-label", "Próxima parada");
-    pantalla.classList.add("conProximaParada");
-    tarjeta.innerHTML = `<div class="cabProximaParada">
-            <small>Próxima parada · ${indice + 1} de ${rutaOrdenada.length}</small>
-            <button type="button" class="pzEnlace" data-parada="saltear">Ya pasé ${window.icono("chevDerecha", 14)}</button>
-        </div>
-        <div class="nombreProximaParada"><strong>${window.piezas.esc(comercio.nombre)}</strong><span>${textoDistanciaCorta(distanciasRuta[indice])}</span></div>
-        <div class="botonesProximaParada">
-            <button type="button" class="pzBtn pzBtnSec" data-parada="ir">${window.icono("navegar", 18)} Ir</button>
-            <button type="button" class="pzBtn pzBtnPri" data-parada="entregar">${window.icono(carga.pedidos.length ? "check" : "documento", 18)} ${carga.pedidos.length ? "Entregar" : "Hacer pedido"}</button>
-        </div>`;
-    tarjeta.onclick = evento => {
-        const accion = evento.target.closest("[data-parada]")?.dataset.parada;
-        if (!accion) return;
-        if (accion === "ir") {
-            window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Number(comercio.lat) + "," + Number(comercio.lng), "_blank", "noopener");
-        } else if (accion === "entregar") {
-            const actual = cargaParaParada(comercio.nombre);
-            if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
-            if (typeof irAPedidoRapido === "function") irAPedidoRapido(comercio.nombre);
-        } else if (accion === "saltear") {
-            paradasHechasRuta.add(comercio.nombre);
-            mostrarRutaEnLista();
+    if (!carrusel) {
+        carrusel = document.createElement("div");
+        carrusel.id = "proximaParadaRuta";
+        carrusel.className = "carruselParadas";
+        carrusel.setAttribute("role", "region");
+        carrusel.setAttribute("aria-label", "Paradas de la ruta");
+        carrusel.addEventListener("click", tocarCarruselParadas);
+        (pantalla.querySelector(".vistaPreviaRutas") || pantalla).appendChild(carrusel);
+        if (window.L?.DomEvent) {
+            L.DomEvent.disableClickPropagation(carrusel);
+            L.DomEvent.disableScrollPropagation(carrusel);
         }
+    }
+    pantalla.classList.add("conProximaParada");
+    if (indice < 0) {
+        carrusel.classList.add("terminada");
+        carrusel.innerHTML = `<div class="paradaCarrusel terminada"><strong>${window.icono("check", 18)} Terminaste la ruta</strong><button type="button" class="pzBtn pzBtnGris" data-parada="reiniciar">Empezar de nuevo</button></div>`;
+        destacarPinRuta("");
+        return;
+    }
+    carrusel.classList.remove("terminada");
+    const horas = horasDeLlegadaRuta();
+    const verPlata = !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
+    const tarjetas = [];
+    for (let i = indice; i < rutaOrdenada.length; i++) {
+        const comercio = rutaOrdenada[i];
+        if (paradaHecha(comercio)) continue;
+        const carga = cargaParaParada(comercio.nombre);
+        const saldo = verPlata ? saldoParaParada(comercio.nombre) : 0;
+        const detalle = [comercio.direccion || "Sin dirección", horas[i]];
+        if (carga.pedidos.length) detalle.push("lleva " + carga.unidades + " u");
+        if (saldo > 0) detalle.push("cobrar " + window.piezas.plata(saldo));
+        const nombre = window.piezas.esc(comercio.nombre);
+        tarjetas.push(`<article class="paradaCarrusel${i === indice ? " actual" : ""}" data-nombre="${nombre}" aria-label="Parada ${i + 1} de ${rutaOrdenada.length}: ${nombre}">
+            <span class="numeroCarrusel">${i + 1}</span>
+            <button type="button" class="datosCarrusel" data-parada="ver"><strong>${nombre}</strong><small>${window.piezas.esc(detalle.filter(Boolean).join(" · "))}</small></button>
+            <button type="button" class="masCarrusel" data-parada="opciones" aria-label="Opciones de ${nombre}">${window.icono("puntos", 18)}</button>
+        </article>`);
+    }
+    carrusel.innerHTML = `<div class="pistaCarrusel">${tarjetas.join("")}</div>`;
+    const pista = carrusel.firstElementChild;
+    pista.addEventListener("scroll", () => {
+        clearTimeout(esperaCarrusel);
+        esperaCarrusel = setTimeout(() => alDeslizarCarrusel(pista), 120);
+    }, { passive: true });
+    // La próxima, con su pin grande (sin mover el mapa).
+    destacarPinRuta(rutaOrdenada[indice].nombre);
+}
+
+// Hora de llegada a cada parada: con el camino por calles si llegó, si no
+// con la cuenta aproximada.
+function horasDeLlegadaRuta() {
+    const tramos = recorridoElegidoPlan()?.tramos;
+    let segundos = 0;
+    return rutaOrdenada.map((comercio, indice) => {
+        segundos += tramos && tramos.length === rutaOrdenada.length ? tramos[indice] : minutosAproximados(distanciasRuta[indice]) * 60;
+        const hora = new Date(Date.now() + segundos * 1000);
+        return String(hora.getHours()).padStart(2, "0") + ":" + String(hora.getMinutes()).padStart(2, "0");
+    });
+}
+
+function alDeslizarCarrusel(pista) {
+    const centro = pista.scrollLeft + pista.clientWidth / 2;
+    let elegida = null;
+    let menor = Infinity;
+    pista.querySelectorAll(".paradaCarrusel").forEach(tarjeta => {
+        const distancia = Math.abs(tarjeta.offsetLeft + tarjeta.offsetWidth / 2 - centro);
+        if (distancia < menor) {
+            menor = distancia;
+            elegida = tarjeta;
+        }
+    });
+    // Pegada al borde izquierdo, la primera.
+    if (pista.scrollLeft < 8) elegida = pista.querySelector(".paradaCarrusel");
+    if (elegida) irAParadaEnMapa(elegida.dataset.nombre);
+}
+
+function irAParadaEnMapa(nombre) {
+    if (!nombre || nombre === paradaDestacadaRuta) return;
+    destacarPinRuta(nombre);
+    const comercio = rutaOrdenada.find(item => item.nombre === nombre);
+    if (comercio && mapaLeaflet) mapaLeaflet.panTo([Number(comercio.lat), Number(comercio.lng)], { animate: true, duration: 0.35 });
+}
+
+// El pin de la parada de la tarjeta, más grande y arriba de los demás.
+function destacarPinRuta(nombre) {
+    const anterior = marcadoresPorNombre.get(paradaDestacadaRuta);
+    if (anterior) {
+        anterior.getElement()?.classList.remove("pinDestacado");
+        anterior.setZIndexOffset(0);
+    }
+    paradaDestacadaRuta = nombre;
+    const marcador = marcadoresPorNombre.get(nombre);
+    if (marcador) {
+        marcador.getElement()?.classList.add("pinDestacado");
+        marcador.setZIndexOffset(1000);
+    }
+}
+
+function tocarCarruselParadas(evento) {
+    const boton = evento.target.closest("[data-parada]");
+    if (!boton) return;
+    const accion = boton.dataset.parada;
+    if (accion === "reiniciar") {
+        paradasHechasRuta.clear();
+        paradasConPedidosRuta.clear();
+        pedidosAlArmarRuta = idsDePedidosRuta();
+        indicePedidosRuta = null;
+        mostrarRutaEnLista();
+        return;
+    }
+    const tarjeta = boton.closest(".paradaCarrusel");
+    const nombre = tarjeta?.dataset.nombre;
+    if (!nombre) return;
+    if (accion === "ver") {
+        tarjeta.scrollIntoView({ inline: "start", block: "nearest", behavior: "smooth" });
+        irAParadaEnMapa(nombre);
+    } else if (accion === "opciones") {
+        abrirOpcionesParadaRuta(nombre);
+    }
+}
+
+function abrirOpcionesParadaRuta(nombre) {
+    const indice = rutaOrdenada.findIndex(comercio => comercio.nombre === nombre);
+    if (indice < 0 || !window.piezas) return;
+    const comercio = rutaOrdenada[indice];
+    const p = window.piezas;
+    const carga = cargaParaParada(nombre);
+    const esLaProxima = indice === indiceProximaParada();
+    const caja = p.hoja({
+        titulo: nombre,
+        sub: "Parada " + (indice + 1) + " de " + rutaOrdenada.length,
+        clase: "hojaParadaCarrusel",
+        etiqueta: "Opciones de la parada " + nombre,
+        html: `<button type="button" class="pzBtn pzBtnPri botonRutaPin" data-carrusel="entregar">${p.ico(carga.pedidos.length ? "check" : "documento", 18)} ${carga.pedidos.length ? "Entregar" : "Hacer pedido"}</button>
+            <div class="pzOpciones">
+                <button type="button" class="pzOpcion" data-carrusel="ir">${p.ico("navegar", 22)}Ir con Google Maps</button>
+                ${esLaProxima ? `<button type="button" class="pzOpcion" data-carrusel="saltear">${p.ico("chevDerecha", 22)}Ya pasé</button>` : `<button type="button" class="pzOpcion" data-carrusel="primero">${p.ico("rayo", 22)}Ir primero</button>`}
+                <button type="button" class="pzOpcion pzOpcionPeligro" data-carrusel="sacar">${p.ico("cerrarX", 22)}Sacar de la ruta</button>
+            </div>`
+    });
+    caja.addEventListener("click", evento => {
+        const accion = evento.target.closest("[data-carrusel]")?.dataset.carrusel;
+        if (!accion) return;
+        p.cerrar();
+        if (accion === "entregar") {
+            const actual = cargaParaParada(nombre);
+            if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
+            if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
+        } else if (accion === "ir") {
+            window.open("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Number(comercio.lat) + "," + Number(comercio.lng), "_blank", "noopener");
+        } else if (accion === "saltear") {
+            paradasHechasRuta.add(nombre);
+            mostrarRutaEnLista();
+        } else if (accion === "primero") {
+            // Pasa adelante de la próxima; las demás siguen en su orden.
+            const destino = Math.max(0, indiceProximaParada());
+            rutaOrdenada.splice(indice, 1);
+            rutaOrdenada.splice(destino, 0, comercio);
+            rutaReordenadaAMano = true;
+            recalcularDistanciasRuta();
+            mostrarRutaEnLista();
+            refrescarPines();
+        } else if (accion === "sacar") {
+            cambiarPinEnRuta(nombre);
+            refrescarPines();
+        }
+    });
+}
+
+// -------------------------------------------------
+// Vista previa (T136): el mapa ocupa toda la pantalla con el camino entero
+// por calles. Arriba, desde dónde y hasta dónde, y cómo se arma el camino
+// (Auto o Moto, Sin autopistas); abajo, cuánto tarda, Iniciar y Paradas, y
+// las herramientas. Paradas abre la lista con todo lo de antes.
+// -------------------------------------------------
+
+const SERVIDOR_CAMINO_RUTAS = "https://routing.openstreetmap.de/routed-car/route/v1/driving/";
+const CLAVE_PREFERENCIAS_RUTAS = "vendefrio_preferencias";
+// Hasta 2 recorridos: el más rápido y, si es distinto, uno sin autopistas.
+let caminoPlanRutas = { clave: "", recorridos: [], recto: false };
+let capaCaminoPlan = null;
+let esperaCaminoPlan = null;
+
+function preferenciasRutas() {
+    try {
+        return JSON.parse(localStorage.getItem(CLAVE_PREFERENCIAS_RUTAS)) || {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function guardarPreferenciaRutas(campo, valor) {
+    const datos = preferenciasRutas();
+    datos[campo] = valor;
+    try {
+        localStorage.setItem(CLAVE_PREFERENCIAS_RUTAS, JSON.stringify(datos));
+    } catch (error) {
+        // Sin lugar: queda para esta vez.
+    }
+}
+
+function prepararVistaPreviaRutas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    const vista = pantalla?.querySelector(".vistaPreviaRutas");
+    if (!vista || vista.dataset.listo) return;
+    vista.dataset.listo = "1";
+    if (window.L?.DomEvent) {
+        vista.querySelectorAll(".cabezaRutas, .chipsRutas, .hojaPlanRutas").forEach(caja => {
+            L.DomEvent.disableClickPropagation(caja);
+            L.DomEvent.disableScrollPropagation(caja);
+        });
+    }
+    vista.querySelector(".cabezaRutas .volverRutas").addEventListener("click", () => mostrarPantalla("mas"));
+    vista.querySelectorAll(".chipRutas[data-vehiculo]").forEach(chip => chip.addEventListener("click", () => {
+        guardarPreferenciaRutas("vehiculo", chip.dataset.vehiculo);
+        dibujarChipsRutas();
+    }));
+    document.getElementById("chipSinAutopistas").addEventListener("click", () => {
+        elegirRecorridoPlan(!preferenciasRutas().sinAutopistas);
+    });
+    document.getElementById("btnParadasRutas").addEventListener("click", () => abrirPanelParadas());
+    document.getElementById("btnElegirRutas").addEventListener("click", () => abrirPanelParadas(".tarjetaSeleccionRuta"));
+    document.getElementById("btnGuardadasRutas").addEventListener("click", () => abrirPanelParadas(".tarjetaRutasGuardadas"));
+    document.getElementById("btnCerrarParadas").addEventListener("click", cerrarPanelParadas);
+    document.getElementById("btnListoParadas").addEventListener("click", cerrarPanelParadas);
+    document.getElementById("btnGuardarRutaParadas").addEventListener("click", () => {
+        abrirPanelParadas(".tarjetaRutasGuardadas");
+        document.getElementById("nombreRutaGuardada")?.focus();
+    });
+    document.getElementById("btnBuscarParadas").addEventListener("click", () => {
+        abrirPanelParadas(".tarjetaSeleccionRuta");
+        document.getElementById("buscarSeleccionRuta")?.focus();
+    });
+
+    // El alto de la hoja de abajo, para el mapa y la tarjeta de la parada.
+    const hoja = vista.querySelector(".hojaPlanRutas");
+    const medir = () => pantalla.style.setProperty("--altoHojaPlan", hoja.offsetHeight + "px");
+    if (window.ResizeObserver) new ResizeObserver(medir).observe(hoja);
+    else medir();
+}
+
+// Lo que el mapa deja libre arriba (cabecera y chips) y abajo (hoja y parada).
+function margenesMapaRutas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    const chips = pantalla?.querySelector(".chipsRutas");
+    const hoja = pantalla?.querySelector(".hojaPlanRutas");
+    const proxima = document.getElementById("proximaParadaRuta");
+    const arriba = chips && chips.offsetHeight ? chips.offsetTop + chips.offsetHeight : 0;
+    const abajo = (hoja?.offsetHeight || 0) + (proxima?.offsetHeight ? proxima.offsetHeight + 10 : 0);
+    return { paddingTopLeft: [30, arriba + 24], paddingBottomRight: [30, abajo + 24] };
+}
+
+function abrirPanelParadas(seccion) {
+    const pantalla = document.getElementById("pantallaRutas");
+    if (!pantalla) return;
+    pantalla.classList.add("conParadasAbiertas");
+    const panel = pantalla.querySelector(".panelParadasRutas");
+    panel.scrollTop = 0;
+    const tarjeta = seccion ? panel.querySelector(seccion) : null;
+    if (tarjeta) {
+        tarjeta.open = true;
+        tarjeta.scrollIntoView({ block: "start" });
+    }
+}
+
+function cerrarPanelParadas() {
+    const pantalla = document.getElementById("pantallaRutas");
+    if (!pantalla?.classList.contains("conParadasAbiertas")) return;
+    pantalla.classList.remove("conParadasAbiertas");
+    if (mapaLeaflet) mapaLeaflet.invalidateSize();
+}
+
+function dibujarChipsRutas() {
+    const preferencias = preferenciasRutas();
+    const vehiculo = preferencias.vehiculo || "auto";
+    document.querySelectorAll("#pantallaRutas .chipRutas[data-vehiculo]").forEach(chip => {
+        const elegido = chip.dataset.vehiculo === vehiculo ? "true" : "false";
+        if (chip.getAttribute("aria-pressed") !== elegido) chip.setAttribute("aria-pressed", elegido);
+    });
+    const sinAutopistas = document.getElementById("chipSinAutopistas");
+    if (sinAutopistas) sinAutopistas.setAttribute("aria-pressed", preferencias.sinAutopistas ? "true" : "false");
+}
+
+// Arriba, hasta dónde va; abajo, cuánto tarda. Se llama con cada cambio de
+// la ruta (no con el GPS): es barato y el camino se pide solo si cambió.
+function dibujarVistaPreviaRutas() {
+    if (!document.querySelector("#pantallaRutas .vistaPreviaRutas")) return;
+    dibujarChipsRutas();
+    const destino = document.getElementById("destinoRutas");
+    let texto;
+    if (rutaOrdenada.length) {
+        texto = rutaOrdenada.length + (rutaOrdenada.length === 1 ? " parada" : " paradas") + " · última: " + rutaOrdenada[rutaOrdenada.length - 1].nombre;
+    } else {
+        // Solo los que tienen ubicación entran a la ruta.
+        const elegidos = comerciosActivosParaLeer().filter(comercio => comerciosSeleccionadosRuta.has(comercio.nombre) && comercioTieneGps(comercio)).length;
+        texto = elegidos ? elegidos + (elegidos === 1 ? " parada elegida" : " paradas elegidas") : "Elegí los comercios de la ruta";
+    }
+    if (destino && destino.textContent !== texto) destino.textContent = texto;
+    pedirCaminoPlan();
+    dibujarResumenPlan();
+}
+
+function pedirCaminoPlan() {
+    clearTimeout(esperaCaminoPlan);
+    esperaCaminoPlan = setTimeout(calcularCaminoPlan, 250);
+}
+
+function puntosCaminoPlan() {
+    if (!rutaOrdenada.length || !inicioRutaCalculada) return [];
+    return [inicioRutaCalculada, ...rutaOrdenada.map(comercio => ({ lat: Number(comercio.lat), lng: Number(comercio.lng) }))];
+}
+
+async function pedirRecorridoPlan(puntos, sinAutopistas) {
+    const url = SERVIDOR_CAMINO_RUTAS + puntos.map(punto => punto.lng + "," + punto.lat).join(";") +
+        "?overview=simplified&geometries=geojson" + (sinAutopistas ? "&exclude=motorway" : "");
+    try {
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) return null;
+        const datos = await respuesta.json();
+        const ruta = datos && Array.isArray(datos.routes) ? datos.routes[0] : null;
+        if (!ruta || !ruta.geometry || !Array.isArray(ruta.geometry.coordinates)) return null;
+        return {
+            sinAutopistas,
+            puntos: ruta.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
+            distancia: Number(ruta.distance) || 0,
+            duracion: Number(ruta.duration) || 0,
+            // Cuánto tarda cada tramo, para la hora de cada parada (T137).
+            tramos: Array.isArray(ruta.legs) ? ruta.legs.map(tramo => Number(tramo.duration) || 0) : []
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
+async function calcularCaminoPlan() {
+    const puntos = puntosCaminoPlan();
+    const clave = puntos.map(punto => punto.lat + "," + punto.lng).join(";");
+    if (clave === caminoPlanRutas.clave) {
+        dibujarCaminoPlan();
+        return;
+    }
+    // Mientras llega el camino por calles, una línea recta entre las paradas.
+    caminoPlanRutas = { clave, recorridos: [], recto: puntos.length > 1 };
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+    if (puntos.length < 2) return;
+    // La ruta nueva entera a la vista, entre la cabecera y la hoja.
+    if (mapaLeaflet) mapaLeaflet.fitBounds(L.latLngBounds(puntos.map(punto => [punto.lat, punto.lng])), margenesMapaRutas());
+    const [rapido, sinAutopistas] = await Promise.all([pedirRecorridoPlan(puntos, false), pedirRecorridoPlan(puntos, true)]);
+    if (clave !== caminoPlanRutas.clave) return;
+    const recorridos = [rapido, sinAutopistas].filter(Boolean);
+    // Si los dos son casi iguales, se muestra uno solo.
+    if (rapido && sinAutopistas && Math.abs(rapido.distancia - sinAutopistas.distancia) <= rapido.distancia * 0.01) recorridos.pop();
+    caminoPlanRutas = { clave, recorridos, recto: !recorridos.length };
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+    dibujarProximaParada();
+    dibujarNumerosParadas();
+    actualizarHorasParadas();
+}
+
+// Con el camino por calles, la hora de cada parada de la lista (sin rearmarla).
+function actualizarHorasParadas() {
+    const horas = horasDeLlegadaRuta();
+    document.querySelectorAll("#listaRutaOrdenada .paradaOrden .horaParada").forEach((hora, indice) => {
+        if (horas[indice] && hora.textContent !== horas[indice]) hora.textContent = horas[indice];
+    });
+}
+
+// El recorrido elegido: el sin autopistas si está pedido y existe.
+function recorridoElegidoPlan() {
+    const recorridos = caminoPlanRutas.recorridos;
+    if (!recorridos.length) return null;
+    const quiere = Boolean(preferenciasRutas().sinAutopistas);
+    return recorridos.find(recorrido => recorrido.sinAutopistas === quiere) || recorridos[0];
+}
+
+function elegirRecorridoPlan(sinAutopistas) {
+    guardarPreferenciaRutas("sinAutopistas", Boolean(sinAutopistas));
+    dibujarChipsRutas();
+    dibujarCaminoPlan();
+    dibujarResumenPlan();
+    dibujarProximaParada();
+    dibujarNumerosParadas();
+    actualizarHorasParadas();
+}
+
+function textoMinutosPlan(segundos) {
+    const minutos = Math.max(1, Math.round(segundos / 60));
+    if (minutos < 60) return minutos + " min";
+    return Math.floor(minutos / 60) + " h " + String(minutos % 60).padStart(2, "0") + " min";
+}
+
+function dibujarCaminoPlan() {
+    if (!mapaLeaflet || typeof L === "undefined") return;
+    if (capaCaminoPlan) capaCaminoPlan.clearLayers();
+    else capaCaminoPlan = L.layerGroup().addTo(mapaLeaflet);
+    const puntos = puntosCaminoPlan();
+    if (puntos.length < 2) return;
+    const yo = L.circleMarker([puntos[0].lat, puntos[0].lng], { className: "yoPlanRutas", radius: 9, weight: 4, opacity: 1, fillOpacity: 1, interactive: false }).addTo(capaCaminoPlan);
+    if (caminoPlanRutas.recto || !caminoPlanRutas.recorridos.length) {
+        L.polyline(puntos.map(punto => [punto.lat, punto.lng]), { className: "caminoPlan recto", color: "#1F5FE0", weight: 5, opacity: 0.9, dashArray: "2 10", lineCap: "round", interactive: false }).addTo(capaCaminoPlan);
+        yo.bringToFront();
+        return;
+    }
+    const elegido = recorridoElegidoPlan();
+    const otros = caminoPlanRutas.recorridos.filter(recorrido => recorrido !== elegido);
+    otros.forEach(recorrido => {
+        const linea = L.polyline(recorrido.puntos, { className: "caminoPlan otro", color: "#A9B8CC", weight: 8, opacity: 1, lineCap: "round", lineJoin: "round" }).addTo(capaCaminoPlan);
+        linea.on("click", () => elegirRecorridoPlan(recorrido.sinAutopistas));
+    });
+    L.polyline(elegido.puntos, { className: "caminoPlan borde", color: "#0F3E9E", weight: 12, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(capaCaminoPlan);
+    L.polyline(elegido.puntos, { className: "caminoPlan elegido", color: "#1F5FE0", weight: 8, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(capaCaminoPlan);
+    yo.bringToFront();
+    // Con dos recorridos, cada uno con su cartelito de minutos para elegirlo.
+    if (!otros.length) return;
+    caminoPlanRutas.recorridos.forEach(recorrido => {
+        const otro = caminoPlanRutas.recorridos.find(item => item !== recorrido);
+        const medio = puntoParaEtiquetaPlan(recorrido.puntos, otro ? otro.puntos : []);
+        const nombre = recorrido.sinAutopistas ? "Sin autopistas" : "Más rápida";
+        const icono = L.divIcon({
+            className: "etiquetaCaminoPlan" + (recorrido === elegido ? " elegida" : ""),
+            html: `<div class="globoEtiquetaPlan"><span>${textoMinutosPlan(recorrido.duracion)}</span><small>${nombre}</small></div>`,
+            iconSize: [0, 0]
+        });
+        L.marker(medio, { icon: icono, keyboard: true, title: nombre + ", " + textoMinutosPlan(recorrido.duracion), zIndexOffset: 500 })
+            .on("click", () => elegirRecorridoPlan(recorrido.sinAutopistas))
+            .addTo(capaCaminoPlan);
+    });
+}
+
+// Donde el cartelito de un recorrido no se confunde con el otro: el punto
+// más lejos del otro camino (mirando hasta 60 puntos de cada uno).
+function puntoParaEtiquetaPlan(puntos, otros) {
+    const muestra = lista => {
+        const paso = Math.max(1, Math.floor(lista.length / 60));
+        return lista.filter((punto, indice) => indice % paso === 0);
     };
+    const propios = muestra(puntos);
+    const ajenos = muestra(otros);
+    if (!ajenos.length) return propios[Math.floor(propios.length / 2)];
+    let mejor = propios[Math.floor(propios.length / 2)];
+    let lejos = -1;
+    propios.forEach(punto => {
+        let cerca = Infinity;
+        ajenos.forEach(ajeno => {
+            const d = (punto[0] - ajeno[0]) ** 2 + (punto[1] - ajeno[1]) ** 2;
+            if (d < cerca) cerca = d;
+        });
+        if (cerca > lejos) {
+            lejos = cerca;
+            mejor = punto;
+        }
+    });
+    return mejor;
+}
+
+// Abajo: «48 min (23 km) · terminás 11:02». Sin camino por calles, la cuenta
+// aproximada de la lista.
+function dibujarResumenPlan() {
+    const minutos = document.getElementById("minutosPlanRutas");
+    const detalle = document.getElementById("detallePlanRutas");
+    if (!minutos || !detalle) return;
+    let textoMinutos = "";
+    let textoDetalle = "Elegí los comercios y tocá Optimizar.";
+    if (rutaOrdenada.length) {
+        const elegido = recorridoElegidoPlan();
+        const segundos = elegido ? elegido.duracion : distanciasRuta.reduce((total, metros) => total + minutosAproximados(metros), 0) * 60;
+        const metros = elegido ? elegido.distancia : distanciasRuta.reduce((total, distancia) => total + (Number(distancia) || 0), 0);
+        const fin = new Date(Date.now() + segundos * 1000);
+        textoMinutos = (elegido ? "" : "unos ") + textoMinutosPlan(segundos);
+        textoDetalle = "(" + formatearDistanciaTotal(metros).replace(" totales", "") + ") · terminás " +
+            String(fin.getHours()).padStart(2, "0") + ":" + String(fin.getMinutes()).padStart(2, "0");
+    }
+    if (minutos.textContent !== textoMinutos) minutos.textContent = textoMinutos;
+    if (detalle.textContent !== textoDetalle) detalle.textContent = textoDetalle;
+    document.getElementById("btnNavegarRuta")?.classList.toggle("sinRuta", !rutaOrdenada.length);
 }
 
 configurarCierreModalAviso();
@@ -2174,8 +2898,15 @@ document.addEventListener("click", event => {
         return;
     }
 
-    if (boton.id === "btnOptimizarRuta") {
+    if (boton.id === "btnOptimizarRuta" || boton.id === "btnOptimizarOrden") {
         optimizarRuta();
+        return;
+    }
+
+    if (boton.dataset.ponerPin) {
+        const select = document.getElementById("selectComercioGps");
+        if (select) select.value = boton.dataset.ponerPin;
+        activarModoPinManual();
         return;
     }
 

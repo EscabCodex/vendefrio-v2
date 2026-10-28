@@ -163,6 +163,20 @@
         return items.sort((a, b) => (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0));
     }
 
+    // Cambia cada vez que cambia la colección: sirve para recordar cuentas
+    // hechas con ella (los pagos parciales, por ejemplo).
+    function marca(nombre) {
+        const coleccion = registradas[nombre];
+        if (!coleccion) return null;
+        conectar();
+        if (!usaLocal(coleccion)) return coleccion.docs;
+        try {
+            return "local:" + (localStorage.getItem(claveLocal(nombre)) || "");
+        } catch (error) {
+            return null;
+        }
+    }
+
     function obtener(nombre, id) {
         return lista(nombre).find(item => item.id === id) || null;
     }
@@ -303,5 +317,5 @@
     enganchar();
     window.addEventListener("nubeVendeFrioLista", enganchar);
 
-    window.extrasVendeFrio = { registrar, lista, obtener, leer, escuchar, guardar, actualizar, borrar, conectar };
+    window.extrasVendeFrio = { registrar, lista, marca, obtener, leer, escuchar, guardar, actualizar, borrar, conectar };
 }());

@@ -108,7 +108,7 @@
         if (columnas.nombre === undefined) return { tipo, columnas, items: [], error: "No encontré la columna del nombre. La primera fila tiene que tener los títulos (por ejemplo: Nombre, Marca, Precio)." };
 
         if (tipo === "comercios") {
-            const existentes = typeof obtenerComercios === "function" ? obtenerComercios() : [];
+            const existentes = typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [];
             const vistos = new Set();
             const items = cuerpo.map(fila => {
                 const nombre = String(celda(fila, "nombre") ?? "").trim().replace(/\s+/g, " ");
@@ -126,7 +126,7 @@
             return { tipo, columnas, items };
         }
 
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         const vistos = new Set();
         const items = cuerpo.map(fila => {
             const nombreBase = String(celda(fila, "nombre") ?? "").trim().replace(/\s+/g, " ");
@@ -246,7 +246,7 @@
                 if (item.existe) {
                     ok = actualizarProductoPorId(item.existe.id, { precio: item.precio, ...(item.codigo ? { codigo: item.codigo } : {}) });
                 } else {
-                    const marcas = obtenerProductos();
+                    const marcas = typeof productosParaLeer === "function" ? productosParaLeer() : obtenerProductos();
                     if (!marcas[item.marca]) agregarMarca(item.marca);
                     ok = agregarProducto(item.marca, { nombre: item.nombre, precio: item.precio, ...(item.codigo ? { codigo: item.codigo } : {}) });
                 }

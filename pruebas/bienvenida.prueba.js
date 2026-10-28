@@ -1,7 +1,7 @@
 // VendeFrío - Bienvenida nueva (T85, T86, T87): entrar con email o código,
 // probar con datos de ejemplo y empezar de cero, presentación y términos.
 const { test, expect, capturar } = require("./ayudas");
-const { abrirMas } = require("./recorridos");
+const { abrirAjustes } = require("./recorridos");
 
 test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page }) => {
     await page.goto("/");
@@ -25,6 +25,36 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     expect(datos.comercios).toBe(5);
     expect(datos.pedidos).toBeGreaterThan(15);
     expect(datos.helado).toBe(4500);
+    // Informe del desconocido: una distribuidora inventada, completa y sin
+    // repetidos (ni la lista de fábrica de antes mezclada).
+    const completo = await page.evaluate(() => {
+        const comercios = obtenerComercios();
+        const productos = obtenerProductos();
+        const todos = Object.values(productos).flat();
+        const distintos = lista => new Set(lista.map(texto => String(texto).toLocaleLowerCase("es"))).size === lista.length;
+        return {
+            comercios: comercios.length,
+            marcas: Object.keys(productos),
+            productos: todos.length,
+            sinRepetir: distintos(comercios.map(c => c.nombre)) && distintos(comercios.map(c => c.direccion)) &&
+                distintos(comercios.map(c => c.telefono)) && distintos(comercios.map(c => c.contacto)) &&
+                distintos(todos.map(p => p.nombre)) && distintos(todos.map(p => p.codigo)) && distintos(Object.keys(productos)),
+            comerciosCompletos: comercios.every(c => c.direccion && c.telefono && c.horario && c.diaVisita && c.contacto && c.nota &&
+                Number.isFinite(c.lat) && Number.isFinite(c.lng) && c.envases && c.envases.tiene > 0 && c.topeDeuda > 0 && (c.favoritos || []).length),
+            productosCompletos: todos.every(p => p.precio > 0 && p.stock > 0 && p.codigo && p.precios && p.precios.Kioscos > 0 && p.precios.Supermercados > 0),
+            oferta: todos.filter(p => p.oferta).length,
+            listas: window.listasDePrecios(),
+            rutas: obtenerRutasGuardadas().map(ruta => [ruta.nombre, ruta.dia, ruta.comercios.length])
+        };
+    });
+    expect(completo).toEqual({
+        comercios: 12, marcas: ["Frío Sur", "Dulce Polar", "Hielo Austral"], productos: 12,
+        sinRepetir: true, comerciosCompletos: true, productosCompletos: true, oferta: 1,
+        listas: ["Kioscos", "Supermercados"],
+        rutas: [["Centro · lunes", "lunes", 6], ["Once · jueves", "jueves", 6]]
+    });
+    // Un solo cartel arriba: el del ejemplo, no "Tus datos no están protegidos".
+    await expect(page.locator("#avisoModoPersonal")).toHaveCount(0);
     await expect(page.locator("#pantallaMenu")).not.toContainText("0 pedidos · 0 comercios");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "bienvenida-02-datos-de-ejemplo");
@@ -46,9 +76,11 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
         marca: Boolean(obtenerProductos()["Frío Sur"])
     }));
     expect(despues).toEqual({ comercios: ["Mi kiosco"], pedidos: 0, marca: false });
+    expect(await page.evaluate(() => [obtenerRutasGuardadas().length, Object.keys(obtenerProductos()).length])).toEqual([0, 0]);
+    await expect(page.locator("#avisoModoPersonal")).toContainText("Tus datos no están protegidos");
 
     // Más > Seguridad: presentación y términos.
-    await abrirMas(page);
+    await abrirAjustes(page);
     const seguridad = page.locator('.configFila[data-config-seccion="seguridad"]');
     await seguridad.evaluate(fila => fila.scrollIntoView({ block: "center" }));
     await seguridad.click();
@@ -57,8 +89,17 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     await filaTerminos.evaluate(fila => fila.scrollIntoView({ block: "center" }));
     const [terminos] = await Promise.all([page.waitForEvent("popup"), filaTerminos.click()]);
     await expect(terminos.getByRole("heading", { name: "Términos y privacidad" })).toBeVisible();
-    await expect(terminos.getByText("Borrador.")).toBeVisible();
+    await expect(terminos.getByText("No es asesoramiento legal.")).toBeVisible();
+    await expect(terminos.getByRole("link", { name: "vendefrio.app@gmail.com" }).first()).toHaveAttribute("href", "mailto:vendefrio.app@gmail.com");
     await terminos.close();
+
+    // Escribinos: el mail de la app.
+    const filaMail = page.getByRole("button", { name: "Escribinos" });
+    await filaMail.evaluate(fila => fila.scrollIntoView({ block: "center" }));
+    await expect(filaMail).toContainText("vendefrio.app@gmail.com");
+    await capturar(page, "bienvenida-05-escribinos");
+    await filaMail.click();
+    await expect(filaMail).toBeVisible();
 });
 
 test("bienvenida: la presentación", async ({ page }) => {

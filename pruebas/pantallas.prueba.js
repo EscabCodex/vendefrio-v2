@@ -1,0 +1,79 @@
+// VendeFrío - Pantallas sin trabas (T151): con los datos de un reparto
+// grande, en un celular común, ninguna pantalla deja trabado el celular y las
+// listas largas se completan al bajar (repasada: lo lejano se dibuja cuando
+// el dedo se acerca, así la app ocupa menos memoria).
+const { test, expect, capturar } = require("./ayudas");
+const { entrarSinCuenta, cargarDatosGrandes, anotarTrabas, bajarHastaElFinal } = require("./datosGrandes");
+
+// La traba más larga que se acepta al tocar algo. Antes de T151 Comercios
+// dejaba el celular trabado unos 7 segundos e Historial unos 4.
+const TRABA_MAXIMA = 800;
+// Mide tiempos: con la máquina cargada por las otras pruebas, a veces una
+// traba suelta la hacía fallar. Si falla, se repite una vez; una traba de
+// verdad falla las dos veces.
+test.describe.configure({ retries: 1 });
+
+test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ page }) => {
+    await page.addInitScript(anotarTrabas);
+    await entrarSinCuenta(page);
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.evaluate(cargarDatosGrandes);
+    await page.reload();
+    await expect(page.locator("#pantallaMenu")).toBeVisible();
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    // Botones de la barra por su pantalla: buscarlos por rol recorre toda la
+    // página y la prueba misma trabaría el celular.
+    const botones = { "Comercios": "comercios", "Pedidos": "pedido", "Catálogo": "catalogo", "Más": "mas" };
+    const barra = nombre => page.locator(nombre === "Nuevo pedido"
+        ? '.bottom-nav [data-accion="nuevoPedido"]'
+        : `.bottom-nav [data-pantalla="${botones[nombre]}"]`);
+
+    async function peorTraba(tocar) {
+        await page.evaluate(() => { window.trabasDePrueba = []; });
+        await tocar();
+        await page.waitForTimeout(1500);
+        return page.evaluate(() => Math.max(0, ...window.trabasDePrueba));
+    }
+
+    // Comercios: aparece enseguida y se completa al bajar (sin trabas), con
+    // "Archivados (1)" al final. De entrada no se dibujan las 199 tarjetas.
+    expect(await peorTraba(() => barra("Comercios").click()), "Comercios (ms)").toBeLessThan(TRABA_MAXIMA);
+    const lista = page.locator("#listaComerciosAdmin");
+    await expect(lista.locator(".comercioCard").first()).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(await lista.locator(".comercioCard").count(), "Tarjetas dibujadas de entrada").toBeLessThan(80);
+    expect(await peorTraba(() => bajarHastaElFinal(lista, ".comercioCard", 199)), "Bajar por Comercios (ms)").toBeLessThan(TRABA_MAXIMA);
+    await expect(lista.locator(":scope > :last-child")).toHaveClass(/filaComerciosArchivados/);
+
+    // Buscar mientras se dibuja: solo quedan los que coinciden.
+    await page.locator("#buscarComercio").fill("Comercio 12");
+    await expect(lista.locator(".comercioCard")).toHaveCount(11);
+    await page.waitForTimeout(1000);
+    await expect(lista.locator(".comercioCard")).toHaveCount(11);
+    await page.locator("#buscarComercio").fill("");
+    await bajarHastaElFinal(lista, ".comercioCard", 199);
+
+    // Historial (en el modo personal, "Pedidos" de la barra).
+    expect(await peorTraba(() => barra("Pedidos").click()), "Historial (ms)").toBeLessThan(TRABA_MAXIMA);
+    await expect(page.locator("#contenedorHistorial .historialCard").first()).toBeVisible();
+    expect(await peorTraba(() => bajarHastaElFinal(page.locator("#contenedorHistorial"), ".historialCard", 600)), "Bajar por Historial (ms)").toBeLessThan(TRABA_MAXIMA);
+
+    expect(await peorTraba(() => barra("Catálogo").click()), "Catálogo (ms)").toBeLessThan(TRABA_MAXIMA);
+    expect(await peorTraba(() => barra("Más").click()), "Más (ms)").toBeLessThan(TRABA_MAXIMA);
+
+    // Nuevo pedido y los "+".
+    expect(await peorTraba(() => barra("Nuevo pedido").click()), "Nuevo pedido (ms)").toBeLessThan(TRABA_MAXIMA);
+    await page.locator("#cliente").fill("Comercio 5");
+    await page.locator("#cliente").blur();
+    await page.locator(".tituloMarca").first().click();
+    const fila = page.locator(".listaProdutos .fila").first();
+    expect(await peorTraba(async () => {
+        for (let i = 0; i < 3; i++) await fila.getByRole("button", { name: "Aumentar cantidad" }).click();
+    }), "Sumar con + (ms)").toBeLessThan(TRABA_MAXIMA);
+    await expect(fila.locator("select")).toHaveValue("3");
+    await expect(page.locator("#totalUnidadesPedido")).toHaveText("3");
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+    await capturar(page, "pantallas-01-nuevo-pedido-con-muchos-datos");
+});

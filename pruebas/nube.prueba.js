@@ -296,6 +296,10 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
     await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Entregado (1)" }).click();
     await confirmar.getByRole("button", { name: "Entregado (1)" }).click();
+    // T130: quien cobra pasa a cobrarlos; "Terminar" lo deja en «A cobrar».
+    await expect(page.locator("#contadorCobroTanda")).toHaveText("Cobro 1 de 1");
+    await page.locator("#terminarCobroTanda").click();
+    await expect(page.locator(".cobroPedido")).toBeHidden();
     await expect(tarjetas).toHaveCount(0);
     await etapas.getByRole("tab", { name: /Terminados/ }).click();
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
@@ -468,8 +472,12 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     expect(await escribirDirecto(empleado, "cobrar")).toBe("permission-denied");
 
     // Al dueño le llega el aviso; al tocarlo abre Empleados y lo aprueba.
+    // La campanita está solo en Inicio y en Más (repaso de diseño).
     await irAPedidos(page);
-    await page.locator("#pantallaPedido .campanaAvisos").click();
+    await expect(page.locator("#pantallaPedido .campanaAvisos")).toHaveCount(0);
+    await expect(page.locator("#pantallaPedido .botonAsistentePantalla")).toBeVisible();
+    await page.evaluate(() => mostrarPantalla("menu"));
+    await page.locator("#pantallaMenu .campanaAvisos").click();
     const itemAviso = page.locator(".itemAviso[data-tipo=\"rolPendiente\"]");
     await expect(itemAviso).toContainText("Rol pendiente de aprobar");
     await expect(itemAviso).toContainText("Maxi");

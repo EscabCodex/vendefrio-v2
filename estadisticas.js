@@ -18,7 +18,7 @@
             const inicio = new Date(ahora); inicio.setHours(0, 0, 0, 0);
             if (periodo === "semana") inicio.setDate(inicio.getDate() - 6);
             if (periodo === "mes") inicio.setDate(1);
-            const pedidos = (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).filter(pedido => {
+            const pedidos = (typeof historialParaLeer === "function" ? historialParaLeer() : []).filter(pedido => {
                 if (!pedido || pedido.eliminado === true) return false;
                 if (periodo === "todo") return true;
                 const fecha = fechaPedido(pedido);
@@ -30,19 +30,81 @@
         return s;
     }
 
+    // Más rápida con muchos pedidos (T168): la lista de pedidos se lee una
+    // sola vez hasta que cambia (pedidosDelHistorialParaLeer) y la fecha, las
+    // unidades y la plata de cada pedido se calculan una vez y se recuerdan.
+    // Nada de esta pantalla cambia los pedidos.
+    const datosDePedido = new WeakMap();
+
+    function datosPedido(pedido) {
+        let datos = datosDePedido.get(pedido);
+        if (!datos) {
+            const fecha = typeof obtenerFechaRegistro === "function" ? obtenerFechaRegistro(pedido) : new Date(Number(pedido.timestamp || 0));
+            datos = {
+                fecha: fecha instanceof Date && !Number.isNaN(fecha.getTime()) ? fecha : null,
+                unidades: (pedido.productos || []).reduce((total, item) => total + Number(item.cantidad || 0), 0),
+                plata: typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0
+            };
+            datosDePedido.set(pedido, datos);
+        }
+        return datos;
+    }
+
     function fechaPedido(pedido) {
-        const fecha = typeof obtenerFechaRegistro === "function" ? obtenerFechaRegistro(pedido) : new Date(Number(pedido.timestamp || 0));
-        return fecha instanceof Date && !Number.isNaN(fecha.getTime()) ? fecha : null;
+        return datosPedido(pedido).fecha;
     }
 
     function unidadesPedido(pedido) {
-        return (pedido.productos || []).reduce((total, item) => total + Number(item.cantidad || 0), 0);
+        return datosPedido(pedido).unidades;
+    }
+
+    // Eliminados y cancelados no cuentan (T26) y, en la nube, solo los
+    // entregados y los "Histórico" (T27).
+    function pedidosQueCuentan() {
+        if (typeof pedidosDelHistorialParaLeer === "function") return pedidosDelHistorialParaLeer();
+        return typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+    }
+
+    // Cuentas sobre una lista que se recuerdan mientras la lista y el día sean
+    // los mismos (los perfiles dicen "hace X días").
+    const cuentasRecordadas = new WeakMap();
+    function recordar(lista, nombre, calcular) {
+        const hoy = new Date().toDateString();
+        let guardadas = cuentasRecordadas.get(lista);
+        if (!guardadas || guardadas.hoy !== hoy) {
+            guardadas = { hoy };
+            cuentasRecordadas.set(lista, guardadas);
+        }
+        if (!(nombre in guardadas)) guardadas[nombre] = calcular();
+        return guardadas[nombre];
+    }
+
+    function perfilesDe(lista) {
+        if (typeof obtenerPerfilesComerciales !== "function") return [];
+        return recordar(lista, "perfiles", () => obtenerPerfilesComerciales(lista));
+    }
+
+    // Los pedidos de cada día ("2026-10-26" → lista), para el gráfico.
+    function claveDia(fecha) {
+        return fecha.getFullYear() + "-" + (fecha.getMonth() + 1) + "-" + fecha.getDate();
+    }
+
+    function pedidosPorDia(lista) {
+        return recordar(lista, "porDia", () => {
+            const dias = new Map();
+            lista.forEach(pedido => {
+                const fecha = fechaPedido(pedido);
+                if (!fecha) return;
+                const clave = claveDia(fecha);
+                if (!dias.has(clave)) dias.set(clave, []);
+                dias.get(clave).push(pedido);
+            });
+            return dias;
+        });
     }
 
     function obtenerHistorialPeriodo() {
-        // Eliminados y cancelados no cuentan (T26) y, en la nube, solo los
-        // entregados y los "Histórico" (T27).
-        const historial = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        const historial = pedidosQueCuentan();
         const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
         if (periodo === "todo") return historial;
         const ahora = new Date();
@@ -57,7 +119,7 @@
     function historialAnterior() {
         const periodo = document.getElementById("filtroPeriodoEstadisticas")?.value || "todo";
         if (periodo === "todo") return null;
-        const historial = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        const historial = pedidosQueCuentan();
         const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
         let inicio, fin;
         if (periodo === "hoy") {
@@ -81,6 +143,10 @@
     }
 
     function estadisticasPeriodo(historial) {
+        return recordar(historial, "ranking", () => contarRanking(historial));
+    }
+
+    function contarRanking(historial) {
         const comercios = {}, productos = {}, marcas = {};
         historial.forEach(pedido => {
             const comercio = pedido.comercio || "Sin comercio";
@@ -94,8 +160,7 @@
             });
         });
         const ordenar = datos => Object.entries(datos).sort((a,b) => b[1]-a[1]).slice(0,5);
-        const perfiles = typeof obtenerPerfilesComerciales === "function" ? obtenerPerfilesComerciales(historial) : [];
-        return { comercios: ordenar(comercios), productos: ordenar(productos), marcas: ordenar(marcas), perfiles, atrasados: perfiles.filter(p => p.atrasado) };
+        return { comercios: ordenar(comercios), productos: ordenar(productos), marcas: ordenar(marcas) };
     }
 
     // --- Estadísticas con el estilo nuevo (T52): todo en tarjetas con
@@ -118,7 +183,7 @@
     }
 
     function totalPlata(pedido) {
-        return typeof totalDelPedido === "function" ? Number(totalDelPedido(pedido)?.total || 0) : 0;
+        return datosPedido(pedido).plata;
     }
 
     function tarjeta(icono, tono, titulo, subtitulo, clase = "") {
@@ -170,7 +235,34 @@
                 <div><span class="statsNumIcono">${ico("paquete", 17)}</span><strong>${numero(unidades)}</strong><small>unidades</small></div>
                 <div><span class="statsNumIcono">${ico("ordenar", 17)}</span><strong>${promedio}</strong><small>por pedido</small></div>
             </div>`;
+        // Repasada: cada número lleva a su detalle, más abajo en la misma
+        // pantalla: los pedidos y lo vendido al gráfico por día, los
+        // comercios y las unidades a "Lo más pedido".
+        const tocable = window.piezas?.tocable;
+        if (tocable) {
+            const [pedidos, vendidoCaja] = card.querySelectorAll(".statsResumenTop > div");
+            const [comerciosCaja, unidadesCaja, promedioCaja] = card.querySelectorAll(".statsNumeros > div");
+            tocable(pedidos, () => irAlGrafico("pedidos"));
+            tocable(vendidoCaja, () => irAlGrafico("plata"));
+            tocable(comerciosCaja, () => irAlRanking("comercios"));
+            tocable(unidadesCaja, () => irAlRanking("productos"));
+            tocable(promedioCaja, () => irAlGrafico("unidades"));
+        }
         return card;
+    }
+
+    function irAlGrafico(medida) {
+        const destino = document.getElementById("contenidoEstadisticas");
+        destino?.querySelector(`.statsGrafico [data-medida="${medida}"][aria-pressed="false"]`)?.click();
+        destino?.querySelector(".statsGrafico")?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    function irAlRanking(pestana) {
+        terminarTanda();
+        const card = document.querySelector("#contenidoEstadisticas .statsRanking");
+        if (!card) return;
+        card.querySelector(`[role=tab][data-ranking="${pestana}"]`)?.click();
+        card.scrollIntoView({ block: "center", behavior: "smooth" });
     }
 
     // Por día en barras redondeadas, con el día de hoy marcado (T116): se
@@ -184,8 +276,7 @@
     };
 
     function pedidosDelDia(historial, dia) {
-        const siguiente = new Date(dia); siguiente.setDate(dia.getDate() + 1);
-        return historial.filter(p => { const f = fechaPedido(p); return f && f >= dia && f < siguiente; });
+        return pedidosPorDia(historial).get(claveDia(dia)) || [];
     }
 
     function crearGraficoPedidos(historial) {
@@ -196,7 +287,7 @@
         if (medidaGrafico === "plata" && !verPlata) medidaGrafico = "pedidos";
         const medida = MEDIDAS[medidaGrafico];
         // El período anterior del mismo largo, para comparar barra con barra.
-        const completo = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : historial;
+        const completo = pedidosQueCuentan();
         const largo = Math.max(cantidadDias, 1);
         const puntos = [];
         for (let i = largo - 1; i >= 0; i--) {
@@ -270,7 +361,7 @@
                 const nombreVisible = clave === "productos" ? String(nombre).split(" - ").slice(1).join(" - ") || nombre : nombre;
                 const marca = clave === "productos" ? String(nombre).split(" - ")[0] : "";
                 const avatar = clave === "comercios" ? esc(iniciales(nombreVisible)) : ico(icono, 16);
-                return `<div class="statsFilaRanking" data-puesto="${puesto + 1}">
+                return `<div class="statsFilaRanking" data-puesto="${puesto + 1}" data-tipo="${clave}" data-nombre="${esc(nombreVisible)}" data-marca="${esc(marca)}">
                     <span class="statsAvatar">${avatar}</span>
                     <div class="statsFilaTexto">
                         <div><strong>${esc(nombreVisible)}</strong><b>${numero(valor)} <small>${sufijo}</small></b></div>
@@ -287,6 +378,16 @@
             if (!boton) return;
             card.querySelectorAll("[role=tab]").forEach(b => b.setAttribute("aria-selected", String(b === boton)));
             card.querySelectorAll(".statsListaRanking").forEach(l => { l.hidden = l.dataset.ranking !== boton.dataset.ranking; });
+        });
+        // Repasada: un comercio lleva a sus pedidos; un producto o una marca,
+        // al Catálogo en esa marca.
+        const tocable = window.piezas?.tocable;
+        if (tocable) card.querySelectorAll(".statsFilaRanking").forEach(fila => {
+            const { tipo, nombre, marca } = fila.dataset;
+            if (!nombre || /^Sin (comercio|marca|producto)$/i.test(nombre)) return;
+            if (tipo === "comercios" && typeof abrirHistorialDeComercio === "function") tocable(fila, () => abrirHistorialDeComercio(nombre));
+            if (tipo === "productos" && window.abrirCatalogoEn) tocable(fila, () => window.abrirCatalogoEn({ marca, producto: nombre }));
+            if (tipo === "marcas" && window.abrirCatalogoEn) tocable(fila, () => window.abrirCatalogoEn({ marca: nombre }));
         });
         return card;
     }
@@ -318,6 +419,11 @@
             <b class="statsFilaValor">${numero(a)}</b>${variacion(a, b)}
         </div>`).join("");
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div>`);
+        // Repasada: cada fila lleva a los pedidos de esta semana.
+        const tocable = window.piezas?.tocable;
+        if (tocable && typeof abrirHistorialPorPeriodo === "function") {
+            card.querySelectorAll(".statsFila").forEach(fila => tocable(fila, () => abrirHistorialPorPeriodo("semana")));
+        }
         return card;
     }
 
@@ -383,7 +489,7 @@
     // Mes por mes: los últimos seis.
     function crearMeses(historial) {
         if (typeof obtenerEstadisticasMensuales !== "function") return null;
-        const meses = obtenerEstadisticasMensuales(historial);
+        const meses = recordar(historial, "meses", () => obtenerEstadisticasMensuales(historial));
         const card = tarjeta("calendario", "gris", "Mes por mes", "Los últimos meses con pedidos", "statsMeses");
         if (!meses.length) {
             card.insertAdjacentHTML("beforeend", vacio("Todavía no hay pedidos con fecha."));
@@ -409,15 +515,13 @@
     // Tarjetas que suman otros módulos (visitas sin pedido, metas, etc.).
     // Es una lista compartida: los módulos que cargan antes ya la llenan.
     const tarjetasExtra = window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || [];
-    function extras(historial, completo) {
-        return tarjetasExtra.map(crear => {
-            try {
-                return crear(historial, completo);
-            } catch (error) {
-                console.error("Falló una tarjeta de Estadísticas.", error);
-                return null;
-            }
-        });
+    function extra(crear, historial, completo) {
+        try {
+            return crear(historial, completo);
+        } catch (error) {
+            console.error("Falló una tarjeta de Estadísticas.", error);
+            return null;
+        }
     }
 
     function inicioPeriodo() {
@@ -429,28 +533,80 @@
         return inicio;
     }
 
-    function renderizar() {
-        const destino = document.getElementById("contenidoEstadisticas"); if (!destino) return;
-        destino.innerHTML = "";
-        const historial = obtenerHistorialPeriodo();
-        const completo = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : historial;
-        const estadisticas = estadisticasPeriodo(historial);
-        // Lo que mira hacia atrás (semanas, meses, habituales) usa todo el historial.
-        const perfilesTodos = typeof obtenerPerfilesComerciales === "function" ? obtenerPerfilesComerciales(completo) : estadisticas.perfiles;
-        [
-            crearResumen(historial),
-            crearGraficoPedidos(historial),
-            crearRanking(estadisticas),
-            crearComparativa(completo),
-            crearParaVisitar(perfilesTodos, perfilesTodos.filter(p => p.atrasado), completo),
-            ...extras(historial, completo),
-            crearHabituales(perfilesTodos),
-            crearMeses(completo)
-        ].filter(Boolean).forEach(card => destino.appendChild(card));
+    // Se dibuja de a partes (T168): arriba el resumen y el gráfico enseguida,
+    // y las demás tarjetas en los cuadros siguientes, así la pantalla aparece
+    // al tocar aunque haya muchos pedidos. Si nada cambió desde la última vez
+    // (mismos pedidos, período y día), al volver a entrar no se rehace.
+    let tandaPendiente = null;
+    // Pone ya las tarjetas que faltaban (para ir a una que todavía no llegó).
+    let terminarTanda = () => {};
+    let firmaDibujada = "";
+    const idsDeListas = new WeakMap();
+    let ultimoIdDeLista = 0;
+
+    function firmaActual() {
+        const lista = pedidosQueCuentan();
+        if (!idsDeListas.has(lista)) idsDeListas.set(lista, ++ultimoIdDeLista);
+        return [
+            idsDeListas.get(lista),
+            typeof marcaDeColeccion === "function" ? marcaDeColeccion("comercios") : "",
+            periodoElegido(),
+            new Date().toDateString(),
+            window.verPlataVendeFrio?.puedoVer?.() !== false,
+            window.piezas?.esDueno?.() === true
+        ].join("|");
     }
 
-    function abrir() {
-        const s=document.getElementById("pantallaEstadisticas")||crearPantalla(); ocultarPantallas(); s.classList.remove("oculto"); renderizar();
+    function renderizar() {
+        const destino = document.getElementById("contenidoEstadisticas"); if (!destino) return;
+        if (tandaPendiente) { clearTimeout(tandaPendiente); tandaPendiente = null; }
+        destino.innerHTML = "";
+        firmaDibujada = firmaActual();
+        const historial = obtenerHistorialPeriodo();
+        const completo = pedidosQueCuentan();
+        // Lo que mira hacia atrás (semanas, meses, habituales) usa todo el historial.
+        const perfilesTodos = () => perfilesDe(completo);
+        const partes = [
+            () => crearResumen(historial),
+            () => crearGraficoPedidos(historial),
+            () => crearRanking(estadisticasPeriodo(historial)),
+            () => crearComparativa(completo),
+            () => crearParaVisitar(perfilesTodos(), perfilesTodos().filter(p => p.atrasado), completo),
+            ...tarjetasExtra.map(crear => () => extra(crear, historial, completo)),
+            () => crearHabituales(perfilesTodos()),
+            () => crearMeses(completo)
+        ];
+        const poner = parte => { const card = parte(); if (card) destino.appendChild(card); };
+        partes.splice(0, 2).forEach(poner);
+        const seguir = () => {
+            tandaPendiente = null;
+            const inicio = performance.now();
+            // Unas cuantas por cuadro, sin trabar más de unos 40 ms.
+            while (partes.length && performance.now() - inicio < 40) poner(partes.shift());
+            if (partes.length) tandaPendiente = setTimeout(seguir, 0);
+        };
+        terminarTanda = () => {
+            if (tandaPendiente) { clearTimeout(tandaPendiente); tandaPendiente = null; }
+            while (partes.length) poner(partes.shift());
+        };
+        tandaPendiente = setTimeout(seguir, 0);
+    }
+
+    // Repasada: desde un número (por ejemplo "Vendido hoy" en Inicio) abre
+    // en ese período.
+    function abrir(periodo) {
+        const s=document.getElementById("pantallaEstadisticas")||crearPantalla();
+        // Al entrar, desde arriba (antes quedaba a la altura de la pantalla de
+        // antes). Si ya estaba abierta y llegan datos nuevos, no se mueve.
+        const entrando = s.classList.contains("oculto");
+        ocultarPantallas(); s.classList.remove("oculto");
+        if (entrando) window.scrollTo(0, 0);
+        const elegido = document.getElementById("filtroPeriodoEstadisticas");
+        if (elegido && typeof periodo === "string" && NOMBRE_PERIODO[periodo]) {
+            elegido.value = periodo;
+            s.querySelectorAll("[data-periodo]").forEach(b => b.classList.toggle("activo", b.dataset.periodo === periodo));
+        }
+        if (tandaPendiente || firmaDibujada !== firmaActual()) renderizar();
         const filtro=document.getElementById("filtroPeriodoEstadisticas");
         if(filtro && !filtro.dataset.conectado){
             filtro.addEventListener("change",()=>{const boton=s.querySelector(`[data-periodo="${filtro.value}"]`);s.querySelectorAll("[data-periodo]").forEach(b=>b.classList.remove("activo"));boton?.classList.add("activo");renderizar();}); filtro.dataset.conectado="true";
@@ -460,11 +616,15 @@
     window.abrirEstadisticas=abrir;
     window.estadisticasVendeFrio = {
         tarjeta, vacio, periodoElegido, inicioPeriodo, NOMBRE_PERIODO,
+        // Inicio: "Productos distintos vendidos hoy" abre Lo más pedido en Productos.
+        irAlRanking,
         sumarTarjeta(crear) { if (typeof crear === "function") tarjetasExtra.push(crear); },
-        // Vuelve a dibujar si la pantalla está abierta.
+        perfilesDe,
+        // Vuelve a dibujar si la pantalla está abierta; si no, al entrar.
         redibujar() {
             const s = document.getElementById("pantallaEstadisticas");
             if (s && !s.classList.contains("oculto")) renderizar();
+            else firmaDibujada = "";
         }
     };
 }());

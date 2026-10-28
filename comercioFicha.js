@@ -7,9 +7,12 @@
     }
 
     function obtenerDatosFicha(nombre) {
-        const comercio = obtenerComercios().find(item => normalizarFicha(item.nombre) === normalizarFicha(nombre));
+        const buscado = normalizarFicha(nombre);
+        const encontrado = comerciosParaLeer().find(item => normalizarFicha(item.nombre) === buscado);
+        // Una copia propia: la ficha se la pasa a editar, al GPS y a otras partes.
+        const comercio = encontrado ? clonarDatos(encontrado) : undefined;
         // Eliminados y cancelados no cuentan (T26).
-        const historial = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const historial = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
         const pedidos = historial.filter(item => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, item.comercio || item.cliente)
             : normalizarFicha(item.comercio || item.cliente) === normalizarFicha(nombre));
@@ -38,6 +41,7 @@
             ultimaVisita: comercio?.ultimaVisita || "Nunca",
             totalUnidades,
             ultimo,
+            listaPedidos: pedidos,
             productos: productosOrdenados.slice(0, 5).map(([nombre, cantidad]) => ({
                 nombre,
                 cantidad,
@@ -58,20 +62,6 @@
         boton.innerHTML = texto;
         boton.addEventListener("click", accion);
         return boton;
-    }
-
-    function abrirMasOpciones(comercio, opciones) {
-        const hoja = window.piezas.hoja({ titulo: comercio.nombre, sub: "Más opciones", etiqueta: "Más opciones de " + comercio.nombre, html: '<div class="pzOpciones"></div>' });
-        const lista = hoja.querySelector(".pzOpciones");
-        // Primero se cierra esta hoja y después corre la opción, que puede abrir otra.
-        lista.addEventListener("click", evento => { if (evento.target.closest("button")) window.piezas.cerrar(); }, true);
-        opciones.forEach(boton => {
-            const peligro = boton.classList.contains("eliminar");
-            boton.className = "pzOpcion fichaOpcion" + (peligro ? " fichaOpcionPeligro" : "");
-            boton.querySelectorAll("svg").forEach(svg => { svg.setAttribute("width", "22"); svg.setAttribute("height", "22"); });
-            if (peligro) lista.appendChild(document.createElement("hr")).className = "fichaOpcionSeparador";
-            lista.appendChild(boton);
-        });
     }
 
     function tieneGps(comercio) {
@@ -127,161 +117,7 @@
         }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     }
 
-    function acceso(icono, texto, clase) {
-        const elemento = document.createElement(clase === "a" ? "a" : "button");
-        elemento.className = "fichaAcceso";
-        if (elemento.tagName === "BUTTON") elemento.type = "button";
-        elemento.innerHTML = '<span class="fichaAccesoIcono">' + window.icono(icono, 22) + "</span><small></small>";
-        elemento.querySelector("small").textContent = texto;
-        return elemento;
-    }
-
-    function abrirFicha(nombre) {
-        const datos = obtenerDatosFicha(nombre);
-        if (!datos.comercio) return;
-        cerrarFicha();
-
-        modalFicha = document.createElement("div");
-        modalFicha.className = "modal modalFichaComercio";
-        modalFicha.innerHTML = `
-            <div class="modalContenido fichaContenido fichaComercioNueva" role="dialog" aria-modal="true" aria-labelledby="tituloFichaComercio">
-                <button type="button" class="fichaCerrar" aria-label="Cerrar ficha">${window.icono("cerrarX", 20)}</button>
-                <div class="fichaEncabezado">
-                    <div class="fichaAvatar"></div>
-                    <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2><p class="fichaDireccion"></p><span class="chipEstado fichaEstado"></span></div>
-                </div>
-                <div class="fichaAccesos"></div>
-                <div class="fichaDebe"></div>
-                <div class="fichaMasDatos"></div>
-                <div class="fichaNumeros"></div>
-                <div class="fichaUbicacion"></div>
-                <div class="fichaProductos"><strong>Productos habituales</strong><div class="fichaListaProductos"></div></div>
-                <div class="fichaAcciones"></div>
-            </div>`;
-        document.body.appendChild(modalFicha);
-
-        const comercio = datos.comercio;
-        const avatar = modalFicha.querySelector(".fichaAvatar");
-        avatar.textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
-        if (typeof colorAvatar === "function") avatar.style.background = colorAvatar(comercio.nombre);
-        modalFicha.querySelector("#tituloFichaComercio").textContent = comercio.nombre;
-        modalFicha.querySelector(".fichaDireccion").textContent = [comercio.direccion || "Sin dirección cargada", comercio.contacto].filter(Boolean).join(" · ");
-        const estado = modalFicha.querySelector(".fichaEstado");
-        estado.textContent = datos.visitadoEstaSemana ? "Visitado esta semana" : "Pendiente esta semana";
-        estado.dataset.tono = datos.visitadoEstaSemana ? "ok" : "aviso";
-
-        // Accesos: pedido, llamar, WhatsApp e ir.
-        const accesos = modalFicha.querySelector(".fichaAccesos");
-        const pedido = acceso("documento", "Pedido");
-        pedido.classList.add("fichaAccesoPrincipal");
-        pedido.addEventListener("click", () => { cerrarFicha(); irAPedidoRapido(comercio.nombre); });
-        accesos.appendChild(pedido);
-        if (comercio.telefono) {
-            const llamar = acceso("telefono", "Llamar", "a");
-            llamar.href = "tel:" + String(comercio.telefono).replace(/[^\d+]/g, "");
-            accesos.appendChild(llamar);
-            const whatsapp = enlaceWhatsapp(comercio.telefono);
-            if (whatsapp) {
-                const enlace = acceso("whatsapp", "WhatsApp", "a");
-                enlace.classList.add("fichaAccesoWa");
-                enlace.href = whatsapp;
-                enlace.target = "_blank";
-                enlace.rel = "noopener";
-                accesos.appendChild(enlace);
-            }
-        }
-        const ir = enlaceIr(comercio);
-        if (ir) {
-            const enlace = acceso("navegar", "Ir", "a");
-            enlace.href = ir;
-            enlace.dataset.navegarA = comercio.nombre;
-            enlace.target = "_blank";
-            enlace.rel = "noopener";
-            accesos.appendChild(enlace);
-        }
-        // "Sin pedido" (T65): el motivo de la visita.
-        if (window.visitasVendeFrio && !comercioArchivado(comercio)) {
-            const sinPedido = acceso("cerrarX", "Sin pedido");
-            sinPedido.classList.add("fichaAccesoSinPedido");
-            sinPedido.addEventListener("click", () => window.visitasVendeFrio.abrir(comercio.nombre));
-            accesos.appendChild(sinPedido);
-        }
-
-        // "Debe" (T74): lo que falta cobrar de este comercio.
-        const debe = modalFicha.querySelector(".fichaDebe");
-        debe.innerHTML = window.saldosVendeFrio ? window.saldosVendeFrio.htmlDebe(comercio.nombre) : "";
-        debe.classList.toggle("oculto", !debe.innerHTML);
-        dibujarMasDatos(modalFicha.querySelector(".fichaMasDatos"), comercio);
-
-        const numeros = modalFicha.querySelector(".fichaNumeros");
-        [[String(datos.pedidos), datos.pedidos === 1 ? "pedido" : "pedidos"], [String(datos.totalUnidades), "unidades"], [String(datos.ultimaVisita).replace(/^(\d{1,2}\/\d{1,2})\/\d{4}$/, "$1"), "última visita"]].forEach(([valor, texto]) => {
-            const caja = document.createElement("div");
-            const fuerte = document.createElement("strong");
-            fuerte.textContent = valor;
-            const chico = document.createElement("small");
-            chico.textContent = texto;
-            caja.append(fuerte, chico);
-            numeros.appendChild(caja);
-        });
-
-        // Ubicación: si tiene GPS y "Actualizar con mi GPS".
-        const ubicacion = modalFicha.querySelector(".fichaUbicacion");
-        const conGps = tieneGps(comercio);
-        ubicacion.innerHTML = `<span class="fichaUbicacionIcono">${window.icono("ubicacion", 18)}</span><div><strong></strong><small></small></div>`;
-        ubicacion.querySelector("strong").textContent = conGps ? "Ubicación guardada" : "Sin ubicación GPS";
-        ubicacion.querySelector("small").textContent = conGps
-            ? (comercio.origenGps === "gps" ? "Tomada con el GPS del celular" : "Tomada de la dirección o del enlace de Maps")
-            : "Parate en la puerta del comercio y tocá el botón";
-        const botonGps = crearBoton(window.icono("mira", 16) + " Actualizar con mi GPS", "secundario botonGpsComercio", () => guardarMiGps(comercio, botonGps));
-        ubicacion.appendChild(botonGps);
-
-        const listaProductos = modalFicha.querySelector(".fichaListaProductos");
-        if (datos.productos.length) {
-            datos.productos.forEach(producto => {
-                const fila = document.createElement("div");
-                fila.className = "fichaProductoBarraFila";
-                fila.innerHTML = `<span class="fichaProductoNombre"></span><b class="fichaProductoPorcentaje"></b><span class="fichaProductoBarra"><i></i></span>`;
-                fila.querySelector(".fichaProductoNombre").textContent = producto.nombre;
-                fila.querySelector(".fichaProductoPorcentaje").textContent = producto.cantidad + " u · " + producto.porcentaje + "%";
-                fila.querySelector(".fichaProductoBarra i").style.width = Math.max(4, producto.porcentaje) + "%";
-                listaProductos.appendChild(fila);
-            });
-        } else {
-            const vacio = document.createElement("span");
-            vacio.className = "subtitulo";
-            vacio.textContent = "Aún no hay productos habituales.";
-            listaProductos.appendChild(vacio);
-        }
-
-        const botonEstado = datos.visitadoEstaSemana
-            ? crearBoton(window.icono("puntoRojo",14) + " Marcar pendiente", "secundario", () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); })
-            : crearBoton(window.icono("check",14) + " Marcar visitado", "ver", () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); if (navigator.vibrate) navigator.vibrate(30); });
-        // T63: archivar en vez de eliminar (se elimina desde "Archivados").
-        const botonEliminar = comercioArchivado(comercio)
-            ? crearBoton(window.icono("deshacer",14) + " Recuperar comercio", "ver", () => { cerrarFicha(); archivarComercioPorId(comercio.id, false); redibujarComerciosEnTodasPartes(); mostrarToast("Comercio recuperado"); })
-            : crearBoton(window.icono("archivo",14) + " Archivar comercio", "eliminar", () => { cerrarFicha(); archivarComercioConDeshacer(comercio.nombre); });
-        const opciones = [
-            crearBoton(window.icono("historial",14) + " Ver sus pedidos", "secundario", () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); }),
-            crearBoton(window.icono("lapiz",14) + " Editar datos", "secundario", () => { cerrarFicha(); abrirModalEditar(comercio); }),
-            botonEstado,
-            // Botones de otras partes (T88: link para que pida solo).
-            ...(window.accionesFichaComercioExtras || []).map(crear => {
-                try { return crear(comercio, crearBoton, cerrarFicha); } catch (error) { console.error(error); return null; }
-            }).filter(Boolean),
-            botonEliminar
-        ];
-        // Etapa 8: la ficha no se llena de botones; todo va adentro de "Más opciones".
-        const botonMas = crearBoton(window.icono("puntos",16) + " Más opciones", "secundario fichaMasOpciones", () => abrirMasOpciones(comercio, opciones));
-        botonMas.setAttribute("aria-haspopup", "dialog");
-        modalFicha.querySelector(".fichaAcciones").append(botonMas);
-
-        modalFicha.querySelector(".fichaCerrar").onclick = event => { event.preventDefault(); event.stopPropagation(); cerrarFicha(); };
-        modalFicha.addEventListener("click", event => { if (event.target === modalFicha || event.target.closest(".fichaCerrar")) cerrarFicha(); });
-    }
-
-    // ---------- Más datos del comercio (T69) ----------
-    const DIAS_VISITA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-
+    // ---------- Datos del comercio (T69) ----------
     function numeroEnvases(valor) {
         const numero = Math.round(Number(valor));
         return Number.isFinite(numero) && numero > 0 ? numero : 0;
@@ -296,88 +132,345 @@
         return "Tiene " + tiene + (tiene === 1 ? " cajón" : " cajones") + (devolvio ? " · devolvió " + devolvio : "");
     }
 
+    // Todos los datos, aunque falten: el que falta se agrega tocándolo.
     function lineasDeDatos(comercio) {
         const lineas = [
-            ["alarma", "Horario", comercio.horario],
-            ["calendario", "Día de visita", comercio.diaVisita],
-            ["persona", "Contacto", comercio.contacto],
-            ["notaLapiz", "Nota", comercio.nota],
-            ["paquete", "Envases", textoEnvases(comercio)]
+            ["direccion", "ubicacion", "Dirección", comercio.direccion],
+            ["telefono", "telefono", "Teléfono", comercio.telefono],
+            ["contacto", "persona", "Contacto", comercio.contacto],
+            ["horario", "alarma", "Horario", comercio.horario],
+            ["diaVisita", "calendario", "Día de visita", comercio.diaVisita],
+            ["nota", "notaLapiz", "Nota", comercio.nota],
+            ["envases", "paquete", "Envases", textoEnvases(comercio)],
+            ["topeDeuda", "moneda", "Tope de deuda", Number(comercio.topeDeuda) > 0 ? window.piezas.plata(Number(comercio.topeDeuda)) : ""]
         ];
-        // Tope de deuda (T74), solo si tiene.
-        if (Number(comercio.topeDeuda) > 0 && window.piezas) lineas.push(["moneda", "Tope de deuda", window.piezas.plata(Number(comercio.topeDeuda))]);
         // Lista de precios (T78), cuando hay listas cargadas.
         const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
-        if (listas.length) lineas.push(["etiqueta", "Lista de precios", comercio.listaPrecios || "General"]);
+        if (listas.length) lineas.push(["listaPrecios", "etiqueta", "Lista de precios", comercio.listaPrecios || "General"]);
         return lineas;
     }
 
-    function dibujarMasDatos(contenedor, comercio) {
-        if (!contenedor || !window.piezas) return;
+    function dibujarDatos(contenedor, comercio) {
         const p = window.piezas;
-        const lineas = lineasDeDatos(comercio);
-        const conDato = lineas.filter(linea => String(linea[2] || "").trim());
-        const filas = (conDato.length ? conDato : []).map(([icono, titulo, valor]) => `<button type="button" class="pzFila fichaDato" data-editar-dato aria-label="Editar ${p.esc(titulo.toLocaleLowerCase("es"))}">
+        contenedor.innerHTML = `<div class="pzTarjeta pzLista fichaDatos">${lineasDeDatos(comercio).map(([campo, icono, titulo, valor]) => {
+            const tiene = String(valor || "").trim();
+            const gps = campo === "direccion"
+                ? `<button type="button" class="fichaGps botonGpsComercio" aria-label="Actualizar con mi GPS">${p.ico("mira", 15)} Mi GPS</button>`
+                : p.ico("chevDerecha", 18);
+            return `<div role="button" tabindex="0" class="pzFila fichaDato${tiene ? "" : " fichaDatoVacio"}" data-campo="${campo}" aria-label="${tiene ? "Cambiar" : "Agregar"} ${p.esc(titulo.toLocaleLowerCase("es"))}">
                 <span class="fichaDatoIco">${p.ico(icono, 22)}</span>
-                <span class="pzFilaTxt"><small>${p.esc(titulo)}</small><strong>${p.esc(valor)}</strong></span>
-            </button>`).join("");
-        const faltan = lineas.length - conDato.length;
-        contenedor.innerHTML = `<div class="pzTarjeta pzLista fichaDatos">${filas}
-            <button type="button" class="pzFila fichaDatoAgregar" data-editar-dato>
-                <span class="fichaDatoIco">${p.ico(conDato.length ? "lapiz" : "mas", 20)}</span>
-                <span class="pzFilaTxt"><strong>${conDato.length ? "Editar horario, nota y envases" : "Agregar horario, día de visita y nota"}</strong>${faltan && conDato.length ? `<small>${faltan} ${faltan === 1 ? "dato" : "datos"} sin cargar</small>` : ""}</span>
-                ${p.ico("chevDerecha", 18)}
-            </button></div>`;
+                <span class="pzFilaTxt"><small>${p.esc(titulo)}</small><strong>${tiene ? p.esc(tiene) : "+ Agregar " + p.esc(titulo.toLocaleLowerCase("es"))}</strong></span>
+                ${gps}
+            </div>`;
+        }).join("")}</div>`;
+        const editar = fila => editarDato(comercio.nombre, fila.dataset.campo);
         contenedor.addEventListener("click", evento => {
-            if (evento.target.closest("[data-editar-dato]")) editarMasDatos(comercio);
+            const gps = evento.target.closest(".fichaGps");
+            if (gps) {
+                guardarMiGps(comercio, gps);
+                return;
+            }
+            const fila = evento.target.closest("[data-campo]");
+            if (fila) editar(fila);
+        });
+        contenedor.addEventListener("keydown", evento => {
+            if (evento.key !== "Enter" && evento.key !== " ") return;
+            const fila = evento.target.closest("[data-campo]");
+            if (!fila || evento.target !== fila) return;
+            evento.preventDefault();
+            evento.stopPropagation();
+            editar(fila);
         });
     }
 
-    function editarMasDatos(comercio) {
-        const p = window.piezas;
-        const envases = comercio.envases && typeof comercio.envases === "object" ? comercio.envases : {};
-        const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
-        const campoLista = listas.length ? `<label class="pzCampo"><span>Lista de precios</span><select id="datoLista">
-                <option value="">General</option>${listas.map(lista => `<option ${comercio.listaPrecios === lista ? "selected" : ""}>${p.esc(lista)}</option>`).join("")}
-            </select></label>` : "";
-        cerrarFicha();
-        p.hoja({
-            titulo: "Datos de " + comercio.nombre,
-            etiqueta: "Datos del comercio",
-            html: `<label class="pzCampo"><span>Horario</span><input id="datoHorario" maxlength="80" placeholder="Ej.: Lun a sáb · 8 a 13 y 17 a 21" value="${p.esc(comercio.horario || "")}"></label>
-                <div class="pzDosCampos">
-                    <label class="pzCampo"><span>Día de visita</span><select id="datoDia"><option value="">Sin día fijo</option>${DIAS_VISITA.map(dia => `<option ${comercio.diaVisita === dia ? "selected" : ""}>${dia}</option>`).join("")}</select></label>
-                    <label class="pzCampo"><span>Contacto</span><input id="datoContacto" maxlength="60" placeholder="Ej.: Pepe Gómez" value="${p.esc(comercio.contacto || "")}"></label>
-                </div>
-                <label class="pzCampo"><span>Nota</span><textarea id="datoNota" rows="2" maxlength="300" placeholder="Ej.: Tocar timbre. Descargar por el costado.">${p.esc(comercio.nota || "")}</textarea></label>
-                <div class="pzDosCampos">
-                    <label class="pzCampo"><span>Cajones que tiene</span><input id="datoTiene" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.tiene) || ""}"></label>
-                    <label class="pzCampo"><span>Ya devolvió</span><input id="datoDevolvio" type="number" inputmode="numeric" min="0" step="1" value="${numeroEnvases(envases.devolvio) || ""}"></label>
-                </div>${campoLista}
-                <label class="pzCampo"><span>Tope de deuda (opcional)</span><input id="datoTope" type="number" inputmode="numeric" min="0" step="1000" placeholder="Sin tope" value="${Number(comercio.topeDeuda) > 0 ? Number(comercio.topeDeuda) : ""}"></label>`,
-            botones: [{
-                texto: "Guardar",
-                icono: "check",
-                alTocar: caja => {
-                    const valor = selector => String(caja.querySelector(selector)?.value || "").trim();
-                    const datos = {
-                        horario: valor("#datoHorario").slice(0, 80),
-                        diaVisita: valor("#datoDia"),
-                        contacto: valor("#datoContacto").slice(0, 60),
-                        nota: valor("#datoNota").slice(0, 300),
-                        envases: { tiene: numeroEnvases(valor("#datoTiene")), devolvio: numeroEnvases(valor("#datoDevolvio")) }
-                    };
-                    if (caja.querySelector("#datoLista")) datos.listaPrecios = valor("#datoLista");
-                    const tope = Math.round(Number(valor("#datoTope")) || 0);
-                    datos.topeDeuda = tope > 0 ? Math.min(tope, 999999999) : 0;
-                    actualizarComercioPorId(comercio.id, datos);
-                    if (typeof renderizarComercios === "function") renderizarComercios();
-                    if (typeof actualizarDashboard === "function") actualizarDashboard();
-                    mostrarToast("Datos guardados");
-                    setTimeout(() => abrirFicha(comercio.nombre), 250);
-                }
-            }]
+    // La hoja "Datos del comercio" se abre arriba de la ficha; al guardar,
+    // la ficha se dibuja de nuevo con lo cargado.
+    function editarDato(nombre, campo) {
+        if (!window.datosComercioVendeFrio) return;
+        window.datosComercioVendeFrio.editar(nombre, {
+            campo,
+            alGuardar: nombreNuevo => { if (modalFicha) abrirFicha(nombreNuevo); }
         });
+    }
+
+    // ---------- Los 9 números de arriba ----------
+    function textoHaceDias(dias) {
+        if (dias <= 0) return "hoy";
+        if (dias === 1) return "ayer";
+        return "hace " + dias + " d";
+    }
+
+    function numerosDeLaFicha(nombre, datos) {
+        const p = window.piezas;
+        const historial = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
+        const buscado = normalizarFicha(nombre);
+        const perfil = typeof obtenerPerfilesComerciales === "function"
+            ? obtenerPerfilesComerciales(historial).find(item => normalizarFicha(item.nombre) === buscado)
+            : null;
+        const pedidos = datos.listaPedidos;
+        const fechas = pedidos.map(pedido => typeof obtenerFechaRegistro === "function" ? obtenerFechaRegistro(pedido) : null).filter(Boolean);
+        const ahora = new Date();
+        const delMes = pedidos.filter((pedido, indice) => {
+            const fecha = typeof obtenerFechaRegistro === "function" ? obtenerFechaRegistro(pedido) : null;
+            return fecha && fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
+        });
+        const total = pedido => {
+            if (typeof totalParaHistorial !== "function") return 0;
+            try {
+                return Number(totalParaHistorial(pedido).valor) || 0;
+            } catch (error) {
+                return 0;
+            }
+        };
+        const unidades = pedido => (Array.isArray(pedido.productos) ? pedido.productos : []).reduce((suma, producto) => suma + Number(producto.cantidad || 1), 0);
+        const veoPlata = window.verPlataVendeFrio?.puedoVer ? window.verPlataVendeFrio.puedoVer() : true;
+        const primero = fechas.sort((a, b) => a - b)[0];
+        const ultimaVisita = String(datos.ultimaVisita).replace(/^(\d{1,2}\/\d{1,2})\/\d{4}$/, "$1");
+
+        const numeros = [
+            { valor: String(datos.pedidos), texto: datos.pedidos === 1 ? "pedido" : "pedidos", verPedidos: true },
+            { valor: String(datos.totalUnidades), texto: "unidades", verPedidos: true },
+            { valor: ultimaVisita, texto: "última visita" },
+            { valor: perfil && perfil.promedioDias ? perfil.promedioDias + " días" : "—", texto: "pide cada", verPedidos: true },
+            { valor: perfil ? textoHaceDias(perfil.diasDesdeUltimo) : "—", texto: "último pedido", verPedidos: true, clase: perfil && perfil.atrasado ? "fichaNumeroAviso" : "" }
+        ];
+        if (window.saldosVendeFrio?.veDeudas?.()) {
+            const debe = window.saldosVendeFrio.deudaDe(nombre) || 0;
+            numeros.push({ valor: p.plata(debe), texto: "debe", clase: debe > 0 ? "fichaNumeroDebe" : "", alTocar: debe > 0 ? () => window.saldosVendeFrio.verCuenta(nombre) : null });
+        } else {
+            numeros.push({ valor: String(delMes.length), texto: delMes.length === 1 ? "pedido este mes" : "pedidos este mes", verPedidos: true, delMes: true });
+        }
+        if (veoPlata) {
+            const delMesPlata = delMes.reduce((suma, pedido) => suma + total(pedido), 0);
+            const todos = pedidos.reduce((suma, pedido) => suma + total(pedido), 0);
+            numeros.push({ valor: p.plata(delMesPlata), texto: "compró este mes", verPedidos: true, delMes: true });
+            numeros.push({ valor: pedidos.length ? p.plata(Math.round(todos / pedidos.length)) : "—", texto: "compra promedio", verPedidos: true });
+        } else {
+            const delMesUnidades = delMes.reduce((suma, pedido) => suma + unidades(pedido), 0);
+            numeros.push({ valor: String(delMesUnidades), texto: "unidades este mes", verPedidos: true, delMes: true });
+            numeros.push({ valor: pedidos.length ? String(Math.round(datos.totalUnidades / pedidos.length)) : "—", texto: "unidades por pedido", verPedidos: true });
+        }
+        numeros.push({
+            valor: primero ? primero.toLocaleDateString("es-AR", { month: "short", year: "numeric" }).replace(".", "").replace(" de ", " ") : "—",
+            texto: "cliente desde",
+            verPedidos: true
+        });
+        return numeros;
+    }
+
+    // ---------- El menú de los tres puntitos ----------
+    function itemMenu(icono, texto, clase = "", enlace = "") {
+        const item = document.createElement(enlace ? "a" : "button");
+        item.className = "fichaMenuItem " + clase;
+        if (enlace) item.href = enlace;
+        else item.type = "button";
+        item.innerHTML = window.piezas.ico(icono, 20) + '<span class="fichaMenuTexto"></span>';
+        item.querySelector(".fichaMenuTexto").textContent = texto;
+        return item;
+    }
+
+    function abrirFicha(nombre) {
+        const datos = obtenerDatosFicha(nombre);
+        if (!datos.comercio) return;
+        cerrarFicha();
+
+        const p = window.piezas;
+        const comercio = datos.comercio;
+        modalFicha = document.createElement("div");
+        modalFicha.className = "modal modalFichaComercio";
+        modalFicha.innerHTML = `
+            <div class="fichaMarco">
+                <div class="modalContenido fichaContenido fichaComercioNueva" role="dialog" aria-modal="true" aria-labelledby="tituloFichaComercio">
+                    <button type="button" class="fichaCerrar" aria-label="Cerrar ficha">${window.icono("cerrarX", 20)}</button>
+                    <button type="button" class="fichaAsistente" aria-label="Asistente" title="Asistente" data-abrir-asistente>${window.icono("chispa", 20)}</button>
+                    <div class="fichaEncabezado">
+                        <div class="fichaAvatar"></div>
+                        <div class="fichaTitulo"><h2 id="tituloFichaComercio"></h2></div>
+                    </div>
+                    <div class="fichaNumeros"></div>
+                    <div class="fichaMasDatos"></div>
+                    <div class="fichaProductos"><strong>Productos habituales</strong><div class="fichaListaProductos"></div></div>
+                </div>
+                <div class="fichaVelo" hidden></div>
+                <div class="fichaMenu" role="dialog" hidden></div>
+                <button type="button" class="fichaMenuBoton" aria-label="Más opciones" aria-haspopup="dialog" aria-expanded="false">${p.ico("puntos", 26)}</button>
+            </div>`;
+        document.body.appendChild(modalFicha);
+
+        const avatar = modalFicha.querySelector(".fichaAvatar");
+        avatar.textContent = String(comercio.nombre || "?").trim().slice(0, 2).toUpperCase();
+        if (typeof colorAvatar === "function") avatar.style.background = colorAvatar(comercio.nombre);
+        modalFicha.querySelector("#tituloFichaComercio").textContent = comercio.nombre;
+
+        // Repasada: los números y los productos habituales llevan a sus pedidos
+        // (lo mismo que "Ver sus pedidos").
+        const verPedidos = () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre); };
+        // Los números "este mes" abren sus pedidos en "Mes".
+        const verPedidosDelMes = () => { cerrarFicha(); if (typeof abrirHistorialDeComercio === "function") abrirHistorialDeComercio(comercio.nombre, "mes"); };
+        const tocable = window.piezas?.tocable;
+        const cajaNumeros = modalFicha.querySelector(".fichaNumeros");
+        numerosDeLaFicha(comercio.nombre, datos).forEach(numero => {
+            const caja = document.createElement("div");
+            if (numero.clase) caja.className = numero.clase;
+            const fuerte = document.createElement("strong");
+            fuerte.textContent = numero.valor;
+            const chico = document.createElement("small");
+            chico.textContent = numero.texto;
+            caja.append(fuerte, chico);
+            const alTocar = numero.alTocar || (numero.verPedidos && datos.pedidos > 0 ? (numero.delMes ? verPedidosDelMes : verPedidos) : null);
+            if (alTocar && tocable) tocable(caja, alTocar);
+            cajaNumeros.appendChild(caja);
+        });
+
+        dibujarDatos(modalFicha.querySelector(".fichaMasDatos"), comercio);
+
+        const listaProductos = modalFicha.querySelector(".fichaListaProductos");
+        if (datos.productos.length) {
+            datos.productos.forEach(producto => {
+                const fila = document.createElement("div");
+                fila.className = "fichaProductoBarraFila";
+                fila.innerHTML = `<span class="fichaProductoNombre"></span><b class="fichaProductoPorcentaje"></b><span class="fichaProductoBarra"><i></i></span>`;
+                fila.querySelector(".fichaProductoNombre").textContent = producto.nombre;
+                fila.querySelector(".fichaProductoPorcentaje").textContent = producto.cantidad + " u · " + producto.porcentaje + "%";
+                fila.querySelector(".fichaProductoBarra i").style.width = Math.max(4, producto.porcentaje) + "%";
+                if (datos.pedidos > 0 && tocable) tocable(fila, verPedidos);
+                listaProductos.appendChild(fila);
+            });
+        } else {
+            const vacio = document.createElement("span");
+            vacio.className = "subtitulo";
+            vacio.textContent = "Aún no hay productos habituales.";
+            listaProductos.appendChild(vacio);
+        }
+
+        armarMenu(comercio, datos, verPedidos);
+
+        modalFicha.querySelector(".fichaCerrar").onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            // Con el menú abierto, el atrás del celular primero cierra el menú.
+            if (menuAbierto()) cerrarMenu();
+            else cerrarFicha();
+        };
+        modalFicha.addEventListener("click", event => {
+            if (event.target === modalFicha || event.target.classList.contains("fichaMarco")) cerrarFicha();
+        });
+    }
+
+    function menuAbierto() {
+        return Boolean(modalFicha && modalFicha.classList.contains("conMenu"));
+    }
+
+    function abrirMenu() {
+        if (!modalFicha) return;
+        modalFicha.classList.add("conMenu");
+        modalFicha.querySelector(".fichaMenu").hidden = false;
+        modalFicha.querySelector(".fichaVelo").hidden = false;
+        const boton = modalFicha.querySelector(".fichaMenuBoton");
+        boton.setAttribute("aria-expanded", "true");
+        boton.setAttribute("aria-label", "Cerrar opciones");
+        boton.innerHTML = window.piezas.ico("cerrarX", 26);
+    }
+
+    function cerrarMenu() {
+        if (!modalFicha) return;
+        modalFicha.classList.remove("conMenu");
+        modalFicha.querySelector(".fichaMenu").hidden = true;
+        modalFicha.querySelector(".fichaVelo").hidden = true;
+        const boton = modalFicha.querySelector(".fichaMenuBoton");
+        boton.setAttribute("aria-expanded", "false");
+        boton.setAttribute("aria-label", "Más opciones");
+        boton.innerHTML = window.piezas.ico("puntos", 26);
+    }
+
+    // Lo principal arriba y resaltado; abajo de la rayita, lo demás.
+    function armarMenu(comercio, datos, verPedidos) {
+        const menu = modalFicha.querySelector(".fichaMenu");
+        menu.setAttribute("aria-label", "Más opciones de " + comercio.nombre);
+        const agregar = (item, alTocar) => {
+            if (alTocar) item.addEventListener("click", alTocar);
+            menu.appendChild(item);
+            return item;
+        };
+        const archivado = comercioArchivado(comercio);
+        // Con la bandeja de pedido (hilo de Catálogo), el pedido se carga
+        // encima de la ficha y al bajarla se sigue en la ficha.
+        agregar(itemMenu("documento", "Cargar pedido", "fichaMenuPrincipal"), () => {
+            if (typeof window.abrirPedidoEnHoja === "function") {
+                window.abrirPedidoEnHoja(comercio.nombre);
+                return;
+            }
+            cerrarFicha();
+            irAPedidoRapido(comercio.nombre);
+        });
+        if (comercio.telefono) {
+            agregar(itemMenu("telefono", "Llamar", "", "tel:" + String(comercio.telefono).replace(/[^\d+]/g, "")));
+            const whatsapp = enlaceWhatsapp(comercio.telefono);
+            if (whatsapp) {
+                const enlace = agregar(itemMenu("whatsapp", "WhatsApp", "fichaMenuWa", whatsapp));
+                enlace.target = "_blank";
+                enlace.rel = "noopener";
+            }
+        }
+        const ir = enlaceIr(comercio);
+        if (ir) {
+            const enlace = agregar(itemMenu("navegar", "Ir", "", ir));
+            enlace.dataset.navegarA = comercio.nombre;
+            enlace.target = "_blank";
+            enlace.rel = "noopener";
+        }
+        // "Sin pedido" (T65): el motivo de la visita.
+        if (window.visitasVendeFrio && !archivado) {
+            agregar(itemMenu("cerrarX", "Visité, sin pedido"), () => window.visitasVendeFrio.abrir(comercio.nombre));
+        }
+        menu.appendChild(document.createElement("hr"));
+        agregar(itemMenu("historial", "Ver sus pedidos"), verPedidos);
+        if (datos.visitadoEstaSemana) {
+            agregar(itemMenu("puntoRojo", "Marcar pendiente"), () => { cerrarFicha(); marcarPendienteManual(comercio.nombre); });
+        } else {
+            agregar(itemMenu("check", "Marcar visitado"), () => { cerrarFicha(); marcarVisitaManual(comercio.nombre); if (navigator.vibrate) navigator.vibrate(30); });
+        }
+        agregar(itemMenu("lapiz", "Editar datos"), () => editarDato(comercio.nombre, "nombre"));
+        // Botones de otras partes (T88: link para que pida solo; heladeras).
+        (window.accionesFichaComercioExtras || []).forEach(crear => {
+            try {
+                const boton = crear(comercio, crearBoton, cerrarFicha);
+                if (!boton) return;
+                boton.className = "fichaMenuItem";
+                boton.querySelectorAll("svg").forEach(svg => { svg.setAttribute("width", "20"); svg.setAttribute("height", "20"); });
+                menu.appendChild(boton);
+            } catch (error) {
+                console.error(error);
+            }
+        });
+        // T63: archivar en vez de eliminar; y eliminar, con "¿Seguro?".
+        if (archivado) {
+            agregar(itemMenu("deshacer", "Recuperar comercio"), () => { cerrarFicha(); archivarComercioPorId(comercio.id, false); redibujarComerciosEnTodasPartes(); mostrarToast("Comercio recuperado"); });
+        } else {
+            agregar(itemMenu("archivo", "Archivar comercio"), () => { cerrarFicha(); archivarComercioConDeshacer(comercio.nombre); });
+        }
+        agregar(itemMenu("tacho", "Eliminar comercio", "fichaMenuPeligro"), () => eliminarConPregunta(comercio));
+
+        // Primero se cierra el menú y después corre la opción.
+        menu.addEventListener("click", evento => { if (evento.target.closest(".fichaMenuItem")) cerrarMenu(); });
+        modalFicha.querySelector(".fichaVelo").addEventListener("click", cerrarMenu);
+        modalFicha.querySelector(".fichaMenuBoton").addEventListener("click", () => (menuAbierto() ? cerrarMenu() : abrirMenu()));
+    }
+
+    async function eliminarConPregunta(comercio) {
+        const si = await window.piezas.preguntar({
+            icono: "tacho",
+            color: "peligro",
+            titulo: "¿Eliminar " + comercio.nombre + "?",
+            texto: "Se borra para siempre. Sus pedidos viejos quedan en el historial.",
+            si: "Eliminar",
+            claseSi: "pzBtnPeligro"
+        });
+        if (!si) return;
+        cerrarFicha();
+        eliminarComercioPorId(comercio.id);
+        redibujarComerciosEnTodasPartes();
+        mostrarToast("Comercio eliminado");
     }
 
     window.cerrarFichaComercio = cerrarFicha;
@@ -391,7 +484,11 @@
     });
 
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape") cerrarFicha();
+        if (event.key === "Escape") {
+            if (document.querySelector(".pzFondo.visible")) return;
+            if (menuAbierto()) cerrarMenu();
+            else cerrarFicha();
+        }
         if (event.key !== "Enter" && event.key !== " ") return;
         const tarjeta = document.activeElement?.closest?.(".comercioCard");
         if (tarjeta) {

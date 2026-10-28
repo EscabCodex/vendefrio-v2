@@ -1,0 +1,445 @@
+{
+  "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
+  "notas": [
+    {
+      "version": 251,
+      "fecha": "2026-10-28",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Cada número te lleva a lo que dice",
+      "texto": "«Entregados» abre los terminados de la semana o de hoy, «Productos distintos» abre lo más vendido hoy, «Ver todos» abre los pedidos de hoy y los números «este mes» de un comercio abren sus pedidos del mes."
+    },
+    {
+      "version": 250,
+      "fecha": "2026-10-28",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "La barra de visitados muestra los visitados",
+      "texto": "En Inicio, al tocar «Visitados esta semana» ahora ves los comercios que ya visitaste."
+    },
+    {
+      "version": 249,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "etiqueta",
+      "titulo": "Editar marcas más ordenado",
+      "texto": "Las marcas arrancan cerradas; la flechita muestra sus productos. Tocá el nombre para ver su ficha."
+    },
+    {
+      "version": 249,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "ordenar",
+      "titulo": "Orden y color de las marcas",
+      "texto": "El orden está en Ajustes › Preferencias de trabajo. El color, en el ⋯ de la ficha de la marca."
+    },
+    {
+      "version": 248,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "ojo",
+      "titulo": "Fondo apenas borroso",
+      "texto": "Todo lo que se abre encima (hojas, bandejas y ventanas) difumina un poquito lo de atrás."
+    },
+    {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "bolsa",
+      "titulo": "Catálogo renovado",
+      "texto": "Filtros con el número adentro, «Poco stock» y «Sin precio» al final, y «+ Agregar» foto o precio."
+    },
+    {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "documento",
+      "titulo": "Armá el pedido desde el Catálogo",
+      "texto": "El «+» abre el pedido encima. Lo bajás, seguís sumando y al final elegís el comercio."
+    },
+    {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "documento",
+      "titulo": "Tu pedido a medio hacer, siempre a mano",
+      "texto": "Una barrita abajo te lo recuerda en cada pantalla. Tocá «Ver pedido» para seguirlo."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Comercios renovado",
+      "texto": "Botones con el número adentro, buscador abajo y en cada tarjeta lo que debe, cuándo pidió y cuándo fuiste."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "mas",
+      "titulo": "Cargá el dato que falta ahí mismo",
+      "texto": "Tocá «+ Agregar» en la tarjeta o en la ficha y cargás el teléfono, la dirección o el horario sin salir."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "puntos",
+      "titulo": "Ficha del comercio nueva",
+      "texto": "Centrada, con 9 números del comercio, todos sus datos y lo demás en el botón de los tres puntitos."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "alarma",
+      "titulo": "Horario con turnos",
+      "texto": "Elegís los días que abre y el turno mañana y tarde con la hora de cada uno."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "flechaIzquierda",
+      "titulo": "El nombre, al lado de la flechita",
+      "texto": "En cada pantalla el nombre va arriba, al lado de la flecha para volver, y la explicación abajo, en un renglón."
+    },
+    {
+      "version": 245,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "documento",
+      "titulo": "Pedido sin salir del mapa",
+      "texto": "Navegando, «Cargar pedido» abre una bandeja arriba del mapa. Tocá afuera o deslizala y seguís navegando."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "grafico",
+      "titulo": "Inicio más claro",
+      "texto": "La tarjeta azul junta lo vendido, quién te debe, los visitados de la semana y accesos a lo de hoy."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Próxima parada renovada",
+      "texto": "El comercio sin visitar más cerca tuyo, con Pedido, Llamar, Ya llego, Ir y Sin pedido."
+    },
+    {
+      "version": 244,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "campana",
+      "titulo": "El respaldo, en Avisos",
+      "texto": "El recordatorio del respaldo pasó a la campanita. Tocando el VF o tu nombre vas a tu cuenta."
+    },
+    {
+      "version": 243,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "engranaje",
+      "titulo": "Más, con botones anchos",
+      "texto": "Lo de todos los días va en botones de a dos. Lo que usás cada tanto está en «De vez en cuando»."
+    },
+    {
+      "version": 243,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "chispa",
+      "titulo": "El Asistente, siempre arriba",
+      "texto": "En cada pantalla está arriba a la derecha, con su nombre. La campanita de avisos queda en Inicio y en Más."
+    },
+    {
+      "version": 242,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "moneda",
+      "titulo": "Quién te debe, a la vista",
+      "texto": "En Inicio ves cuánto te deben en total, y en Comercios cada tarjeta dice cuánto debe."
+    },
+    {
+      "version": 242,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "engranaje",
+      "titulo": "Más, más ordenado",
+      "texto": "Arriba lo de todos los días. Los ajustes quedaron juntos en un solo lugar: Ajustes."
+    },
+    {
+      "version": 242,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Ejemplo de helados completo",
+      "texto": "El ejemplo trae 12 comercios con todos sus datos, rutas, precios y stock. Probalo sin miedo."
+    },
+    {
+      "version": 240,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "chispa",
+      "titulo": "Notas de cambios",
+      "texto": "Tocá la tarjeta «Hay una versión nueva» y ves qué cambió, como en los juegos."
+    },
+    {
+      "version": 239,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "flechaIzquierda",
+      "titulo": "El atrás desanda el camino",
+      "texto": "En cualquier pantalla, el atrás del celular vuelve por donde viniste, paso a paso."
+    },
+    {
+      "version": 238,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "mas",
+      "titulo": "Menú rápido en el +",
+      "texto": "Mantené apretado el + de abajo y elegís al toque qué hacer."
+    },
+    {
+      "version": 237,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "navegar",
+      "titulo": "Vuelve sola a la navegación",
+      "texto": "En ruta, después de guardar un pedido, la navegación aparece de nuevo como estaba."
+    },
+    {
+      "version": 235,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "check",
+      "titulo": "«Visité, sin pedido» navegando",
+      "texto": "Anotás la visita desde la parada y pasa sola a la siguiente."
+    },
+    {
+      "version": 235,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "mira",
+      "titulo": "Ubicarme otra vez",
+      "texto": "En Próxima parada, «Actualizar mi ubicación» elige bien la más cercana."
+    },
+    {
+      "version": 235,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "bajar",
+      "titulo": "La tarjeta de llegada se baja",
+      "texto": "Deslizala con el dedo para ver el mapa sin cortar la navegación."
+    },
+    {
+      "version": 234,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "flechaIzquierda",
+      "titulo": "El atrás del celular",
+      "texto": "Ahora da un paso atrás en toda la app y ya no la cierra de golpe."
+    },
+    {
+      "version": 234,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "notaLapiz",
+      "titulo": "Pedido a medio cargar",
+      "texto": "Si saliste sin guardar, Inicio te ofrece «Seguí el pedido de…»."
+    },
+    {
+      "version": 233,
+      "fecha": "2026-10-27",
+      "tipo": "nuevo",
+      "icono": "minimizar",
+      "titulo": "La navegación se achica",
+      "texto": "Con la flechita para abajo queda una burbuja con los minutos. Tocala y vuelve como estaba."
+    },
+    {
+      "version": 232,
+      "fecha": "2026-10-27",
+      "tipo": "arreglado",
+      "icono": "mapa",
+      "titulo": "Rutas anda de nuevo",
+      "texto": "Con 2 o más rutas guardadas no abría. Ya está."
+    },
+    {
+      "version": 231,
+      "fecha": "2026-10-27",
+      "tipo": "mejor",
+      "icono": "subir",
+      "titulo": "Ventanas que suben desde abajo",
+      "texto": "Todas se abren desde abajo, a mano del pulgar, y se cierran deslizándolas."
+    },
+    {
+      "version": 230,
+      "fecha": "2026-10-26",
+      "tipo": "mejor",
+      "icono": "refrescar",
+      "titulo": "Vuelve donde estabas",
+      "texto": "Si el celular cierra la app de fondo, al volver la encontrás en la misma pantalla."
+    },
+    {
+      "version": 230,
+      "fecha": "2026-10-26",
+      "tipo": "mejor",
+      "icono": "grafico",
+      "titulo": "Los números te llevan al detalle",
+      "texto": "Tocás una cifra o tarjeta de Inicio o Estadísticas y te muestra qué hay detrás."
+    },
+    {
+      "version": 230,
+      "fecha": "2026-10-26",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Errores raros",
+      "texto": "Pedidos repetidos sin querer, «Hoy» y «Ayer» a la tarde y «Más opciones» que se cerraba solo."
+    },
+    {
+      "version": 228,
+      "fecha": "2026-10-26",
+      "tipo": "mejor",
+      "icono": "historial",
+      "titulo": "Terminados por día",
+      "texto": "En Pedidos › Terminados los ves agrupados por día, con el total de cada uno."
+    },
+    {
+      "version": 227,
+      "fecha": "2026-10-25",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Todo con el estilo nuevo",
+      "texto": "Catálogo con tarjetas de color por marca, y el Historial, Tus datos y el ticket combinan."
+    },
+    {
+      "version": 225,
+      "fecha": "2026-10-25",
+      "tipo": "mejor",
+      "icono": "celular",
+      "titulo": "Se siente como una app",
+      "texto": "Mantener apretado ya no marca texto, no hace zoom con doble toque y no rebota."
+    },
+    {
+      "version": 225,
+      "fecha": "2026-10-25",
+      "tipo": "arreglado",
+      "icono": "celular",
+      "titulo": "Se ve bien en todos lados",
+      "texto": "En celulares chicos ya no se corta nada, y en modo oscuro se lee bien lo que va sobre el lima."
+    },
+    {
+      "version": 223,
+      "fecha": "2026-10-25",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "Más liviana en celulares baratos",
+      "texto": "Con muchos comercios y pedidos, Inicio, Rutas, Nuevo pedido y las listas ya no se traban."
+    },
+    {
+      "version": 222,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "chispa",
+      "titulo": "Asistente en todas las pantallas",
+      "texto": "Sabe lo que estás mirando y le podés pedir varias cosas en una sola frase."
+    },
+    {
+      "version": 221,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "etiqueta",
+      "titulo": "Listas de precios",
+      "texto": "En Más armás tus listas, elegís una al cargar el pedido y la pasás a planilla o folleto."
+    },
+    {
+      "version": 218,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "brujula",
+      "titulo": "¿Cómo querés ir?",
+      "texto": "La primera vez que tocás «Ir» elegís la navegación de VendeFrío o Google Maps."
+    },
+    {
+      "version": 217,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "info",
+      "titulo": "Tutorial al crear la cuenta",
+      "texto": "Te guía paso a paso y cargás lo básico de verdad: comercio, producto, pedido y ruta."
+    },
+    {
+      "version": 216,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "paleta",
+      "titulo": "Apariencia a tu gusto",
+      "texto": "Más colores, forma de los botones, tarjetas y tamaños, con vista previa antes de elegir."
+    },
+    {
+      "version": 208,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "alerta",
+      "titulo": "Avisar en la calle",
+      "texto": "Navegando, tocá «Avisar» (o decilo) si hay calle cortada o control: queda en el mapa y te desvía."
+    },
+    {
+      "version": 208,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "usuarios",
+      "titulo": "Ver a los repartidores",
+      "texto": "El dueño ve en el mapa a los repartidores que comparten su ubicación."
+    },
+    {
+      "version": 207,
+      "fecha": "2026-10-22",
+      "tipo": "nuevo",
+      "icono": "mapa",
+      "titulo": "Rutas nueva",
+      "texto": "Mapa grande, paradas para deslizar, lista como línea de tiempo y elegís auto, moto o sin autopistas."
+    },
+    {
+      "version": 203,
+      "fecha": "2026-10-21",
+      "tipo": "nuevo",
+      "icono": "ubicacion",
+      "titulo": "Al llegar al comercio",
+      "texto": "A 150 m aparecen Llamar, WhatsApp, Ya llego y Cargar pedido. Deslizás y queda «Llegué»."
+    },
+    {
+      "version": 202,
+      "fecha": "2026-10-21",
+      "tipo": "mejor",
+      "icono": "navegar",
+      "titulo": "Navegación para manejar",
+      "texto": "Giro grande, la voz dice la frase entera, la línea se borra al avanzar y solo usa calles de auto."
+    },
+    {
+      "version": 197,
+      "fecha": "2026-10-21",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "La app abre más rápido",
+      "texto": "Abre al toque aunque haya poca señal y te avisa cuando hay una versión nueva."
+    },
+    {
+      "version": 196,
+      "fecha": "2026-10-21",
+      "tipo": "mejor",
+      "icono": "mapa",
+      "titulo": "Rutas sin tope de paradas",
+      "texto": "Ya no hay límite de 9. Si vas con Google Maps, te la parte en tramos."
+    },
+    {
+      "version": 196,
+      "fecha": "2026-10-21",
+      "tipo": "nuevo",
+      "icono": "moneda",
+      "titulo": "Cobrar varios pedidos seguidos",
+      "texto": "Elegís varios, tocás Cobrar y los cobrás uno atrás del otro."
+    }
+  ]
+}

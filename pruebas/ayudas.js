@@ -35,8 +35,9 @@ function configuracionConEmuladores() {
 async function prepararPagina(page, nube) {
     const errores = [];
     page.on("pageerror", error => errores.push(error.message));
-    // El resumen de la noche (T79) no sale solo en las pruebas.
-    await page.addInitScript(() => { window.vendefrioPruebas = { resumenNoche: false }; });
+    // El resumen de la noche (T79), el tutorial (T157) y "La app se
+    // actualizó" (notas de cambios) no salen solos en las pruebas.
+    await page.addInitScript(() => { window.vendefrioPruebas = { resumenNoche: false, tutorial: false, notasDeCambios: false }; });
 
     await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, ruta => {
         const tipo = ruta.request().resourceType() === "stylesheet" ? "text/css" : "text/javascript";
@@ -63,9 +64,21 @@ async function prepararPagina(page, nube) {
 const test = base.test.extend({
     // Las pruebas que usan la nube ponen { nube: true } con test.use().
     nube: [false, { option: true }],
+    // El Asistente le pregunta a Claude (T155). Las pruebas no tienen la
+    // función de verdad: Claude queda apagado, salvo en las que lo prueban
+    // con una IA falsa (ponen { claude: true } con test.use()).
+    claude: [false, { option: true }],
 
-    page: async ({ page, nube }, use) => {
+    page: async ({ page, nube, claude }, use) => {
         const errores = await prepararPagina(page, nube);
+        if (!claude) {
+            await page.addInitScript(() => {
+                try {
+                    const preferencias = JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}");
+                    if (preferencias.asistenteClaude === undefined) localStorage.setItem("vendefrio_preferencias", JSON.stringify({ ...preferencias, asistenteClaude: false }));
+                } catch (error) { /* sin lugar */ }
+            });
+        }
 
         await use(page);
 

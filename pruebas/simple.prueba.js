@@ -12,7 +12,7 @@
 // 7. Inicio con "¿Qué querés hacer?", Más en tres grupos y el Catálogo con
 //    "Productos" y "Editar marcas".
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas, abrirAjustes, abrirConfiguracionEn } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -176,14 +176,17 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first()).toBeVisible();
     await capturar(page, "simple-07-pestanas-pedidos");
 
-    // 6. Ficha del comercio: un solo botón "Más opciones" con todo adentro.
+    // 6. Ficha del comercio: un solo botón de tres puntitos con todo adentro
+    // (Cargar pedido primero y resaltado; Eliminar al final, en rojo).
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
     const fichaComercio = page.locator(".modalFichaComercio");
-    await expect(fichaComercio.locator(".fichaAcciones button")).toHaveCount(1);
+    await expect(fichaComercio.locator(".fichaMenu")).toBeHidden();
     await fichaComercio.getByRole("button", { name: "Más opciones" }).click();
+    await expect(fichaComercio).toHaveClass(/conMenu/);
     const masOpcionesComercio = page.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" });
-    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Ver sus pedidos/);
-    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Archivar comercio/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Cargar pedido/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveClass(/fichaMenuPrincipal/);
+    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Eliminar comercio/);
     await capturar(page, "simple-08-ficha-comercio-opciones");
     await masOpcionesComercio.getByRole("button", { name: "Ver sus pedidos" }).click();
     await expect(masOpcionesComercio).toBeHidden();
@@ -207,34 +210,58 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     const inicio = page.locator("#pantallaMenu");
 
-    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
+    // T178: "¿Qué querés hacer?" arranca apagada; se prende en Apariencia.
     const queHacer = inicio.locator("#queHacerInicio");
+    await expect(queHacer).toBeHidden();
+    // El logo y el nombre llevan a Tu cuenta (ya no está el botón "Más" de arriba).
+    await expect(inicio.locator("#botonAvatar")).toBeHidden();
+    await inicio.locator(".dashboardMarca").click();
+    await expect(page.locator('.configDetalle, #configDetalle').first()).toBeVisible();
+    await abrirConfiguracionEn(page, "apariencia");
+    await page.locator("#configDetalle").getByRole("switch", { name: "¿Qué querés hacer?" }).check();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+
+    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
     await expect(queHacer.getByRole("heading", { name: "¿Qué querés hacer?" })).toBeVisible();
     const resumen = await inicio.locator("#resumenHoy").boundingBox();
     expect((await queHacer.boundingBox()).y).toBeGreaterThan(resumen.y);
-    await expect(queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ })).toContainText("1 para armar");
+    await expect(queHacer.getByRole("button", { name: /Pedidos de hoy/ })).toContainText("1 para armar");
     await expect(queHacer.getByRole("button", { name: /Cobrar/ })).toBeVisible();
     // El Asistente arriba a la derecha, en el lugar del micrófono.
     await expect(inicio.locator("header").getByRole("button", { name: "Asistente" })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "simple-09-inicio-que-hacer");
 
-    await queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ }).click();
+    await queHacer.getByRole("button", { name: /Pedidos de hoy/ }).click();
     await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Para armar/ })).toHaveAttribute("aria-selected", "true");
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await queHacer.getByRole("button", { name: /Cargar un pedido/ }).click();
     await expect(page.locator("#generar")).toBeVisible();
     await page.evaluate(() => mostrarPantalla("menu"));
 
-    // Más: Plata, Ventas y Herramientas; Preguntale ya no está ahí.
+    // Más (informe del desconocido, opción A): lo de todos los días en
+    // cuadros, el resto de las herramientas en lista y una sola fila
+    // "Ajustes" con todo lo demás. Preguntale ya no está ahí.
     await abrirMas(page);
     const grupos = page.locator("#masAccesos");
-    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Plata", "Ventas", "Herramientas"]);
-    await expect(grupos.locator(".masAccesos").nth(0)).toContainText("A cobrar");
-    await expect(grupos.locator(".masAccesos").nth(1)).toContainText("Estadísticas");
-    await expect(grupos.locator(".masAccesos").nth(2)).toContainText("Rutas");
+    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "De vez en cuando"]);
+    await expect(grupos.locator(".masAccesos .masAcceso strong")).toHaveText(["A cobrar", "Cierre del día", "Estadísticas", "Rutas", "WhatsApp", "Listas de precios"]);
+    await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["Mapa de ventas", "Registro de cambios", "Importar planilla"]);
     await expect(grupos).not.toContainText("Preguntale");
+    await expect(page.locator(".configMenuPrincipal > .configLista .configFila")).toHaveCount(1);
+    await expect(page.locator("#configFilaAjustes")).toContainText("Ajustes");
     await capturar(page, "simple-10-mas-en-grupos");
+    await page.locator("#configFilaAjustes").click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await expect(page.locator("#configDetalle .configGrupoTitulo")).toHaveText(["Trabajo diario", "Distribuidora", "App"]);
+    await page.locator('#configDetalle [data-config-seccion="trabajo"]').click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Preferencias de trabajo");
+    // La flecha vuelve a Ajustes y, desde ahí, a Más.
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Más");
+    await expect(page.locator("#masAccesos")).toBeVisible();
 
     // Catálogo: "Productos" y "Editar marcas".
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
@@ -252,7 +279,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 1. Los íconos de arriba con su nombre abajo (se puede apagar).
     expect(await nombreAbajo("#botonAsistente")).toBe('"Asistente"');
-    expect(await nombreAbajo("#botonAvatar")).toBe('"Más"');
+    expect(await nombreAbajo(".campanaAvisos")).toBe('"Avisos"');
     // Inicio no lleva "?": ahí está el Asistente.
     await expect(inicio.locator(".botonAyudaPantalla")).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -298,7 +325,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 4. Apariencia: apagar los nombres de arriba.
     await page.evaluate(() => mostrarPantalla("menu"));
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await page.locator("#configDetalle").getByRole("switch", { name: "Nombres en los íconos de arriba" }).uncheck();
     await expect(page.locator("html")).toHaveAttribute("data-nombres-arriba", "no");
@@ -311,7 +338,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
     });
     await page.evaluate(() => mostrarToast("Pedido guardado"));
     expect(await page.evaluate(() => window.dichos)).toEqual([]);
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     const llave = page.locator("#configDetalle").getByRole("switch", { name: "Decirlo en voz alta al guardar" });
     await expect(llave).not.toBeChecked();

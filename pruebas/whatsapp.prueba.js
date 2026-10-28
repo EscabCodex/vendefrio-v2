@@ -17,7 +17,7 @@ const { Readable } = require("stream");
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora, abrirMas } = require("./recorridos");
 
-test.use({ nube: true });
+test.use({ nube: true, claude: true });
 
 process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080";
 process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -274,8 +274,8 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
     expect(marcado.estado).toBe("cargado");
     expect(marcado.atendido.nombre).toBe("Jere");
 
-    // El que no se entendió: «Entender con IA» (la de «Voz con IA», acá una
-    // falsa) y después se carga a mano, revisándolo en "Nuevo pedido".
+    // El que no se entendió: «Que lo lea el Asistente» (Claude, acá uno
+    // falso) y después se carga a mano, revisándolo en "Nuevo pedido".
     await page.evaluate(() => {
         window.vozVendeFrio.leerPedidoConIA = async texto => ({
             comercio: obtenerComercios().find(comercio => comercio.nombre === "Super Norte"),
@@ -284,7 +284,7 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
         });
         window.whatsappVendeFrio.abrir();
     });
-    await carla.getByRole("button", { name: "Entender con IA" }).click();
+    await carla.getByRole("button", { name: "Que lo lea el Asistente" }).click();
     await expect(carla.locator(".waEtiqueta")).toHaveText("Se entendió todo");
     await expect(carla.locator(".waProductos")).toContainText("2 × Palito bombón");
     await carla.getByRole("button", { name: "Cargar pedido" }).click();

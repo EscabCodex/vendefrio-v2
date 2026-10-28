@@ -115,6 +115,7 @@
         seccion.classList.remove("oculto");
         document.querySelectorAll(".nav-item").forEach(boton => boton.classList.remove("activo"));
         window.scrollTo(0, 0);
+        pedirAcomodarCabeceras();
     }
 
     function volverDesde(seccion) {
@@ -238,6 +239,60 @@
         });
     }
 
+    // ---------- Lo último que se abre queda arriba ----------
+    // Cada hoja o ventana tiene su altura (z-index) en el CSS, y entre dos de
+    // la misma altura ganaba la que se creó después: la de "una o dos copias"
+    // del ticket salía debajo de la ficha del pedido. Ahora la que se abre
+    // sube por encima de las que ya estaban abiertas, en toda la app.
+    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear";
+    const capasAbiertas = new WeakMap();
+
+    function capaAbierta(capa) {
+        return capa.isConnected && !capa.hidden && !capa.classList.contains("oculto");
+    }
+
+    function alturaDe(capa) {
+        return Number(getComputedStyle(capa).zIndex) || 0;
+    }
+
+    function subirCapa(capa) {
+        capa.style.removeProperty("z-index");
+        let encima = 0;
+        for (const otra of document.body.children) {
+            if (otra !== capa && otra.matches(CAPAS) && capaAbierta(otra)) encima = Math.max(encima, alturaDe(otra));
+        }
+        if (encima && encima >= alturaDe(capa)) capa.style.setProperty("z-index", String(encima + 1), "important");
+    }
+
+    function revisarCapa(capa) {
+        const abiertaAhora = capaAbierta(capa);
+        if (abiertaAhora && !capasAbiertas.get(capa)) subirCapa(capa);
+        capasAbiertas.set(capa, abiertaAhora);
+    }
+
+    // Se mira solo la clase de cada ventana (no todo lo de adentro), así no
+    // cuesta nada mientras la app se usa.
+    const vigiaCapas = new MutationObserver(cambios => {
+        new Set(cambios.map(cambio => cambio.target)).forEach(revisarCapa);
+    });
+
+    function vigilarCapa(capa) {
+        if (!capasAbiertas.has(capa)) vigiaCapas.observe(capa, { attributes: true, attributeFilter: ["class", "hidden"] });
+        capasAbiertas.set(capa, false);
+        revisarCapa(capa);
+    }
+
+    new MutationObserver(cambios => {
+        cambios.forEach(cambio => {
+            cambio.addedNodes.forEach(nodo => {
+                if (nodo.nodeType === 1 && nodo.matches(CAPAS)) vigilarCapa(nodo);
+            });
+        });
+    }).observe(document.body, { childList: true });
+    [...document.body.children].forEach(nodo => {
+        if (nodo.matches(CAPAS)) vigilarCapa(nodo);
+    });
+
     // ---------- "Deshacer" ----------
     let deshacerActual = null;
 
@@ -285,15 +340,18 @@
             aviso.id = id;
         }
         aviso.className = "pzBanner pzBan" + (datos.color || "Pri");
-        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto ? `<small>${esc(datos.texto)}</small>` : ""}</div>` +
+        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto || datos.destacado ? `<small>${esc(datos.texto || "")}${datos.destacado ? `${datos.texto ? " " : ""}<b class="pzDestacado">${esc(datos.destacado)}</b>` : ""}</small>` : ""}</div>` +
             (conBoton ? `<button type="button" class="pzBtn ${datos.claseBoton || "pzBtnPri"}">${esc(datos.boton)}</button>` : ico("chevDerecha", 20));
         const tocar = conBoton ? aviso.querySelector("button") : aviso;
         tocar.onclick = datos.alTocar || null;
         if (datos.etiqueta) tocar.setAttribute("aria-label", datos.etiqueta);
 
+        // "resumen": justo debajo del resumen de hoy (lo que te deben).
         const ancla = lugar === "arriba"
             ? contenedor.firstElementChild
-            : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
+            : lugar === "resumen"
+                ? (document.getElementById("resumenHoy")?.nextElementSibling || null)
+                : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
         const orden = Number(datos.orden) || 0;
         aviso.dataset.orden = String(orden);
         if (aviso.parentElement !== contenedor || aviso.dataset.lugar !== lugar) {
@@ -406,13 +464,323 @@
         return /Mobile/i.test(agente) ? "Celular" : "Computadora";
     }
 
+    // Listas largas (T151): las primeras tarjetas se dibujan enseguida y el
+    // resto de a tandas, sin trabar el celular. Volver a dibujar la lista (o
+    // cortarTandas) frena las tandas que quedaban de antes.
+    // Repasada: lo que está a más de dos pantallas de distancia se dibuja
+    // recién cuando el dedo baja y se acerca. Con mil comercios, dibujarlos
+    // todos ocupaba mucha memoria (y Android cerraba antes la app de fondo).
+    function cortarTandas(contenedor) {
+        if (!contenedor) return;
+        const tanda = contenedor.tandaVendeFrio;
+        if (tanda && tanda.soltar) tanda.soltar();
+        contenedor.tandaVendeFrio = null;
+    }
+
+    function dibujarDeATandas(contenedor, items, dibujarUno, opciones) {
+        // Cada tanda dura como mucho unos milisegundos: así el celular sigue
+        // respondiendo al dedo mientras se completa la lista.
+        const { primeros = 8, milisegundos = 10, alTerminar } = opciones || {};
+        cortarTandas(contenedor);
+        const tanda = {};
+        contenedor.tandaVendeFrio = tanda;
+        let siguiente = 0;
+        let vigia = null;
+        tanda.soltar = () => {
+            if (vigia) vigia.disconnect();
+            vigia = null;
+        };
+        // ¿El final de la lista está a menos de dos pantallas de lo que se ve?
+        function cerca() {
+            return contenedor.getBoundingClientRect().bottom < window.innerHeight * 3;
+        }
+        function dibujar(minimo) {
+            const inicio = performance.now();
+            const fragmento = document.createDocumentFragment();
+            while (siguiente < items.length && (siguiente < minimo || performance.now() - inicio < milisegundos)) {
+                const elemento = dibujarUno(items[siguiente], siguiente);
+                if (elemento) fragmento.appendChild(elemento);
+                siguiente++;
+            }
+            contenedor.appendChild(fragmento);
+            if (siguiente < items.length) {
+                if (cerca()) setTimeout(seguir, 0);
+                else esperarAlDedo();
+                return;
+            }
+            contenedor.tandaVendeFrio = null;
+            if (alTerminar) alTerminar();
+        }
+        // Se mira la última tarjeta: cuando el dedo la acerca, sigue la lista.
+        function esperarAlDedo() {
+            const ultima = contenedor.lastElementChild;
+            if (!ultima || typeof IntersectionObserver !== "function") {
+                setTimeout(seguir, 0);
+                return;
+            }
+            vigia = new IntersectionObserver(entradas => {
+                if (!entradas.some(entrada => entrada.isIntersecting)) return;
+                tanda.soltar();
+                seguir();
+            }, { rootMargin: "0px 0px " + Math.round(window.innerHeight * 2) + "px 0px" });
+            vigia.observe(ultima);
+        }
+        function seguir() {
+            if (contenedor.tandaVendeFrio !== tanda) return;
+            // Si se fue de la pantalla, se corta: al volver se dibuja de nuevo.
+            if (!contenedor.isConnected || contenedor.closest(".oculto")) {
+                cortarTandas(contenedor);
+                return;
+            }
+            dibujar(0);
+        }
+        dibujar(primeros);
+    }
+
+    // Repasada: lo que parece solo información (un número, una tarjeta) se
+    // puede tocar y lleva a su detalle. Se ve igual que antes; al apretarlo
+    // se achica apenas, como los botones. Un solo oyente para toda la app.
+    // Si adentro tiene su propio botón o enlace, ese sigue haciendo lo suyo.
+    const alTocarDe = new WeakMap();
+    function tocable(elemento, alTocar, { etiqueta = "", rol = true } = {}) {
+        if (!elemento || typeof alTocar !== "function") return elemento;
+        alTocarDe.set(elemento, alTocar);
+        elemento.classList.add("pzTocable");
+        if (rol && elemento.tagName !== "BUTTON" && elemento.tagName !== "A") {
+            elemento.setAttribute("role", "button");
+            elemento.tabIndex = 0;
+        }
+        if (etiqueta) elemento.setAttribute("aria-label", etiqueta);
+        return elemento;
+    }
+    function tocadoEn(evento) {
+        const elemento = evento.target.closest?.(".pzTocable");
+        if (!elemento || !alTocarDe.has(elemento)) return null;
+        const propio = evento.target.closest("button, a[href], input, select, textarea, label, [role='button']");
+        return propio && propio !== elemento && elemento.contains(propio) ? null : elemento;
+    }
+    document.addEventListener("click", evento => {
+        const elemento = tocadoEn(evento);
+        if (elemento) alTocarDe.get(elemento)(evento);
+    });
+    document.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        const elemento = evento.target;
+        if (!alTocarDe.has(elemento) || elemento.tagName === "BUTTON" || elemento.tagName === "A") return;
+        evento.preventDefault();
+        alTocarDe.get(elemento)(evento);
+    });
+
+    // Cabeceras en un celular chico (T152): el nombre de la pantalla va
+    // siempre al lado de la flechita (pedido del dueño, 2026-10-28). Si no
+    // entra, se le achica la letra de a poco, sin empujar los botones fuera
+    // de la pantalla. Se mira después de cada toque (que es lo que abre las
+    // pantallas) y al girar el celular.
+    const LETRAS_TITULO = [22, 20, 18];
+    function acomodarCabeceras() {
+        document.querySelectorAll("body > section:not(.oculto) > header").forEach(cabecera => {
+            const titulo = cabecera.querySelector(":scope > div > h1");
+            if (!titulo) return;
+            if (titulo.style.fontSize) titulo.style.fontSize = "";
+            titulo.classList.remove("tituloDosRenglones");
+            for (const letra of LETRAS_TITULO) {
+                if (titulo.scrollWidth <= titulo.clientWidth + 1) return;
+                titulo.style.fontSize = letra + "px";
+            }
+            // Ni así entra (flecha y casita juntas): en dos renglones chicos.
+            if (titulo.scrollWidth > titulo.clientWidth + 1) titulo.classList.add("tituloDosRenglones");
+        });
+    }
+    let cabecerasPendientes = false;
+    function pedirAcomodarCabeceras() {
+        if (cabecerasPendientes) return;
+        cabecerasPendientes = true;
+        requestAnimationFrame(() => setTimeout(() => {
+            cabecerasPendientes = false;
+            acomodarCabeceras();
+        }, 0));
+    }
+    document.addEventListener("click", pedirAcomodarCabeceras, true);
+    window.addEventListener("resize", pedirAcomodarCabeceras);
+    window.addEventListener("load", pedirAcomodarCabeceras);
+
+    // Que mantener apretado no abra el menú de Chrome (abrir imagen, copiar
+    // link) ni se puedan arrastrar las imágenes. Donde se escribe o en lo que
+    // tiene .copiable el menú sigue, para poder copiar y pegar.
+    function dejaMenu(elemento) {
+        return !!(elemento && elemento.closest && elemento.closest("input, textarea, select, [contenteditable], .copiable"));
+    }
+    document.addEventListener("contextmenu", evento => {
+        if (!dejaMenu(evento.target)) evento.preventDefault();
+    });
+    document.addEventListener("dragstart", evento => {
+        if (evento.target && evento.target.closest && evento.target.closest("img, svg, a")) evento.preventDefault();
+    });
+
+    // Deslizar hacia abajo para cerrar (T169): cualquier hoja que sube desde
+    // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
+    // hacia abajo, como en las apps del celular. Solo mueve la hoja con
+    // transform, para que ande fluido en celulares baratos.
+    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido, .ventanaNotas > .notasCaja, #pantallaPedido.pedidoEnHoja";
+    let arrastre = null;
+    const BOTONES_CERRAR = /^(Cancelar|Cerrar|Volver|Ahora no|Entendido)$/;
+
+    function subioAlgo(desde, hasta) {
+        for (let elemento = desde; elemento && elemento !== hasta.parentElement; elemento = elemento.parentElement) {
+            if (elemento.scrollTop > 0) return true;
+        }
+        return false;
+    }
+
+    function fondoDe(hoja) {
+        // Una bandeja suelta (el pedido en la navegación, T179) dice cuál es su fondo.
+        return hoja.closest(".pzFondo") || hoja.closest(".modal") || (hoja.dataset.fondo ? document.getElementById(hoja.dataset.fondo) : null);
+    }
+
+    function sigueAbierta(fondo) {
+        if (!fondo.isConnected || fondo.classList.contains("oculto")) return false;
+        return !fondo.classList.contains("pzFondo") || fondo.classList.contains("visible");
+    }
+
+    function soltarHoja(hoja, hasta) {
+        hoja.classList.remove("hojaArrastrando");
+        hoja.classList.add("hojaSoltando");
+        hoja.style.transform = hasta || "";
+        setTimeout(() => hoja.classList.remove("hojaSoltando"), 220);
+    }
+
+    function cerrarArrastrada(hoja) {
+        const fondo = fondoDe(hoja);
+        soltarHoja(hoja, "translateY(100%)");
+        setTimeout(() => {
+            // Igual que tocar afuera: cada ventana decide qué pasa al cerrarla.
+            if (fondo) fondo.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            setTimeout(() => {
+                // Si tocar afuera no la cierra, se usa su botón de cancelar.
+                if (fondo && sigueAbierta(fondo)) {
+                    const cancelar = Array.from(hoja.querySelectorAll("button"))
+                        .find(boton => boton.offsetParent && (BOTONES_CERRAR.test(boton.textContent.trim()) ||
+                            /^Cerrar/.test(boton.getAttribute("aria-label") || "")));
+                    if (cancelar) cancelar.click();
+                }
+                setTimeout(() => {
+                    if (fondo && sigueAbierta(fondo)) soltarHoja(hoja, "");
+                    else hoja.style.transform = "";
+                }, 60);
+            }, 60);
+        }, 160);
+    }
+
+    document.addEventListener("touchstart", evento => {
+        arrastre = null;
+        if (evento.touches.length !== 1 || !evento.target.closest) return;
+        const hoja = evento.target.closest(HOJAS);
+        if (!hoja || evento.target.closest("input, textarea, select, [contenteditable], .sinArrastre")) return;
+        if (subioAlgo(evento.target, hoja)) return;
+        const toque = evento.touches[0];
+        arrastre = { hoja, x: toque.clientX, y: toque.clientY, hora: Date.now(), activo: false, dy: 0, cuadro: 0 };
+    }, { passive: true });
+
+    document.addEventListener("touchmove", evento => {
+        if (!arrastre) return;
+        const toque = evento.touches[0];
+        const dx = toque.clientX - arrastre.x;
+        const dy = toque.clientY - arrastre.y;
+        if (!arrastre.activo) {
+            if (dy < -6 || Math.abs(dx) > Math.abs(dy) + 4) { arrastre = null; return; }
+            if (dy < 10 || arrastre.hoja.scrollTop > 0) return;
+            arrastre.activo = true;
+            arrastre.hoja.classList.add("hojaArrastrando");
+        }
+        arrastre.dy = Math.max(0, dy - 10);
+        if (!arrastre.cuadro) {
+            const actual = arrastre;
+            actual.cuadro = requestAnimationFrame(() => {
+                actual.cuadro = 0;
+                actual.hoja.style.transform = "translateY(" + actual.dy + "px)";
+            });
+        }
+    }, { passive: true });
+
+    function terminarArrastre() {
+        const actual = arrastre;
+        arrastre = null;
+        if (!actual || !actual.activo) return;
+        if (actual.cuadro) cancelAnimationFrame(actual.cuadro);
+        const rapido = actual.dy / Math.max(1, Date.now() - actual.hora);
+        if (actual.dy > Math.max(90, actual.hoja.offsetHeight * 0.25) || (rapido > 0.6 && actual.dy > 40)) {
+            cerrarArrastrada(actual.hoja);
+        } else {
+            soltarHoja(actual.hoja, "");
+        }
+    }
+    document.addEventListener("touchend", terminarArrastre, { passive: true });
+    document.addEventListener("touchcancel", terminarArrastre, { passive: true });
+
+    // ---------- Menú ⋯ flotante (repaso de Comercios y Catálogo) ----------
+    // menu(boton, { titulo, sub, items: [{ icono, texto, principal, peligro,
+    // alTocar }, "-"] }): se abre redondeado junto al botón, con el fondo
+    // apenas difuminado; el ⋯ pasa a ser una X. Se cierra tocando afuera, la
+    // X, una opción o el atrás del celular (es una .modal).
+    function menu(ancla, { titulo = "", sub = "", items = [] } = {}) {
+        const fondo = document.createElement("div");
+        fondo.className = "modal menuFlotante";
+        const caja = document.createElement("div");
+        caja.className = "menuFlotanteCaja";
+        caja.setAttribute("role", "menu");
+        caja.setAttribute("aria-label", titulo || "Opciones");
+        caja.innerHTML = titulo ? `<div class="menuFlotanteCabeza"><strong>${esc(titulo)}</strong>${sub ? `<small>${esc(sub)}</small>` : ""}</div>` : "";
+        const cerrarMenu = () => {
+            fondo.remove();
+            document.removeEventListener("keydown", alTecla);
+        };
+        const alTecla = evento => { if (evento.key === "Escape") cerrarMenu(); };
+        items.forEach(item => {
+            if (item === "-") {
+                caja.appendChild(document.createElement("hr"));
+                return;
+            }
+            if (!item) return;
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "");
+            boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span>${esc(item.texto)}</span>`;
+            boton.addEventListener("click", () => {
+                cerrarMenu();
+                if (typeof item.alTocar === "function") item.alTocar();
+            });
+            caja.appendChild(boton);
+        });
+        const equis = document.createElement("button");
+        equis.type = "button";
+        equis.className = "menuFlotanteX";
+        equis.setAttribute("aria-label", "Cerrar las opciones");
+        equis.innerHTML = ico("cerrarX", 22);
+        equis.addEventListener("click", cerrarMenu);
+        fondo.append(caja, equis);
+        fondo.addEventListener("click", evento => { if (evento.target === fondo) cerrarMenu(); });
+        document.body.appendChild(fondo);
+        document.addEventListener("keydown", alTecla);
+        // Junto al botón: abajo si entra, si no arriba.
+        const r = ancla.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const ancho = caja.offsetWidth;
+        const lado = Math.max(12, Math.min(window.innerWidth - ancho - 12, r.right - ancho));
+        const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
+        caja.style.left = lado + "px";
+        caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+        equis.style.left = (r.left + r.width / 2 - 22) + "px";
+        equis.style.top = (r.top + r.height / 2 - 22) + "px";
+        return caja;
+    }
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer,
-        avisoInicio
+        hoja, modal, preguntar, cerrar, deshacer, tocable, menu,
+        avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

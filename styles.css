@@ -802,7 +802,8 @@ footer button:active{
   flex-direction:column;
   align-items:center;
   gap:8px;
-  z-index:3000;
+  /* Por encima de cualquier hoja abierta, así el aviso se ve siempre. */
+  z-index:10090;
   pointer-events:none;
 }
 
@@ -813,7 +814,7 @@ footer button:active{
   background:var(--texto);
   color:var(--superficie);
   padding:11px 18px;
-  border-radius:999px;
+  border-radius:var(--radio-pildora);
   font-size:13.5px;
   font-weight:600;
   box-shadow:0 6px 20px rgba(0,0,0,.22);
@@ -2921,8 +2922,6 @@ html[data-tema="oscuro"] #pantallaMenu #dashProximaParada h3{color:var(--texto)!
 html[data-tema="oscuro"] #pantallaMenu #dashProximaParada p,html[data-tema="oscuro"] #pantallaMenu #dashUltimoPedido p{color:var(--texto-sec)!important;}
 html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{background:var(--superficie)!important;border-color:var(--borde)!important;color:var(--texto)!important;}
 
-.btnUbicacionDashboard{display:inline-flex;align-items:center;width:max-content;min-height:34px;margin-top:5px;padding:6px 9px;border:1px solid #86efac;border-radius:8px;background:#f0fdf4;color:#166534;font-size:11px;font-weight:700;}
-html[data-tema="oscuro"] .btnUbicacionDashboard{background:var(--visitado-bg);border-color:#166534;color:var(--visitado);}
 
 /* Rework visual de Pedido: compacto y táctil */
 #pantallaPedido>.container{padding-top:8px;}
@@ -2953,7 +2952,7 @@ html[data-tema="oscuro"] #pantallaPedido .fila{border-color:var(--borde);}
 #pantallaComercios .datoComercio{font-size:12px;line-height:1.35;overflow-wrap:anywhere;white-space:normal;}
 #pantallaComercios .accionesComercio{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 #pantallaComercios .accionesComercio button{min-height:36px;padding:6px 9px;border-radius:8px;font-size:11px;}
-#pantallaComercios .badge{padding:4px 7px;border-radius:999px;font-size:10px;}
+#pantallaComercios .badge{padding:4px 7px;border-radius:var(--radio-pildora);font-size:10px;}
 #pantallaComercios .pedidoComercioBtn,#pantallaComercios .marcarVisitaBtn,#pantallaComercios .marcarPendienteBtn{min-height:36px;}
 html[data-tema="oscuro"] #pantallaComercios .filtrosComercios{background:var(--superficie);border-color:var(--borde);}
 
@@ -3127,7 +3126,7 @@ html[data-tema="oscuro"] .configCuentaError{background:var(--fondo);color:var(--
 
 /* Sincronización visible (T12): pedido sin subir e indicador de conexión */
 .badgeSinSubir{color:var(--pendiente);margin-top:4px;margin-left:8px;}
-.indicadorNube{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:3px 12px;border-radius:999px;border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font-size:11px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.indicadorNube{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1500;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:3px 12px;border-radius:var(--radio-pildora);border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font-size:11px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .indicadorNube::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--pendiente);flex-shrink:0;vertical-align:1px;}
 .indicadorNube::before{margin-right:0;}
 .indicadorNube[data-estado="ok"]::before{background:var(--visitado);}
@@ -3269,8 +3268,8 @@ html.conCartelPersonal .botonNuevoPedido{bottom:calc(92px + var(--alto-cartel-pe
 html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(250px + env(safe-area-inset-bottom)) !important;}
 .filtrosEtapaPedidos{display:flex;gap:6px;margin:0 -12px 6px;padding:2px 12px 6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .filtrosEtapaPedidos::-webkit-scrollbar{display:none;}
-.filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:999px;background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
-.filtroEtapaCantidad{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--gris-claro);color:var(--texto);font-size:11.5px;text-align:center;}
+.filtroEtapa{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:38px;padding:0 12px;border:1px solid var(--borde);border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer;}
+.filtroEtapaCantidad{min-width:20px;padding:1px 6px;border-radius:var(--radio-pildora);background:var(--gris-claro);color:var(--texto);font-size:11.5px;text-align:center;}
 .filtroEtapa.activo{border-color:var(--acento);background:var(--acento);color:var(--acento-txt);}
 .filtroEtapa.activo .filtroEtapaCantidad{background:rgba(0,0,0,.12);color:var(--acento-txt);}
 .resumenVistaPedidos{margin:0 2px 8px;color:var(--texto-sec);font-size:12px;font-weight:700;}
@@ -3285,7 +3284,7 @@ html.conPieTanda #pantallaPedido[data-vista="pedidos"] main.container{padding-bo
 .seguimientoVacio h3{margin-bottom:4px;font-size:14.5px;}
 .seguimientoVacio p{color:var(--texto-sec);font-size:13px;}
 .verMasSeguimiento{width:100%;justify-content:center;}
-.estadoSeguimiento{flex-shrink:0;padding:3px 8px;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font-size:11px;font-weight:800;white-space:nowrap;}
+.estadoSeguimiento{flex-shrink:0;padding:3px 8px;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--acento-oscuro);font-size:11px;font-weight:800;white-space:nowrap;}
 .estadoSeguimiento[data-estado="enPreparacion"]{background:var(--pendiente-bg);color:var(--pendiente);}
 .estadoSeguimiento[data-estado="preparado"],.estadoSeguimiento[data-estado="entregado"]{background:var(--visitado-bg);color:var(--visitado);}
 .estadoSeguimiento[data-estado="enVehiculo"],.estadoSeguimiento[data-estado="enReparto"]{background:#E6EEFA;color:#1D4F91;}
@@ -3398,7 +3397,7 @@ html.conAvisos .campanaAvisos{display:flex;}
 .dashboardHeaderTop .campanaAvisos{margin-left:6px;color:#fff;}
 .dashboardHeaderTop .campanaAvisos:active{background:rgba(255,255,255,.2);}
 .configHeader .campanaAvisos{color:inherit;}
-.contadorAvisos{position:absolute;top:2px;right:0;min-width:19px;height:19px;padding:0 5px;border:2px solid var(--superficie);border-radius:999px;background:var(--peligro);color:#fff;font-size:10.5px;font-weight:800;line-height:15px;text-align:center;box-sizing:border-box;}
+.contadorAvisos{position:absolute;top:2px;right:0;min-width:19px;height:19px;padding:0 5px;border:2px solid var(--superficie);border-radius:var(--radio-pildora);background:var(--peligro);color:#fff;font-size:10.5px;font-weight:800;line-height:15px;text-align:center;box-sizing:border-box;}
 .dashboardHeaderTop .contadorAvisos{border-color:var(--acento);}
 .contadorAvisos.oculto{display:none;}
 .listaAvisosContenido h2{margin-bottom:10px;}
@@ -3477,8 +3476,8 @@ html[data-tema="oscuro"] .cerrarEmergenteAviso{color:var(--texto-sec);}
 .observacionFaltante{font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere;}
 .progresoChecklist{display:grid;gap:6px;margin-bottom:4px;}
 .textoProgresoChecklist{font-size:14px;font-weight:800;}
-.barraChecklist{height:8px;border-radius:999px;background:var(--gris-claro);overflow:hidden;}
-.barraChecklist span{display:block;height:100%;border-radius:999px;background:var(--acento);transition:width .25s ease;}
+.barraChecklist{height:8px;border-radius:var(--radio-pildora);background:var(--gris-claro);overflow:hidden;}
+.barraChecklist span{display:block;height:100%;border-radius:var(--radio-pildora);background:var(--acento);transition:width .25s ease;}
 .progresoChecklist.completa .barraChecklist span{background:var(--visitado);}
 .lineaChecklist{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--borde);border-radius:var(--radius-sm);}
 .casillaChecklist{flex:1;min-width:0;display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:56px;padding:8px 4px;border:none;background:transparent;color:var(--texto);text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -3497,7 +3496,7 @@ html[data-tema="oscuro"] .cerrarEmergenteAviso{color:var(--texto-sec);}
 .textoChecklist .observacionFaltante{color:var(--texto-sec);font-size:12px;}
 .cantidadChecklist{min-width:42px;font-size:17px;font-weight:800;text-align:right;white-space:nowrap;}
 .lineaChecklist[data-estado="faltante"] .cantidadChecklist{color:var(--pendiente);}
-.botonFaltante{flex-shrink:0;min-height:40px;padding:0 12px;border:1px solid var(--pendiente);border-radius:999px;background:transparent;color:var(--pendiente);font-size:12.5px;font-weight:700;cursor:pointer;}
+.botonFaltante{flex-shrink:0;min-height:40px;padding:0 12px;border:1px solid var(--pendiente);border-radius:var(--radio-pildora);background:transparent;color:var(--pendiente);font-size:12.5px;font-weight:700;cursor:pointer;}
 .botonFaltante:active{background:var(--pendiente-bg);}
 .lineaChecklist.resaltada{animation:resaltarLinea 1.4s ease;}
 @keyframes resaltarLinea{0%,60%{background:var(--pendiente-bg);}100%{background:transparent;}}
@@ -3521,8 +3520,8 @@ html[data-tema="oscuro"] .cerrarEmergenteAviso{color:var(--texto-sec);}
 .faltantesResumen{display:grid;gap:6px;margin:10px 0 0;padding:10px 12px;border-radius:var(--radius-md);background:var(--pendiente-bg);list-style:none;}
 .faltantesResumen strong{display:block;color:var(--pendiente);font-size:13.5px;overflow-wrap:anywhere;}
 .faltantesResumen small{display:block;color:var(--texto-sec);font-size:12px;font-style:italic;overflow-wrap:anywhere;}
-.deslizador{position:relative;height:60px;margin-top:16px;border-radius:999px;background:var(--acento-bg);overflow:hidden;user-select:none;-webkit-user-select:none;}
-.rellenoDeslizador{position:absolute;top:0;bottom:0;left:0;width:60px;border-radius:999px;background:var(--acento);opacity:.22;transition:width .25s ease, opacity .2s ease;}
+.deslizador{position:relative;height:60px;margin-top:16px;border-radius:var(--radio-pildora);background:var(--acento-bg);overflow:hidden;user-select:none;-webkit-user-select:none;}
+.rellenoDeslizador{position:absolute;top:0;bottom:0;left:0;width:60px;border-radius:var(--radio-pildora);background:var(--acento);opacity:.22;transition:width .25s ease, opacity .2s ease;}
 .textoDeslizador{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 12px 0 60px;color:var(--acento-oscuro);font-size:14.5px;font-weight:800;text-align:center;pointer-events:none;transition:opacity .2s ease;}
 .tiradorDeslizador{position:absolute;top:4px;left:4px;z-index:1;display:grid;place-items:center;width:52px;height:52px;padding:0;border:none;border-radius:50%;background:var(--acento);color:var(--acento-txt);box-shadow:0 3px 10px rgba(0,0,0,.2);cursor:grab;touch-action:none;transition:transform .25s ease;}
 .deslizador.arrastrando .tiradorDeslizador,.deslizador.arrastrando .rellenoDeslizador{transition:none;}
@@ -3679,7 +3678,7 @@ html[data-tema="oscuro"] .emergenteAviso[data-tipo="entregado"]{border-left-colo
 .datoFichaPedido[data-cobro="pendiente"] strong{color:var(--pendiente);}
 .datoFichaPedido[data-cobro="cobrado"] strong{color:var(--visitado);}
 .comprobanteFichaPedido{align-items:center;}
-.botonVerComprobante{flex-shrink:0;min-height:36px;padding:0 14px;border:1px solid var(--acento);border-radius:999px;background:transparent;color:var(--acento-oscuro);font-size:12.5px;font-weight:700;cursor:pointer;}
+.botonVerComprobante{flex-shrink:0;min-height:36px;padding:0 14px;border:1px solid var(--acento);border-radius:var(--radio-pildora);background:transparent;color:var(--acento-oscuro);font-size:12.5px;font-weight:700;cursor:pointer;}
 .botonVerComprobante:active{background:var(--acento-bg);}
 .pasoSeguimiento.cobro::before{background:var(--visitado);}
 .cobroPedido h2,.comprobantePedido h2{margin-bottom:8px;}
@@ -3761,7 +3760,8 @@ html[data-tema="oscuro"] .estadoSeguimiento[data-estado="historico"]{background:
 .listaRepartoTanda span{flex-shrink:0;color:var(--texto-sec);}
 html[data-tema="oscuro"] .casillaTanda{background:var(--fondo);border-color:var(--borde-fuerte);}
 html[data-tema="oscuro"] .elegidaTanda .casillaTanda{background:var(--acento);border-color:var(--acento);color:var(--acento-txt) !important;}
-html[data-tema="oscuro"] .botonTanda:not(.botonTandaPeligro){color:var(--texto) !important;}
+/* Texto oscuro sobre el verde lima: el claro no se leía (T152). */
+html[data-tema="oscuro"] .botonTanda:not(.botonTandaPeligro){color:var(--acento-txt) !important;}
 html[data-tema="oscuro"] .listaRepartoTanda{background:var(--fondo);border-color:var(--borde);}
 html[data-tema="oscuro"] .listaRepartoTanda li{border-color:var(--borde);}
 html[data-tema="oscuro"] .listaRepartoTanda span{color:var(--texto-sec) !important;}
@@ -3825,3 +3825,10 @@ html[data-tema="oscuro"] .inicioLink{color:var(--acento);}
 .inicioContenido [data-paso="elegir"] .inicioSinSesion{border:0;min-height:44px;color:var(--texto-sec);font-weight:700;text-decoration:underline;text-underline-offset:3px;}
 .inicioLegales{margin:0;text-align:center;font-size:12.5px;color:var(--texto-ter);}
 .inicioLegales a{color:var(--texto-sec);}
+
+/* Cobro en tanda (T130): "Cobro 1 de 9" y "Terminar", arriba de la hoja. */
+.tandaCobro{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-2px 0 10px;padding:8px 8px 8px 14px;border-radius:var(--radio-pildora);background:var(--acento-bg);}
+.tandaCobro.oculto{display:none;}
+.contadorCobroTanda{color:var(--acento-oscuro);font-size:14px;font-weight:800;}
+.terminarCobroTanda{min-height:36px;padding:0 14px;border:1px solid var(--acento);border-radius:var(--radio-pildora);background:transparent;color:var(--acento-oscuro);font-size:13px;font-weight:700;cursor:pointer;}
+.terminarCobroTanda:active{background:var(--fondo);}

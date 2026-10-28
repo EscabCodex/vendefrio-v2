@@ -16,8 +16,14 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await expect(page.getByText("Tus datos no están protegidos")).toBeVisible();
-    await expect(page.locator("#dashTotalComercios")).not.toHaveText("0");
+    // Arranca vacío, sin la lista de fábrica de antes (informe del desconocido).
+    await expect(page.locator("#dashTotalComercios")).toHaveText("0");
+    expect(await page.evaluate(() => [obtenerComercios().length, Object.keys(obtenerProductos()).length])).toEqual([0, 0]);
     await capturar(page, "personal-02-inicio");
+    await page.evaluate(() =>
+        agregarComercio({ nombre: "Anibal", direccion: "Calle 1" }) &&
+        agregarMarca("Frío Sur") && agregarProducto("Frío Sur", { nombre: "Helado 1 kg", precio: 4500 }) &&
+        agregarMarca("Pastas Sur") && agregarProducto("Pastas Sur", { nombre: "Ravioles", precio: 2500 }));
 
     // Nuevo pedido: comercio, productos y observaciones.
     await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
@@ -58,7 +64,20 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
     await page.locator("#pantallaHistorial").getByRole("radio", { name: "Mes" }).click();
     await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
+    await expect(page.locator("#pantallaHistorial .marcadorFechaHistorial").first()).toContainText(/^Hoy · /);
+    await expect(page.locator("#resumenHistorial")).toHaveText(/^1 pedido · \d+ unidad/);
     await capturar(page, "personal-05-historial");
+
+    // T167: "⋯" abre una hoja con Ver pedido y Eliminar pedido.
+    await page.getByRole("button", { name: "Opciones del pedido de Anibal" }).click();
+    const opciones = page.getByRole("dialog", { name: "Opciones del pedido" });
+    await expect(opciones.getByRole("button", { name: "Eliminar pedido" })).toBeVisible();
+    await capturar(page, "personal-06-opciones-del-pedido");
+    await opciones.getByRole("button", { name: "Ver pedido" }).click();
+    await expect(page.locator("#modalPedido")).toBeVisible();
+    await expect(page.locator("#pedidoCliente")).toHaveText("Anibal");
+    await page.locator("#modalPedido").click({ position: { x: 10, y: 10 } });
+    await expect(page.locator("#modalPedido")).toBeHidden();
 
     // Sigue ahí después de cerrar y abrir la app.
     await page.reload();

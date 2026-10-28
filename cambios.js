@@ -103,10 +103,17 @@
         lat: "ubicación", envases: "envases"
     };
 
+    // Cómo estaba el comercio antes del cambio (se guarda congelado: no
+    // hace falta copiar todos los comercios en cada edición).
+    function comercioAntesDeCambiar(id) {
+        if (typeof comercioParaLeerPorId === "function") return comercioParaLeerPorId(id) || null;
+        return typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) || null : null;
+    }
+
     if (typeof window.actualizarComercioPorId === "function") {
         const original = window.actualizarComercioPorId;
         window.actualizarComercioPorId = function (id, datos) {
-            const antes = typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) : null;
+            const antes = comercioAntesDeCambiar(id);
             const resultado = original.apply(this, arguments);
             if (resultado && antes && datos && typeof datos === "object") {
                 try { anotarComercio(antes, datos); } catch (error) { console.warn(error); }
@@ -135,7 +142,7 @@
     if (typeof window.eliminarComercioPorId === "function") {
         const original = window.eliminarComercioPorId;
         window.eliminarComercioPorId = function (id) {
-            const antes = typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) : null;
+            const antes = comercioAntesDeCambiar(id);
             const resultado = original.apply(this, arguments);
             if (resultado && antes) anotar("comercios", "borró un comercio", antes.nombre);
             return resultado;

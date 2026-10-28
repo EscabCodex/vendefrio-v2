@@ -35,7 +35,6 @@
         { id: "cobranza", nombre: "Cobranza" },
         { id: "administracion", nombre: "Administración" }
     ];
-    const TEXTO_CARTEL_PERSONAL = "Tus datos no están protegidos: están solo en este celular. Iniciá sesión para guardarlos en la nube";
 
     let pantalla = null;
     let quitarOyenteDistribuidora = null;
@@ -95,28 +94,38 @@
         return true;
     }
 
-    // Cartel fijo, arriba de la barra de abajo. Al tocarlo abre la pantalla
-    // de inicio, para ingresar o registrarse (o entrar como empleado).
-    function mostrarCartelPersonal() {
-        if (!document.body || document.getElementById("cartelModoPersonal")) return;
+    // Aviso en Inicio (T169, opción B que eligió el dueño): una tarjeta
+    // arriba de todo, que se va al bajar la pantalla y no tapa nada. "Guardar"
+    // abre la pantalla de inicio, para ingresar o registrarse.
+    let esperaCartel = 0;
 
-        const cartel = document.createElement("button");
-        cartel.type = "button";
-        cartel.id = "cartelModoPersonal";
-        cartel.className = "cartelModoPersonal";
-        cartel.textContent = TEXTO_CARTEL_PERSONAL;
-        cartel.addEventListener("click", () => {
-            crear();
-            mostrarPaso("elegir");
-        });
-
-        document.body.appendChild(cartel);
-        document.documentElement.classList.add("conCartelPersonal");
+    function mostrarCartelPersonal(intento = 0) {
+        clearTimeout(esperaCartel);
+        // Probando con datos de ejemplo: un solo cartel arriba, el del ejemplo
+        // (informe "visto por un desconocido"). Vuelve al empezar de cero.
+        if (window.ejemploVendeFrio?.hay?.()) {
+            quitarCartelPersonal();
+            return;
+        }
+        const aviso = window.piezas?.avisoInicio?.("avisoModoPersonal", {
+            color: "Aviso",
+            icono: "alerta",
+            titulo: "Tus datos no están protegidos",
+            texto: "Están solo en este celular. Creá una cuenta gratis para guardarlos en la nube.",
+            boton: "Guardar",
+            etiqueta: "Guardar tus datos en la nube",
+            alTocar: () => {
+                crear();
+                mostrarPaso("elegir");
+            }
+        }, "arriba");
+        // Inicio todavía no está armado: se prueba de nuevo enseguida.
+        if (!aviso && intento < 20) esperaCartel = setTimeout(() => mostrarCartelPersonal(intento + 1), 300);
     }
 
     function quitarCartelPersonal() {
-        document.getElementById("cartelModoPersonal")?.remove();
-        document.documentElement.classList.remove("conCartelPersonal");
+        clearTimeout(esperaCartel);
+        window.piezas?.avisoInicio?.("avisoModoPersonal", null);
     }
 
     function horasCodigo() {
@@ -147,6 +156,31 @@
 
     function icono(nombre, tamano) {
         return typeof window.icono === "function" ? window.icono(nombre, tamano) : "";
+    }
+
+    // Cada rol en una fila con su ícono, qué hace y un círculo para marcarlo
+    // (T167, opción B). Los roles que agregó el dueño van con un ícono de
+    // persona.
+    const DATOS_ROL = {
+        vendedor: { icono: "bolsa", texto: "Carga pedidos" },
+        deposito: { icono: "paquete", texto: "Arma los pedidos" },
+        repartidor: { icono: "camion", texto: "Entrega los pedidos" },
+        cobranza: { icono: "moneda", texto: "Registra los cobros" },
+        administracion: { icono: "engranaje", texto: "Ve y maneja todo" }
+    };
+
+    function htmlRol(rol, posicion, marcado, aclaracion) {
+        const datos = DATOS_ROL[rol.id] || { icono: "persona", texto: "" };
+        const detalle = aclaracion
+            ? `<small class="inicioRolAclaracion">${escapar(aclaracion)}</small>`
+            : datos.texto ? `<small>${escapar(datos.texto)}</small>` : "";
+        return `
+            <label class="inicioRol">
+                <input type="checkbox" value="${escapar(rol.id)}" ${marcado ? "checked" : ""}>
+                <span class="pzIni pzIni${(posicion % 3) + 1}" aria-hidden="true">${icono(datos.icono, 18)}</span>
+                <span class="inicioRolTexto"><strong>${escapar(rol.nombre)}</strong>${detalle}</span>
+                <span class="inicioRolMarca" aria-hidden="true">${icono("check", 16)}</span>
+            </label>`;
     }
 
     // --- ¿Este celular tiene datos propios? ---
@@ -212,14 +246,15 @@
         const comercios = leerLocal(DB_COMERCIOS);
         if (comercios !== undefined) {
             if (!Array.isArray(comercios)) return true;
-            if (nombresDeComercios(comercios) !== nombresDeComercios(COMERCIOS)) return true;
+            // Vacío (un celular nuevo) o la lista de fábrica de antes: no son datos propios.
+            if (comercios.length && nombresDeComercios(comercios) !== nombresDeComercios(COMERCIOS)) return true;
             if (!comercios.every(esComoEjemplo)) return true;
         }
 
         const productos = leerLocal(DB_PRODUCTOS);
         if (productos !== undefined) {
             if (!productos || typeof productos !== "object" || Array.isArray(productos)) return true;
-            if (nombresDeProductos(productos) !== nombresDeProductos(PRODUCTOS)) return true;
+            if (Object.keys(productos).length && nombresDeProductos(productos) !== nombresDeProductos(PRODUCTOS)) return true;
 
             const todosComoEjemplo = Object.keys(productos).every(marca =>
                 Array.isArray(productos[marca]) && productos[marca].every(esComoEjemplo)
@@ -258,14 +293,16 @@
         pantalla.innerHTML = `
             <div class="inicioContenido">
                 <div class="inicioMarca">
-                    <img src="icon.svg" alt="" width="56" height="56">
-                    <h1 id="inicioTitulo">VendeFrío</h1>
-                    <p>Pedidos y reparto desde el celular</p>
+                    <span class="inicioLogo" aria-hidden="true">VF</span>
+                    <div>
+                        <h1 id="inicioTitulo">VendeFrío</h1>
+                        <p>Pedidos y reparto desde el celular</p>
+                    </div>
                 </div>
 
                 <div data-paso="elegir">
                     <div class="inicioHero">
-                        <img src="icon.svg" alt="" width="64" height="64">
+                        <span class="inicioLogo" aria-hidden="true">VF</span>
                         <h2>Tus pedidos, del comercio al camión.</h2>
                         <p>Cargá el pedido una vez desde el celular y seguilo hasta la entrega.</p>
                     </div>
@@ -300,24 +337,21 @@
 
                 <form data-paso="personal" class="inicioFormulario oculto" id="inicioFormPersonal" novalidate>
                     <h2>Usar sin cuenta</h2>
-                    <p class="inicioNota">
-                        Tus datos no están protegidos: quedan solo en este celular
-                        y no se comparten. Si se pierde o se borra el celular, se pierden.
-                        Podés iniciar sesión después para guardarlos en la nube.
-                    </p>
+                    <div class="pzBanner pzBanAviso inicioAvisoPersonal">
+                        <span class="pzIco">${icono("alerta", 22)}</span>
+                        <div>
+                            <strong>Tus datos quedan solo en este celular</strong>
+                            <small>No se comparten. Si se pierde o se borra el celular, se pierden. Después podés guardarlos en la nube.</small>
+                        </div>
+                    </div>
                     <label>Tu nombre
                         <input type="text" id="inicioNombrePersonal" autocomplete="name"
                             maxlength="${LARGO_MAXIMO_NOMBRE_PERSONAL}" placeholder="Por ejemplo: Juan Pérez" required>
                     </label>
                     <fieldset class="inicioRoles">
-                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
-                        <div id="inicioRolesPersonales">
-                            ${ROLES_PERSONALES.map(rol => `
-                                <label class="inicioRol">
-                                    <input type="checkbox" value="${escapar(rol.id)}">
-                                    <span>${escapar(rol.nombre)}</span>
-                                </label>
-                            `).join("")}
+                        <legend>¿Qué hacés? Podés elegir varios o ninguno</legend>
+                        <div id="inicioRolesPersonales" class="inicioListaRoles">
+                            ${ROLES_PERSONALES.map((rol, posicion) => htmlRol(rol, posicion, false, "")).join("")}
                         </div>
                     </fieldset>
                     <p class="inicioError oculto" role="alert"></p>
@@ -398,8 +432,8 @@
                             maxlength="${largoNombreEmpleado()}" placeholder="Por ejemplo: Juan Pérez" required>
                     </label>
                     <fieldset class="inicioRoles">
-                        <legend>Tus roles (podés marcar varios o ninguno)</legend>
-                        <div id="inicioListaRoles"></div>
+                        <legend>¿Qué hacés? Podés elegir varios o ninguno</legend>
+                        <div id="inicioListaRoles" class="inicioListaRoles"></div>
                     </fieldset>
                     <p class="inicioAclaracion oculto" id="inicioNotaCobra">
                         Los roles con «Cobra» quedan pendientes hasta que tu encargado
@@ -713,6 +747,8 @@
 
         empleados.canjearCodigo(codigo)
             .then(resultado => {
+                // T157: quien entra por primera vez con código ve el tutorial.
+                if (resultado.tipo !== "reingreso") window.tutorialVendeFrio?.marcarRecienEntrado("empleado");
                 boton.textContent = resultado.tipo === "reingreso"
                     ? "¡Listo! Volviste a entrar…"
                     : "¡Listo! Entrando…";
@@ -750,14 +786,9 @@
             return "";
         };
 
-        caja.innerHTML = empleados.roles().map(rol => `
-            <label class="inicioRol">
-                <input type="checkbox" value="${escapar(rol.id)}" ${marcados.has(rol.id) ? "checked" : ""}>
-                <span>${escapar(rol.nombre)}${aclaracion(rol)
-                    ? `<small class="inicioRolAclaracion">${escapar(aclaracion(rol))}</small>`
-                    : ""}</span>
-            </label>
-        `).join("");
+        caja.innerHTML = empleados.roles().map((rol, posicion) =>
+            htmlRol(rol, posicion, marcados.has(rol.id), aclaracion(rol))
+        ).join("");
 
         document.getElementById("inicioNotaCobra")?.classList.toggle(
             "oculto",
@@ -864,6 +895,8 @@
 
         distribuidora.cambiarNombreDueno(nombre)
             .then(guardado => {
+                // T157: cuenta nueva, al llegar a Inicio arranca el tutorial.
+                window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
                 cerrar();
                 mostrarToast("¡Hola, " + escapar(guardado) + "!");
             })
@@ -915,6 +948,9 @@
 
         const desdeConfiguracion = personalDesdeConfiguracion;
         mostrarError(formulario, "");
+        // Arranca vacío: el tutorial enseña a cargar lo suyo, como al crear
+        // una cuenta (informe del desconocido).
+        if (!desdeConfiguracion && !celularTieneDatosPropios()) window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
         recordarSinSesion();
         cerrar();
         mostrarCartelPersonal();
@@ -1258,7 +1294,8 @@
         usaModoPersonal,
         datosPersonales,
         nombresDeRolesPersonales,
-        pedirDatosPersonales: () => pedirDatosPersonales(true)
+        pedirDatosPersonales: () => pedirDatosPersonales(true),
+        mostrarCartelPersonal: () => { if (usaModoPersonal()) mostrarCartelPersonal(); }
     };
 
     decidir();

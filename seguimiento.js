@@ -40,7 +40,7 @@
     if (!pantalla || !vista || !filtros || !resumen || !lista) return;
 
     const tituloPantalla = pantalla.querySelector("header h1");
-    const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo Pedido";
+    const TITULO_NUEVO = tituloPantalla ? tituloPantalla.textContent : "Nuevo pedido";
 
     // Etapas de la vista. Un pedido que quedó en "Cargado en el vehículo" (ya
     // no existe, T29b) está en "En reparto": así lo da estadoActualDelPedido.
@@ -258,20 +258,49 @@
 
     // Los pedidos de trabajo: con historial de estados, sin "Histórico" ni
     // eliminados. Cada uno con su estado actual.
+    // Para leer, sin copiar los pedidos en cada dibujo (repasada): esta
+    // pantalla nunca cambia los pedidos a mano, todo pasa por la nube.
+    // Las dos listas se arman una sola vez hasta que cambian los pedidos: al
+    // abrir la app con miles, la lista se dibujaba varias veces seguidas y
+    // las rehacía cada vez (repasada). Nadie cambia las listas ni sus registros.
+    const listasDe = { historial: null, nube: null, trabajo: null, terminados: null };
+    // El redibujo de la lista que quedó pedido (ver pedirDibujarLista).
+    let relojLista = null;
+
+    function listasDePedidos() {
+        const historial = historialParaLeer();
+        const nube = usaNubeReal();
+        if (listasDe.historial !== historial || listasDe.nube !== nube) {
+            listasDe.historial = historial;
+            listasDe.nube = nube;
+            listasDe.trabajo = null;
+            listasDe.terminados = null;
+        }
+        return listasDe;
+    }
+
     function pedidosDeTrabajo() {
-        return obtenerHistorial()
-            .filter(pedido => pedido.estado !== "historico" && pedido.eliminado !== true)
-            .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) }))
-            .filter(registro => registro.estado !== "");
+        const listas = listasDePedidos();
+        if (!listas.trabajo) {
+            listas.trabajo = listas.historial
+                .filter(pedido => pedido.estado !== "historico" && pedido.eliminado !== true)
+                .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) }))
+                .filter(registro => registro.estado !== "");
+        }
+        return listas.trabajo;
     }
 
     // Historial (T27b): los mismos pedidos que la sección Historial de antes
     // (pedidoEstaEnHistorial). Los "Histórico" no tienen estado: se marcan
     // como "historico".
     function pedidosDelHistorial() {
-        return obtenerHistorial()
-            .filter(pedidoEstaEnHistorial)
-            .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
+        const listas = listasDePedidos();
+        if (!listas.terminados) {
+            listas.terminados = listas.historial
+                .filter(pedidoEstaEnHistorial)
+                .map(pedido => ({ pedido, estado: estadoActualDelPedido(pedido) || "historico" }));
+        }
+        return listas.terminados;
     }
 
     function hayFiltrosDelHistorial() {
@@ -320,7 +349,7 @@
     }
 
     function buscarPedido(id) {
-        return obtenerHistorial().find(pedido => String(pedido.id || "") === id) || null;
+        return pedidoParaLeer(id);
     }
 
     // -------------------------------------------------
@@ -379,6 +408,54 @@
     function textoTotal(pedido) {
         const entrega = estadoActualDelPedido(pedido) === "entregado" ? entregaDe(pedido) : null;
         return textoMonto(entrega ? entrega.total : totalDelPedido(pedido));
+    }
+
+    function montoDelPedido(pedido) {
+        const entrega = estadoActualDelPedido(pedido) === "entregado" ? entregaDe(pedido) : null;
+        const { total, conPrecio } = entrega ? entrega.total : totalDelPedido(pedido);
+        return conPrecio ? total : 0;
+    }
+
+    // Terminados como el Historial nuevo (T167, opción A): los pedidos
+    // agrupados por día, cada día con cuántos son y cuánto suman.
+    function claveDelDia(pedido) {
+        const hora = horaParaOrdenar(pedido);
+        if (!hora) return "";
+        const fecha = new Date(hora);
+        return fecha.getFullYear() + "-" + fecha.getMonth() + "-" + fecha.getDate();
+    }
+
+    function dibujarTerminadosPorDia(deLaEtapa) {
+        const dias = new Map();
+        deLaEtapa.forEach(registro => {
+            const clave = claveDelDia(registro.pedido);
+            const dia = dias.get(clave) || { cuantos: 0, total: 0 };
+            dia.cuantos += 1;
+            dia.total += montoDelPedido(registro.pedido);
+            dias.set(clave, dia);
+        });
+        let anterior = null;
+        deLaEtapa.slice(0, mostrando).forEach(registro => {
+            const clave = claveDelDia(registro.pedido);
+            if (clave !== anterior) {
+                anterior = clave;
+                const dia = dias.get(clave);
+                const hora = horaParaOrdenar(registro.pedido);
+                const nombre = !hora
+                    ? "Sin fecha"
+                    : typeof nombreDelDiaDeFecha === "function"
+                        ? nombreDelDiaDeFecha(new Date(hora))
+                        : new Date(hora).toLocaleDateString("es-AR");
+                const marcador = crear("div", "marcadorFechaHistorial");
+                marcador.append(
+                    crear("strong", "", nombre),
+                    crear("small", "", (dia.cuantos === 1 ? "1 pedido" : dia.cuantos + " pedidos") +
+                        (dia.total > 0 ? " · " + textoPrecio(dia.total) : ""))
+                );
+                lista.appendChild(marcador);
+            }
+            lista.appendChild(crearTarjeta(registro));
+        });
     }
 
     function textoUnidades(cantidad) {
@@ -765,6 +842,10 @@
     }
 
     function dibujarLista() {
+        if (relojLista) {
+            clearTimeout(relojLista);
+            relojLista = null;
+        }
         const registros = pedidosDeTrabajo();
         const historial = pedidosDelHistorial();
         // Si a esta persona le sacaron "Cobra" mientras miraba "A cobrar",
@@ -799,6 +880,11 @@
         resumen.textContent = deLaEtapa.length === 1
             ? "1 pedido  ·  " + textoUnidades(unidades)
             : deLaEtapa.length + " pedidos  ·  " + textoUnidades(unidades);
+        // Terminados (T167): también cuánto suman.
+        if (enHistorial) {
+            const suma = deLaEtapa.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
+            if (suma > 0) resumen.textContent += "  ·  " + textoPrecio(suma);
+        }
 
         if (deLaEtapa.length === 0 && enHistorial) {
             const vacio = crear("div", "card seguimientoVacio");
@@ -827,7 +913,8 @@
             return;
         }
 
-        deLaEtapa.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
+        if (enHistorial) dibujarTerminadosPorDia(deLaEtapa);
+        else deLaEtapa.slice(0, mostrando).forEach(registro => lista.appendChild(crearTarjeta(registro)));
         recordarEstados(registros.concat(historial));
 
         if (deLaEtapa.length > mostrando) {
@@ -912,6 +999,11 @@
             id: "entregado", boton: "Entregado", destino: "«Entregado», completos (sin cambios)", hecho: ["Pedido entregado", " pedidos entregados"],
             aplica: pedido => puedeEntregar(pedido),
             hacer: id => window.nubeVendeFrio.entregarPedido(id, {})
+        },
+        // T130: cobrar los elegidos uno tras otro, con la hoja de siempre.
+        {
+            id: "cobrar", boton: "Cobrar", extra: true,
+            aplica: pedido => puedeRegistrarCobro(pedido) && cobroPendiente(pedido)
         },
         {
             id: "eliminar", boton: "Eliminar", destino: "", peligro: true, hecho: ["Pedido eliminado", " pedidos eliminados"],
@@ -1020,7 +1112,7 @@
             boton.classList.toggle("oculto", accion !== principal);
         });
         botonMoverTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length);
-        botonMasTanda.classList.toggle("oculto", !disponibles.some(accion => accion.peligro));
+        botonMasTanda.classList.toggle("oculto", !masAccionesTanda(disponibles).length);
         filaTanda.classList.toggle("oculto", botonMoverTanda.classList.contains("oculto") && botonMasTanda.classList.contains("oculto"));
         actualizarBotonNuevo();
     }
@@ -1031,20 +1123,29 @@
 
     let etapaTanda = "";
     function accionPrincipalTanda(disponibles) {
+        // En «A cobrar» y Terminados el botón grande es "Cobrar" (T130).
+        const cobrar = disponibles.find(accion => accion.id === "cobrar");
+        if (cobrar && (etapaTanda === "aCobrar" || etapaTanda === "historial")) return cobrar;
         if (ETAPAS_SIN_PRINCIPAL.includes(etapaTanda)) return null;
-        return disponibles.find(accion => !accion.peligro) || null;
+        return disponibles.find(accion => !accion.peligro && !accion.extra) || null;
     }
 
     function otrosPasosTanda(disponibles) {
         const principal = accionPrincipalTanda(disponibles);
-        return disponibles.filter(accion => accion !== principal && !accion.peligro);
+        return disponibles.filter(accion => accion !== principal && !accion.peligro && !accion.extra);
+    }
+
+    // El ⋯: "Cobrar" (si no es el botón grande) y "Eliminar".
+    function masAccionesTanda(disponibles) {
+        const principal = accionPrincipalTanda(disponibles);
+        return disponibles.filter(accion => accion !== principal && (accion.peligro || accion.extra));
     }
 
     // Hoja con acciones de la tanda, cada una con cuántos pedidos toca.
     function abrirHojaTanda(titulo, acciones) {
         const p = window.piezas;
         if (!p || !acciones.length) return;
-        const iconos = { enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
+        const iconos = { cobrar: "moneda", enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
         const caja = p.hoja({
             titulo,
             sub: textoPedidos(elegidos.size) + " elegido" + (elegidos.size === 1 ? "" : "s"),
@@ -1058,7 +1159,7 @@
             const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accionTanda);
             if (!accion || boton.disabled) return;
             p.cerrar();
-            abrirConfirmarTanda(accion);
+            hacerAccionTanda(accion);
         });
     }
 
@@ -1152,13 +1253,25 @@
             return;
         }
         if (evento.target.closest(".botonMasTanda")) {
-            abrirHojaTanda("Más acciones", accionesDeLaEtapa().filter(accion => accion.peligro));
+            abrirHojaTanda("Más acciones", masAccionesTanda(accionesDeLaEtapa()));
             return;
         }
         const boton = evento.target.closest("button[data-accion]");
         const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accion);
-        if (accion && !boton.disabled) abrirConfirmarTanda(accion);
+        if (accion && !boton.disabled) hacerAccionTanda(accion);
     });
+
+    // "Cobrar" no pide confirmar: la hoja de cada cobro ya es la pregunta.
+    function hacerAccionTanda(accion) {
+        if (accion.id !== "cobrar") {
+            abrirConfirmarTanda(accion);
+            return;
+        }
+        const ids = [...elegidos].filter(id => aplicaAccion(accion, buscarPedido(id)));
+        dejarDeElegir();
+        dibujarLista();
+        empezarCobroEnTanda(ids, false);
+    }
 
     function textoPedidos(cantidad) {
         return cantidad === 1 ? "1 pedido" : cantidad + " pedidos";
@@ -1168,7 +1281,7 @@
         let modal = document.getElementById("modalRepartoTanda");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalRepartoTanda";
 
         const contenido = crear("div", "modalContenido repartoTanda");
@@ -1256,6 +1369,7 @@
         accionAConfirmar = null;
         if (!accion) return;
         const noSeMovieron = [];
+        const hechosIds = [];
         let hechos = 0;
 
         ids.forEach(id => {
@@ -1271,6 +1385,7 @@
             try {
                 accion.hacer(id);
                 hechos += 1;
+                hechosIds.push(id);
             } catch (error) {
                 console.error("No se pudo mover el pedido en tanda.", error);
                 noSeMovieron.push(comercio + (error && error.code === "pedido" ? " (" + error.message + ")" : ""));
@@ -1280,15 +1395,25 @@
         dejarDeElegir();
         dibujarLista();
 
-        if (!noSeMovieron.length) {
+        const aviso = noSeMovieron.length ? [
+            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
+            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
+        ] : null;
+
+        // T130: entregados en tanda por quien cobra, se cobran uno tras otro
+        // (como el "¿Cómo pagó?" que sale al entregar uno).
+        if (accion.id === "entregado" && hechosIds.length && puedeCobrar()) {
+            mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
+            empezarCobroEnTanda(hechosIds, true, aviso);
+            return;
+        }
+
+        if (!aviso) {
             mostrarToast(hechos === 1 ? accion.hecho[0] : hechos + accion.hecho[1]);
             return;
         }
 
-        mostrarAviso(
-            hechos ? "Algunos pedidos no se movieron" : "No se movió ningún pedido",
-            "Se hicieron " + hechos + " de " + ids.length + ". No se movieron: " + noSeMovieron.join("; ") + "."
-        );
+        mostrarAviso(aviso[0], aviso[1]);
     }
 
     // -------------------------------------------------
@@ -1313,7 +1438,14 @@
         const botones = crear("div", "modalBotones");
         const cerrar = crear("button", "btnModalSecundario", "Cerrar");
         cerrar.type = "button";
-        botones.appendChild(cerrar);
+        // T160: el Asistente sabe qué pedido está abierto («imprimí el ticket»).
+        const asistente = crear("button", "btnModalSecundario botonAsistenteFicha");
+        asistente.type = "button";
+        asistente.dataset.abrirAsistente = "";
+        asistente.setAttribute("aria-label", "Asistente");
+        asistente.title = "Asistente";
+        asistente.innerHTML = window.icono ? window.icono("chispa", 20) : "";
+        botones.append(asistente, cerrar);
 
         contenido.append(cuerpo, botones);
         modal.appendChild(contenido);
@@ -1662,6 +1794,9 @@
         const enfoque = activo && cuerpo.contains(activo) && activo.dataset && activo.dataset.accion
             ? { accion: activo.dataset.accion, linea: activo.dataset.linea || "" }
             : null;
+        // Repasada: "Más opciones" abierto sigue abierto (se cerraba solo si
+        // llegaba un cambio justo al tocarlo, como la confirmación de la nube).
+        const menuAbierto = Boolean(cuerpo.querySelector(".menuFichaPedido:not(.oculto)"));
 
         cuerpo.innerHTML = "";
 
@@ -1725,7 +1860,7 @@
 
         // Encabezado (T35): número, comercio con su estado y la línea de pasos.
         const numero = crear("p", "numeroFichaPedido", "Pedido N° " + numeroCortoDelPedido(pedido));
-        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(String(pedido.comercio || "")) : null;
+        const comercio = comercioParaLeerPorNombre(String(pedido.comercio || ""));
         const direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
         const tarjeta = crear("div", "tarjetaFichaPedido");
         tarjeta.append(numero, titulo);
@@ -1777,6 +1912,12 @@
                 (enfoque.linea ? '[data-linea="' + enfoque.linea.replace(/["\\]/g, "") + '"]' : "");
             const igual = cuerpo.querySelector(selector);
             if (igual) igual.focus({ preventScroll: true });
+        }
+        const menu = menuAbierto ? cuerpo.querySelector(".menuFichaPedido") : null;
+        const abrirMenu = menu ? cuerpo.querySelector(".botonMenuFicha") : null;
+        if (menu && abrirMenu) {
+            menu.classList.remove("oculto");
+            abrirMenu.setAttribute("aria-expanded", "true");
         }
     }
 
@@ -2098,6 +2239,13 @@
                 const abierto = menu.classList.toggle("oculto") === false;
                 abrir.setAttribute("aria-expanded", String(abierto));
             });
+            // Al elegir una opción, el menú se cierra antes de hacerla (así
+            // no vuelve a quedar abierto cuando la ficha se redibuja).
+            menu.addEventListener("click", evento => {
+                if (!evento.target.closest(".opcionMenuFicha")) return;
+                menu.classList.add("oculto");
+                abrir.setAttribute("aria-expanded", "false");
+            }, true);
             acciones.append(abrir, menu);
         }
 
@@ -2179,7 +2327,7 @@
         let modal = document.getElementById("modalTextoPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalTextoPedido";
 
         const contenido = crear("div", "modalContenido textoPedido");
@@ -2634,7 +2782,7 @@
         let modal = document.getElementById("modalConfirmarPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalConfirmarPedido";
 
         const contenido = crear("div", "modalContenido confirmarPedido");
@@ -2717,7 +2865,7 @@
         let modal = document.getElementById("modalFaltantePedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalFaltantePedido";
 
         const contenido = crear("div", "modalContenido faltantePedido");
@@ -3026,7 +3174,7 @@
         let modal = document.getElementById("modalResumenPreparacion");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalResumenPreparacion";
 
         const contenido = crear("div", "modalContenido resumenPreparacion");
@@ -3267,7 +3415,7 @@
         let modal = document.getElementById("modalEntregaPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalEntregaPedido";
 
         const contenido = crear("div", "modalContenido entregaPedido");
@@ -3558,6 +3706,12 @@
     let cobroPorAbrir = "";
     let esperaCobroPorAbrir = 0;
 
+    // Cobro en tanda (T130): { ids, indice, cobrados, pendientes, cambiaron,
+    // trasEntrega, esperarHasta, aviso }. La hoja muestra "Cobro 1 de N";
+    // al guardar pasa al siguiente. "Saltar" lo deja en «A cobrar» y
+    // "Terminar" corta la tanda: lo ya cobrado queda guardado.
+    let colaCobro = null;
+
     // Lado más largo de la foto del comprobante y tamaño máximo (en letras;
     // las reglas aceptan hasta 700.000).
     const LADO_MAXIMO_FOTO = 1280;
@@ -3605,7 +3759,8 @@
         const pagaCon = cobroAbierto.pagaCon;
         const vuelto = pagaCon === "justo" ? 0
             : Number.isFinite(monto) && pagaCon ? Math.round((pagaCon - monto) * 100) / 100 : NaN;
-        caja.classList.toggle("oculto", !Number.isFinite(vuelto));
+        // Solo se ve si hay vuelto o si no alcanza (con "Justo" no hace falta).
+        caja.classList.toggle("oculto", !Number.isFinite(vuelto) || vuelto === 0);
         caja.classList.toggle("faltaPlata", vuelto < 0);
         if (Number.isFinite(vuelto)) {
             caja.querySelector("span").textContent = vuelto === 0 ? "Da justo, sin vuelto" : vuelto < 0 ? "No alcanza, faltan" : "Le das de vuelto";
@@ -3617,7 +3772,7 @@
         let modal = document.getElementById("modalCobroPedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalCobroPedido";
 
         const contenido = crear("div", "modalContenido cobroPedido");
@@ -3627,6 +3782,17 @@
 
         const titulo = crear("h2", "", "¿Cómo pagó?");
         titulo.id = "tituloCobroPedido";
+
+        // Arriba, en tanda: "Cobro 1 de 9" y "Terminar".
+        const tanda = crear("div", "tandaCobro oculto");
+        tanda.id = "tandaCobroPedido";
+        const contador = crear("span", "contadorCobroTanda");
+        contador.id = "contadorCobroTanda";
+        contador.setAttribute("aria-live", "polite");
+        const terminar = crear("button", "terminarCobroTanda", "Terminar");
+        terminar.type = "button";
+        terminar.id = "terminarCobroTanda";
+        tanda.append(contador, terminar);
 
         const cuerpo = crear("div", "cuerpoCobroPedido");
         cuerpo.id = "cuerpoCobroPedido";
@@ -3648,13 +3814,20 @@
         guardar.id = "guardarCobroPedido";
         botones.append(volver, guardar);
 
-        contenido.append(titulo, cuerpo, archivo, botones);
+        contenido.append(tanda, titulo, cuerpo, archivo, botones);
         modal.appendChild(contenido);
         document.body.appendChild(modal);
 
-        volver.addEventListener("click", () => cerrarCobro(true));
+        volver.id = "volverCobroPedido";
+        volver.addEventListener("click", () => {
+            if (colaCobro) saltarCobroEnTanda();
+            else cerrarCobro(true);
+        });
+        terminar.addEventListener("click", terminarCobroEnTanda);
         modal.addEventListener("click", evento => {
-            if (evento.target === modal) cerrarCobro(true);
+            if (evento.target !== modal) return;
+            if (colaCobro) terminarCobroEnTanda();
+            else cerrarCobro(true);
         });
         guardar.addEventListener("click", guardarCobro);
 
@@ -3754,6 +3927,92 @@
         abrirCobro(id, true);
     }
 
+    // T130: empieza a cobrar varios, en el orden en que se ven.
+    function empezarCobroEnTanda(ids, trasEntrega, aviso) {
+        if (!ids.length) return;
+        colaCobro = {
+            ids: [...ids], indice: 0, cobrados: 0, pendientes: [], cambiaron: [],
+            trasEntrega: Boolean(trasEntrega),
+            // Recién entregados: puede tardar un instante en figurar.
+            esperarHasta: trasEntrega ? Date.now() + 5000 : 0,
+            aviso: aviso || null
+        };
+        const cola = colaCobro;
+        if (trasEntrega) setTimeout(() => {
+            if (colaCobro === cola) seguirCobroEnTanda();
+        }, 5100);
+        seguirCobroEnTanda();
+    }
+
+    function seguirCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola || cobroAbierto) return;
+
+        while (cola.indice < cola.ids.length) {
+            const id = cola.ids[cola.indice];
+            const pedido = buscarPedido(id);
+            if (pedido && puedeRegistrarCobro(pedido) && cobroPendiente(pedido)) {
+                abrirCobro(id, cola.trasEntrega);
+                return;
+            }
+            if (cola.trasEntrega && Date.now() < cola.esperarHasta && pedido && pedido.eliminado !== true &&
+                estadoActualDelPedido(pedido) !== "entregado") return;
+            // Otro ya lo cobró, lo movió o lo eliminó: sigue con el próximo.
+            cola.cambiaron.push(String(pedido && pedido.comercio || "Un pedido").trim());
+            cola.indice += 1;
+        }
+
+        terminarCobroEnTanda();
+    }
+
+    // El pedido que se ve sigue sin cobrar y pasa al siguiente.
+    function saltarCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola || !cobroAbierto) return;
+        cola.pendientes.push(cobroAbierto.id);
+        cerrarCobro(false);
+        cola.indice += 1;
+        seguirCobroEnTanda();
+    }
+
+    function terminarCobroEnTanda() {
+        const cola = colaCobro;
+        if (!cola) return;
+        colaCobro = null;
+        if (cobroAbierto) cerrarCobro(false);
+
+        // Los que no se cobraron quedan en «A cobrar». Si se acaban de
+        // entregar, se avisa a "Cobra" (como al cerrar uno solo).
+        const sinCobrar = cola.pendientes.concat(cola.ids.slice(cola.indice).filter(id => {
+            const pedido = buscarPedido(id);
+            return pedido && cobroPendiente(pedido);
+        }));
+        if (cola.trasEntrega) {
+            sinCobrar.forEach(id => {
+                try {
+                    window.nubeVendeFrio.avisarCobroPendiente(id);
+                } catch (error) {
+                    console.warn("No se pudo avisar el cobro pendiente.", error);
+                }
+            });
+        }
+
+        const total = cola.ids.length;
+        const texto = (cola.cobrados === 1 ? "1 cobrado" : cola.cobrados + " cobrados") + " de " + total +
+            (sinCobrar.length ? ". " + (sinCobrar.length === 1 ? "1 queda" : sinCobrar.length + " quedan") + " en «A cobrar»" : "");
+
+        if (cola.aviso || cola.cambiaron.length) {
+            const partes = [];
+            if (cola.aviso) partes.push(cola.aviso[1]);
+            partes.push(texto + ".");
+            if (cola.cambiaron.length) partes.push("Cambiaron mientras cobrabas (otro lo cobró o lo movió): " + cola.cambiaron.join("; ") + ".");
+            mostrarAviso(cola.aviso ? cola.aviso[0] : "Cobro en tanda", partes.join(" "));
+        } else {
+            mostrarToast(texto);
+        }
+        dibujarLista();
+    }
+
     function abrirCobro(id, trasEntrega) {
         const pedido = buscarPedido(id);
         if (!pedido || !puedeRegistrarCobro(pedido)) return;
@@ -3805,6 +4064,11 @@
     function revisarCobro() {
         const pedido = buscarPedido(cobroAbierto.id);
 
+        if (colaCobro && (!pedido || !puedeRegistrarCobro(pedido) || firmaDeCobro(pedido) !== cobroAbierto.firma)) {
+            pasarPorCambioEnTanda(pedido);
+            return;
+        }
+
         if (!pedido || !puedeRegistrarCobro(pedido)) {
             cerrarCobro(false);
             mostrarAviso("El pedido cambió", "El pedido ya no está entregado o ya no podés registrar su cobro. Revisá la ficha.");
@@ -3817,9 +4081,27 @@
         }
     }
 
+    // En tanda, si otro celular lo cobró o lo movió, se anota y sigue.
+    function pasarPorCambioEnTanda(pedido) {
+        colaCobro.cambiaron.push(String(pedido && pedido.comercio || "Un pedido").trim());
+        cerrarCobro(false);
+        colaCobro.indice += 1;
+        seguirCobroEnTanda();
+    }
+
     function dibujarCobro() {
         const cuerpo = document.getElementById("cuerpoCobroPedido");
         if (!cuerpo || !cobroAbierto) return;
+
+        const tanda = document.getElementById("tandaCobroPedido");
+        if (tanda) {
+            tanda.classList.toggle("oculto", !colaCobro);
+            if (colaCobro) {
+                document.getElementById("contadorCobroTanda").textContent = "Cobro " + (colaCobro.indice + 1) + " de " + colaCobro.ids.length;
+            }
+        }
+        const volver = document.getElementById("volverCobroPedido");
+        if (volver) volver.textContent = colaCobro ? "Saltar" : "Volver";
 
         const pedido = buscarPedido(cobroAbierto.id);
         if (!pedido) {
@@ -3983,7 +4265,8 @@
 
         const guardar = document.getElementById("guardarCobroPedido");
         if (guardar) {
-            guardar.textContent = forma === "pendiente" ? "Dejar pendiente" : "Guardar cobro";
+            const hayOtro = colaCobro && colaCobro.indice < colaCobro.ids.length - 1;
+            guardar.textContent = hayOtro ? (forma === "pendiente" ? "Pendiente y seguir" : "Guardar y seguir") : (forma === "pendiente" ? "Dejar pendiente" : "Guardar cobro");
             guardar.disabled = cobroAbierto.procesando;
         }
     }
@@ -4006,6 +4289,10 @@
 
         const pedido = buscarPedido(id);
         if (!pedido || !puedeRegistrarCobro(pedido) || firmaDeCobro(pedido) !== cobroAbierto.firma) {
+            if (colaCobro) {
+                pasarPorCambioEnTanda(pedido);
+                return;
+            }
             cerrarCobro(false);
             mostrarAviso("El pedido cambió", "Otra persona lo cambió recién. Revisá la ficha y probá de nuevo si hace falta.");
             return;
@@ -4029,7 +4316,13 @@
             const cobro = window.nubeVendeFrio.registrarCobro(id, datos);
             cerrarCobro(false);
 
-            if (cobro) {
+            if (colaCobro) {
+                if (cobro) colaCobro.cobrados += 1;
+                else colaCobro.pendientes.push(id);
+                if (cobro && navigator.vibrate) navigator.vibrate(30);
+                colaCobro.indice += 1;
+                seguirCobroEnTanda();
+            } else if (cobro) {
                 mostrarToast("Cobro registrado: " + textoCobro(cobro));
                 if (navigator.vibrate) navigator.vibrate(30);
             } else if (trasEntrega) {
@@ -4100,7 +4393,7 @@
         let modal = document.getElementById("modalComprobantePedido");
         if (modal) return modal;
 
-        modal = crear("div", "modal oculto");
+        modal = crear("div", "modal modalHoja oculto");
         modal.id = "modalComprobantePedido";
 
         const contenido = crear("div", "modalContenido comprobantePedido");
@@ -4185,24 +4478,40 @@
         return vistaActual === "pedidos" && !pantalla.classList.contains("oculto");
     }
 
-    function dibujar() {
-        if (vistaVisible()) dibujarLista();
+    // Lo que llega de la nube (cambios y "ya se subió") redibuja la lista una
+    // sola vez cada tanto: al abrir la app con miles de pedidos llegaban
+    // varios avisos seguidos y la lista se rehacía con cada uno (repasada).
+    // Lo demás (la ficha abierta, la entrega y el cobro) sigue al instante.
+    function pedirDibujarLista() {
+        if (relojLista) return;
+        relojLista = setTimeout(() => {
+            relojLista = null;
+            if (vistaVisible()) dibujarLista();
+        }, 80);
+    }
+
+    function dibujar({ listaEnUnRato = false } = {}) {
+        if (vistaVisible()) {
+            if (listaEnUnRato) pedirDibujarLista();
+            else dibujarLista();
+        }
         if (idFichaAbierta) dibujarFicha();
         if (idResumenAbierto) dibujarResumen();
         if (entregaAbierta) revisarEntrega();
         if (cobroPorAbrir) abrirCobroPendienteDeAbrir();
         if (cobroAbierto) revisarCobro();
+        else if (colaCobro) seguirCobroEnTanda();
     }
 
     // Un pedido cargado en otro celular (o en este) aparece al instante.
     if (typeof escucharCambiosDatos === "function") {
         escucharCambiosDatos(aviso => {
-            if (aviso && Array.isArray(aviso.colecciones) && aviso.colecciones.includes("historial")) dibujar();
+            if (aviso && Array.isArray(aviso.colecciones) && aviso.colecciones.includes("historial")) dibujar({ listaEnUnRato: true });
         });
     }
 
     // "Pendiente de sincronizar" se va cuando la nube confirma el pedido.
-    window.nubeVendeFrio?.escucharSincronizacion?.(() => dibujar());
+    window.nubeVendeFrio?.escucharSincronizacion?.(() => dibujar({ listaEnUnRato: true }));
 
     // Si el dueño cambia los permisos o los roles, los botones de la ficha
     // cambian al instante (T22).
@@ -4218,6 +4527,12 @@
     window.seguimientoVendeFrio = {
         redibujarFicha: () => dibujarFicha(),
         pedidoAbierto: () => idFichaAbierta,
+        // Dónde está la sección (lugar.js la vuelve a abrir igual si
+        // Android cierra la app de fondo).
+        vista: () => vistaActual,
+        etapa: () => etapaActual,
+        // La navegación (T135) usa el mismo "Deslizá para marcar Llegué".
+        crearDeslizador,
         // Inicio (T32): abre Pedidos en una etapa ("cargados", "enReparto"...).
         abrirEtapa(etapa) {
             etapa = ETAPAS_DE_ANTES[etapa] || etapa;

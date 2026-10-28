@@ -2,12 +2,13 @@
 // filas, y los ajustes de Apariencia, Trabajo y Recorrido que cambian algo
 // de verdad. También "Comercios para esta ruta" en Rutas.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
 async function abrirSeccion(page, seccion) {
-    await abrirMas(page);
+    if (seccion === "cuenta") await abrirMas(page);
+    else await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -78,7 +79,7 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
 
     // Cómo hacés el recorrido.
     await abrirSeccion(page, "navegacion");
-    await expect(detalle.getByRole("radio", { name: "Moto" })).toBeChecked();
+    await expect(detalle.getByRole("radio", { name: "Moto", exact: true })).toBeChecked();
     await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
     await capturar(page, "ajustes-04-recorrido");
 
@@ -91,6 +92,8 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
 
     // Rutas: comercios para esta ruta, con buscador y resumen.
     await page.evaluate(() => mostrarPantalla("rutas"));
+    // Está dentro de «Paradas» (T136).
+    await page.locator("#btnParadasRutas").click();
     const tarjeta = page.locator(".tarjetaSeleccionRuta");
     // Desplegable (T51): cerrada muestra el resumen; se abre al tocarla.
     await expect(tarjeta.locator(".chipResumenRuta").first()).toBeVisible();
@@ -98,7 +101,8 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     await tarjeta.locator("summary").click();
     await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(3);
     await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("1 elegido");
-    await tarjeta.getByRole("button", { name: "Todos" }).click();
+    // Todos, Pendientes y Ninguno, arriba de la lista de paradas (T138).
+    await page.locator(".filtrosParadas").getByRole("button", { name: "Todos" }).click();
     await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("3 elegidos");
     await page.getByLabel("Buscar comercio para la ruta").fill("luna");
     await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(1);

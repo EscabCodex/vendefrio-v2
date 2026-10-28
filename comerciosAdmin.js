@@ -7,20 +7,11 @@ const listaComerciosAdmin = document.getElementById("listaComerciosAdmin");
 const buscarComercio = document.getElementById("buscarComercio");
 const filtroEstadoComercios = document.getElementById("filtroEstadoComercios");
 const resumenComercios = document.getElementById("resumenComercios");
-// Todos / Pendientes / Visitados con botones (T37).
-const segmentoEstadoComercios = typeof crearSegmentoDeSelect === "function"
-    ? crearSegmentoDeSelect(filtroEstadoComercios, [["todos", "Todos"], ["pendientes", "Pendientes"], ["visitados", "Visitados"]], "Filtrar comercios por visitas", "todos")
-    : null;
+// Todos / Pendientes / Visitados con el número adentro, como en Pedidos
+// (repaso de diseño de Comercios). El select oculto sigue mandando.
+const filtrosEstadoComercios = document.getElementById("filtrosEstadoComercios");
+const cantidadComercios = document.getElementById("cantidadComercios");
 const botonAgregar = document.getElementById("agregarComercio");
-
-const modal = document.getElementById("modal");
-const modalTitulo = document.getElementById("modalTitulo");
-const modalNombre = document.getElementById("modalNombre");
-const modalDireccion = document.getElementById("modalDireccion");
-const modalEnlaceMaps = document.getElementById("modalEnlaceMaps");
-const modalTelefono = document.getElementById("modalTelefono");
-const guardarModal = document.getElementById("guardarModal");
-const cancelarModal = document.getElementById("cancelarModal");
 
 const modalConfirmacion = document.getElementById("modalConfirmacion");
 const tituloConfirmacion = document.getElementById("tituloConfirmacion");
@@ -32,35 +23,62 @@ let comercioSeleccionado = null;
 let accionConfirmada = null;
 let comercioMostradoIndividual = "";
 
+// Es la misma lista que la de Nuevo pedido (#listaComercios): se arma ahí,
+// y solo si los comercios cambiaron.
 function actualizarDatalist() {
-    const lista = document.getElementById("listaComercios");
-    if (!lista) return;
-
-    lista.innerHTML = "";
-
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-        .forEach(comercio => {
-            const option = document.createElement("option");
-            option.value = comercio.nombre;
-            lista.appendChild(option);
-        });
+    if (typeof actualizarDatalistPedido === "function") actualizarDatalistPedido();
 }
 
 function estaVisitadoEstaSemana(comercio) {
     return comercioEstaVisitadoEstaSemana(comercio);
 }
 
-function actualizarResumenComercios(comercios) {
-    if (!resumenComercios) return;
-
-    const visitados = comercios.filter(estaVisitadoEstaSemana).length;
+function actualizarResumenComercios(comercios, fueVisitado = estaVisitadoEstaSemana) {
+    const visitados = comercios.filter(fueVisitado).length;
     const pendientes = comercios.length - visitados;
 
-    resumenComercios.textContent =
-        comercios.length + (comercios.length === 1 ? " comercio" : " comercios") +
-        "  ·  " + pendientes + (pendientes === 1 ? " pendiente" : " pendientes") +
-        "  ·  " + visitados + (visitados === 1 ? " visitado" : " visitados") + " esta semana";
+    if (resumenComercios) {
+        resumenComercios.textContent =
+            comercios.length + (comercios.length === 1 ? " comercio" : " comercios") +
+            "  ·  " + pendientes + (pendientes === 1 ? " pendiente" : " pendientes") +
+            "  ·  " + visitados + (visitados === 1 ? " visitado" : " visitados") + " esta semana";
+    }
+    if (filtrosEstadoComercios) {
+        const cuentas = { todos: comercios.length, pendientes, visitados };
+        const elegido = filtroEstadoComercios ? filtroEstadoComercios.value : "todos";
+        filtrosEstadoComercios.querySelectorAll("[data-filtro]").forEach(boton => {
+            const activo = boton.dataset.filtro === elegido;
+            boton.classList.toggle("activo", activo);
+            boton.setAttribute("aria-pressed", String(activo));
+            boton.querySelector(".filtroEtapaCantidad").textContent = String(cuentas[boton.dataset.filtro]);
+        });
+    }
+}
+
+if (filtrosEstadoComercios) {
+    filtrosEstadoComercios.addEventListener("click", evento => {
+        const boton = evento.target.closest("[data-filtro]");
+        if (!boton || !filtroEstadoComercios) return;
+        filtroEstadoComercios.value = boton.dataset.filtro;
+        filtroEstadoComercios.dispatchEvent(new Event("change"));
+    });
+}
+
+// "hace 3 días", "ayer" u "hoy".
+function textoHaceDias(dias) {
+    if (dias <= 0) return "hoy";
+    if (dias === 1) return "ayer";
+    return "hace " + dias + " días";
+}
+
+// Días desde una fecha guardada como "28/10/2026".
+function diasDesdeFechaGuardada(texto) {
+    const partes = String(texto || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (!partes) return null;
+    const fecha = new Date(Number(partes[3]), Number(partes[2]) - 1, Number(partes[1]));
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((hoy - fecha) / 86400000));
 }
 
 function crearBotonComercio(clase, texto, nombre) {
@@ -223,6 +241,27 @@ function contarPedidosDelComercio(nombre, historial) {
     return historial.filter(pedido => nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)).length;
 }
 
+// Lo mismo para toda la lista de una vez (T151): antes se recorría el
+// historial entero por cada tarjeta y en cada comparación del orden.
+function contarPedidosDeComercios(comercios, historial) {
+    // Cuántos pedidos tiene cada nombre escrito en el historial.
+    const porNombre = new Map();
+    historial.forEach(pedido => {
+        const nombre = normalizarTexto(pedido.comercio || pedido.cliente);
+        if (nombre) porNombre.set(nombre, (porNombre.get(nombre) || 0) + 1);
+    });
+    const cuentas = new Map();
+    comercios.forEach(comercio => {
+        const nombre = normalizarTexto(comercio.nombre);
+        let cantidad = 0;
+        if (nombre) porNombre.forEach((pedidos, delHistorial) => {
+            if (delHistorial === nombre || delHistorial.startsWith(nombre + " ") || nombre.startsWith(delHistorial + " ")) cantidad += pedidos;
+        });
+        cuentas.set(comercio.nombre, cantidad);
+    });
+    return cuentas;
+}
+
 let verComerciosArchivados = false;
 
 function agregarFilaArchivados(cantidad) {
@@ -257,16 +296,27 @@ window.archivarComercioConDeshacer = archivarComercioConDeshacer;
 
 function renderizarComercios() {
     if (!listaComerciosAdmin) return;
+    // Con Comercios oculta no se dibuja: mostrarPantalla la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaComercios")?.classList.contains("oculto")) return;
 
     // Archivados (T63): aparte, con "Archivados (N)" al final de la lista.
-    const guardados = obtenerComercios();
+    const guardados = comerciosParaLeer();
     const archivados = guardados.filter(comercioArchivado);
     if (!archivados.length) verComerciosArchivados = false;
-    const todosLosComercios = verComerciosArchivados ? archivados : guardados.filter(comercio => !comercioArchivado(comercio));
-    // Eliminados y cancelados no cuentan (T26).
-    const historialComercios = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
-    actualizarResumenComercios(verComerciosArchivados ? guardados.filter(comercio => !comercioArchivado(comercio)) : todosLosComercios);
-    if (segmentoEstadoComercios && filtroEstadoComercios) sincronizarSegmento(segmentoEstadoComercios, filtroEstadoComercios.value);
+    const todosLosComercios = verComerciosArchivados ? archivados : comerciosActivosParaLeer();
+    // Eliminados y cancelados no cuentan (T26). Se cuenta una vez por cada
+    // cambio, no en cada letra del buscador.
+    const pedidosPorComercio = recordarHastaQueCambie("pedidosPorComercio", ["comercios", "historial"], () => {
+        return contarPedidosDeComercios(guardados, pedidosQueCuentanParaLeer());
+    });
+    // Pidió hace / No pide hace: una vez por cada cambio del historial.
+    const perfilesPorComercio = recordarHastaQueCambie("perfilesPorComercio", ["historial"], () => {
+        const mapa = new Map();
+        if (typeof obtenerPerfilesComerciales === "function") {
+            obtenerPerfilesComerciales(pedidosQueCuentanParaLeer()).forEach(perfil => mapa.set(normalizarTexto(perfil.nombre), perfil));
+        }
+        return mapa;
+    });
 
     const texto = buscarComercio ? buscarComercio.value : "";
     const filtro = filtroEstadoComercios
@@ -274,13 +324,23 @@ function renderizarComercios() {
         : "todos";
     const filtroNormalizado = normalizarTexto(texto);
 
+    // Visitado o no, una vez por comercio (no en cada comparación del orden).
+    const visitados = new Map();
+    const fueVisitado = comercio => {
+        if (!visitados.has(comercio)) visitados.set(comercio, estaVisitadoEstaSemana(comercio));
+        return visitados.get(comercio);
+    };
+    // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
+    const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
+    actualizarResumenComercios(verComerciosArchivados ? guardados.filter(comercio => !comercioArchivado(comercio)) : todosLosComercios, fueVisitado);
+
     const comercios = todosLosComercios
         .filter(comercio => {
             const coincideIndividual = !comercioMostradoIndividual ||
                 normalizarTexto(comercio.nombre) === normalizarTexto(comercioMostradoIndividual);
             const coincideTexto = normalizarTexto(comercio.nombre)
                 .includes(filtroNormalizado) && coincideIndividual;
-            const visitado = estaVisitadoEstaSemana(comercio);
+            const visitado = fueVisitado(comercio);
 
             const coincideEstado =
                 filtro === "todos" ||
@@ -290,24 +350,26 @@ function renderizarComercios() {
             return coincideTexto && coincideEstado;
         })
         .sort((a, b) => {
-            // Más > Preferencias de trabajo > "Comercios: mostrar primero" (T50).
-            const orden = window.preferenciasVendeFrio?.valor("orden") || "pendientes";
-
             if (orden === "frecuentes") {
-                const diferencia = contarPedidosDelComercio(b.nombre, historialComercios) - contarPedidosDelComercio(a.nombre, historialComercios);
+                const diferencia = pedidosPorComercio.get(b.nombre) - pedidosPorComercio.get(a.nombre);
                 if (diferencia) return diferencia;
             } else if (orden === "pendientes") {
-                const pendienteA = !estaVisitadoEstaSemana(a);
-                const pendienteB = !estaVisitadoEstaSemana(b);
+                const pendienteA = !fueVisitado(a);
+                const pendienteB = !fueVisitado(b);
 
                 if (pendienteA !== pendienteB) {
                     return pendienteA ? -1 : 1;
                 }
             }
 
-            return a.nombre.localeCompare(b.nombre, "es");
+            return ordenAlfabeticoEs.compare(a.nombre, b.nombre);
         });
 
+    if (cantidadComercios) {
+        cantidadComercios.textContent = comercios.length + (comercios.length === 1 ? " comercio" : " comercios");
+    }
+
+    window.piezas?.cortarTandas(listaComerciosAdmin);
     listaComerciosAdmin.innerHTML = "";
 
     if (comercioMostradoIndividual) {
@@ -337,148 +399,64 @@ function renderizarComercios() {
         return;
     }
 
-    comercios.forEach(comercio => {
+    // Con muchos comercios se dibujan de a tandas, sin trabar (T151).
+    // La tarjeta (repaso de diseño de Comercios): abajo del nombre, un dato
+    // por renglón (pedidos, dirección, teléfono, horario); el que falta se
+    // agrega ahí mismo. A la derecha: Pendiente, Debe, cuándo pidió y cuándo
+    // se lo visitó. Con muchos comercios se dibujan de a tandas (T151).
+    const p = window.piezas;
+    const dato = (clase, icono, texto) => `<span class="datoComercio ${clase}">${window.icono(icono, 13)} ${p.esc(texto)}</span>`;
+    const falta = (campo, texto, nombre) => `<button type="button" class="datoComercio datoFalta agregarDatoBtn" data-campo="${campo}" data-nombre="${p.esc(nombre)}">${window.icono("mas", 13)} ${texto}</button>`;
+    const chip = (texto, tono, clase = "") => `<span class="chipEstado ${clase}"${tono ? ` data-tono="${tono}"` : ""}>${p.esc(texto)}</span>`;
+    const dibujarComercio = comercio => {
         const card = document.createElement("div");
         card.className = "card comercioCard";
         card.tabIndex = 0;
         card.setAttribute("role", "button");
         card.setAttribute("aria-label", "Abrir ficha de " + comercio.nombre);
-        const cabecera = document.createElement("div");
-        cabecera.className = "cabeceraCard";
 
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.style.background = colorAvatar(comercio.nombre);
-        avatar.textContent = iniciales(comercio.nombre);
+        const nombre = comercio.nombre;
+        const cantidadPedidos = pedidosPorComercio.get(nombre) || 0;
+        const textoPedidos = cantidadPedidos + (cantidadPedidos === 1 ? " pedido" : " pedidos");
+        const datos = [
+            cantidadPedidos
+                ? `<button type="button" class="datoComercio datoPedidos historialComercioBtn" data-nombre="${p.esc(nombre)}" aria-label="Ver los ${textoPedidos} de ${p.esc(nombre)}">${window.icono("paquete", 13)} ${textoPedidos}</button>`
+                : dato("datoPedidos", "paquete", "Sin pedidos"),
+            comercio.direccion ? dato("datoDireccion", "ubicacion", comercio.direccion) : falta("direccion", "Agregar dirección", nombre),
+            comercio.telefono ? dato("datoTelefono", "telefono", comercio.telefono) : falta("telefono", "Agregar teléfono", nombre),
+            comercio.horario ? dato("datoHorario", "alarma", comercio.horario) : falta("horario", "Agregar horario", nombre)
+        ];
 
-        const informacion = document.createElement("div");
-        informacion.className = "infoCard";
+        const visitado = fueVisitado(comercio);
+        const chips = [];
+        if (comercioArchivado(comercio)) chips.push(chip("Archivado", "", "estadoComercio"));
+        else chips.push(chip(visitado ? "Visitado" : "Pendiente", visitado ? "ok" : "aviso", "estadoComercio"));
+        // Lo que debe (informe del desconocido; solo para quien cobra, lo calcula "A cobrar").
+        const debe = window.saldosVendeFrio?.deudaDe?.(nombre) || 0;
+        if (debe > 0) chips.push(chip("Debe " + p.plata(debe), "peligro", "chipDebe"));
+        const perfil = perfilesPorComercio.get(normalizarTexto(nombre));
+        if (perfil) chips.push(chip((perfil.atrasado ? "No pide " : "Pidió ") + textoHaceDias(perfil.diasDesdeUltimo), perfil.atrasado ? "aviso" : "", "chipGris chipPidio"));
+        else chips.push(chip("Nunca pidió", "", "chipGris chipPidio"));
+        const diasVisita = diasDesdeFechaGuardada(comercio.ultimaVisita);
+        chips.push(chip(diasVisita === null ? "Nunca visitado" : "Visita " + textoHaceDias(diasVisita), "", "chipGris chipVisita"));
 
-        const titulo = document.createElement("h3");
-        titulo.textContent = comercio.nombre;
-
-        const datosComercio = document.createElement("div");
-        datosComercio.className = "datosComercioGrid";
-
-        const pedidos = document.createElement("span");
-        pedidos.className = "datoComercio datoPedidos";
-        const cantidadPedidos = contarPedidosDelComercio(comercio.nombre, historialComercios);
-        pedidos.innerHTML =
-            window.icono("paquete", 12) + " " +
-            cantidadPedidos +
-            (cantidadPedidos === 1 ? " pedido" : " pedidos");
-
-        const ultimaVisita = document.createElement("span");
-        ultimaVisita.className = "datoComercio datoVisita";
-        ultimaVisita.innerHTML =
-            window.icono("calendario", 12) + " " +
-            (comercio.ultimaVisita || "Nunca");
-
-        const direccion = document.createElement("span");
-        direccion.className = "datoComercio datoDireccion";
-        direccion.innerHTML = comercio.direccion
-            ? window.icono("ubicacion", 12) + " " + comercio.direccion
-            : "";
-
-        const telefono = document.createElement("span");
-        telefono.className = "datoComercio datoTelefono";
-        telefono.innerHTML = comercio.telefono
-            ? window.icono("telefono", 12) + " " + comercio.telefono
-            : "";
-
-        datosComercio.append(
-            pedidos,
-            ultimaVisita,
-            direccion,
-            telefono
-        );
-
-        const visitado = estaVisitadoEstaSemana(comercio);
-        const estado = document.createElement("span");
-        estado.className = "chipEstado estadoComercio";
-        estado.dataset.tono = visitado ? "ok" : "aviso";
-        estado.textContent = visitado ? "Visitado" : "Pendiente";
-        estado.title = visitado ? "Visitado esta semana" : "Pendiente esta semana";
-        if (comercioArchivado(comercio)) {
-            estado.dataset.tono = "";
-            estado.textContent = "Archivado";
-            estado.title = "Archivado: no aparece para visitar";
-        }
-
-        const filaTitulo = document.createElement("div");
-        filaTitulo.className = "filaTituloComercio";
-        filaTitulo.append(titulo, estado);
-        informacion.append(filaTitulo, datosComercio);
-        cabecera.append(avatar, informacion);
-        card.appendChild(cabecera);
-
-        const acciones = document.createElement("div");
-        acciones.className = "accionesComercio";
-        acciones.addEventListener("click", event => event.stopPropagation());
-        acciones.append(
-            crearBotonComercio(
-                "agregar pedidoComercioBtn",
-                window.icono("documento",13) + " Pedido",
-                comercio.nombre
-            ),
-            crearBotonComercio(
-                "ver historialComercioBtn",
-                window.icono("historial",13) + " Historial",
-                comercio.nombre
-            ),
-            crearBotonComercio(
-                "editar editarBtn",
-                window.icono("lapiz",13) + " Editar",
-                comercio.nombre
-            ),
-            comercioArchivado(comercio)
-                ? crearBotonComercio("ver recuperarComercioBtn", window.icono("deshacer",13) + " Recuperar", comercio.nombre)
-                : crearBotonComercio("secundario archivarComercioBtn", window.icono("archivo",13) + " Archivar", comercio.nombre)
-        );
-        if (comercioArchivado(comercio)) {
-            acciones.appendChild(crearBotonComercio(
-                "eliminar eliminarBtn",
-                window.icono("tacho",13) + " Eliminar para siempre",
-                comercio.nombre
-            ));
-        }
-
-        if (comercio.enlaceMaps || comercio.direccion) {
-            acciones.insertBefore(
-                crearBotonComercio(
-                    "ver abrirMapsBtn",
-                    window.icono("ubicacion",13) + " Maps",
-                    comercio.nombre
-                ),
-                acciones.children[2]
-            );
-        }
-
-        if (!visitado) {
-            acciones.insertBefore(
-                crearBotonComercio(
-                    "ver marcarVisitaBtn",
-                    window.icono("check",13) + " Marcar visitado",
-                    comercio.nombre
-                ),
-                acciones.children[2]
-            );
-        } else {
-            acciones.insertBefore(
-                crearBotonComercio(
-                    "secundario marcarPendienteBtn",
-                    window.icono("puntoRojo",13) + " Marcar pendiente",
-                    comercio.nombre
-                ),
-                acciones.children[2]
-            );
-        }
-
-        card.appendChild(acciones);
-        listaComerciosAdmin.appendChild(card);
-    });
-
-    agregarFilaArchivados(archivados.length);
+        card.innerHTML = `<div class="cabeceraCard">
+                <div class="avatar" style="background:${colorAvatar(nombre)}">${p.esc(iniciales(nombre))}</div>
+                <div class="infoCard">
+                    <div class="filaTituloComercio"><h3>${p.esc(nombre)}</h3></div>
+                    <div class="datosComercioGrid">${datos.join("")}</div>
+                </div>
+                <div class="chipsComercio">${chips.join("")}</div>
+            </div>`;
+        return card;
+    };
+    const dibujarTodo = () => {
+        comercios.forEach(comercio => listaComerciosAdmin.appendChild(dibujarComercio(comercio)));
+        agregarFilaArchivados(archivados.length);
+    };
+    if (window.piezas?.dibujarDeATandas) {
+        window.piezas.dibujarDeATandas(listaComerciosAdmin, comercios, dibujarComercio, { alTerminar: () => agregarFilaArchivados(archivados.length) });
+    } else dibujarTodo();
 }
 
 // Alias que utiliza menu.js al abrir la pantalla.
@@ -492,144 +470,13 @@ if (filtroEstadoComercios) {
     filtroEstadoComercios.addEventListener("change", renderizarComercios);
 }
 
+// Agregar y editar usan la hoja única "Datos del comercio" (datosComercio.js).
 function abrirModalNuevo() {
-    comercioSeleccionado = null;
-    modalTitulo.textContent = "Nuevo Comercio";
-    modalNombre.value = "";
-    modalDireccion.value = "";
-    if (modalEnlaceMaps) modalEnlaceMaps.value = "";
-    modalTelefono.value = "";
-    modal.classList.remove("oculto");
+    window.datosComercioVendeFrio?.nuevo();
 }
 
-function abrirModalEditar(comercio) {
-    comercioSeleccionado = comercio;
-    modalTitulo.textContent = "Editar Comercio";
-    modalNombre.value = comercio.nombre;
-    modalDireccion.value = comercio.direccion || "";
-    if (modalEnlaceMaps) modalEnlaceMaps.value = comercio.enlaceMaps || "";
-    modalTelefono.value = comercio.telefono || "";
-    modal.classList.remove("oculto");
-}
-
-function cerrarModal() {
-    if (modal) modal.classList.add("oculto");
-}
-
-if (cancelarModal) cancelarModal.onclick = cerrarModal;
-
-if (guardarModal) {
-    guardarModal.onclick = async () => {
-        const nombre = modalNombre.value.trim();
-        let direccion = modalDireccion.value.trim();
-        const enlaceMaps = modalEnlaceMaps
-            ? modalEnlaceMaps.value.trim()
-            : "";
-        const telefono = modalTelefono.value.trim();
-
-        if (!nombre) {
-            mostrarAviso(
-                "Falta el nombre",
-                "Ingres\u00e1 un nombre antes de guardar el comercio."
-            );
-            return;
-        }
-
-        let coordenadasMaps = extraerCoordenadasDeMaps(enlaceMaps);
-        let datosMapsRemotos = null;
-        let errorResolverMaps = false;
-
-        if (enlaceMaps && !coordenadasMaps) {
-            try {
-                datosMapsRemotos = await resolverEnlaceMaps(enlaceMaps);
-
-                if (!direccion && datosMapsRemotos.direccion) {
-                    direccion = datosMapsRemotos.direccion;
-                }
-
-                if (
-                    datosMapsRemotos.lat !== null &&
-                    datosMapsRemotos.lng !== null
-                ) {
-                    coordenadasMaps = {
-                        lat: Number(datosMapsRemotos.lat),
-                        lng: Number(datosMapsRemotos.lng)
-                    };
-                }
-            } catch (error) {
-                datosMapsRemotos = null;
-                errorResolverMaps = true;
-            }
-        }
-
-        let guardado;
-
-        if (comercioSeleccionado === null) {
-            guardado = agregarComercioConId({
-                nombre,
-                direccion,
-                enlaceMaps,
-                telefono,
-                lat: coordenadasMaps ? coordenadasMaps.lat : "",
-                lng: coordenadasMaps ? coordenadasMaps.lng : "",
-                origenGps: coordenadasMaps ? "maps" : "",
-                pedidosRealizados: 0,
-                ultimaVisita: ""
-            });
-
-            if (!guardado) {
-                mostrarAviso(
-                    "Comercio no creado",
-                    "Ese comercio ya existe o el nombre no es v\u00e1lido."
-                );
-                return;
-            }
-        } else {
-            const datosActualizacion = {
-                nombre,
-                direccion,
-                enlaceMaps,
-                telefono
-            };
-
-            if (coordenadasMaps) {
-                datosActualizacion.lat = coordenadasMaps.lat;
-                datosActualizacion.lng = coordenadasMaps.lng;
-                datosActualizacion.origenGps = "maps";
-            }
-
-            guardado = actualizarComercioPorId(
-                comercioSeleccionado.id,
-                datosActualizacion
-            );
-
-            if (!guardado) {
-                mostrarAviso(
-                    "Comercio no modificado",
-                    "No se pudo guardar. Revis\u00e1 que el nombre no est\u00e9 repetido."
-                );
-                return;
-            }
-        }
-
-        cerrarModal();
-
-        if (coordenadasMaps) {
-            mostrarAviso(
-                "Ubicaci\u00f3n detectada",
-                "Se guardaron autom\u00e1ticamente las coordenadas encontradas en el enlace de Maps."
-            );
-        } else if (errorResolverMaps) {
-            mostrarAviso(
-                "Comercio guardado sin GPS",
-                "El enlace se guard\u00f3, pero no se pudo obtener la ubicaci\u00f3n autom\u00e1ticamente."
-            );
-        }
-
-        actualizarDatalist();
-        renderizarComercios();
-        if (typeof actualizarDashboard === "function") actualizarDashboard();
-    };
+function abrirModalEditar(comercio, campo) {
+    if (comercio) window.datosComercioVendeFrio?.editar(comercio.nombre, { campo });
 }
 
 function mostrarComercioIndividual(nombre) {
@@ -642,6 +489,13 @@ function mostrarComercioIndividual(nombre) {
     } else {
         renderizarComercios();
     }
+}
+
+// Inicio (visitados, sin visitar): la lista entera, no la de un solo
+// comercio (la deja Historial) ni la de archivados.
+function verTodaLaListaDeComercios() {
+    comercioMostradoIndividual = "";
+    verComerciosArchivados = false;
 }
 
 function limpiarComercioIndividual() {
@@ -658,6 +512,11 @@ if (listaComerciosAdmin) {
 
         const nombre = elemento.dataset.nombre;
         if (!nombre) return;
+
+        if (elemento.classList.contains("agregarDatoBtn")) {
+            window.abrirDatosComercio?.(nombre, elemento.dataset.campo);
+            return;
+        }
 
         if (elemento.classList.contains("pedidoComercioBtn")) {
             if (typeof irAPedidoRapido === "function") {
@@ -724,12 +583,6 @@ if (listaComerciosAdmin) {
     });
 }
 
-if (modal) {
-    modal.addEventListener("click", event => {
-        if (event.target === modal) cerrarModal();
-    });
-}
-
 function abrirConfirmacion(titulo, mensaje, accion) {
     tituloConfirmacion.textContent = titulo;
     mensajeConfirmacion.textContent = mensaje;
@@ -760,7 +613,6 @@ if (modalConfirmacion) {
 
 document.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
-    cerrarModal();
     cerrarConfirmacion();
     if (typeof cerrarModalProducto === "function") cerrarModalProducto();
 });

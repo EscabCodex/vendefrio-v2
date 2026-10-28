@@ -508,7 +508,7 @@
 
         modal = document.createElement("div");
         modal.id = "modalImpresion";
-        modal.className = "modal oculto";
+        modal.className = "modal modalHoja oculto";
         modal.innerHTML = `
             <div class="modalContenido impresionPedido" role="dialog" aria-modal="true" aria-labelledby="tituloImpresion">
                 <h2 id="tituloImpresion"></h2>
@@ -620,7 +620,7 @@
 
         modal = document.createElement("div");
         modal.id = "modalCopiasTicket";
-        modal.className = "modal oculto";
+        modal.className = "modal modalHoja oculto";
         modal.innerHTML = `
             <div class="modalContenido copiasTicket" role="dialog" aria-modal="true" aria-labelledby="tituloCopiasTicket">
                 <h2 id="tituloCopiasTicket"></h2>
@@ -665,7 +665,7 @@
     }
 
     function buscarPedido(id) {
-        return obtenerHistorial().find(item => String(item.id || "") === String(id || "")) || null;
+        return pedidoParaLeer(id);
     }
 
     function elegirCopias(idPedido, opciones) {
@@ -774,7 +774,7 @@
         const sinEntregar = [];
         const aCobrar = [];
 
-        obtenerHistorial().forEach(pedido => {
+        historialParaLeer().forEach(pedido => {
             if (!pedido || pedido.eliminado === true || !mismoComercio(pedido.comercio, nombre)) return;
 
             const estado = estadoActualDelPedido(pedido);

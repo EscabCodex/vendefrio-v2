@@ -14,7 +14,8 @@
         ["navegar", "Navegación propia", "«Ir» te lleva al comercio con la línea del camino, giro a giro y con voz. Al llegar, «Llegué» lo marca visitado."],
         ["microfono", "Voz", "Tocá el micrófono y decí «próxima parada» o «nuevo pedido para…». En Nuevo pedido podés dictar o pegar un mensaje."],
         ["lista", "Pedidos con historial", "Hoy, Semana, Mes y Todo en la misma lista. La ficha muestra los pasos del pedido y lo demás va en «⋯»."],
-        ["calendario", "Suelen pedir hoy", "Inicio te muestra los comercios que suelen pedir este día de la semana y todavía no pidieron."],
+        ["calendario", "Suelen pedir hoy", "Inicio puede mostrarte los comercios que suelen pedir este día y todavía no pidieron. Prendelo en Más › Apariencia › Qué se ve en Inicio."],
+        ["paleta", "Apariencia a tu gusto", "Más colores (y uno a elección), tonos de día y de noche, forma de los botones, estilo de las tarjetas, tamaño de los íconos y fondo de Inicio, con vista previa."],
         ["descargar", "Planilla para el contador", "Descargá los pedidos y cobros del período desde Estadísticas o Cierre del día."]
     ];
 
@@ -61,7 +62,7 @@
     function abrir() {
         if (!ventana) {
             ventana = document.createElement("div");
-            ventana.className = "modal oculto ventanaNovedades";
+            ventana.className = "modal modalHoja oculto ventanaNovedades";
             ventana.innerHTML = `
                 <div class="modalContenido contenidoNovedades" role="dialog" aria-modal="true" aria-labelledby="tituloNovedades">
                     <span class="etiquetaVersion"></span>
@@ -113,5 +114,5 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", revisar);
     else revisar();
 
-    window.novedadesVendeFrio = { version: VERSION, abrir };
+    window.novedadesVendeFrio = { version: VERSION, abrir, hayDatosDeAntes };
 }());

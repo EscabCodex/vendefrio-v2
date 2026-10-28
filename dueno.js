@@ -28,7 +28,9 @@
 
     function pedidosDelMes() {
         const inicio = new Date(); inicio.setDate(1); inicio.setHours(0, 0, 0, 0);
-        const lista = typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
+        // Solo se lee (T168): la lista compartida, sin volver a leer el historial.
+        const lista = typeof pedidosDelHistorialParaLeer === "function" ? pedidosDelHistorialParaLeer()
+            : typeof obtenerPedidosDelHistorial === "function" ? obtenerPedidosDelHistorial() : [];
         return lista.filter(pedido => { const fecha = fechaPedido(pedido); return fecha && fecha >= inicio; });
     }
 
@@ -58,7 +60,8 @@
     function tarjetaEnfriando(historial, completo) {
         const estadisticas = window.estadisticasVendeFrio;
         if (!estadisticas || typeof obtenerPerfilesComerciales !== "function") return null;
-        const enfriando = obtenerPerfilesComerciales(completo || historial)
+        const lista = completo || historial;
+        const enfriando = (estadisticas.perfilesDe ? estadisticas.perfilesDe(lista) : obtenerPerfilesComerciales(lista))
             .filter(perfil => perfil.atrasado && perfil.nombre !== "Sin comercio")
             .sort((a, b) => (b.diasDesdeUltimo / b.promedioDias) - (a.diasDesdeUltimo / a.promedioDias));
         if (!enfriando.length) return null;
@@ -67,7 +70,7 @@
         const distribuidora = window.distribuidoraVendeFrio?.nombreActual?.() || "";
         const filas = mostrar.map(perfil => {
             const enlace = enlaceWhatsapp(perfil.nombre, "¡Hola! " + (distribuidora ? "Te escribo de " + distribuidora + ". " : "") + "Hace unos días que no te vemos, ¿te preparo un pedido?");
-            return `<div class="statsFila filaEnfriando">
+            return `<div class="statsFila filaEnfriando" data-ficha="${p.esc(perfil.nombre)}">
                 <span class="pzIni ${p.colorIni(perfil.nombre)}">${p.esc(p.iniciales(perfil.nombre))}</span>
                 <div class="statsFilaTexto"><strong>${p.esc(perfil.nombre)}</strong><small>Pedía ${cadaCuanto(perfil.promedioDias)} · hace ${perfil.diasDesdeUltimo} días que no</small></div>
                 ${enlace ? `<a class="botonWaEnfriando" href="${enlace}" target="_blank" rel="noopener" aria-label="WhatsApp a ${p.esc(perfil.nombre)}">${p.ico("whatsapp", 20)}</a>` : ""}
@@ -76,6 +79,10 @@
         const verTodos = enfriando.length > 3 && !verTodosEnfriando
             ? `<button type="button" class="pzEnlace verTodosEnfriando">Ver los ${enfriando.length}</button>` : "";
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div>${verTodos}`);
+        // Repasada: tocar el comercio abre su ficha (el WhatsApp sigue aparte).
+        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
+            p.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha), { rol: false });
+        });
         card.querySelector(".verTodosEnfriando")?.addEventListener("click", () => {
             verTodosEnfriando = true;
             estadisticas.redibujar();
@@ -108,7 +115,7 @@
         const personas = {};
         const yo = p.persona();
         if (yo && yo.idPersona) personas[yo.idPersona] = yo.nombre;
-        (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).forEach(pedido => {
+        (typeof historialParaLeer === "function" ? historialParaLeer() : []).forEach(pedido => {
             const autor = pedido && pedido.autor;
             const fecha = fechaPedido(pedido);
             if (autor && autor.idPersona && fecha && fecha.getTime() >= desde) personas[autor.idPersona] = autor.nombre || personas[autor.idPersona];
@@ -190,7 +197,7 @@
             const nombre = String(pedido.comercio || "").trim().toLocaleLowerCase("es");
             porComercio[nombre] = (porComercio[nombre] || 0) + totalPedido(pedido);
         });
-        const comercios = typeof obtenerComercios === "function" ? obtenerComercios() : [];
+        const comercios = typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [];
         return comercios
             .filter(comercio => comercio.archivado !== true && comercio.lat !== "" && comercio.lng !== "" &&
                 Number.isFinite(Number(comercio.lat)) && Number.isFinite(Number(comercio.lng)) && comercio.lat !== null)

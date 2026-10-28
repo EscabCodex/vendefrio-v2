@@ -12,6 +12,18 @@ const pantallas = {
     rutas: document.getElementById("pantallaRutas")
 };
 
+// Las listas largas de las pantallas que se dejan se vacían: se vuelven a
+// dibujar al entrar, y miles de tarjetas ocultas hacen más lento todo lo
+// demás (T151).
+function vaciarListasOcultas(nombre) {
+    [["historial", "contenedorHistorial"], ["comercios", "listaComerciosAdmin"]].forEach(([pantalla, id]) => {
+        const lista = document.getElementById(id);
+        if (pantalla === nombre || !lista || !lista.firstChild) return;
+        window.piezas?.cortarTandas(lista);
+        lista.replaceChildren();
+    });
+}
+
 function mostrarPantalla(nombre) {
     if (typeof window.cerrarFichaComercio === "function" && nombre !== "comercios") window.cerrarFichaComercio();
     if (nombre === "mas") {
@@ -26,6 +38,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {
         pantalla.classList.add("oculto");
     });
+    vaciarListasOcultas(nombre);
 
     if (pantallas[nombre]) {
         pantallas[nombre].classList.remove("oculto");
@@ -37,6 +50,7 @@ function mostrarPantalla(nombre) {
     document.querySelectorAll(".nav-item").forEach(btn => {
         btn.classList.toggle("activo", btn.dataset.pantalla === nombre || btn.dataset.tambien === nombre);
     });
+    window.piezas?.acomodarCabeceras?.();
 
     if (nombre === "menu") actualizarDashboard();
     if (nombre === "pedido") {
@@ -116,28 +130,63 @@ function comercioVisitadoRecientemente(comercio) {
 }
 
 let ubicacionDashboard = null;
+let horaUbicacionDashboard = 0;
 let solicitandoUbicacionDashboard = false;
 
 function distanciaDashboard(lat1, lng1, lat2, lng2) {
     const radio = 6371; const rad = valor => valor * Math.PI / 180; const dLat = rad(lat2 - lat1); const dLng = rad(lng2 - lng1); const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2; return radio * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// La ubicación se pide de nuevo si tiene más de 2 minutos: andando, la
+// parada más cercana cambia. "Actualizar mi ubicación" la pide en el momento.
 function actualizarUbicacionDashboard(forzar = false) {
-    if ((!forzar && ubicacionDashboard) || solicitandoUbicacionDashboard || !navigator.geolocation) return;
+    const vieja = Date.now() - horaUbicacionDashboard > 120000;
+    if ((!forzar && ubicacionDashboard && !vieja) || solicitandoUbicacionDashboard || !navigator.geolocation) return;
     solicitandoUbicacionDashboard = true;
-    navigator.geolocation.getCurrentPosition(posicion => { ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude }; solicitandoUbicacionDashboard = false; actualizarDashboard(); }, () => { solicitandoUbicacionDashboard = false; }, { enableHighAccuracy: true, maximumAge: 120000, timeout: 8000 });
+    navigator.geolocation.getCurrentPosition(posicion => {
+        ubicacionDashboard = { lat: posicion.coords.latitude, lng: posicion.coords.longitude };
+        horaUbicacionDashboard = Date.now();
+        solicitandoUbicacionDashboard = false;
+        actualizarDashboard();
+    }, error => {
+        solicitandoUbicacionDashboard = false;
+        if (!forzar) return;
+        document.querySelectorAll(".btnUbicacionDashboard").forEach(boton => { boton.disabled = false; boton.classList.remove("buscando"); });
+        if (error && error.code === 1) explicarPermisoUbicacion();
+        else if (typeof mostrarToast === "function") mostrarToast("No se pudo saber dónde estás. Revisá que el GPS esté prendido.");
+    }, { enableHighAccuracy: true, maximumAge: forzar ? 0 : 120000, timeout: 8000 });
+}
+
+// T178: si el permiso de ubicación está negado, el celular ya no pregunta;
+// una hoja explica cómo prenderlo. La ubicación no es obligatoria.
+function explicarPermisoUbicacion() {
+    const p = window.piezas;
+    if (!p || typeof p.hoja !== "function") {
+        if (typeof mostrarToast === "function") mostrarToast("La app no tiene permiso para saber dónde estás.");
+        return;
+    }
+    p.hoja({
+        titulo: "Prendé la ubicación",
+        sub: "Así Inicio te muestra el comercio sin visitar más cerca tuyo. Es opcional: sin ella, la app anda igual.",
+        clase: "hojaPermisoUbicacion",
+        html: `<ol class="pasosPermiso">
+            <li>Tocá el candadito o los tres puntitos de Chrome, arriba al lado de la dirección.</li>
+            <li>Entrá a <b>Permisos</b> (o <b>Configuración del sitio</b>) › <b>Ubicación</b>.</li>
+            <li>Elegí <b>Permitir</b> y volvé a tocar el botón de ubicación.</li>
+        </ol>
+        <p class="pzHojaSub">Si instalaste la app, también está en Ajustes del teléfono › Apps › VendeFrío › Permisos. Y revisá que el GPS del celular esté prendido.</p>`,
+        botones: [{ texto: "Entendido" }]
+    });
 }
 
 // -----------------------------------------------------
 // INICIO (T32): resumen de hoy, próxima parada, pedidos de hoy y semana
 // -----------------------------------------------------
 
-const ESTADOS_KPI_INICIO = [
-    { id: "aPreparar", texto: "A preparar", estados: ["cargado", "enPreparacion"], etapa: "cargados" },
-    { id: "preparados", texto: "Preparados", estados: ["preparado"], etapa: "preparados" },
-    { id: "enReparto", texto: "En reparto", estados: ["enVehiculo", "enReparto"], etapa: "enReparto" },
-    { id: "entregados", texto: "Entregados", estados: ["entregado"], etapa: "historial" }
-];
+// Repaso de diseño de Inicio (T178): los cuadritos de la tarjeta azul son
+// accesos. Arriba, la semana (cargados que faltan entregar y entregados) y
+// lo cobrado hoy; abajo, lo de hoy.
+const ESTADOS_EN_CAMINO_INICIO = ["cargado", "enPreparacion", "preparado", "enVehiculo", "enReparto"];
 
 // Estado de cada pedido la última vez que se dibujó Inicio: si cambia (por
 // ejemplo, otro celular lo marcó "Preparado"), su fila se ilumina.
@@ -204,27 +253,45 @@ function pedidosDeHoyInicio(pedidos) {
 function abrirPedidoDesdeInicio(pedido) {
     if (usaNubeReal() && window.seguimientoVendeFrio?.abrirPedido?.(pedido.id)) return;
     if (typeof abrirHistorialDePedido === "function") {
-        const indice = obtenerHistorial().findIndex(item => item.id === pedido.id);
+        const indice = historialParaLeer().findIndex(item => item.id === pedido.id);
         if (indice >= 0) abrirHistorialDePedido(indice);
     }
 }
 
-function dibujarKpisInicio(pedidosHoy, nube, semana) {
+function dibujarKpisInicio(cuentas, nube, conPlata) {
     const caja = document.getElementById("dashKpis");
     if (!caja) return;
-    caja.innerHTML = "";
 
-    const kpis = nube
-        ? ESTADOS_KPI_INICIO.map(kpi => ({
-            ...kpi,
-            valor: pedidosHoy.filter(pedido => kpi.estados.includes(estadoInicio(pedido))).length
-        }))
-        : [
-            { id: "hoy", texto: "Pedidos hoy", valor: pedidosHoy.length, accion: "pedidosHoy" },
-            { id: "semana", texto: "Esta semana", valor: semana.pedidos, accion: "pedidosSemana" },
-            { id: "pendientes", texto: "Sin visitar", valor: semana.sinVisitar, accion: "pendientesSemana" }
+    const deHoy = typeof cuentas.visitadosHoy === "number" ? cuentas.visitadosHoy : 0;
+    let kpis;
+    if (nube) {
+        kpis = [
+            { id: "cargados", texto: "Cargados", valor: cuentas.cargadosSemana, etapa: "paraArmar" },
+            { id: "entregados", texto: "Entregados", valor: cuentas.entregadosSemana, accion: "entregadosSemana" }
         ];
+        const cobrado = conPlata && window.cierreVendeFrio?.disponible?.() ? cobradoHoyInicio() : null;
+        if (cobrado !== null) kpis.push({ id: "cobradoHoy", texto: "Cobrado hoy", valor: textoPlataCortoInicio(cobrado), accion: "cobradoHoy" });
+        kpis.push(
+            { id: "cargadosHoy", texto: "Cargados hoy", valor: cuentas.cargadosHoy.length, etapa: "paraArmar" },
+            { id: "entregadosHoy", texto: "Entregados hoy", valor: cuentas.entregadosHoy, accion: "entregadosHoy" },
+            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosSemana" }
+        );
+    } else {
+        kpis = [
+            { id: "semana", texto: "Pedidos", valor: cuentas.pedidosSemana.length, accion: "pedidosSemana" },
+            { id: "pendientes", texto: "Sin visitar", valor: cuentas.comercios.length - cuentas.visitadosSemana, accion: "pendientesSemana" },
+            { id: "hoy", texto: "Pedidos hoy", valor: cuentas.cargadosHoy.length, accion: "pedidosHoy" },
+            { id: "comerciosHoy", texto: "Comercios hoy", valor: comerciosDistintosInicio(cuentas.cargadosHoy), accion: "pedidosHoy" },
+            { id: "visitadosHoy", texto: "Visitados hoy", valor: deHoy, accion: "visitadosSemana" }
+        ];
+    }
+    // Sin "Cobrado hoy", la fila de arriba lleva dos cuadros más anchos.
+    caja.classList.toggle("kpisDosArriba", kpis.length === 5);
 
+    const firma = kpis.map(kpi => kpi.id + ":" + kpi.valor).join("|");
+    if (caja.dataset.firma === firma) return;
+    caja.dataset.firma = firma;
+    caja.innerHTML = "";
     kpis.forEach(kpi => {
         const boton = document.createElement("button");
         boton.type = "button";
@@ -241,7 +308,42 @@ function dibujarKpisInicio(pedidosHoy, nube, semana) {
     });
 }
 
-function dibujarPedidosDeHoyInicio(pedidosHoy) {
+function comerciosDistintosInicio(pedidos) {
+    return new Set(pedidos.map(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es"))).size;
+}
+
+// Lo cobrado hoy, igual que la caja del Cierre (cobros y pagos de hoy).
+// Se recuerda hasta que cambian los pedidos, los pagos o el día.
+function cobradoHoyInicio() {
+    const pagos = window.extrasVendeFrio?.marca?.("pagos");
+    return recordarHastaQueCambie("cobradoHoyInicio", ["historial"], () => {
+        try {
+            const inicio = new Date();
+            inicio.setHours(0, 0, 0, 0);
+            return Number(window.cierreVendeFrio.calcular(inicio).totalRecaudado) || 0;
+        } catch (error) {
+            return 0;
+        }
+    }, new Date().toDateString() + "|" + pagos);
+}
+
+// "Semana 5 de 5": las semanas del mes, de lunes a domingo.
+function semanaDelMesInicio(fecha) {
+    const corrimiento = (new Date(fecha.getFullYear(), fecha.getMonth(), 1).getDay() + 6) % 7;
+    const dias = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+    return {
+        numero: Math.floor((fecha.getDate() - 1 + corrimiento) / 7) + 1,
+        total: Math.ceil((dias + corrimiento) / 7)
+    };
+}
+
+function comercioVisitadoHoyInicio(comercio) {
+    if (!comercio || !comercio.ultimaVisita) return false;
+    const fecha = obtenerFechaLocalDesdeTexto(comercio.ultimaVisita);
+    return Boolean(fecha) && fecha.toDateString() === new Date().toDateString();
+}
+
+function dibujarPedidosDeHoyInicio(pedidosHoy, vePlata = true) {
     const caja = document.getElementById("dashPedidosDeHoy");
     if (!caja) return;
     caja.innerHTML = "";
@@ -273,7 +375,7 @@ function dibujarPedidosDeHoyInicio(pedidosHoy) {
         const detalle = document.createElement("small");
         const partes = [];
         if (typeof numeroCortoDelPedido === "function" && pedido.id && estado) partes.push("N° " + numeroCortoDelPedido(pedido));
-        partes.push(unidadesInicio(pedido) + " u");
+        if (vePlata) partes.push(unidadesInicio(pedido) + " u");
         const autor = pedido.autor && pedido.autor.nombre;
         if (autor) partes.push(autor);
         detalle.textContent = partes.join(" · ");
@@ -289,7 +391,16 @@ function dibujarPedidosDeHoyInicio(pedidosHoy) {
             derecha.appendChild(chip);
         }
         const total = totalInicio(pedido);
-        if (total > 0) {
+        if (!vePlata) {
+            // T178: sin permiso para ver la plata, productos y unidades.
+            const productos = new Set((Array.isArray(pedido.productos) ? pedido.productos : [])
+                .filter(item => item && Number(item.cantidad) > 0)
+                .map(item => String(item.marca || "") + "|" + String(item.producto || item.nombre || ""))).size;
+            const cantidad = document.createElement("small");
+            cantidad.className = "cantidadFilaInicio";
+            cantidad.textContent = productos + (productos === 1 ? " producto" : " productos") + " | " + unidadesInicio(pedido) + " u";
+            derecha.appendChild(cantidad);
+        } else if (total > 0) {
             const plata = document.createElement("small");
             plata.textContent = textoPlataInicio(total);
             derecha.appendChild(plata);
@@ -308,10 +419,73 @@ function dibujarPedidosDeHoyInicio(pedidosHoy) {
     pedidosHoy.forEach(pedido => estadosVistosInicio.set(pedido.id, estadoInicio(pedido)));
 }
 
-function dibujarProximaParadaInicio(comercios) {
+// Datos cortos de la próxima parada (T178): hace cuánto se visitó, si debe
+// y cada cuánto pide. Van en una sola línea, sin agrandar la tarjeta.
+function diasDesdeVisitaInicio(comercio) {
+    const fecha = comercio && comercio.ultimaVisita ? obtenerFechaLocalDesdeTexto(comercio.ultimaVisita) : null;
+    if (!fecha) return null;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((hoy - fecha) / 86400000));
+}
+
+function pideCadaInicio(nombre, pedidos) {
+    const clave = String(nombre || "").trim().toLocaleLowerCase("es");
+    return recordarHastaQueCambie("pideCadaInicio", ["historial"], () => {
+        const dias = [...new Set(pedidos
+            .filter(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es") === clave)
+            .map(pedido => obtenerFechaPedidoDashboard(pedido))
+            .filter(Boolean)
+            .map(fecha => new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime()))]
+            .sort((a, b) => b - a)
+            .slice(0, 6);
+        // Hacen falta al menos tres pedidos en días distintos.
+        if (dias.length < 3) return 0;
+        return Math.max(1, Math.round((dias[0] - dias[dias.length - 1]) / 86400000 / (dias.length - 1)));
+    }, clave);
+}
+
+function chipsProximaParadaInicio(comercio, pedidos, vePlata) {
+    const chips = [];
+    const horario = String(comercio.horario || "").trim();
+    // Con horario cargado (T69), el primero dice cuándo atiende.
+    if (horario) chips.push(["chipEstado chipHorario", horario]);
+    const dias = diasDesdeVisitaInicio(comercio);
+    chips.push(["chipEstado", dias === null ? "Sin visitas" : dias === 0 ? "Visitado hoy" : "Hace " + dias + (dias === 1 ? " día" : " días")]);
+    const debe = vePlata && window.saldosVendeFrio?.deudaDe ? window.saldosVendeFrio.deudaDe(comercio.nombre) : 0;
+    if (debe > 0) chips.push(["chipDebeParada", "Debe " + textoPlataInicio(debe)]);
+    const cada = pideCadaInicio(comercio.nombre, pedidos);
+    if (cada) chips.push(["chipDatoParada", "Pide cada " + cada + (cada === 1 ? " día" : " días")]);
+    const caja = document.createElement("span");
+    caja.className = "paradaChips";
+    chips.forEach(([clase, texto]) => {
+        const chip = document.createElement("span");
+        chip.className = clase;
+        if (clase.startsWith("chipEstado") && !horario) chip.dataset.tono = "aviso";
+        chip.textContent = texto;
+        caja.appendChild(chip);
+    });
+    return caja;
+}
+
+// Un acceso como los de la ficha del comercio: cuadradito con ícono y nombre.
+function accesoParadaInicio(etiqueta, icono, texto, clase) {
+    const acceso = document.createElement(etiqueta);
+    acceso.className = "paradaAcceso " + clase;
+    if (etiqueta === "button") acceso.type = "button";
+    acceso.innerHTML = `<span class="paradaAccesoIcono">${window.icono(icono, 20)}</span><span class="paradaAccesoTexto"></span>`;
+    acceso.querySelector(".paradaAccesoTexto").textContent = texto;
+    return acceso;
+}
+
+function dibujarProximaParadaInicio(comercios, pedidos = [], vePlata = true) {
     const contenedor = document.getElementById("dashProximaParada");
     if (!contenedor) return;
     contenedor.innerHTML = "";
+
+    // T178: con la ubicación dice que es el más cercano.
+    const titulo = document.getElementById("tituloProximaParada");
+    if (titulo) titulo.textContent = ubicacionDashboard ? "Más cerca tuyo, sin visitar" : "Siguiente parada";
 
     const pendientes = comercios.filter(comercio => !comercioVisitadoRecientemente(comercio));
 
@@ -333,89 +507,93 @@ function dibujarProximaParadaInicio(comercios) {
         ? conUbicacion.slice().sort((a, b) => distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(a.lat), Number(a.lng)) - distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(b.lat), Number(b.lng)))[0]
         : conUbicacion[0] || pendientes[0];
 
-    // La tarjeta abre la ficha del comercio.
+    const cabeza = document.createElement("div");
+    cabeza.className = "paradaCabeza";
+
+    // El nombre abre la ficha del comercio arriba de Inicio.
     const info = document.createElement("button");
     info.type = "button";
     info.className = "paradaInfo";
     info.setAttribute("aria-label", "Ver ficha de " + sugerido.nombre);
-    info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small><span class="chipEstado" data-tono="aviso">Sin visitar esta semana</span></span>`;
+    info.innerHTML = `<span class="paradaIcono">${window.icono("tienda", 22)}</span><span class="paradaTexto"><strong></strong><small></small></span>`;
     info.querySelector("strong").textContent = sugerido.nombre;
-    // Con horario cargado (T69), el chip dice cuándo atiende.
-    if (String(sugerido.horario || "").trim()) {
-        const chip = info.querySelector(".chipEstado");
-        chip.textContent = String(sugerido.horario).trim();
-        chip.classList.add("chipHorario");
-    }
     const partes = [sugerido.direccion || "Dirección pendiente"];
     if (ubicacionDashboard && tieneGpsValidoDashboard(sugerido)) {
         const km = distanciaDashboard(ubicacionDashboard.lat, ubicacionDashboard.lng, Number(sugerido.lat), Number(sugerido.lng));
         partes.push(km < 1 ? "a " + Math.round(km * 100) * 10 + " m" : "a " + km.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " km");
     }
     info.querySelector("small").textContent = partes.join(" · ");
+    info.querySelector(".paradaTexto").appendChild(chipsProximaParadaInicio(sugerido, pedidos, vePlata));
     info.addEventListener("click", () => {
         if (typeof window.abrirFichaComercio === "function") window.abrirFichaComercio(sugerido.nombre);
     });
+    cabeza.appendChild(info);
 
+    // Botoncito redondo: sin ubicación la pide (y prende el permiso); con
+    // ubicación la vuelve a pedir y elige otra vez la más cercana.
+    if (navigator.geolocation) {
+        const ubicar = document.createElement("button");
+        ubicar.type = "button";
+        ubicar.className = "btnUbicacionDashboard";
+        const etiqueta = ubicacionDashboard ? "Actualizar mi ubicación" : "Usar mi ubicación";
+        ubicar.setAttribute("aria-label", etiqueta);
+        ubicar.title = etiqueta;
+        ubicar.innerHTML = window.icono("mira", 19);
+        ubicar.addEventListener("click", () => {
+            ubicar.disabled = true;
+            ubicar.classList.add("buscando");
+            actualizarUbicacionDashboard(true);
+        });
+        cabeza.appendChild(ubicar);
+    }
+
+    // Los mismos accesos que la ficha: Pedido, Llamar, Ya llego, Ir y Sin pedido.
     const acciones = document.createElement("div");
     acciones.className = "paradaAcciones";
 
-    const pedido = document.createElement("button");
-    pedido.type = "button";
-    pedido.className = "btnAccion agregar";
-    pedido.innerHTML = window.icono("documento", 18) + " Cargar pedido";
+    const pedido = accesoParadaInicio("button", "documento", "Pedido", "agregar");
+    pedido.setAttribute("aria-label", "Cargar pedido");
     pedido.addEventListener("click", () => irAPedidoRapido(sugerido.nombre));
+    acciones.appendChild(pedido);
+
+    const telefono = String(sugerido.telefono || "").replace(/[^\d+]/g, "");
+    if (telefono) {
+        const llamar = accesoParadaInicio("a", "telefono", "Llamar", "paradaLlamar");
+        llamar.href = "tel:" + telefono;
+        acciones.appendChild(llamar);
+    }
+
+    // "Ya llego" por WhatsApp (T72), con teléfono.
+    const yaLlego = window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(sugerido) : "";
+    if (yaLlego) {
+        const aviso = accesoParadaInicio("a", "whatsapp", "Ya llego", "paradaYaLlego");
+        aviso.href = yaLlego;
+        aviso.target = "_blank";
+        aviso.rel = "noopener";
+        acciones.appendChild(aviso);
+    }
 
     // "Ir": la navegación propia (navegacion.js) o, si no se puede, Google Maps.
-    const ir = document.createElement("a");
-    ir.className = "btnAccion ver botonIr";
+    const ir = accesoParadaInicio("a", "navegar", "Ir", "botonIr");
     ir.target = "_blank";
     ir.rel = "noopener";
-    ir.innerHTML = window.icono("navegar", 18) + " Ir";
     const destino = tieneGpsValidoDashboard(sugerido)
         ? sugerido.lat + "," + sugerido.lng
         : sugerido.direccion || sugerido.nombre;
     ir.href = "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + encodeURIComponent(destino);
     // Con GPS guardado, "Ir" abre la navegación propia (Etapa 5).
     ir.dataset.navegarA = sugerido.nombre;
-
-    acciones.append(pedido, ir);
-
-    // "Ya llego" por WhatsApp (T72): con teléfono, entre "Cargar pedido" e
-    // "Ir" (que queda solo con el ícono).
-    const yaLlego = window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(sugerido) : "";
-    if (yaLlego) {
-        const aviso = document.createElement("a");
-        aviso.className = "pzBtn pzBtnWa paradaYaLlego";
-        aviso.href = yaLlego;
-        aviso.target = "_blank";
-        aviso.rel = "noopener";
-        aviso.innerHTML = window.icono("whatsapp", 18) + " Ya llego";
-        pedido.after(aviso);
-        ir.innerHTML = window.icono("navegar", 20);
-        ir.setAttribute("aria-label", "Ir");
-        ir.classList.add("soloIcono");
-        acciones.classList.add("conYaLlego");
-    }
+    acciones.appendChild(ir);
 
     // "Visité, sin pedido" (T65): pide el motivo y lo marca visitado.
     if (window.visitasVendeFrio) {
-        const sinPedido = document.createElement("button");
-        sinPedido.type = "button";
-        sinPedido.className = "pzBtn pzBtnSec paradaSinPedido";
-        sinPedido.innerHTML = window.icono("cerrarX", 16) + " Visité, sin pedido";
+        const sinPedido = accesoParadaInicio("button", "cerrarX", "Sin pedido", "paradaSinPedido");
+        sinPedido.setAttribute("aria-label", "Visité, sin pedido");
         sinPedido.addEventListener("click", () => window.visitasVendeFrio.abrir(sugerido.nombre));
         acciones.appendChild(sinPedido);
     }
-    contenedor.append(info, acciones);
-
-    if (!ubicacionDashboard && navigator.geolocation) {
-        const ubicar = document.createElement("button");
-        ubicar.type = "button";
-        ubicar.className = "btnUbicacionDashboard";
-        ubicar.innerHTML = window.icono("mira", 14) + " Usar mi ubicación para elegir la más cercana";
-        ubicar.addEventListener("click", () => actualizarUbicacionDashboard(true));
-        contenedor.appendChild(ubicar);
-    }
+    acciones.style.setProperty("--accesos", String(acciones.children.length));
+    contenedor.append(cabeza, acciones);
 }
 
 function actualizarEncabezadoInicio() {
@@ -431,26 +609,60 @@ function actualizarEncabezadoInicio() {
     }
 }
 
+// Las cuentas de Inicio, recordadas hasta que cambian los pedidos, los
+// comercios o el día (repasada): Inicio se dibuja muchas veces seguidas y
+// con miles de pedidos recorrerlos todos cada vez trababa el celular.
+function cuentasDeInicio() {
+    return recordarHastaQueCambie("cuentasDeInicio", ["historial", "comercios"], () => {
+        const comercios = comerciosActivosParaLeer();
+        const pedidos = pedidosQueCuentanParaLeer();
+        const cargadosHoy = pedidos.filter(esDeHoyInicio);
+        const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
+        // T178: los entregados se cuentan el día que se entregaron.
+        const entregados = pedidos.filter(pedido => estadoInicio(pedido) === "entregado")
+            .map(pedido => horaDelEstadoInicio(pedido)).filter(hora => hora > 0);
+        const inicioSemana = obtenerInicioSemanaActual().getTime();
+        const productosHoy = new Set();
+        cargadosHoy.forEach(pedido => (Array.isArray(pedido.productos) ? pedido.productos : []).forEach(item => {
+            if (item && Number(item.cantidad) > 0) productosHoy.add(String(item.marca || "") + "|" + String(item.producto || item.nombre || ""));
+        }));
+        return Object.freeze({
+            comercios,
+            pedidos,
+            pedidosHoy: Object.freeze(pedidosDeHoyInicio(pedidos)),
+            cargadosHoy: Object.freeze(cargadosHoy),
+            pedidosSemana: Object.freeze(pedidosSemana),
+            visitadosSemana: comercios.filter(comercioVisitadoRecientemente).length,
+            visitadosHoy: comercios.filter(comercioVisitadoHoyInicio).length,
+            cargadosSemana: pedidosSemana.filter(pedido => ESTADOS_EN_CAMINO_INICIO.includes(estadoInicio(pedido))).length,
+            entregadosSemana: entregados.filter(hora => hora >= inicioSemana).length,
+            entregadosHoy: entregados.filter(hora => esDeHoyInicio({ timestamp: hora })).length,
+            productosHoy: productosHoy.size
+        });
+    }, new Date().toDateString() + "|" + usaNubeReal());
+}
+
 function actualizarDashboard() {
     actualizarUbicacionDashboard();
     actualizarEncabezadoInicio();
 
     const nube = usaNubeReal();
-    const comercios = comerciosActivos();
-    const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : obtenerHistorial();
-    const pedidosHoy = pedidosDeHoyInicio(pedidos);
-    const cargadosHoy = pedidos.filter(esDeHoyInicio);
-    const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
-    const visitadosSemana = comercios.filter(comercioVisitadoRecientemente).length;
+    // Para leer, sin copiar los datos en cada dibujo (repasada).
+    const cuentas = cuentasDeInicio();
+    const { comercios, pedidos, pedidosHoy, cargadosHoy, pedidosSemana, visitadosSemana } = cuentas;
     const sinVisitar = comercios.length - visitadosSemana;
 
-    // Resumen de hoy.
+    // Resumen de hoy, con la semana del mes (T178).
     const hoy = new Date();
     const fecha = document.getElementById("dashFechaHoy");
-    if (fecha) fecha.textContent = "Hoy · " + hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    if (fecha) {
+        const semana = semanaDelMesInicio(hoy);
+        fecha.textContent = "Hoy · " + hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) +
+            " / Semana " + semana.numero + " de " + semana.total;
+    }
     const vendido = cargadosHoy.reduce((total, pedido) => total + totalInicio(pedido), 0);
     const hayPrecios = cargadosHoy.some(pedido => totalInicio(pedido) > 0);
-    const comerciosHoy = new Set(cargadosHoy.map(pedido => String(pedido.comercio || pedido.cliente || "").trim().toLocaleLowerCase("es"))).size;
+    const comerciosHoy = comerciosDistintosInicio(cargadosHoy);
     // T93: sin permiso para ver la plata, unidades en vez de pesos.
     const vePlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
     const conPlata = vePlata && (hayPrecios || nube);
@@ -458,9 +670,11 @@ function actualizarDashboard() {
         dashTituloHoy: conPlata ? "Vendido hoy" : "Unidades hoy",
         dashVendidoHoy: conPlata
             ? textoPlataInicio(vendido)
-            : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)),
+            : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)) + " u",
         dashResumenHoy: cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
             comerciosHoy + (comerciosHoy === 1 ? " comercio" : " comercios"),
+        dashVisitasHechas: visitadosSemana,
+        dashVisitasTotal: "de " + comercios.length,
         dashVisitadosSemana: visitadosSemana,
         dashTotalComercios: comercios.length,
         dashPedidosSemana: pedidosSemana.length,
@@ -474,15 +688,39 @@ function actualizarDashboard() {
         const elemento = document.getElementById(id);
         if (elemento) elemento.textContent = String(textos[id]);
     });
-    const barra = document.getElementById("dashBarraSemana");
-    if (barra) barra.style.width = (comercios.length ? Math.round(visitadosSemana / comercios.length * 100) : 0) + "%";
+    const avance = (comercios.length ? Math.round(visitadosSemana / comercios.length * 100) : 0) + "%";
+    ["dashBarraSemana", "dashVisitasBarra"].forEach(id => {
+        const barra = document.getElementById(id);
+        if (barra) barra.style.width = avance;
+    });
+    dibujarDerechaResumenInicio(cuentas, vePlata);
 
-    dibujarKpisInicio(pedidosHoy, nube, { pedidos: pedidosSemana.length, sinVisitar });
-    dibujarPedidosDeHoyInicio(nube ? pedidosHoy : cargadosHoy);
-    dibujarProximaParadaInicio(comercios);
+    dibujarKpisInicio(cuentas, nube, vePlata);
+    dibujarPedidosDeHoyInicio(nube ? pedidosHoy : cargadosHoy, vePlata);
+    dibujarProximaParadaInicio(comercios, pedidos, vePlata);
     dibujarPrimerosPasos(comercios, pedidos);
     dibujarVisitarHoy(comercios, pedidos, cargadosHoy);
     inicioDibujadoUnaVez = true;
+}
+
+// A la derecha de "Vendido hoy" (T178): "Te deben" del mismo tamaño para
+// quien cobra (lo mismo que calcula "A cobrar"); si no, los productos
+// distintos vendidos hoy.
+function dibujarDerechaResumenInicio(cuentas, vePlata) {
+    const caja = document.getElementById("dashDerechaHoy");
+    if (!caja) return;
+    const deudas = vePlata && window.saldosVendeFrio?.resumenDeudas?.();
+    const debe = Boolean(deudas);
+    caja.classList.toggle("resumenHoyDeben", debe);
+    caja.dataset.accion = debe ? "teDeben" : "productosHoy";
+    const textos = debe
+        ? ["Te deben", textoPlataInicio(deudas.total),
+            deudas.comercios ? deudas.comercios + (deudas.comercios === 1 ? " comercio" : " comercios") : "Nadie te debe"]
+        : ["Productos distintos", String(cuentas.productosHoy), "vendidos hoy"];
+    caja.querySelector("small").textContent = textos[0];
+    caja.querySelector("strong").textContent = textos[1];
+    caja.querySelector("span").textContent = textos[2];
+    caja.setAttribute("aria-label", textos.join(" ") + (debe ? ". Ver a cobrar por comercio" : ""));
 }
 
 // -----------------------------------------------------
@@ -498,7 +736,7 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     let cerrado = false;
     try { cerrado = localStorage.getItem(CLAVE_PRIMEROS_PASOS) === "cerrado"; } catch (error) { cerrado = false; }
 
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const hayProductos = Object.values(productos).some(lista => Array.isArray(lista) && lista.length > 0);
     const pasos = [
         { hecho: hayProductos, texto: "Cargá tus productos y precios", accion: () => mostrarPantalla("productos") },
@@ -533,6 +771,18 @@ function dibujarPrimerosPasos(comercios, pedidos) {
     barra.innerHTML = "<span></span>";
     barra.querySelector("span").style.width = Math.round(hechos / pasos.length * 100) + "%";
     caja.appendChild(barra);
+
+    // Tutorial (T157): primero, la invitación a hacer lo básico con los
+    // botones señalados en la pantalla real.
+    if (window.tutorialVendeFrio) {
+        const recorrido = document.createElement("button");
+        recorrido.type = "button";
+        recorrido.className = "pasoPrimeros recorridoPrimeros";
+        recorrido.innerHTML = '<span class="tildePaso">' + window.icono("chispa", 14) + "</span><span></span>" + window.icono("chevDerecha", 16);
+        recorrido.children[1].textContent = window.tutorialVendeFrio.yaLoVio() ? "Ver de nuevo el tutorial" : "Hacelo con el tutorial, paso a paso";
+        recorrido.addEventListener("click", () => window.tutorialVendeFrio.abrir());
+        caja.appendChild(recorrido);
+    }
 
     pasos.forEach(paso => {
         const fila = document.createElement("button");
@@ -575,10 +825,24 @@ function comerciosQueSuelenPedirHoy(pedidos, cargadosHoy) {
         .sort((a, b) => b.veces - a.veces);
 }
 
+function tarjetaInicioPrendida(campo, porDefecto) {
+    try {
+        const valor = (JSON.parse(localStorage.getItem("vendefrio_preferencias")) || {})[campo];
+        return valor === undefined ? porDefecto : valor === true;
+    } catch (error) {
+        return porDefecto;
+    }
+}
+
 function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
     const seccion = document.getElementById("dashVisitarHoy");
     const lista = document.getElementById("dashListaVisitarHoy");
     if (!seccion || !lista) return;
+    // T156: arranca apagada; si está apagada en Más > Apariencia, ni se calcula.
+    if (!tarjetaInicioPrendida("inicioVerSuelenPedir", false)) {
+        seccion.classList.add("oculto");
+        return;
+    }
     const sugeridos = comerciosQueSuelenPedirHoy(pedidos, cargadosHoy)
         .map(item => ({ ...item, comercio: comercios.find(comercio => String(comercio.nombre || "").trim().toLocaleLowerCase("es") === item.clave) }))
         .filter(item => item.comercio)
@@ -614,6 +878,24 @@ function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
 }
 
 function irAPedidoRapido(nombreComercio) {
+    // Repaso de Catálogo: con un pedido a medio hacer se pregunta si seguir
+    // con ese (para este comercio) o empezar uno nuevo. Así no se pierde nada.
+    if (window.pedidoEnHoja && window.pedidoEnHoja.resumen() && typeof abrirPedidoNuevoParaComercio === "function") {
+        window.pedidoEnHoja.preguntarSiHayOtro(nombreComercio, seguir => {
+            if (!seguir) {
+                abrirPedidoNuevoParaComercio(nombreComercio);
+                return;
+            }
+            mostrarPantalla("pedido");
+            const cliente = document.getElementById("cliente");
+            if (cliente && nombreComercio) {
+                cliente.value = nombreComercio;
+                cliente.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            if (typeof guardarBorradorPedido === "function") guardarBorradorPedido();
+        });
+        return;
+    }
     if (typeof abrirPedidoNuevoParaComercio === "function") {
         abrirPedidoNuevoParaComercio(nombreComercio);
         return;
@@ -627,6 +909,8 @@ function irAPedidoRapido(nombreComercio) {
 function abrirComerciosConFiltroDashboard(filtro) {
     const selector = document.getElementById("filtroEstadoComercios");
     const buscador = document.getElementById("buscarComercio");
+    // La lista entera: sin el comercio solo que dejó Historial ni los archivados.
+    if (typeof verTodaLaListaDeComercios === "function") verTodaLaListaDeComercios();
 
     if (selector) selector.value = filtro || "todos";
     if (buscador) buscador.value = "";
@@ -645,6 +929,13 @@ function ejecutarAccionTarjetaDashboard(accion) {
         return;
     }
 
+    // "Entregados" y "Entregados hoy" abren Terminados en ese período (antes,
+    // Terminados de siempre).
+    if ((accion === "entregadosSemana" || accion === "entregadosHoy") && window.seguimientoVendeFrio?.abrirHistorial) {
+        window.seguimientoVendeFrio.abrirHistorial({ periodo: accion === "entregadosHoy" ? "hoy" : "semana" });
+        return;
+    }
+
     if (accion === "visitadosSemana") {
         abrirComerciosConFiltroDashboard("visitados");
         return;
@@ -654,8 +945,28 @@ function ejecutarAccionTarjetaDashboard(accion) {
         abrirComerciosConFiltroDashboard("pendientes");
     }
 
+    if (accion === "teDeben" && window.saldosVendeFrio?.abrirPantalla) {
+        window.saldosVendeFrio.abrirPantalla();
+    }
+
+    if (accion === "cobradoHoy" && window.cierreVendeFrio?.abrir) {
+        window.cierreVendeFrio.abrir();
+    }
+
+    // Repasada: Estadísticas abre en el período del número que se tocó.
     if (accion === "vendidoSemana" && typeof window.abrirEstadisticas === "function") {
-        window.abrirEstadisticas();
+        window.abrirEstadisticas("semana");
+    }
+
+    if (accion === "vendidoHoy" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas("hoy");
+    }
+
+    // "Productos distintos vendidos hoy": Estadísticas de hoy, en Lo más
+    // pedido > Productos.
+    if (accion === "productosHoy" && typeof window.abrirEstadisticas === "function") {
+        window.abrirEstadisticas("hoy");
+        window.estadisticasVendeFrio?.irAlRanking?.("productos");
     }
 }
 
@@ -677,6 +988,26 @@ function prepararTarjetasDashboard() {
 
         tarjeta.dataset.dashboardConfigurada = "true";
     });
+
+    // Repasada: "Vendido hoy" lleva a Estadísticas de hoy y "23 de 80
+    // comercios visitados" a la lista de los visitados.
+    const tocable = window.piezas && window.piezas.tocable;
+    if (!tocable) return;
+    tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
+    tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
+    // La barra dice "Visitados", así que lleva a los visitados; "Te deben", a A cobrar.
+    document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
+    document.getElementById("dashDerechaHoy")?.addEventListener("click", evento => {
+        ejecutarAccionTarjetaDashboard(evento.currentTarget.dataset.accion || "vendidoHoy");
+    });
+    // El logo y el nombre, juntos, llevan a Tu cuenta.
+    const marca = document.querySelector("#pantallaMenu .dashboardMarca");
+    const irACuenta = () => {
+        if (typeof window.abrirConfiguracionEn === "function") window.abrirConfiguracionEn("cuenta");
+        else abrirMenuMas();
+    };
+    if (marca) tocable(marca, irACuenta, { rol: false });
+    document.querySelector("#pantallaMenu .inicioLogo")?.addEventListener("click", irACuenta);
 }
 
 prepararTarjetasDashboard();
@@ -685,6 +1016,11 @@ document.getElementById("botonAvatar")?.addEventListener("click", () => abrirMen
 document.getElementById("dashVerTodos")?.addEventListener("click", () => {
     if (usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial) {
         if (window.seguimientoVendeFrio.abrirEtapa("cargados")) return;
+    }
+    // Sin la nube, Historial en "Hoy" (antes quedaba en el último período elegido).
+    if (!usaNubeReal() && typeof abrirHistorialPorPeriodo === "function") {
+        abrirHistorialPorPeriodo("hoy");
+        return;
     }
     mostrarPantalla(usaNubeReal() ? "pedido" : "historial");
 });
@@ -779,6 +1115,27 @@ if (window.distribuidoraVendeFrio?.escucharNombre) {
 }
 
 window.actualizarDashboard = actualizarDashboard;
+
+// Para los cambios que llegan solos (de la nube o de otro celular): Inicio se
+// redibuja una sola vez aunque lleguen varios juntos. Al abrir la app llegan
+// por separado los comercios, los productos, los pedidos y los pagos, y
+// redibujar Inicio con cada uno trababa un celular barato.
+// Con Inicio escondido se espera más (repasada): lo que llega de la nube en
+// tandas se junta en menos redibujos mientras se usa otra pantalla. No se
+// saltea, porque de este redibujo cuelgan avisos que trabajan aunque no se
+// vea Inicio (por ejemplo, apagar la ubicación al terminar el reparto). Al
+// volver a Inicio se dibuja enseguida (mostrarPantalla).
+let relojInicio = null;
+function pedirActualizarDashboard() {
+    if (relojInicio) return;
+    const escondido = Boolean(pantallas.menu && pantallas.menu.classList.contains("oculto"));
+    relojInicio = setTimeout(() => {
+        relojInicio = null;
+        window.actualizarDashboard();
+    }, escondido ? 1500 : 100);
+}
+window.pedirActualizarDashboard = pedirActualizarDashboard;
+
 window.addEventListener("DOMContentLoaded", actualizarDashboard);
 window.addEventListener("load", actualizarDashboard);
 // Carga la pantalla de Configuración del rework sin inflar index.html.
