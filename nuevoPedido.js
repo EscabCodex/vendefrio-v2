@@ -635,6 +635,12 @@
     // Si saliste de Nuevo pedido sin guardarlo (te llamaron, fuiste a otra
     // pantalla), Inicio te lo recuerda y lo retomás de un toque, como estaba.
     function avisoMedioCargado() {
+        // Repaso de Catálogo: la barrita "Pedido nuevo · Ver pedido"
+        // (pedidoEnHoja.js) ya lo muestra en Inicio; la tarjeta se saca.
+        if (window.pedidoEnHoja) {
+            p.avisoInicio("avisoPedidoMedioCargado", null, "arriba");
+            return;
+        }
         const datos = p.lsLeer("vendefrio_borrador_pedido", null);
         const cantidades = datos && Array.isArray(datos.cantidades) ? datos.cantidades : [];
         const unidades = cantidades.reduce((suma, item) => suma + (Number(item.cantidad) || 0), 0);

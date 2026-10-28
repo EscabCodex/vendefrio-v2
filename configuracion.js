@@ -2117,7 +2117,10 @@
                     ]) +
                     filaElegir("paquete", "naranja", "Orden de productos", "En Nuevo pedido, dentro de cada marca", "ordenProductos", [
                         ["marca", "Catálogo"], ["alfabetico", "A a Z"], ["frecuencia", "Más pedidos"]
-                    ])) +
+                    ]) +
+                    // Repaso de Catálogo: el orden de las marcas, que antes
+                    // eran flechitas en cada marca de Editar marcas.
+                    filaAccion("ordenar", "azul", "Orden de las marcas", "En Catálogo y en Nuevo pedido", 'data-accion="ordenMarcas"')) +
                 grupo("Al usar la app",
                     filaElegir("casa", "azul", "Pantalla al abrir", "Dónde arranca la app", "inicio", [
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
@@ -3132,6 +3135,11 @@
     document.addEventListener("click", event => {
         const boton = event.target.closest?.("[data-tarea-aviso]");
         if (boton) tocarTareaAvisos(boton);
+    });
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest?.('#pantallaConfiguracion [data-accion="ordenMarcas"]')) return;
+        window.abrirOrdenMarcas?.();
     });
 
     document.addEventListener("click", event => {

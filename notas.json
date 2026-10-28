@@ -2,6 +2,22 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 248,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "etiqueta",
+      "titulo": "Editar marcas más ordenado",
+      "texto": "Las marcas arrancan cerradas; la flechita muestra sus productos. Tocá el nombre para ver su ficha."
+    },
+    {
+      "version": 248,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "ordenar",
+      "titulo": "Orden y color de las marcas",
+      "texto": "El orden está en Ajustes › Preferencias de trabajo. El color, en el ⋯ de la ficha de la marca."
+    },
+    {
       "version": 247,
       "fecha": "2026-10-28",
       "tipo": "mejor",

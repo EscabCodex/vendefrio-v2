@@ -134,7 +134,7 @@
     }
     // T166: cada marca tiene su color (el mismo en Productos y en Editar
     // marcas), según el orden de las marcas.
-    function tonoDeMarca(marca) { const orden = typeof obtenerMarcasOrdenadas === "function" ? obtenerMarcasOrdenadas() : []; const i = orden.indexOf(marca); return "tono" + ((i < 0 ? 0 : i) % 6); }
+    function tonoDeMarca(marca) { const elegido = typeof window.colorElegidoDeMarca === "function" ? window.colorElegidoDeMarca(marca) : ""; if (elegido) return elegido; const orden = typeof obtenerMarcasOrdenadas === "function" ? obtenerMarcasOrdenadas() : []; const i = orden.indexOf(marca); return "tono" + ((i < 0 ? 0 : i) % 6); }
     window.tonoDeMarca = tonoDeMarca;
     let soloSinPrecio = false;
     let soloPocoStock = false;

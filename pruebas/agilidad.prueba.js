@@ -1,7 +1,7 @@
 // VendeFrío - Retomar rápido lo que se estaba haciendo.
 // Un pedido a medio cargar (te llamaron, fuiste a otra pantalla) queda
-// esperando en Inicio: "Seguir" lo abre como estaba. Al guardarlo, el
-// aviso se va.
+// esperando en Inicio en la barrita "Pedido nuevo · Ver pedido" (repaso de
+// Catálogo; antes era una tarjeta). Al guardarlo, la barrita se va.
 const { test, expect, capturar } = require("./ayudas");
 const { entrarSinCuenta } = require("./datosGrandes");
 
@@ -9,9 +9,9 @@ test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page 
     await entrarSinCuenta(page);
     // Un celular nuevo arranca vacío: se carga la lista de fábrica de antes.
     await page.evaluate(() => { guardarComercios(COMERCIOS); guardarProductos(PRODUCTOS); });
-    const aviso = page.locator("#avisoPedidoMedioCargado");
+    const barra = page.locator("#barraPedidoMedio");
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    await expect(aviso).toHaveCount(0);
+    await expect(barra).toBeHidden();
 
     await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
@@ -25,29 +25,29 @@ test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page 
     await fila.getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("2");
 
-    // Se va a Inicio sin guardar: el aviso lo espera arriba.
+    // Se va a Inicio sin guardar: la barrita lo espera (y la tarjeta vieja ya no está).
     await page.locator("#cerrarCargaPedido").click();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    await expect(aviso).toBeVisible();
-    await expect(aviso).toContainText("Seguí el pedido de Anibal");
-    await expect(aviso).toContainText("2 unidades cargadas");
+    await expect(barra).toBeVisible();
+    await expect(barra).toContainText("Pedido nuevo");
+    await expect(page.locator("#avisoPedidoMedioCargado")).toHaveCount(0);
     await capturar(page, "agilidad-01-pedido-a-medio-cargar");
 
-    // "Seguir" lo abre como estaba.
-    await aviso.getByRole("button", { name: "Seguir el pedido a medio cargar" }).click();
+    // "Ver pedido" lo abre como estaba.
+    await barra.getByRole("button", { name: "Ver pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await expect(page.locator("#cliente")).toHaveValue("Anibal");
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("2");
 
-    // Guardado, el aviso ya no está.
+    // Guardado, la barrita ya no está.
     await page.locator("#generar").click();
     const ventana = page.locator("#modalPedido");
     await expect(ventana).toBeVisible();
     await ventana.click({ position: { x: 10, y: 10 } });
     await expect(ventana).toBeHidden();
-    await page.locator("#cerrarCargaPedido").click();
+    await page.evaluate(() => mostrarPantalla("menu"));
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    await expect(aviso).toHaveCount(0);
+    await expect(barra).toBeHidden();
 });
 
 // Mantener apretado el + abre el menú rápido (hoja desde abajo); el toque
