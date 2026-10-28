@@ -82,13 +82,19 @@ test("confianza: versión nueva y cambios sin subir", async ({ page, context }, 
     await expect(page.locator("#avisoSinSubir")).toHaveCount(0, { timeout: 15000 });
 });
 
-test("confianza: recordatorio de respaldo en Inicio", async ({ page }, testInfo) => {
+// T178: en la nube, el recordatorio queda fijo arriba de Avisos (la
+// campanita marca 1) en vez de en Inicio.
+test("confianza: recordatorio de respaldo en Avisos", async ({ page }, testInfo) => {
     await registrarDistribuidora(page, testInfo);
     await expect(page.locator("#indicadorNube")).toHaveAttribute("data-estado", "ok", { timeout: 20000 });
 
-    const aviso = page.locator("#avisoRespaldo");
+    const campana = page.locator("#pantallaMenu .campanaAvisos");
+    await expect(campana.locator(".contadorAvisos")).toHaveText("1");
+    await expect(page.locator("#avisoRespaldo")).toHaveCount(0);
+    await campana.click();
+    const aviso = page.locator("#cuerpoAvisos .avisoFijo");
     await expect(aviso).toContainText("Todavía no guardaste un respaldo");
-    await expect(aviso).toContainText("Descargalo en un toque, por si algo falla");
+    await expect(aviso).toContainText("Queda acá hasta que lo guardes");
 
     // Hace 9 días: dice cuántos.
     await page.evaluate(() => {
@@ -96,14 +102,14 @@ test("confianza: recordatorio de respaldo en Inicio", async ({ page }, testInfo)
         actualizarDashboard();
     });
     await expect(aviso).toContainText("Hace 9 días que no guardás un respaldo");
-    await aviso.scrollIntoViewIfNeeded();
     await capturar(page, "confianza-04-recordatorio-respaldo");
 
     const descarga = page.waitForEvent("download");
     await aviso.getByRole("button", { name: "Guardar" }).click();
     expect((await descarga).suggestedFilename()).toMatch(/^vendefrio-respaldo-nube-.*\.json$/);
     await page.getByRole("button", { name: "Entendido" }).click();
-    await expect(page.locator("#avisoRespaldo")).toHaveCount(0);
+    await expect(page.locator("#cuerpoAvisos .avisoFijo")).toHaveCount(0);
+    await expect(campana.locator(".contadorAvisos")).toBeHidden();
 });
 
 test("confianza: informar un problema y verlo como dueño", async ({ page }, testInfo) => {

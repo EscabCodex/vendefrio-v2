@@ -26,7 +26,7 @@ test("rutas: más de 9 paradas y Google Maps en partes", async ({ page }) => {
     });
 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).
@@ -88,7 +88,7 @@ test("rutas: reoptimizar con un pedido nuevo no saltea la parada", async ({ page
     });
 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     // «Elegir» abre las paradas en «Comercios para esta ruta» (T136).

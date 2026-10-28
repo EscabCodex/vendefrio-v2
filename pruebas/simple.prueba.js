@@ -12,7 +12,7 @@
 // 7. Inicio con "¿Qué querés hacer?", Más en tres grupos y el Catálogo con
 //    "Productos" y "Editar marcas".
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas, abrirAjustes } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas, abrirAjustes, abrirConfiguracionEn } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -207,19 +207,29 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     const inicio = page.locator("#pantallaMenu");
 
-    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
+    // T178: "¿Qué querés hacer?" arranca apagada; se prende en Apariencia.
     const queHacer = inicio.locator("#queHacerInicio");
+    await expect(queHacer).toBeHidden();
+    // El logo y el nombre llevan a Tu cuenta (ya no está el botón "Más" de arriba).
+    await expect(inicio.locator("#botonAvatar")).toBeHidden();
+    await inicio.locator(".dashboardMarca").click();
+    await expect(page.locator('.configDetalle, #configDetalle').first()).toBeVisible();
+    await abrirConfiguracionEn(page, "apariencia");
+    await page.locator("#configDetalle").getByRole("switch", { name: "¿Qué querés hacer?" }).check();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+
+    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
     await expect(queHacer.getByRole("heading", { name: "¿Qué querés hacer?" })).toBeVisible();
     const resumen = await inicio.locator("#resumenHoy").boundingBox();
     expect((await queHacer.boundingBox()).y).toBeGreaterThan(resumen.y);
-    await expect(queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ })).toContainText("1 para armar");
+    await expect(queHacer.getByRole("button", { name: /Pedidos de hoy/ })).toContainText("1 para armar");
     await expect(queHacer.getByRole("button", { name: /Cobrar/ })).toBeVisible();
     // El Asistente arriba a la derecha, en el lugar del micrófono.
     await expect(inicio.locator("header").getByRole("button", { name: "Asistente" })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "simple-09-inicio-que-hacer");
 
-    await queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ }).click();
+    await queHacer.getByRole("button", { name: /Pedidos de hoy/ }).click();
     await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Para armar/ })).toHaveAttribute("aria-selected", "true");
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await queHacer.getByRole("button", { name: /Cargar un pedido/ }).click();
@@ -266,7 +276,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 1. Los íconos de arriba con su nombre abajo (se puede apagar).
     expect(await nombreAbajo("#botonAsistente")).toBe('"Asistente"');
-    expect(await nombreAbajo("#botonAvatar")).toBe('"Más"');
+    expect(await nombreAbajo(".campanaAvisos")).toBe('"Avisos"');
     // Inicio no lleva "?": ahí está el Asistente.
     await expect(inicio.locator(".botonAyudaPantalla")).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));

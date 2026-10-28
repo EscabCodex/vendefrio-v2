@@ -23,11 +23,12 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     await page.getByRole("button", { name: "Probar con datos de ejemplo" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
-    // "Cargar un pedido" y los botones de varios pedidos, también en oscuro.
-    for (const selector of [".queHacerOpcion.principal strong", ".queHacerOpcion.principal small", ".botonTanda:not(.botonTandaPeligro)"]) {
+    // "Cargar un pedido" (también el de Próxima parada, T178) y los botones
+    // de varios pedidos, también en oscuro.
+    for (const selector of [".queHacerOpcion.principal strong", ".queHacerOpcion.principal small", ".paradaAcceso.agregar .paradaAccesoIcono", ".botonTanda:not(.botonTandaPeligro)"]) {
         expect(await page.evaluate(contraste, selector), selector).toBeGreaterThan(4.5);
     }
-    await page.locator(".queHacerOpcion.principal").scrollIntoViewIfNeeded();
+    await page.locator("#dashProximaParada").scrollIntoViewIfNeeded();
     await capturar(page, "errores-01-cargar-un-pedido");
 
     // Los pedidos de ejemplo tienen fecha, unidades y mensaje, como los de

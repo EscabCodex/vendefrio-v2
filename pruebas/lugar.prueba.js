@@ -74,7 +74,7 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
 
     // En Más > Ajustes > Apariencia: si Android la cierra ahí, vuelve a
     // Apariencia; el atrás vuelve a la lista de Más y después a Inicio.
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator("#configDetalle")).toBeVisible();
@@ -119,7 +119,7 @@ test("lugar: vuelve a la misma pantalla y ficha, y el atrás cierra lo de arriba
 async function variosAtrasSeguidos(page) {
     await entrarSinCuenta(page);
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
 
     // Una pantalla de Más cuya flecha de arriba va a Inicio: el atrás vuelve a Más.
@@ -136,7 +136,7 @@ async function variosAtrasSeguidos(page) {
     await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
 
     // Más > Ajustes > Apariencia > una hoja: cuatro atrás seguidos, un paso cada uno.
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator('.configFila[data-config-seccion="ajustes"]').click();
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator("#configDetalle")).toBeVisible();
@@ -161,7 +161,7 @@ async function variosAtrasSeguidos(page) {
 test("lugar: cada acceso de Más vuelve a Más con el atrás, y otro atrás va a Inicio", async ({ page }) => {
     await entrarSinCuenta(page);
     await expect(page.locator("#pantallaMenu")).toBeVisible();
-    const mas = () => page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    const mas = () => page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await mas();
     const accesos = await page.locator("#masAccesos button").evaluateAll(botones => botones.map(boton => boton.textContent.trim()));
     expect(accesos.length).toBeGreaterThan(4);
@@ -275,7 +275,7 @@ test.describe("en la nube", () => {
     test("lugar: Más > A cobrar, atrás vuelve a Más y otro atrás a Inicio", async ({ page }, testInfo) => {
         await registrarDistribuidora(page, testInfo);
         await page.locator('.bottom-nav [data-pantalla="menu"]').click();
-        await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+        await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
         await page.locator("#masAccesos button", { hasText: "A cobrar" }).click();
         await expect(page.locator("#pantallaConfiguracion")).toBeHidden();
         await atrasDelCelular(page);

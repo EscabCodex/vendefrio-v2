@@ -20,16 +20,21 @@ test("apariencia: más personalización y qué se ve en Inicio", async ({ page }
     const oscuro = testInfo.project.name === "oscuro";
     await registrarDistribuidora(page, testInfo);
 
-    // De fábrica: "Suelen pedir los…" apagada, lo demás prendido.
+    // De fábrica: "¿Qué querés hacer?", "Suelen pedir los…" y "Esta semana"
+    // apagadas (T178), lo demás prendido.
     await expect(page.locator("#dashVisitarHoy")).toBeHidden();
+    await expect(page.locator("#queHacerInicio")).toBeHidden();
+    await expect(page.locator("#dashSemana")).toBeHidden();
     await expect(page.locator("#dashProximaParada")).toBeVisible();
-    expect(await raiz(page, "inicioSin")).toBe("suelenPedir");
+    expect(await raiz(page, "inicioSin")).toBe("queHacer suelenPedir semana");
 
     await abrirConfiguracionEn(page, "apariencia");
     const detalle = page.locator("#configDetalle");
     await expect(detalle.locator(".ajVistaPrevia")).toBeVisible();
     await expect(detalle.getByRole("switch", { name: "Suelen pedir los…" })).not.toBeChecked();
     await expect(detalle.getByRole("switch", { name: "Próxima parada" })).toBeChecked();
+    await expect(detalle.getByRole("switch", { name: "¿Qué querés hacer?" })).not.toBeChecked();
+    await expect(detalle.locator(".ajChipsQueHacer")).toBeHidden();
     await expect(detalle.locator(".ajColor")).toHaveCount(11);
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "apariencia-01-de-fabrica");
@@ -68,14 +73,27 @@ test("apariencia: más personalización y qué se ve en Inicio", async ({ page }
     expect(vista.y).toBeLessThan(90);
     await capturar(page, "apariencia-02-cambiada");
 
-    // Qué se ve en Inicio: apagar dos y prender "Suelen pedir los…".
+    // Qué se ve en Inicio: apagar Próxima parada, prender "Suelen pedir
+    // los…" y "¿Qué querés hacer?" con solo dos de sus botones (T178).
     await detalle.getByRole("switch", { name: "Próxima parada" }).uncheck();
-    await detalle.getByRole("switch", { name: "Esta semana" }).uncheck();
     await detalle.getByRole("switch", { name: "Suelen pedir los…" }).check();
+    await expect(detalle.getByRole("switch", { name: "Esta semana" })).not.toBeChecked();
+    await detalle.getByRole("switch", { name: "¿Qué querés hacer?" }).check();
+    await expect(detalle.getByRole("switch", { name: "Esta semana" })).not.toBeChecked();
+    const chips = detalle.locator(".ajChipsQueHacer");
+    await expect(chips).toBeVisible();
+    await expect(chips.getByRole("checkbox", { name: "Pedidos de hoy" })).toBeChecked();
+    await chips.locator(".ajChip", { hasText: "Pedidos de hoy" }).click();
+    await expect(chips.getByRole("checkbox", { name: "Pedidos de hoy" })).not.toBeChecked();
+    await expect(detalle.getByRole("switch", { name: "Esta semana" })).not.toBeChecked();
+    await capturar(page, "apariencia-02b-que-queres-hacer");
     await irAInicio(page);
     await expect(page.locator("#dashProximaParada")).toBeHidden();
     await expect(page.locator("#tituloProximaParada")).toBeHidden();
     await expect(page.locator("#dashSemana")).toBeHidden();
+    const queHacer = page.locator("#queHacerInicio");
+    await expect(queHacer.getByRole("button", { name: /Cargar un pedido/ })).toBeVisible();
+    await expect(queHacer.getByRole("button", { name: /Pedidos de hoy/ })).toHaveCount(0);
     await expect(page.locator("#resumenHoy")).toBeVisible();
     expect(await page.locator("#pantallaMenu").evaluate(el => getComputedStyle(el).backgroundImage)).toContain("radial-gradient");
     await capturar(page, "apariencia-03-inicio");
@@ -86,6 +104,7 @@ test("apariencia: más personalización y qué se ve en Inicio", async ({ page }
     expect(await raiz(page, "forma")).toBe("rectos");
     expect(await raiz(page, "iconos")).toBe("grandes");
     expect(await raiz(page, "inicioSin")).toBe("proxima semana");
+    await expect(page.locator("#queHacerInicio").getByRole("button", { name: /Cargar un pedido/ })).toBeVisible();
     expect(await variable(page, "--acento-claro")).toBe("#FFD400");
     await expect(page.locator("#dashSemana")).toBeHidden();
 
@@ -104,7 +123,7 @@ test("apariencia: más personalización y qué se ve en Inicio", async ({ page }
     await detalle.getByRole("button", { name: "Restablecer apariencia" }).click();
     expect(await raiz(page, "acento")).toBe("original");
     expect(await raiz(page, "forma")).toBe("redondos");
-    expect(await raiz(page, "inicioSin")).toBe("suelenPedir");
+    expect(await raiz(page, "inicioSin")).toBe("queHacer suelenPedir semana");
     expect(await page.evaluate(() => document.documentElement.style.getPropertyValue("--acento"))).toBe("");
     await irAInicio(page);
     await expect(page.locator("#inicioVacio")).toBeHidden();

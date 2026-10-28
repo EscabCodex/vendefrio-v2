@@ -2,6 +2,8 @@
 // Debajo del resumen de hoy (que sigue arriba de todo), tres botones grandes
 // con lo que más se hace en el día: cargar un pedido, ver los pedidos de hoy
 // y cobrar. "Cobrar" aparece solo para quien cobra, en la nube.
+// T178: arranca apagado; en Más > Apariencia se prende y se elige qué
+// botones van (inicioQueHacerPedido, inicioQueHacerPedidosHoy, inicioQueHacerCobrar).
 (function () {
     "use strict";
 
@@ -24,6 +26,10 @@
             armar: deHoy.filter(pedido => ["cargado", "enPreparacion"].includes(estado(pedido))).length,
             entregar: deHoy.filter(pedido => ["preparado", "enVehiculo", "enReparto"].includes(estado(pedido))).length
         };
+    }
+
+    function elegido(campo) {
+        return window.preferenciasVendeFrio?.valor?.(campo) !== false;
     }
 
     function opcion(accion, icono, titulo, sub, principal) {
@@ -50,18 +56,21 @@
             ? hoy.armar + " para armar · " + hoy.entregar + " para entregar"
             : hoy.todos + (hoy.todos === 1 ? " pedido hoy" : " pedidos hoy");
         let cobrar = "";
-        if (puedeCobrar()) {
+        if (puedeCobrar() && elegido("inicioQueHacerCobrar")) {
             const deben = window.saldosVendeFrio?.cuentas?.() || [];
             cobrar = opcion("cobrar", "moneda", "Cobrar", deben.length
                 ? deben.length + (deben.length === 1 ? " comercio te debe" : " comercios te deben")
                 : "Nadie te debe", false);
         }
+        const opciones = [
+            elegido("inicioQueHacerPedido") ? opcion("pedido", "lapiz", "Cargar un pedido", "Elegís el comercio y los productos", true) : "",
+            elegido("inicioQueHacerPedidosHoy") ? opcion("pedidosHoy", "camion", "Pedidos de hoy", subPedidos, false) : "",
+            cobrar
+        ].filter(Boolean);
+        // El principal va a lo ancho; los otros dos, lado a lado (T178).
         const html = `<h2 class="seccionTitulo" id="tituloQueHacer">¿Qué querés hacer?</h2>
-            <div class="queHacerLista">
-                ${opcion("pedido", "lapiz", "Cargar un pedido", "Elegís el comercio y los productos", true)}
-                ${opcion("pedidosHoy", "camion", "Ver los pedidos de hoy", subPedidos, false)}
-                ${cobrar}
-            </div>`;
+            <div class="queHacerLista" data-cantidad="${opciones.length}">${opciones.join("")}</div>`;
+        bloque.classList.toggle("oculto", !opciones.length);
         // Igual que antes: no se rehace (Inicio se dibuja muchas veces seguidas).
         if (dibujado.bloque !== bloque || dibujado.html !== html) {
             bloque.innerHTML = html;

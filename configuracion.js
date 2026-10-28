@@ -95,15 +95,25 @@
         tonoDia: "hielo", tonoNoche: "grafito", acentoPropio: "", formaBotones: "redondos",
         tarjetas: "suaves", iconos: "normales", fondoInicio: "liso",
         // T156: qué tarjetas se ven en Inicio ("Suelen pedir los…" arranca apagada).
-        inicioVerResumen: true, inicioVerQueHacer: true, inicioVerProxima: true, inicioVerSuelenPedir: false,
-        inicioVerPedidosHoy: true, inicioVerSemana: true, inicioVerAvisos: true
+        // T178: "¿Qué querés hacer?" y "Esta semana" arrancan apagadas (lo de la
+        // semana ya está en la tarjeta azul); se elige qué botones lleva la primera.
+        inicioVerResumen: true, inicioVerQueHacer: false, inicioVerProxima: true, inicioVerSuelenPedir: false,
+        inicioVerPedidosHoy: true, inicioVerSemana: false, inicioVerAvisos: true,
+        inicioQueHacerPedido: true, inicioQueHacerPedidosHoy: true, inicioQueHacerCobrar: true
     };
+
+    // Los botones que se pueden elegir para "¿Qué querés hacer?" (T178).
+    const BOTONES_QUE_HACER = [
+        ["inicioQueHacerPedido", "lapiz", "Cargar un pedido"],
+        ["inicioQueHacerPedidosHoy", "camion", "Pedidos de hoy"],
+        ["inicioQueHacerCobrar", "moneda", "Cobrar"]
+    ];
 
     // Tarjetas de Inicio (T156): campo, clave en data-inicio-sin, título, ayuda, ícono y tono.
     const TARJETAS_INICIO = [
         ["inicioVerAvisos", "avisos", "Avisos", "Pedidos que llegaron, reparto y respaldo", "campana", "naranja"],
         ["inicioVerResumen", "resumen", "Resumen de hoy", "Lo vendido y los pedidos del día", "grafico", "azul"],
-        ["inicioVerQueHacer", "queHacer", "¿Qué querés hacer?", "Cargar un pedido, ver los de hoy y cobrar", "chispa", "violeta"],
+        ["inicioVerQueHacer", "queHacer", "¿Qué querés hacer?", "Botones grandes: elegí cuáles", "chispa", "violeta"],
         ["inicioVerProxima", "proxima", "Próxima parada", "El comercio que sigue, con «Ir» y «Cargar pedido»", "ubicacion", "verde"],
         ["inicioVerSuelenPedir", "suelenPedir", "Suelen pedir los…", "Comercios que suelen pedir este día y todavía no pidieron", "calendario", "naranja"],
         ["inicioVerPedidosHoy", "pedidosHoy", "Pedidos de hoy", "La lista de lo cargado hoy", "lista", "azul"],
@@ -279,8 +289,18 @@
                 <small>A elección</small>
             </label>`;
 
+        // Con "¿Qué querés hacer?" prendida, abajo se eligen sus botones.
+        const chipsQueHacer = `
+            <div class="ajChipsQueHacer" role="group" aria-label="Botones de «¿Qué querés hacer?»">
+                ${BOTONES_QUE_HACER.map(([campo, icono, texto]) => `
+                    <label class="ajChip">
+                        <input type="checkbox" data-campo="${campo}" aria-label="${texto}">
+                        <span>${ico(icono, 16)}${texto}</span>
+                    </label>`).join("")}
+            </div>`;
         const tarjetasInicio = TARJETAS_INICIO
-            .map(([campo, , titulo, ayuda, icono, tono]) => filaLlave(icono, tono, titulo, ayuda, campo))
+            .map(([campo, , titulo, ayuda, icono, tono]) => filaLlave(icono, tono, titulo, ayuda, campo) +
+                (campo === "inicioVerQueHacer" ? chipsQueHacer : ""))
             .join("");
 
         return vistaPrevia() +
@@ -512,7 +532,7 @@
         if (caja) dibujarMuestraTexto(caja);
         if (campo === "acentoPropio" && caja) marcarColorPropio(caja, d);
         // Una tarjeta de Inicio que se prende se calcula recién ahora (T156).
-        if (campo.startsWith("inicioVer") && valor === true) window.actualizarDashboard?.();
+        if ((campo.startsWith("inicioVer") && valor === true) || campo.startsWith("inicioQueHacer")) window.actualizarDashboard?.();
     }
 
     // El círculo de "A elección" muestra el color elegido y queda marcado.
