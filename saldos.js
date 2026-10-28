@@ -554,5 +554,5 @@
         abrir: abrirPantalla
     });
 
-    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, deudaDe, resumenDeudas, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
+    window.saldosVendeFrio = { veDeudas, pagadoDe, cuentas, cuentaDe, deudaDe, resumenDeudas, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
 }());

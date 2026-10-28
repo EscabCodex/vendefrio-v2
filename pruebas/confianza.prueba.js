@@ -175,7 +175,7 @@ test("confianza: archivar productos y comercios con deshacer", async ({ page }, 
 
     // Comercios: "Archivar" con deshacer y la fila "Archivados".
     await page.evaluate(() => mostrarPantalla("comercios"));
-    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco La Esquina" }).click();
+    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
     await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
     await page.getByRole("dialog", { name: "Más opciones de Kiosco La Esquina" }).getByRole("button", { name: "Archivar comercio" }).click();
     await expect(page.locator(".pzDeshacer.visible")).toContainText("“Kiosco La Esquina” archivado");
@@ -185,7 +185,7 @@ test("confianza: archivar productos y comercios con deshacer", async ({ page }, 
     const tarjeta = page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco La Esquina" });
     await expect(tarjeta).toContainText("Archivado");
     await capturar(page, "confianza-09-comercios-archivados");
-    await tarjeta.click();
+    await tarjeta.locator("h3").click();
     await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
     await page.getByRole("button", { name: "Recuperar comercio" }).click();
     await expect(page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco La Esquina" })).toContainText(/Pendiente|Visitado/);

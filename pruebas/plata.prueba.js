@@ -116,9 +116,10 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
 
     // "Debe" en la ficha del comercio y al cargar un pedido nuevo.
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    const debe = page.locator(".modalFichaComercio .pzDebe");
-    await expect(debe).toContainText("$ 7.600");
-    await expect(debe.locator(".pzChip")).toHaveText("1 pedido");
+    // En la ficha nueva es uno de los 9 números, en rojo, y lleva a la cuenta.
+    const debe = page.locator(".modalFichaComercio .fichaNumeroDebe");
+    await expect(debe).toHaveText(/\$ 7\.600\s*debe/);
+    await expect(debe).toHaveAttribute("role", "button");
     await page.locator(".modalFichaComercio .modalContenido").evaluate(el => { el.scrollTop = 0; });
     await capturar(page, "plata-04-ficha-debe");
     await page.keyboard.press("Escape");
@@ -222,7 +223,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
 
     // Don Pepe pasa a "Mayorista" (ficha > datos) y el pedido usa ese precio.
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    await page.locator(".modalFichaComercio").getByRole("button", { name: /^Editar horario, nota y envases/ }).click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Cambiar lista de precios" }).click();
     const datos = page.getByRole("dialog", { name: "Datos del comercio" });
     await datos.locator("#datoLista").selectOption("Mayorista");
     await datos.getByRole("button", { name: "Guardar" }).click();

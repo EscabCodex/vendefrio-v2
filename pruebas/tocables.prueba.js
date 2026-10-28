@@ -123,7 +123,7 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     // Ficha de un comercio: sus números y productos llevan a sus pedidos.
     await barra.getByRole("button", { name: "Comercios" }).click();
     await page.locator("#filtroEstadoComercios").evaluate(filtro => { filtro.value = "todos"; filtro.dispatchEvent(new Event("change")); });
-    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco Luna" }).click();
+    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco Luna" }).locator("h3").click();
     const ficha = page.locator(".modalFichaComercio");
     await expect(ficha.locator("#tituloFichaComercio")).toHaveText("Kiosco Luna");
     const numeros = ficha.locator(".fichaNumeros > div");

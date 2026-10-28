@@ -172,20 +172,27 @@
   </header>
 
   <main class="container">
-    <div class="card filtrosComercios">
-      <input id="buscarComercio" type="text" placeholder="Buscar comercio...">
+    <div class="filtrosComercios">
+      <div id="filtrosEstadoComercios" class="filtrosEtapaPedidos" role="group" aria-label="Filtrar comercios por visitas">
+        <button type="button" class="filtroEtapa activo" data-filtro="todos" aria-pressed="true"><span class="filtroEtapaNombre">Todos</span><span class="filtroEtapaCantidad">0</span></button>
+        <button type="button" class="filtroEtapa" data-filtro="pendientes" aria-pressed="false"><span class="filtroEtapaNombre">Pendientes</span><span class="filtroEtapaCantidad">0</span></button>
+        <button type="button" class="filtroEtapa" data-filtro="visitados" aria-pressed="false"><span class="filtroEtapaNombre">Visitados</span><span class="filtroEtapaCantidad">0</span></button>
+      </div>
 
-      <select id="filtroEstadoComercios" aria-label="Filtrar comercios por visitas">
+      <select id="filtroEstadoComercios" class="oculto" aria-hidden="true" tabindex="-1">
         <option value="todos">Todos los comercios</option>
         <option value="pendientes">Pendientes esta semana</option>
         <option value="visitados">Visitados esta semana</option>
       </select>
 
-      <p id="resumenComercios" class="resumenComercios" aria-live="polite">
-        Comercios: 0 - Pendientes: 0 - Visitados: 0
-      </p>
+      <input id="buscarComercio" class="buscadorMarcas" type="search" placeholder="Buscar comercio..." aria-label="Buscar comercio">
 
-      <button id="agregarComercio" class="btnAccion agregar">Agregar comercio</button>
+      <p id="resumenComercios" class="oculto" aria-live="polite"></p>
+
+      <div class="filaCantidadComercios">
+        <span id="cantidadComercios">0 comercios</span>
+        <button id="agregarComercio" class="pzBtn agregarComercioBtn" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar comercio</button>
+      </div>
     </div>
 
     <div id="listaComerciosAdmin"></div>
@@ -417,34 +424,6 @@
   </div>
 </div>
 
-<div id="modal" class="modal modalHoja oculto">
-  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
-    <h2 id="modalTitulo">Comercio</h2>
-
-    <label for="modalNombre">Nombre</label>
-    <input id="modalNombre" type="text" placeholder="Por ejemplo, Almacén Don Pepe">
-
-    <label for="modalDireccion">Dirección</label>
-    <input id="modalDireccion" type="text" placeholder="Pegá la dirección de Google Maps">
-
-    <label for="modalEnlaceMaps">Enlace de Google Maps (opcional)</label>
-    <input id="modalEnlaceMaps" type="url" placeholder="Pegá el enlace de Google Maps">
-
-    <label for="modalTelefono">Teléfono</label>
-    <input id="modalTelefono" type="tel" inputmode="tel" placeholder="Por ejemplo, 11 5555-1234">
-
-    <div class="modalBotones">
-      <button id="cancelarModal" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="guardarModal" class="btnModalConfirmar">
-        Guardar
-      </button>
-    </div>
-  </div>
-</div>
-
 <div id="modalConfirmacion" class="modal modalHoja oculto">
   <div class="modalContenido">
     <h2 id="tituloConfirmacion">Confirmar</h2>
@@ -547,6 +526,7 @@
 <script src="menu.js"></script>
 <script src="pedidos.js"></script>
 <script src="comerciosAdmin.js"></script>
+<script src="datosComercio.js"></script>
 <script src="productosAdmin.js"></script>
 <script src="historial.js"></script>
 <!-- Imprimir ticket (T28b): antes de seguimiento.js, que muestra el botón. -->

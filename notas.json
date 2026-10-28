@@ -5,6 +5,38 @@
       "version": 246,
       "fecha": "2026-10-28",
       "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Comercios renovado",
+      "texto": "Botones con el número adentro, buscador abajo y en cada tarjeta lo que debe, cuándo pidió y cuándo fuiste."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "mas",
+      "titulo": "Cargá el dato que falta ahí mismo",
+      "texto": "Tocá «+ Agregar» en la tarjeta o en la ficha y cargás el teléfono, la dirección o el horario sin salir."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "puntos",
+      "titulo": "Ficha del comercio nueva",
+      "texto": "Centrada, con 9 números del comercio, todos sus datos y lo demás en el botón de los tres puntitos."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "alarma",
+      "titulo": "Horario con turnos",
+      "texto": "Elegís los días que abre y el turno mañana y tarde con la hora de cada uno."
+    },
+    {
+      "version": 246,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
       "icono": "flechaIzquierda",
       "titulo": "El nombre, al lado de la flechita",
       "texto": "En cada pantalla el nombre va arriba, al lado de la flecha para volver, y la explicación abajo, en un renglón."

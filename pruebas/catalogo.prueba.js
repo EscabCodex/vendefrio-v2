@@ -90,9 +90,10 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(page.locator(".pzDeshacer.visible")).toHaveCount(0, { timeout: 10000 });
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
     await page.locator("#agregarComercio").click();
-    await expect(page.locator("#modalTitulo")).toHaveText("Nuevo comercio");
+    await expect(page.getByRole("dialog", { name: "Nuevo comercio" })).toBeVisible();
     await capturar(page, "catalogo-06-nuevo-comercio");
-    await page.locator("#cancelarModal").click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Nuevo comercio" })).toHaveCount(0);
 
     // Pedido generado: sin emojis en la ventana (el mensaje copiado los tiene).
     await page.evaluate(() => mostrarPantalla("pedido"));

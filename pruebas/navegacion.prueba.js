@@ -61,8 +61,9 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
 
     // Comercios > ficha > "Ir".
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
-    await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
 
     // T154: la primera vez, una hoja pregunta cómo ir.
     const eleccion = page.getByRole("dialog", { name: "¿Cómo querés ir?" });
@@ -144,8 +145,9 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     // «Ir» al mismo comercio con la navegación minimizada también la trae, sin empezar de nuevo.
     await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
-    await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
     await expect(navegacion).toBeVisible();
     await expect(navegacion.locator("path.lineaHecha")).toHaveCount(1);
     await expect.poll(largoDeLaLinea).toBeLessThan(largoAntes);
@@ -220,8 +222,9 @@ test("navegación: elegir Google Maps la primera vez que se toca Ir", async ({ p
 
     const tocarIr = async () => {
         await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-        await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
-        await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+        await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
+        await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+        await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
     };
     const eleccion = page.getByRole("dialog", { name: "¿Cómo querés ir?" });
 

@@ -65,7 +65,7 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await expect(page.locator("#pantallaComercios")).toBeVisible();
     await capturar(page, "diseno-05-comercios");
     // Ficha del comercio con "Actualizar con mi GPS" (T37).
-    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
+    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
     await expect(page.locator(".fichaComercioNueva")).toBeVisible();
     await expect(page.getByRole("button", { name: "Actualizar con mi GPS" })).toBeVisible();
     await capturar(page, "diseno-05b-ficha-comercio");

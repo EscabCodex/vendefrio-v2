@@ -17,7 +17,7 @@ async function irAInicio(page) {
 
 async function abrirFicha(page, nombre) {
     await page.evaluate(() => mostrarPantalla("comercios"));
-    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: nombre }).click();
+    await page.locator("#listaComerciosAdmin .comercioCard", { hasText: nombre }).locator("h3").click();
     await expect(page.locator(".modalFichaComercio")).toBeVisible();
 }
 
@@ -43,6 +43,7 @@ test("vender: visita sin pedido con motivo", async ({ page }, testInfo) => {
 
     // Desde la ficha: "Sin pedido" con otro motivo escrito.
     await abrirFicha(page, "Kiosco La Esquina");
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
     await page.locator(".modalFichaComercio").getByRole("button", { name: "Sin pedido" }).click();
     await hoja.getByRole("button", { name: "Otro motivo (escribir)" }).click();
     await hoja.locator("#textoOtroMotivo").fill("Pidió que vuelva el jueves");
@@ -147,17 +148,23 @@ test("vender: ofertas con fecha y ficha del comercio completa", async ({ page },
     // Ficha del comercio: horario, día, contacto, nota y envases.
     await abrirFicha(page, "Almacén Don Pepe");
     const ficha = page.locator(".modalFichaComercio");
-    await expect(ficha.getByRole("button", { name: "Sin pedido" })).toBeVisible();
-    await ficha.getByRole("button", { name: "Agregar horario, día de visita y nota" }).click();
+    // Los botones van en el menú de los tres puntitos.
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await expect(ficha.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" }).getByRole("button", { name: "Sin pedido" })).toBeVisible();
+    await ficha.getByRole("button", { name: "Cerrar opciones" }).click();
+    // Cada dato que falta se agrega tocándolo: abre "Datos del comercio" en ese dato.
+    await ficha.getByRole("button", { name: "Agregar horario" }).click();
     const datos = page.getByRole("dialog", { name: "Datos del comercio" });
-    await datos.locator("#datoHorario").fill("Lun a sáb · 8 a 13 y 17 a 21");
+    for (const dia of ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]) await datos.getByRole("button", { name: dia, exact: true }).click();
+    await expect(datos.locator(".datosQueda")).toHaveText("Queda: Lun a sáb · 8 a 13 y 17 a 21");
     await datos.locator("#datoDia").selectOption("Martes");
     await datos.locator("#datoContacto").fill("Pepe Gómez");
     await datos.locator("#datoNota").fill("Tocar timbre. Descargar por el costado.");
     await datos.locator("#datoTiene").fill("6");
     await datos.locator("#datoDevolvio").fill("4");
     await datos.getByRole("button", { name: "Guardar" }).click();
-    await expect(ficha).toContainText("San Martín 123 · Pepe Gómez");
+    await expect(ficha.locator(".fichaDatos")).toContainText("San Martín 123");
+    await expect(ficha.locator(".fichaDatos")).toContainText("Pepe Gómez");
     await expect(ficha.locator(".fichaDatos")).toContainText("Lun a sáb · 8 a 13 y 17 a 21");
     await expect(ficha.locator(".fichaDatos")).toContainText("Martes");
     await expect(ficha.locator(".fichaDatos")).toContainText("Tiene 6 cajones · devolvió 4");

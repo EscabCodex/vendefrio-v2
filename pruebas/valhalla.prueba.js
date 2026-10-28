@@ -102,8 +102,9 @@ async function irAlComercio(page) {
         agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", telefono: "11 4444-0000", lat, lng, origenGps: "gps" }),
     COMERCIO);
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
-    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).click();
-    await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
     // T154: la primera vez se elige cómo ir.
     await page.getByRole("dialog", { name: "¿Cómo querés ir?" }).getByRole("button", { name: "Navegación de VendeFrío" }).click();
     const navegacion = page.locator("#pantallaNavegacion");

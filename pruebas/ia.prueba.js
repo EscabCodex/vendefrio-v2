@@ -221,7 +221,8 @@ test("ia: un solo asistente, el de Claude, en Inicio, el dictado y navegando", a
         window.__fraseVoz = "cantame una canción";
     });
     await page.evaluate(() => window.abrirFichaComercio("Kiosco La Esquina"));
-    await page.locator(".fichaComercioNueva").getByRole("link", { name: "Ir" }).click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();
+    await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
     await navegacion.getByRole("button", { name: "Asistente" }).click();

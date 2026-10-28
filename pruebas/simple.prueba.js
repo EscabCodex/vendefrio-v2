@@ -176,14 +176,17 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first()).toBeVisible();
     await capturar(page, "simple-07-pestanas-pedidos");
 
-    // 6. Ficha del comercio: un solo botón "Más opciones" con todo adentro.
+    // 6. Ficha del comercio: un solo botón de tres puntitos con todo adentro
+    // (Cargar pedido primero y resaltado; Eliminar al final, en rojo).
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
     const fichaComercio = page.locator(".modalFichaComercio");
-    await expect(fichaComercio.locator(".fichaAcciones button")).toHaveCount(1);
+    await expect(fichaComercio.locator(".fichaMenu")).toBeHidden();
     await fichaComercio.getByRole("button", { name: "Más opciones" }).click();
+    await expect(fichaComercio).toHaveClass(/conMenu/);
     const masOpcionesComercio = page.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" });
-    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Ver sus pedidos/);
-    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Archivar comercio/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Cargar pedido/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveClass(/fichaMenuPrincipal/);
+    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Eliminar comercio/);
     await capturar(page, "simple-08-ficha-comercio-opciones");
     await masOpcionesComercio.getByRole("button", { name: "Ver sus pedidos" }).click();
     await expect(masOpcionesComercio).toBeHidden();
