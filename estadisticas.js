@@ -616,6 +616,8 @@
     window.abrirEstadisticas=abrir;
     window.estadisticasVendeFrio = {
         tarjeta, vacio, periodoElegido, inicioPeriodo, NOMBRE_PERIODO,
+        // Inicio: "Productos distintos vendidos hoy" abre Lo más pedido en Productos.
+        irAlRanking,
         sumarTarjeta(crear) { if (typeof crear === "function") tarjetasExtra.push(crear); },
         perfilesDe,
         // Vuelve a dibujar si la pantalla está abierta; si no, al entrar.

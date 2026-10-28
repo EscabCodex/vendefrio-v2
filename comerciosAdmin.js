@@ -491,6 +491,13 @@ function mostrarComercioIndividual(nombre) {
     }
 }
 
+// Inicio (visitados, sin visitar): la lista entera, no la de un solo
+// comercio (la deja Historial) ni la de archivados.
+function verTodaLaListaDeComercios() {
+    comercioMostradoIndividual = "";
+    verComerciosArchivados = false;
+}
+
 function limpiarComercioIndividual() {
     comercioMostradoIndividual = "";
     renderizarComercios();
