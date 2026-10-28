@@ -201,12 +201,16 @@ test("lugar: el atrás vuelve a la pantalla de la que se vino, no siempre a Inic
         await expect.poll(() => page.evaluate(() => window.lugarVendeFrio.frenaElAtras())).toBe(false);
     };
 
-    // Catálogo > Agregar al pedido: el atrás vuelve al Catálogo, y otro a Inicio.
+    // Catálogo > "+": el pedido sube como hoja encima del Catálogo; el atrás
+    // la baja y queda el Catálogo con la barrita del pedido a medio hacer.
     await nav("catalogo");
     await page.locator("#grillaCatalogo .btnCatalogoPedido").first().click();
-    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await expect(page.locator("#pantallaPedido.pedidoEnHoja")).toBeVisible();
     await atrasDelCelular(page);
+    await expect(page.locator("#pantallaPedido")).toBeHidden();
     await expect(page.locator("#pantallaCatalogo")).toBeVisible();
+    await expect(page.locator("#barraPedidoMedio")).toBeVisible();
+    await page.evaluate(() => window.limpiarPedido());
     await atrasDelCelular(page);
     await enInicio();
 

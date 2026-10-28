@@ -1144,6 +1144,23 @@ html[data-tema] #pantallaPedido.pedidoEnHoja > header > div{flex:1 1 auto !impor
 html[data-tema] #pantallaPedido.pedidoEnHoja > header h1{font-size:22px;line-height:1.15;text-align:left;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header p{display:none;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header .cerrarPedidoEncima{display:grid;place-items:center;flex-shrink:0;order:9;width:44px;height:44px;min-height:0;padding:0;border:1px solid var(--borde);border-radius:50%;background:var(--superficie);color:var(--texto);}
+/* Repaso de Catálogo: el mismo pedido en hoja, encima de cualquier pantalla
+   (Catálogo, la ficha del comercio, que está a 2500). */
+.fondoPedidoNavegacion.fondoPedidoEnHoja{z-index:2600;}
+html[data-tema] #pantallaPedido.pedidoEnHoja.pedidoSobreTodo{z-index:2601;}
+/* La barrita del pedido a medio hacer, arriba de la barra de abajo. */
+.barraPedidoMedio{position:fixed;left:max(16px, env(safe-area-inset-left));right:max(16px, env(safe-area-inset-right));bottom:calc(90px + env(safe-area-inset-bottom));z-index:900;
+  display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 10px 8px 14px;border-radius:20px;background:var(--superficie);border:var(--borde-tarjeta);box-shadow:0 10px 28px rgba(0,0,0,.22);cursor:pointer;animation:subirHoja .2s ease-out;}
+.barraPedidoMedio.oculto{display:none;}
+.barraPedidoMedio::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:3px;background:var(--borde-fuerte);}
+.iconoPedidoMedio{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:12px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .iconoPedidoMedio{background:var(--superficie-2);color:var(--acento);}
+.textoPedidoMedio{flex:1;min-width:0;display:flex;flex-direction:column;}
+.textoPedidoMedio strong,.textoPedidoMedio small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.textoPedidoMedio strong{font-size:15px;color:var(--texto);}
+.textoPedidoMedio small{font-size:13px;color:var(--texto-sec);}
+html[data-tema] .verPedidoMedio{flex-shrink:0;min-height:42px;padding:0 16px;border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);font:inherit;font-size:14.5px;font-weight:800;box-shadow:none;}
+html.conPedidoMedio body > section > main.container::after{content:"";display:block;height:72px;}
 .mapaNavegacion{position:absolute;inset:0;background:var(--superficie-2);}
 .pantallaNavegacion .leaflet-bottom.leaflet-right{bottom:auto;top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 6px);}
 .pantallaNavegacion .leaflet-control-attribution{font-size:10px;border-radius:8px 0 0 8px;}

@@ -878,6 +878,24 @@ function dibujarVisitarHoy(comercios, pedidos, cargadosHoy) {
 }
 
 function irAPedidoRapido(nombreComercio) {
+    // Repaso de Catálogo: con un pedido a medio hacer se pregunta si seguir
+    // con ese (para este comercio) o empezar uno nuevo. Así no se pierde nada.
+    if (window.pedidoEnHoja && window.pedidoEnHoja.resumen() && typeof abrirPedidoNuevoParaComercio === "function") {
+        window.pedidoEnHoja.preguntarSiHayOtro(nombreComercio, seguir => {
+            if (!seguir) {
+                abrirPedidoNuevoParaComercio(nombreComercio);
+                return;
+            }
+            mostrarPantalla("pedido");
+            const cliente = document.getElementById("cliente");
+            if (cliente && nombreComercio) {
+                cliente.value = nombreComercio;
+                cliente.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            if (typeof guardarBorradorPedido === "function") guardarBorradorPedido();
+        });
+        return;
+    }
     if (typeof abrirPedidoNuevoParaComercio === "function") {
         abrirPedidoNuevoParaComercio(nombreComercio);
         return;

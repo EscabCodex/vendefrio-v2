@@ -717,13 +717,70 @@
     document.addEventListener("touchend", terminarArrastre, { passive: true });
     document.addEventListener("touchcancel", terminarArrastre, { passive: true });
 
+    // ---------- Menú ⋯ flotante (repaso de Comercios y Catálogo) ----------
+    // menu(boton, { titulo, sub, items: [{ icono, texto, principal, peligro,
+    // alTocar }, "-"] }): se abre redondeado junto al botón, con el fondo
+    // apenas difuminado; el ⋯ pasa a ser una X. Se cierra tocando afuera, la
+    // X, una opción o el atrás del celular (es una .modal).
+    function menu(ancla, { titulo = "", sub = "", items = [] } = {}) {
+        const fondo = document.createElement("div");
+        fondo.className = "modal menuFlotante";
+        const caja = document.createElement("div");
+        caja.className = "menuFlotanteCaja";
+        caja.setAttribute("role", "menu");
+        caja.setAttribute("aria-label", titulo || "Opciones");
+        caja.innerHTML = titulo ? `<div class="menuFlotanteCabeza"><strong>${esc(titulo)}</strong>${sub ? `<small>${esc(sub)}</small>` : ""}</div>` : "";
+        const cerrarMenu = () => {
+            fondo.remove();
+            document.removeEventListener("keydown", alTecla);
+        };
+        const alTecla = evento => { if (evento.key === "Escape") cerrarMenu(); };
+        items.forEach(item => {
+            if (item === "-") {
+                caja.appendChild(document.createElement("hr"));
+                return;
+            }
+            if (!item) return;
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "");
+            boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span>${esc(item.texto)}</span>`;
+            boton.addEventListener("click", () => {
+                cerrarMenu();
+                if (typeof item.alTocar === "function") item.alTocar();
+            });
+            caja.appendChild(boton);
+        });
+        const equis = document.createElement("button");
+        equis.type = "button";
+        equis.className = "menuFlotanteX";
+        equis.setAttribute("aria-label", "Cerrar las opciones");
+        equis.innerHTML = ico("cerrarX", 22);
+        equis.addEventListener("click", cerrarMenu);
+        fondo.append(caja, equis);
+        fondo.addEventListener("click", evento => { if (evento.target === fondo) cerrarMenu(); });
+        document.body.appendChild(fondo);
+        document.addEventListener("keydown", alTecla);
+        // Junto al botón: abajo si entra, si no arriba.
+        const r = ancla.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const ancho = caja.offsetWidth;
+        const lado = Math.max(12, Math.min(window.innerWidth - ancho - 12, r.right - ancho));
+        const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
+        caja.style.left = lado + "px";
+        caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+        equis.style.left = (r.left + r.width / 2 - 22) + "px";
+        equis.style.top = (r.top + r.height / 2 - 22) + "px";
+        return caja;
+    }
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer, tocable,
+        hoja, modal, preguntar, cerrar, deshacer, tocable, menu,
         avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

@@ -82,55 +82,93 @@
     const mainProductos = document.querySelector("#pantallaProductos main");
     if (mainProductos) mainProductos.prepend(crearSegmentoCatalogo("productos"));
 
-    // Las marcas como chips (como al cargar un pedido). El desplegable queda
-    // escondido y sigue siendo el que manda.
+    // Repaso de Catálogo: filtros con el número adentro (como en Pedidos),
+    // arriba del buscador. Primero Todas y las marcas; al final los avisos
+    // ("Poco stock", "Sin precio"), que muestran solo esos productos. El
+    // desplegable queda escondido y sigue siendo el que manda la marca.
     function dibujarChipsMarcas(filtro, marcas, lista) {
         let chips = document.getElementById("chipsMarcasCatalogo");
         if (!chips) {
             chips = document.createElement("div");
             chips.id = "chipsMarcasCatalogo";
-            chips.className = "chipsMarcasPedido chipsMarcasCatalogo";
-            filtro.after(chips);
+            chips.className = "filtrosEtapaPedidos filtrosCatalogo";
+            chips.setAttribute("role", "group");
+            chips.setAttribute("aria-label", "Filtrar productos");
+            filtro.closest(".catalogoFiltros").before(chips);
             filtro.classList.add("oculto");
         }
         chips.innerHTML = "";
-        [["todas", "Todas", lista.length]].concat(marcas.map(m => [m, m, lista.filter(p => p.marca === m).length])).forEach(([valor, texto, cantidad]) => {
+        const ico = window.icono;
+        const pocoStock = lista.filter(p => estaBajo(p)).length;
+        const sinPrecio = verArchivados ? 0 : lista.filter(p => !(Number(p.precio) > 0)).length;
+        if (!pocoStock) soloPocoStock = false;
+        if (!sinPrecio) soloSinPrecio = false;
+        const avisoActivo = soloPocoStock || soloSinPrecio;
+        const boton = (texto, cantidad, activo, clase, alTocar, adelante = "") => {
             const chip = document.createElement("button");
             chip.type = "button";
-            chip.className = "chipMarca" + (filtro.value === valor ? " activo" : "") + (valor === "todas" ? "" : " conTono " + tonoDeMarca(valor));
-            chip.setAttribute("aria-pressed", filtro.value === valor ? "true" : "false");
-            const nombre = document.createElement("span"); nombre.textContent = texto;
-            const numero = document.createElement("small"); numero.textContent = String(cantidad);
+            chip.className = "filtroEtapa" + (activo ? " activo" : "") + (clase ? " " + clase : "");
+            chip.setAttribute("aria-pressed", activo ? "true" : "false");
+            chip.innerHTML = adelante;
+            const nombre = document.createElement("span"); nombre.className = "filtroEtapaNombre"; nombre.textContent = texto;
+            const numero = document.createElement("small"); numero.className = "filtroEtapaCantidad"; numero.textContent = String(cantidad);
             chip.append(nombre, numero);
-            chip.onclick = () => { filtro.value = valor; renderizar(); };
+            chip.onclick = alTocar;
             chips.appendChild(chip);
-        });
+        };
+        boton("Todas", lista.length, filtro.value === "todas" && !avisoActivo, "", () => { filtro.value = "todas"; soloPocoStock = false; soloSinPrecio = false; renderizar(); });
+        marcas.forEach(m => boton(m, lista.filter(p => p.marca === m).length, filtro.value === m && !avisoActivo, "conTono " + tonoDeMarca(m),
+            () => { filtro.value = m; soloPocoStock = false; soloSinPrecio = false; renderizar(); }));
+        if (pocoStock) boton("Poco stock", pocoStock, soloPocoStock, "chipAviso", () => { soloPocoStock = !soloPocoStock; soloSinPrecio = false; filtro.value = "todas"; renderizar(); }, ico("alerta", 16));
+        if (sinPrecio) boton("Sin precio", sinPrecio, soloSinPrecio, "chipAviso", () => { soloSinPrecio = !soloSinPrecio; soloPocoStock = false; filtro.value = "todas"; renderizar(); }, ico("alerta", 16));
+    }
+    function estaBajo(p) {
+        const stock = window.stockVendeFrio;
+        if (!stock || p.archivado === true) return false;
+        try {
+            const estado = stock.estadoDe(p, p.marca);
+            return Boolean(estado && estado.nivel !== "ok");
+        } catch (error) {
+            return false;
+        }
     }
     // T166: cada marca tiene su color (el mismo en Productos y en Editar
     // marcas), según el orden de las marcas.
     function tonoDeMarca(marca) { const orden = typeof obtenerMarcasOrdenadas === "function" ? obtenerMarcasOrdenadas() : []; const i = orden.indexOf(marca); return "tono" + ((i < 0 ? 0 : i) % 6); }
     window.tonoDeMarca = tonoDeMarca;
     let soloSinPrecio = false;
-    function dibujarAvisoSinPrecio(lista) {
-        const grilla = document.getElementById("grillaCatalogo");
-        const sinPrecio = verArchivados ? 0 : lista.filter(p => !(Number(p.precio) > 0)).length;
-        if (!sinPrecio) soloSinPrecio = false;
-        let aviso = document.getElementById("avisoSinPrecio");
-        if (!sinPrecio) { aviso?.remove(); return; }
-        if (!aviso) {
-            aviso = document.createElement("button");
-            aviso.type = "button";
-            aviso.id = "avisoSinPrecio";
-            aviso.className = "pzBanner pzBanAviso";
-            aviso.onclick = () => { soloSinPrecio = !soloSinPrecio; renderizar(); };
+    let soloPocoStock = false;
+    // El "+" de cada producto (repaso de Catálogo): sin pedido empezado abre
+    // el Nuevo pedido como hoja encima, con ese producto; con un pedido a
+    // medio hacer suma uno ahí mismo y el botón muestra cuántos van.
+    function prepararBotonPedido(boton, p) {
+        const enHoja = window.pedidoEnHoja;
+        const cantidad = enHoja ? enHoja.cantidadDe(p.marca, p.nombre) : 0;
+        if (cantidad) {
+            boton.classList.add("conCantidad");
+            boton.textContent = String(cantidad);
+            boton.setAttribute("aria-label", "Sumar otro " + p.nombre + " (" + cantidad + " en el pedido)");
         }
-        const pz = window.piezas;
-        const ico = (n, t) => pz ? pz.ico(n, t) : window.icono(n, t);
-        aviso.innerHTML = `${ico("alerta", 22)}<div><strong>${sinPrecio === 1 ? "1 producto sin precio" : sinPrecio + " productos sin precio"}</strong><small>${soloSinPrecio ? "Mostrando solo esos. Tocá para ver todos." : "No se pueden cobrar bien."}</small></div><span class="avisoSinPrecioVer">${soloSinPrecio ? "Ver todos" : "Ver"}</span>`;
-        const chips = document.getElementById("chipsMarcasCatalogo");
-        if (chips) chips.after(aviso); else grilla.before(aviso);
+        boton.onclick = () => {
+            const elegido = { marca: p.marca, producto: p.nombre };
+            if (!enHoja) {
+                localStorage.setItem("vendefrio_producto_catalogo_pendiente", JSON.stringify(elegido));
+                mostrarPantalla("pedido");
+                return;
+            }
+            if (!enHoja.resumen()) {
+                enHoja.abrir({ producto: elegido });
+                return;
+            }
+            if (!enHoja.sumar(p.marca, p.nombre)) return;
+            if (navigator.vibrate) navigator.vibrate(15);
+            const nueva = enHoja.cantidadDe(p.marca, p.nombre);
+            boton.classList.add("conCantidad");
+            boton.textContent = String(nueva);
+            boton.setAttribute("aria-label", "Sumar otro " + p.nombre + " (" + nueva + " en el pedido)");
+        };
     }
-    function renderizar() { const grilla = document.getElementById("grillaCatalogo"); const filtro = document.getElementById("filtroMarcaCatalogo"); if (!grilla || !filtro) return; const todos = datos(); const cantidadArchivados = todos.filter(p => p.archivado === true).length; if (!cantidadArchivados) verArchivados = false; dibujarFiltroArchivados(todos.length - cantidadArchivados, cantidadArchivados); const lista = todos.filter(p => (p.archivado === true) === verArchivados); const marcaActual = filtro.value; const marcas = [...new Set(lista.map(p => p.marca))].sort((a,b) => a.localeCompare(b,"es")); filtro.innerHTML = '<option value="todas">Todas las marcas</option>' + marcas.map(m => `<option value="${m.replace(/"/g,"&quot;")}">${m}</option>`).join(""); filtro.value = marcas.includes(marcaActual) ? marcaActual : "todas"; dibujarChipsMarcas(filtro, marcas, lista); const texto = (document.getElementById("buscarCatalogo")?.value || "").toLocaleLowerCase("es"); const visibles = lista.filter(p => (filtro.value === "todas" || p.marca === filtro.value) && (p.nombre + " " + p.marca).toLocaleLowerCase("es").includes(texto) && (!soloSinPrecio || !(Number(p.precio) > 0))); grilla.innerHTML = ""; visibles.forEach(p => { const card = document.createElement("article"); card.className = "itemCatalogo " + tonoDeMarca(p.marca); card.dataset.idProducto = p.id || ""; const imagen = p.imagen || p.foto || p.image || ""; card.innerHTML = `<div class="fotoCatalogo${imagen ? " conFoto" : ""}">${imagen ? `<img alt="">` : window.icono("paquete",34)}</div><button type="button" class="btnCatalogoEditar" aria-label="Opciones" title="Opciones">${window.icono("puntos",18)}</button><small></small><strong></strong><div class="pieItemCatalogo"><b></b><button type="button" class="btnCatalogoPedido" aria-label="Agregar al pedido" title="Agregar al pedido">${window.icono("mas",18)}</button></div>`; card.dataset.marca = p.marca; if (imagen) { const img = card.querySelector("img"); img.src = imagen; img.alt = p.nombre; } card.querySelector("small").textContent = p.marca; card.querySelector("strong").textContent = p.nombre; card.querySelector("b").textContent = p.precio ? "$ " + Number(p.precio).toLocaleString("es-AR") : "Sin precio"; if (!p.precio) card.querySelector("b").classList.add("sinPrecioCatalogo"); const oferta = typeof ofertaVigente === "function" ? ofertaVigente(p) : null; if (oferta && window.ofertasVendeFrio && p.archivado !== true) { card.querySelector("b").innerHTML = window.ofertasVendeFrio.htmlPrecio(p); card.classList.add("enOferta"); card.querySelector("strong").insertAdjacentHTML("afterend", `<span class="pzChip pzChipPromo">${window.piezas.esc(window.ofertasVendeFrio.textoHasta(oferta.hasta))}</span>`); } card.querySelector(".btnCatalogoPedido").onclick = () => { localStorage.setItem("vendefrio_producto_catalogo_pendiente", JSON.stringify({ marca: p.marca, producto: p.nombre })); mostrarPantalla("pedido"); }; card.querySelector(".btnCatalogoEditar").setAttribute("aria-label", "Opciones de " + p.nombre); card.querySelector(".btnCatalogoEditar").onclick = () => opcionesProducto(p); if (p.archivado === true) { card.classList.add("archivado"); card.querySelector("b").textContent = "Archivado"; card.querySelector("b").classList.remove("sinPrecioCatalogo"); card.querySelector(".btnCatalogoPedido").remove(); } grilla.appendChild(card); }); if (!visibles.length) grilla.innerHTML = '<p class="catalogoVacio">No se encontraron productos.</p>'; dibujarAvisoSinPrecio(lista); dibujarExtras(grilla, verArchivados ? [] : visibles); dibujarVista(grilla, visibles.length); }
+    function renderizar() { const grilla = document.getElementById("grillaCatalogo"); const filtro = document.getElementById("filtroMarcaCatalogo"); if (!grilla || !filtro) return; const todos = datos(); const cantidadArchivados = todos.filter(p => p.archivado === true).length; if (!cantidadArchivados) verArchivados = false; dibujarFiltroArchivados(todos.length - cantidadArchivados, cantidadArchivados); const lista = todos.filter(p => (p.archivado === true) === verArchivados); const marcaActual = filtro.value; const marcas = [...new Set(lista.map(p => p.marca))].sort((a,b) => a.localeCompare(b,"es")); filtro.innerHTML = '<option value="todas">Todas las marcas</option>' + marcas.map(m => `<option value="${m.replace(/"/g,"&quot;")}">${m}</option>`).join(""); filtro.value = marcas.includes(marcaActual) ? marcaActual : "todas"; dibujarChipsMarcas(filtro, marcas, lista); const texto = (document.getElementById("buscarCatalogo")?.value || "").toLocaleLowerCase("es"); const visibles = lista.filter(p => (filtro.value === "todas" || p.marca === filtro.value) && (p.nombre + " " + p.marca).toLocaleLowerCase("es").includes(texto) && (!soloSinPrecio || !(Number(p.precio) > 0)) && (!soloPocoStock || estaBajo(p))); grilla.innerHTML = ""; visibles.forEach(p => { const card = document.createElement("article"); card.className = "itemCatalogo " + tonoDeMarca(p.marca); card.dataset.idProducto = p.id || ""; const imagen = p.imagen || p.foto || p.image || ""; card.innerHTML = `<div class="fotoCatalogo${imagen ? " conFoto" : ""}">${imagen ? `<img alt="">` : window.icono("paquete",34)}</div><button type="button" class="btnCatalogoEditar" aria-label="Opciones" title="Opciones">${window.icono("puntos",18)}</button><small></small><strong></strong><div class="pieItemCatalogo"><b></b><button type="button" class="btnCatalogoPedido" aria-label="Agregar al pedido" title="Agregar al pedido">${window.icono("mas",18)}</button></div>`; card.dataset.marca = p.marca; if (imagen) { const img = card.querySelector("img"); img.src = imagen; img.alt = p.nombre; } card.querySelector("small").textContent = p.marca; card.querySelector("strong").textContent = p.nombre; card.querySelector("b").textContent = p.precio ? "$ " + Number(p.precio).toLocaleString("es-AR") : "+ Agregar precio"; if (!p.precio) { const precio = card.querySelector("b"); precio.classList.add("sinPrecioCatalogo"); precio.setAttribute("role", "button"); precio.tabIndex = 0; precio.onclick = () => editarProductoCatalogo(p); } if (!imagen && p.archivado !== true) { const foto = document.createElement("button"); foto.type = "button"; foto.className = "agregarFotoCatalogo"; foto.textContent = "+ Agregar foto"; foto.setAttribute("aria-label", "Agregar foto a " + p.nombre); foto.onclick = () => editarProductoCatalogo(p); card.querySelector(".fotoCatalogo").appendChild(foto); } const oferta = typeof ofertaVigente === "function" ? ofertaVigente(p) : null; if (oferta && window.ofertasVendeFrio && p.archivado !== true) { card.querySelector("b").innerHTML = window.ofertasVendeFrio.htmlPrecio(p); card.classList.add("enOferta"); card.querySelector("strong").insertAdjacentHTML("afterend", `<span class="pzChip pzChipPromo">${window.piezas.esc(window.ofertasVendeFrio.textoHasta(oferta.hasta))}</span>`); } prepararBotonPedido(card.querySelector(".btnCatalogoPedido"), p); card.querySelector(".btnCatalogoEditar").setAttribute("aria-label", "Opciones de " + p.nombre); card.querySelector(".btnCatalogoEditar").onclick = evento => opcionesProducto(p, evento.currentTarget); if (p.archivado === true) { card.classList.add("archivado"); card.querySelector("b").textContent = "Archivado"; card.querySelector("b").classList.remove("sinPrecioCatalogo"); card.querySelector(".btnCatalogoPedido").remove(); } grilla.appendChild(card); }); if (!visibles.length) grilla.innerHTML = '<p class="catalogoVacio">No se encontraron productos.</p>'; dibujarExtras(grilla, verArchivados ? [] : visibles); dibujarVista(grilla, visibles.length); }
     // Archivar en vez de borrar (T63): "Activos" y "Archivados" arriba de
     // la grilla, y los tres puntos de cada producto.
     let verArchivados = false;
@@ -174,9 +212,15 @@
             barra = document.createElement("div");
             barra.id = "vistaCatalogo";
             barra.className = "vistaCatalogo";
+            // Repaso de Catálogo: solo los dibujos (4 cuadraditos y renglones
+            // con puntitos) y "+ Agregar producto" al lado, como en Comercios.
             barra.innerHTML = `<small></small><div class="pzSegmentos" role="group" aria-label="Ver como">
-                <button type="button" data-vista="cuadros" aria-label="Ver en cuadros" title="Cuadros">${window.icono("menu", 16)}<span>Cuadros</span></button>
-                <button type="button" data-vista="lista" aria-label="Ver en lista" title="Lista">${window.icono("lista", 16)}<span>Lista</span></button></div>`;
+                <button type="button" data-vista="cuadros" aria-label="Ver en cuadros" title="Cuadros"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg></button>
+                <button type="button" data-vista="lista" aria-label="Ver en lista" title="Lista"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/><path d="M9 6h11M9 12h11M9 18h11"/></svg></button></div>
+                <button type="button" class="agregarProductoCatalogo">+ Agregar producto</button>`;
+            barra.querySelector(".agregarProductoCatalogo").addEventListener("click", () => {
+                if (typeof abrirModalNuevoProducto === "function") abrirModalNuevoProducto();
+            });
             barra.addEventListener("click", evento => {
                 const boton = evento.target.closest("[data-vista]");
                 if (!boton) return;
@@ -197,34 +241,30 @@
             try { extra(grilla, visibles); } catch (error) { console.error("Falló un agregado del catálogo.", error); }
         });
     }
-    function opcionesProducto(p) {
+    // Repaso de Catálogo: el ⋯ de cada producto abre el menú flotante (el de
+    // la ficha del comercio), con "Editar datos" resaltado arriba. El "+" de
+    // la tarjeta ya suma al pedido, así que acá no se repite.
+    function opcionesProducto(p, boton) {
         const pz = window.piezas;
         const archivado = p.archivado === true;
-        pz.hoja({
-            titulo: p.nombre,
-            sub: p.marca + (archivado ? " · archivado" : " · " + (p.precio ? pz.plata(p.precio) : "sin precio")),
-            html: `<div class="pzMotivos">
-                <button type="button" class="pzMotivo" data-opcion="editar">${pz.ico("lapiz", 20)}Editar precio o foto</button>
-                ${archivado
-                    ? `<button type="button" class="pzMotivo" data-opcion="recuperar">${pz.ico("deshacer", 20)}Recuperar para vender</button>`
-                    : `${window.ofertasVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="oferta">${pz.ico("etiqueta", 20)}${typeof ofertaVigente === "function" && ofertaVigente(p) ? "Cambiar la oferta" : "Poner en oferta"}</button>` : ""}${window.listasPreciosVendeFrio ? `<button type="button" class="pzMotivo" data-opcion="listas">${pz.ico("etiqueta", 20)}Precios por lista</button>` : ""}${extrasOpciones(p).map(extra => `<button type="button" class="pzMotivo" data-opcion="${extra.opcion}">${pz.ico(extra.icono, 20)}${pz.esc(extra.texto(p))}</button>`).join("")}<button type="button" class="pzMotivo" data-opcion="archivar">${pz.ico("archivo", 20)}Archivar</button>`}
-            </div>
-            <p class="pzHojaSub">${archivado ? "Vuelve a aparecer en Nuevo pedido." : "Deja de aparecer para vender. Los pedidos viejos lo siguen mostrando igual."}</p>`
-        }).addEventListener("click", evento => {
-            const opcion = evento.target.closest("[data-opcion]")?.dataset.opcion;
-            if (!opcion) return;
-            pz.cerrar();
-            if (opcion === "editar") editarProductoCatalogo(p);
-            if (opcion === "oferta") window.ofertasVendeFrio.abrir(p);
-            if (opcion === "listas") window.listasPreciosVendeFrio.abrir(p);
-            extrasOpciones(p).find(extra => extra.opcion === opcion)?.abrir(p);
-            if (opcion === "archivar") window.archivarProductoConDeshacer?.(p.id);
-            if (opcion === "recuperar") {
+        const items = [{ icono: "lapiz", texto: "Editar datos", principal: true, alTocar: () => editarProductoCatalogo(p) }];
+        if (archivado) {
+            items.push({ icono: "deshacer", texto: "Recuperar para vender", alTocar: () => {
                 archivarProductoPorId(p.id, false);
                 if (typeof renderizarPedido === "function") renderizarPedido();
                 renderizar();
                 window.mostrarToast?.("Producto recuperado: vuelve a estar para vender");
-            }
+            } });
+        } else {
+            if (window.ofertasVendeFrio) items.push({ icono: "etiqueta", texto: typeof ofertaVigente === "function" && ofertaVigente(p) ? "Cambiar la oferta" : "Poner en oferta", alTocar: () => window.ofertasVendeFrio.abrir(p) });
+            if (window.listasPreciosVendeFrio) items.push({ icono: "etiqueta", texto: "Precios por lista", alTocar: () => window.listasPreciosVendeFrio.abrir(p) });
+            extrasOpciones(p).forEach(extra => items.push({ icono: extra.icono, texto: extra.texto(p), alTocar: () => extra.abrir(p) }));
+            items.push("-", { icono: "archivo", texto: "Archivar", alTocar: () => window.archivarProductoConDeshacer?.(p.id) });
+        }
+        pz.menu(boton, {
+            titulo: p.nombre,
+            sub: p.marca + (archivado ? " · archivado" : " · " + (p.precio ? pz.plata(p.precio) : "sin precio")),
+            items
         });
     }
     function abrir() { const s = crear(); document.querySelectorAll('body > section[id^="pantalla"]').forEach(item => item.classList.add("oculto")); s.classList.remove("oculto"); renderizar(); }

@@ -2,6 +2,30 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "mejor",
+      "icono": "bolsa",
+      "titulo": "Catálogo renovado",
+      "texto": "Filtros con el número adentro, «Poco stock» y «Sin precio» al final, y «+ Agregar» foto o precio."
+    },
+    {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "documento",
+      "titulo": "Armá el pedido desde el Catálogo",
+      "texto": "El «+» abre el pedido encima. Lo bajás, seguís sumando y al final elegís el comercio."
+    },
+    {
+      "version": 247,
+      "fecha": "2026-10-28",
+      "tipo": "nuevo",
+      "icono": "documento",
+      "titulo": "Tu pedido a medio hacer, siempre a mano",
+      "texto": "Una barrita abajo te lo recuerda en cada pantalla. Tocá «Ver pedido» para seguirlo."
+    },
+    {
       "version": 246,
       "fecha": "2026-10-28",
       "tipo": "mejor",

@@ -28,20 +28,29 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(tarjeta("Helado 1 kg")).toHaveClass(/tono0/);
     await expect(tarjeta("Ravioles de verdura")).toHaveClass(/tono1/);
     await expect(tarjeta("Helado 1 kg").locator("b")).toHaveText("$ 4.500");
-    await expect(tarjeta("Ñoquis de papa").locator("b.sinPrecioCatalogo")).toHaveText("Sin precio");
-    const aviso = catalogo.locator("#avisoSinPrecio");
-    await expect(aviso).toContainText("1 producto sin precio");
+    await expect(tarjeta("Ñoquis de papa").locator("b.sinPrecioCatalogo")).toHaveText("+ Agregar precio");
+    // Repaso de Catálogo: filtros con el número adentro arriba del buscador,
+    // las marcas primero y "Sin precio" al final.
+    const filtros = catalogo.locator("#chipsMarcasCatalogo .filtroEtapa");
+    await expect(filtros).toHaveText([/Todas\s*5/, /Frío Sur\s*3/, /Pastas Doña Rosa\s*2/, /Sin precio\s*1/]);
+    await expect(catalogo.locator("#vistaCatalogo")).toContainText("+ Agregar producto");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "catalogo-01-productos");
-    await aviso.click();
+    const sinPrecio = catalogo.locator("#chipsMarcasCatalogo .filtroEtapa", { hasText: "Sin precio" });
+    await sinPrecio.click();
     await expect(catalogo.locator(".itemCatalogo")).toHaveCount(1);
-    await expect(aviso).toContainText("Ver todos");
-    await aviso.click();
+    await expect(sinPrecio).toHaveAttribute("aria-pressed", "true");
+    await sinPrecio.click();
     await expect(catalogo.locator(".itemCatalogo")).toHaveCount(5);
 
     // Editar precio o foto: hoja nueva, con el "$" adelante.
+    // El ⋯ abre el menú flotante, con "Editar datos" resaltado arriba.
     await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-    await page.getByRole("button", { name: "Editar precio o foto" }).click();
+    const menu = page.getByRole("menu", { name: "Helado 1 kg" });
+    await expect(menu.locator(".menuFlotanteItem").first()).toHaveText("Editar datos");
+    await expect(menu.getByRole("button", { name: "Agregar al pedido" })).toHaveCount(0);
+    await capturar(page, "catalogo-01b-menu-producto");
+    await menu.getByRole("button", { name: "Editar datos" }).click();
     const hoja = page.getByRole("dialog", { name: "Editar producto" });
     await expect(hoja.getByText("Poner foto")).toBeVisible();
     await hoja.locator(".precioCatalogoEdicion").fill("4800");
