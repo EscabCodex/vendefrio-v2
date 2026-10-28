@@ -571,16 +571,24 @@
         alTocarDe.get(elemento)(evento);
     });
 
-    // Cabeceras en un celular chico (T152): si el título no entra al lado de
-    // "Avisos" y "?", pasa a su propio renglón debajo de los botones, en vez
-    // de empujarlos fuera de la pantalla. Se mira después de cada toque (que
-    // es lo que abre las pantallas) y al girar el celular.
+    // Cabeceras en un celular chico (T152): el nombre de la pantalla va
+    // siempre al lado de la flechita (pedido del dueño, 2026-10-28). Si no
+    // entra, se le achica la letra de a poco, sin empujar los botones fuera
+    // de la pantalla. Se mira después de cada toque (que es lo que abre las
+    // pantallas) y al girar el celular.
+    const LETRAS_TITULO = [22, 20, 18];
     function acomodarCabeceras() {
         document.querySelectorAll("body > section:not(.oculto) > header").forEach(cabecera => {
             const titulo = cabecera.querySelector(":scope > div > h1");
             if (!titulo) return;
-            cabecera.classList.remove("cabeceraDosFilas");
-            if (titulo.scrollWidth > titulo.clientWidth + 1) cabecera.classList.add("cabeceraDosFilas");
+            if (titulo.style.fontSize) titulo.style.fontSize = "";
+            titulo.classList.remove("tituloDosRenglones");
+            for (const letra of LETRAS_TITULO) {
+                if (titulo.scrollWidth <= titulo.clientWidth + 1) return;
+                titulo.style.fontSize = letra + "px";
+            }
+            // Ni así entra (flecha y casita juntas): en dos renglones chicos.
+            if (titulo.scrollWidth > titulo.clientWidth + 1) titulo.classList.add("tituloDosRenglones");
         });
     }
     let cabecerasPendientes = false;
