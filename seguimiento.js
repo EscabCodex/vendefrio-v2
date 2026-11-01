@@ -961,10 +961,11 @@
         if (cambioDesdeLaUltimaVez(registro)) tarjeta.classList.add("filaCambio");
 
         // Eligiendo varios (T29c): la tarjeta se marca en vez de abrir la ficha.
+        // Repaso: sin casilla; el avatar se vuelve un tilde (o un anillo).
         if (eligiendo) {
-            const casilla = crear("span", "casillaTanda");
-            casilla.innerHTML = SVG_TILDE;
-            tarjeta.prepend(casilla);
+            const tilde = crear("span", "tildeAvatar");
+            tilde.innerHTML = window.icono ? window.icono("check", 26) : SVG_TILDE;
+            avatar.appendChild(tilde);
             tarjeta.classList.add("eligiendoTanda");
             tarjeta.setAttribute("role", "checkbox");
             tarjeta.setAttribute("aria-label", "Elegir el pedido de " + comercio);
@@ -1239,12 +1240,17 @@
         return pedido && estadoActualDelPedido(pedido) === "entregado" ? "Vuelto atrás en tanda desde Pedidos" : "";
     }
 
+    // Elegir varios (repaso de Pedidos): una fila con la X, "N elegidos" y
+    // "Marcar todos", en lugar del resumen.
     const barraTanda = crear("div", "barraTandaPedidos oculto");
-    const botonMarcarTodos = crear("button", "btnAccion secundario botonMarcarTodos", "Marcar todos");
-    botonMarcarTodos.type = "button";
-    const botonDejarDeElegir = crear("button", "btnAccion secundario botonDejarDeElegir", "Cancelar");
+    const botonDejarDeElegir = crear("button", "botonDejarDeElegir");
     botonDejarDeElegir.type = "button";
-    barraTanda.append(botonMarcarTodos, botonDejarDeElegir);
+    botonDejarDeElegir.setAttribute("aria-label", "Dejar de elegir");
+    botonDejarDeElegir.innerHTML = window.icono ? window.icono("cerrarX", 20) : "×";
+    const cuantosElegidos = crear("strong", "cuantosElegidos");
+    const botonMarcarTodos = crear("button", "botonMarcarTodos", "Marcar todos");
+    botonMarcarTodos.type = "button";
+    barraTanda.append(botonDejarDeElegir, cuantosElegidos, botonMarcarTodos);
     filaResumen.after(barraTanda);
 
     const pieTanda = crear("div", "pieTandaPedidos oculto");
@@ -1258,18 +1264,14 @@
         botonesTanda[accion.id] = boton;
         pieTanda.appendChild(boton);
     });
-    // T110: abajo queda un solo botón grande; los otros pasos van en "Mover a
-    // otro paso" y "Eliminar" en el ⋯, separado.
-    const botonMoverTanda = crear("button", "btnAccion secundario botonMoverTanda");
-    botonMoverTanda.type = "button";
-    botonMoverTanda.innerHTML = "<span>Mover a otro paso</span>" + (window.icono ? window.icono("chevArriba", 16) : "");
-    const botonMasTanda = crear("button", "btnAccion secundario botonMasTanda");
+    // Abajo, una barra flotante: el botón grande y un ⋯ redondo con los
+    // otros pasos (con cuántos pedidos mueve cada uno) y "Eliminar" en rojo.
+    const botonMasTanda = crear("button", "botonMasTanda");
     botonMasTanda.type = "button";
     botonMasTanda.setAttribute("aria-label", "Más acciones con los elegidos");
-    botonMasTanda.innerHTML = window.icono ? window.icono("puntos", 22) : "⋯";
-    const filaTanda = crear("div", "filaTandaPedidos");
-    filaTanda.append(botonMoverTanda, botonMasTanda);
-    pieTanda.appendChild(filaTanda);
+    botonMasTanda.setAttribute("aria-haspopup", "menu");
+    botonMasTanda.innerHTML = window.icono ? window.icono("puntos", 24) : "⋯";
+    pieTanda.appendChild(botonMasTanda);
     document.body.appendChild(pieTanda);
 
     // Los pedidos de la etapa que se ve ahora (todos, no solo los dibujados).
@@ -1306,6 +1308,7 @@
         }
 
         barraTanda.classList.toggle("oculto", !eligiendo);
+        filaResumen.classList.toggle("oculto", eligiendo);
         actualizarTanda();
     }
 
@@ -1327,9 +1330,9 @@
             boton.disabled = cantidad === 0;
             boton.classList.toggle("oculto", accion !== principal);
         });
-        botonMoverTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length);
-        botonMasTanda.classList.toggle("oculto", !masAccionesTanda(disponibles).length);
-        filaTanda.classList.toggle("oculto", botonMoverTanda.classList.contains("oculto") && botonMasTanda.classList.contains("oculto"));
+        botonMasTanda.classList.toggle("oculto", !otrosPasosTanda(disponibles).length && !masAccionesTanda(disponibles).length);
+        pieTanda.classList.toggle("soloMasTanda", !principal);
+        cuantosElegidos.textContent = elegidos.size === 1 ? "1 elegido" : elegidos.size + " elegidos";
         actualizarBotonNuevo();
     }
 
@@ -1357,25 +1360,31 @@
         return disponibles.filter(accion => accion !== principal && (accion.peligro || accion.extra));
     }
 
-    // Hoja con acciones de la tanda, cada una con cuántos pedidos toca.
-    function abrirHojaTanda(titulo, acciones) {
+    // El ⋯ de los elegidos: un menú que sale del botón (piezas.menu), cada
+    // opción con cuántos pedidos toca.
+    function abrirMenuTanda() {
         const p = window.piezas;
-        if (!p || !acciones.length) return;
+        const disponibles = accionesDeLaEtapa();
+        const pasos = otrosPasosTanda(disponibles);
+        const mas = masAccionesTanda(disponibles);
+        if (!p || (!pasos.length && !mas.length)) return;
         const iconos = { cobrar: "moneda", enPreparacion: "check", preparado: "paquete", entregado: "camion", eliminar: "tacho", enReparto: "camion" };
-        const caja = p.hoja({
-            titulo,
-            sub: textoPedidos(elegidos.size) + " elegido" + (elegidos.size === 1 ? "" : "s"),
-            html: `<div class="pzMotivos">${acciones.map(accion => {
-                const cantidad = cantidadTanda(accion);
-                return `<button type="button" class="pzMotivo${accion.peligro ? " motivoPeligroTanda" : ""}" data-accion-tanda="${accion.id}" ${cantidad ? "" : "disabled"}>${p.ico(iconos[accion.id] || "check", 20)}${p.esc(accion.boton + " (" + cantidad + ")")}</button>`;
-            }).join("")}</div>`
-        });
-        caja.addEventListener("click", evento => {
-            const boton = evento.target.closest("[data-accion-tanda]");
-            const accion = boton && ACCIONES_TANDA.find(item => item.id === boton.dataset.accionTanda);
-            if (!accion || boton.disabled) return;
-            p.cerrar();
-            hacerAccionTanda(accion);
+        const item = accion => {
+            const cantidad = cantidadTanda(accion);
+            return {
+                texto: accion.boton, icono: iconos[accion.id] || "check", cantidad, desactivado: !cantidad,
+                peligro: Boolean(accion.peligro), alTocar: () => hacerAccionTanda(accion)
+            };
+        };
+        const comunes = mas.filter(accion => !accion.peligro);
+        const peligro = mas.filter(accion => accion.peligro);
+        const items = pasos.map(item).concat(comunes.map(item));
+        if (peligro.length && items.length) items.push("-");
+        p.menu(botonMasTanda, {
+            titulo: textoPedidos(elegidos.size) + (elegidos.size === 1 ? " elegido" : " elegidos"),
+            sub: pasos.length ? "Pasalos a otro paso" + (peligro.length ? " o eliminalos" : "") : "",
+            clase: "menuTanda",
+            items: items.concat(peligro.map(item))
         });
     }
 
@@ -1464,12 +1473,8 @@
     });
 
     pieTanda.addEventListener("click", evento => {
-        if (evento.target.closest(".botonMoverTanda")) {
-            abrirHojaTanda("Mover a otro paso", otrosPasosTanda(accionesDeLaEtapa()));
-            return;
-        }
         if (evento.target.closest(".botonMasTanda")) {
-            abrirHojaTanda("Más acciones", masAccionesTanda(accionesDeLaEtapa()));
+            abrirMenuTanda();
             return;
         }
         const boton = evento.target.closest("button[data-accion]");

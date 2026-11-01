@@ -1541,3 +1541,23 @@ html #modalFichaPedido .accionesFichaPedido{margin-bottom:0;padding-bottom:0;}
 html #modalFichaPedido .seccionFichaPedido h3{margin-top:14px;}
 html #modalFichaPedido .menuFichaPedido[hidden]{display:none !important;}
 html #modalFichaPedido .botonCartelCobro{display:flex;align-items:center;justify-content:center;}
+/* Elegir varios: fila X · "N elegidos" · Marcar todos; el avatar se vuelve
+   un tilde; abajo una sola barra con el botón grande y un ⋯ redondo. */
+.filaResumenPedidos.oculto{display:none;}
+html .barraTandaPedidos{align-items:center;gap:10px;margin:10px 0;}
+html .barraTandaPedidos .botonDejarDeElegir{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
+.barraTandaPedidos .cuantosElegidos{flex:1;font-size:16px;color:var(--texto);}
+html .barraTandaPedidos .botonMarcarTodos{flex:0 0 auto;width:auto;min-height:40px;margin:0;padding:0 16px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);box-shadow:none;font-weight:800;font-size:14px;}
+html[data-tema="oscuro"] .barraTandaPedidos .botonMarcarTodos{background:var(--superficie-2);color:var(--acento);}
+html .tarjetaSeguimiento .avatar{position:relative;}
+.tarjetaSeguimiento .casillaTanda{display:none;}
+.tarjetaSeguimiento .tildeAvatar{display:none;}
+.tarjetaSeguimiento.eligiendoTanda .avatar::after{content:"";position:absolute;inset:-3px;border-radius:inherit;border:2px dashed var(--borde-fuerte);}
+.tarjetaSeguimiento.elegidaTanda .avatar::after{display:none;}
+.tarjetaSeguimiento.elegidaTanda .tildeAvatar{position:absolute;inset:0;display:grid;place-items:center;border-radius:inherit;background:var(--acento);color:var(--acento-txt);}
+html[data-tema="oscuro"] .tarjetaSeguimiento.elegidaTanda .tildeAvatar svg{color:var(--acento-txt) !important;}
+html .pieTandaPedidos{flex-wrap:nowrap;align-items:center;gap:8px;padding:8px;border-radius:999px;background:var(--superficie);box-shadow:0 8px 30px rgba(0,0,0,.18);}
+html .pieTandaPedidos.soloMasTanda{left:auto;}
+html .pieTandaPedidos .botonTanda{flex:1;min-height:50px;margin:0;border-radius:999px;box-shadow:none;}
+html .pieTandaPedidos .botonMasTanda{display:grid;place-items:center;flex:0 0 auto;width:50px;height:50px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;}
+html .pieTandaPedidos .botonMasTanda.oculto{display:none;}
