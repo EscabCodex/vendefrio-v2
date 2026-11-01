@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 253,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "ubicacion",
+      "titulo": "Agregá la dirección desde Rutas",
+      "texto": "Si a una parada le falta la dirección o el teléfono, tocá «+ Agregar» y lo cargás sin salir de Rutas."
+    },
+    {
       "version": 252,
       "fecha": "2026-10-28",
       "tipo": "arreglado",
