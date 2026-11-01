@@ -318,20 +318,25 @@
 
     // Buscador (comercio, texto del pedido o N°), fecha y, si se entró desde
     // un comercio o desde "Último pedido", solo ese comercio o ese pedido.
-    function coincideConElHistorial(registro) {
+    function coincideConElHistorial(registro, periodo = periodoHistorial) {
         const pedido = registro.pedido;
         if (idPedidoHistorial) return String(pedido.id || "") === idPedidoHistorial;
 
         const comercio = normalizarTexto(pedido.comercio);
         if (comercioHistorial && comercio !== normalizarTexto(comercioHistorial)) return false;
 
+        return coincideLaBusqueda(registro) && coincidePeriodoHistorial(pedido, periodo);
+    }
+
+    // La lupa (repaso de Pedidos): por comercio, por lo pedido o por N°, en
+    // todas las pestañas.
+    function coincideLaBusqueda(registro) {
         const texto = normalizarTexto(busquedaHistorial);
-        const coincideTexto = !texto ||
-            comercio.includes(texto) ||
+        if (!texto) return true;
+        const pedido = registro.pedido;
+        return normalizarTexto(pedido.comercio).includes(texto) ||
             normalizarTexto(pedido.pedido).includes(texto) ||
             normalizarTexto(numeroCortoDelPedido(pedido)).includes(texto);
-
-        return coincideTexto && coincidePeriodoHistorial(pedido, periodoHistorial);
     }
 
     function esDeLaEtapa(registro, etapa) {
@@ -494,9 +499,10 @@
     }
 
     function etiquetaEstado(estado) {
-        const nombre = estado === "historico" ? "Histórico" : nombreDeEstadoPedido(estado) || estado;
+        // Repaso de Pedidos: los de antes (sin pasos) también dicen "Entregado".
+        const nombre = estado === "historico" ? "Entregado" : nombreDeEstadoPedido(estado) || estado;
         const etiqueta = crear("span", "estadoSeguimiento", nombre);
-        etiqueta.dataset.estado = estado;
+        etiqueta.dataset.estado = estado === "historico" ? "entregado" : estado;
         return etiqueta;
     }
 
@@ -552,6 +558,20 @@
     }
 
     botonNuevo.addEventListener("click", () => {
+        cambiarVista("nuevo");
+        window.scrollTo(0, 0);
+    });
+
+    // Repaso de Pedidos: la fila del resumen lleva "Cargar pedido" a la derecha
+    // (solo en Para armar y Para entregar; en las demás, el resumen va centrado).
+    const filaResumen = crear("div", "filaResumenPedidos");
+    resumen.before(filaResumen);
+    const botonCargarPedido = crear("button", "pzBtn botonCargarPedido");
+    botonCargarPedido.type = "button";
+    botonCargarPedido.innerHTML = window.icono ? window.icono("mas", 18) : "";
+    botonCargarPedido.appendChild(crear("span", "", "Cargar pedido"));
+    filaResumen.append(resumen, botonCargarPedido);
+    botonCargarPedido.addEventListener("click", () => {
         cambiarVista("nuevo");
         window.scrollTo(0, 0);
     });
@@ -621,16 +641,29 @@
     }
 
     // Historial (T27b): buscador, filtro por fecha y el aviso del filtro de
-    // un comercio o de un pedido, con "Ver todos". Solo en "Historial".
-    const barraHistorial = crear("div", "card filtrosHistorial filtrosHistorialPedidos oculto");
+    // un comercio o de un pedido, con "Ver todos". Repaso de Pedidos
+    // (2026-11-01): Hoy / Semana / Mes / Todo como filtros con el número
+    // adentro, y el buscador es la lupa: el primer botón de la fila de
+    // filtros más cercana a la lista (en Terminados, la del período; en las
+    // demás, la de los pasos), y busca en todas las pestañas.
+    const barraHistorial = crear("div", "filtrosHistorial filtrosHistorialPedidos oculto");
 
     const buscadorHistorial = document.createElement("input");
     buscadorHistorial.type = "search";
-    buscadorHistorial.placeholder = "Buscar por comercio, pedido o N°...";
-    buscadorHistorial.setAttribute("aria-label", "Buscar en el historial");
+    buscadorHistorial.placeholder = "Comercio o N° de pedido";
+    buscadorHistorial.setAttribute("aria-label", "Buscar pedidos");
+    buscadorHistorial.setAttribute("autocomplete", "off");
 
     const fechaHistorial = document.createElement("select");
     fechaHistorial.setAttribute("aria-label", "Filtrar historial por fecha");
+    fechaHistorial.classList.add("oculto");
+    (typeof PERIODOS_HISTORIAL !== "undefined" ? PERIODOS_HISTORIAL : [["hoy", "Hoy"], ["semana", "Semana"], ["mes", "Mes"], ["todos", "Todo"]])
+        .forEach(([valor, texto]) => fechaHistorial.appendChild(new Option(texto, valor)));
+    fechaHistorial.value = periodoHistorial;
+
+    const filaPeriodo = crear("div", "filtrosEtapaPedidos filaPeriodoPedidos");
+    filaPeriodo.setAttribute("role", "radiogroup");
+    filaPeriodo.setAttribute("aria-label", "Período");
 
     const avisoFiltroHistorial = crear("div", "filtroHistorialActivo oculto");
     const textoAvisoHistorial = crear("span", "");
@@ -638,10 +671,9 @@
     verTodosHistorial.type = "button";
     avisoFiltroHistorial.append(textoAvisoHistorial, verTodosHistorial);
 
-    barraHistorial.append(buscadorHistorial, fechaHistorial, avisoFiltroHistorial);
+    barraHistorial.append(filaPeriodo, fechaHistorial, avisoFiltroHistorial);
     filtros.after(barraHistorial);
-    // Hoy / Semana / Mes / Todo (T33), del mismo modo que en el modo personal.
-    const segmentoHistorial = typeof crearSegmentoPeriodo === "function" ? crearSegmentoPeriodo(fechaHistorial) : null;
+    const lupaPedidos = window.piezas?.lupa ? window.piezas.lupa(buscadorHistorial, { etiqueta: "Buscar pedidos" }) : null;
 
     buscadorHistorial.addEventListener("input", () => {
         busquedaHistorial = buscadorHistorial.value;
@@ -655,21 +687,52 @@
         dibujarLista();
     });
 
+    filaPeriodo.addEventListener("click", evento => {
+        const boton = evento.target.closest("[data-periodo]");
+        if (!boton || boton.dataset.periodo === periodoHistorial) return;
+        fechaHistorial.value = boton.dataset.periodo;
+        fechaHistorial.dispatchEvent(new Event("change"));
+    });
+
     verTodosHistorial.addEventListener("click", () => {
         comercioHistorial = "";
         idPedidoHistorial = "";
         busquedaHistorial = "";
+        buscadorHistorial.value = "";
+        lupaPedidos?.cerrar();
         mostrando = TANDA;
         dibujarLista();
     });
 
-    function dibujarBarraHistorial(visible) {
+    // Los filtros de Hoy / Semana / Mes / Todo, con cuántos hay en cada uno
+    // (con la búsqueda y el comercio elegidos).
+    function dibujarFilaPeriodo(historial) {
+        const sinPeriodo = historial.filter(registro => coincideConElHistorial(registro, "todos"));
+        [...filaPeriodo.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
+        [...fechaHistorial.options].forEach(opcion => {
+            const boton = crear("button", "filtroEtapa");
+            boton.type = "button";
+            boton.dataset.periodo = opcion.value;
+            boton.setAttribute("role", "radio");
+            const elegido = opcion.value === periodoHistorial;
+            boton.setAttribute("aria-checked", elegido ? "true" : "false");
+            if (elegido) boton.classList.add("activo");
+            const cantidad = opcion.value === "todos"
+                ? sinPeriodo.length
+                : sinPeriodo.filter(registro => coincidePeriodoHistorial(registro.pedido, opcion.value)).length;
+            boton.append(crear("span", "filtroEtapaNombre", opcion.textContent), crear("span", "filtroEtapaCantidad", String(cantidad)));
+            filaPeriodo.appendChild(boton);
+        });
+    }
+
+    function dibujarBarraHistorial(visible, historial) {
         barraHistorial.classList.toggle("oculto", !visible);
+        if (lupaPedidos) lupaPedidos.poner(visible ? filaPeriodo : filtros);
         if (!visible) return;
 
         if (buscadorHistorial.value !== busquedaHistorial) buscadorHistorial.value = busquedaHistorial;
         fechaHistorial.value = periodoHistorial;
-        if (segmentoHistorial) sincronizarSegmentoPeriodo(segmentoHistorial, periodoHistorial);
+        dibujarFilaPeriodo(historial || []);
 
         const aviso = idPedidoHistorial
             ? "Mostrando solamente el pedido seleccionado"
@@ -681,7 +744,7 @@
     let cantidadesOtros = [];
 
     function dibujarFiltros(registros, historial) {
-        filtros.innerHTML = "";
+        [...filtros.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
         cantidadesOtros = [];
 
         etapasVisibles().forEach(etapa => {
@@ -708,7 +771,7 @@
         const otros = crear("button", "filtroEtapa filtroEtapaOtros");
         otros.type = "button";
         otros.setAttribute("role", "tab");
-        otros.setAttribute("aria-haspopup", "dialog");
+        otros.setAttribute("aria-haspopup", "menu");
         otros.setAttribute("aria-selected", elegida ? "true" : "false");
         if (elegida) otros.classList.add("activo");
         const suma = cantidadesOtros.reduce((total, item) => total + item.cantidad, 0);
@@ -720,19 +783,27 @@
         filtros.appendChild(otros);
     }
 
+    // Otros (repaso de Pedidos): una lista que baja desde la pastilla, con el
+    // mismo estilo que el menú del + y el ⋯ de las fichas.
     function abrirOtros() {
         const p = window.piezas;
-        const hoja = p.hoja({
+        const ancla = filtros.querySelector(".filtroEtapaOtros") || filtros;
+        const ESTILO = {
+            aCobrar: { icono: "moneda", tono: "aviso" },
+            incidencias: { icono: "bandera", tono: "peligro" },
+            cancelados: { icono: "cerrarX", tono: "gris" }
+        };
+        p.menu(ancla, {
             titulo: "Otros pedidos",
-            html: '<div class="pzOpciones">' + cantidadesOtros.map(({ etapa, cantidad }) =>
-                `<button type="button" class="pzOpcion" data-etapa-otros="${etapa.id}"${etapa.id === etapaActual ? ' aria-current="true"' : ""}>${p.esc(etapa.nombre)}<span class="filtroEtapaCantidad">${cantidad}</span></button>`
-            ).join("") + "</div>"
-        });
-        hoja.addEventListener("click", evento => {
-            const opcion = evento.target.closest("[data-etapa-otros]");
-            if (!opcion) return;
-            p.cerrar();
-            elegirEtapa(opcion.dataset.etapaOtros);
+            clase: "menuOtrosPedidos",
+            items: cantidadesOtros.map(({ etapa, cantidad }) => ({
+                texto: etapa.nombre,
+                icono: (ESTILO[etapa.id] || {}).icono,
+                tono: (ESTILO[etapa.id] || {}).tono,
+                cantidad,
+                actual: etapa.id === etapaActual,
+                alTocar: () => elegirEtapa(etapa.id)
+            }))
         });
     }
 
@@ -765,6 +836,38 @@
         return visto !== huellaDelRegistro(registro);
     }
 
+    // Repaso de Pedidos (2026-11-01): un dato por línea, con su ícono.
+    function lineaTarjeta(icono, texto, clase) {
+        const linea = crear("div", "lineaTarjeta" + (clase ? " " + clase : ""));
+        linea.innerHTML = window.icono ? window.icono(icono, 16) : "";
+        linea.appendChild(crear("span", "", texto));
+        return linea;
+    }
+
+    // "+ Agregar dirección" (y teléfono en la ficha): completa el dato del
+    // comercio ahí mismo, con la hoja "Datos del comercio".
+    function botonAgregarDato(comercio, campo, texto) {
+        const boton = crear("button", "lineaTarjeta agregarDatoPedido");
+        boton.type = "button";
+        boton.dataset.agregarDato = campo;
+        boton.dataset.comercio = comercio;
+        boton.innerHTML = window.icono ? window.icono("mas", 16) : "";
+        boton.appendChild(crear("span", "", texto));
+        return boton;
+    }
+
+    function agregarDatoDelComercio(boton) {
+        const comercio = boton.dataset.comercio;
+        const campo = boton.dataset.agregarDato;
+        const alGuardar = () => { dibujarLista(); if (idFichaAbierta) dibujarFicha(); };
+        if (typeof window.abrirDatosComercio === "function") window.abrirDatosComercio(comercio, campo, alGuardar);
+        else window.datosComercioVendeFrio?.editar?.(comercio, { campo, alGuardar });
+    }
+
+    function seVeLaPlata() {
+        return window.verPlataVendeFrio?.puedoVer?.() !== false;
+    }
+
     function crearTarjeta(registro) {
         const pedido = registro.pedido;
         const comercio = String(pedido.comercio || "SIN NOMBRE").trim();
@@ -775,6 +878,7 @@
         tarjeta.setAttribute("role", "button");
         tarjeta.tabIndex = 0;
         tarjeta.setAttribute("aria-label", "Ver el pedido de " + comercio);
+        if (registro.estado === "cancelado") tarjeta.classList.add("tarjetaCancelada");
 
         const avatar = crear("div", "avatar", iniciales(comercio));
         avatar.style.background = colorAvatar(comercio);
@@ -782,52 +886,76 @@
         const info = crear("div", "infoSeguimiento");
         const arriba = crear("div", "filaSeguimientoArriba");
         arriba.append(crear("h3", "", comercio), etiquetaEstado(registro.estado));
+        info.append(arriba);
 
-        const detalle = crear(
-            "p",
-            "subtitulo",
-            (hora ? textoCuando(hora) : String(pedido.fecha || "Sin fecha")) + "  ·  " + textoUnidades(unidadesDelPedido(pedido)) + "  ·  " + textoTotal(pedido)
-        );
-        // Número corto (T28b): el mismo del ticket impreso. Un "Histórico"
-        // puede no tener autor (T27b).
-        const numero = numeroCortoDelPedido(pedido);
+        // Un dato por línea: hora y quién lo cargó, unidades y productos, la
+        // dirección (o "+ Agregar dirección"), la incidencia y el cobro.
+        const datos = crear("div", "datosTarjeta");
         const conAutor = Boolean(pedido.autor && typeof pedido.autor === "object");
-        const textoAutor = [conAutor ? "Cargado por " + nombrePersona(pedido.autor) : "", numero ? "N° " + numero : ""]
-            .filter(Boolean)
-            .join("  ·  ");
+        datos.appendChild(lineaTarjeta("reloj", (hora ? textoCuando(hora) : String(pedido.fecha || "Sin fecha")) +
+            (conAutor ? "  ·  cargó " + nombrePersona(pedido.autor) : "")));
+        const productos = (Array.isArray(pedido.productos) ? pedido.productos : [])
+            .filter(item => item && (Number(item.cantidad) || 0) > 0).length;
+        datos.appendChild(lineaTarjeta("paquete", textoUnidades(unidadesDelPedido(pedido)) +
+            (productos ? "  ·  " + productos + (productos === 1 ? " producto" : " productos") : "")));
+        const datosComercio = typeof comercioParaLeerPorNombre === "function" ? comercioParaLeerPorNombre(comercio) : null;
+        if (datosComercio && datosComercio.direccion) datos.appendChild(lineaTarjeta("ubicacion", datosComercio.direccion));
+        else if (datosComercio && registro.estado !== "historico") datos.appendChild(botonAgregarDato(comercio, "direccion", "Agregar dirección"));
 
-        info.append(arriba, detalle);
-        if (textoAutor) info.append(crear("p", "subtitulo autorSeguimiento", textoAutor));
-        // T124: si se anotó lo que el comercio quiere o lo que tiene en la heladera.
-        const tiene = window.tieneQuiereVendeFrio?.esTiene?.(pedido);
-        info.append(crear("span", "badge " + (tiene ? "tipoTiene" : "tipoQuiere"), tiene ? "Tiene" : "Quiere"));
+        const incidencia = incidenciasAbiertas(pedido)[0];
+        if (incidencia) datos.appendChild(lineaTarjeta("bandera", String(incidencia.motivo || "").trim() || "Con incidencia", "lineaIncidencia"));
 
         // Checklist (T24): cuánto lleva armado y si hay faltantes. En
         // "Cargado", solo si alguien ya tildó (T29b).
+        let barra = null;
         if (ESTADOS_CON_CHECKLIST.includes(registro.estado) || ESTADOS_PREPARADOS.includes(registro.estado)) {
             const preparacion = preparacionDe(pedido);
             if (registro.estado === "enPreparacion" || (registro.estado === "cargado" && preparacion.listos > 0)) {
-                info.append(crear("p", "subtitulo progresoTarjeta", "Checklist: " + preparacion.listos + " de " + preparacion.productos + " listos"));
+                barra = crear("div", "progresoTarjeta");
+                const relleno = crear("span", "barraArmado");
+                const lleno = crear("i", "");
+                lleno.style.width = (preparacion.productos ? Math.round(100 * preparacion.listos / preparacion.productos) : 0) + "%";
+                relleno.appendChild(lleno);
+                barra.append(relleno, crear("small", "", "Armado: " + preparacion.listos + " de " + preparacion.productos + " productos"));
             }
-            if (preparacion.faltantes) info.append(crear("span", "badge faltanteSeguimiento", textoFaltantes(preparacion.faltantes)));
+            if (preparacion.faltantes) datos.appendChild(lineaTarjeta("alerta", textoFaltantes(preparacion.faltantes), "lineaFaltante"));
         }
 
-        // Entrega (T27): si se entregó distinto de lo preparado.
-        if (registro.estado === "entregado" && (entregaDe(pedido)?.cambios || 0) > 0) {
-            info.append(crear("span", "badge entregaSeguimiento", "Entregado con cambios"));
-        }
-
-        // Cobro (T28): "Cobro pendiente" o cómo se cobró.
+        // Cobro (T28): "Falta cobrar" o cómo se cobró.
         if (registro.estado === "entregado") {
             const cobro = cobroDe(pedido);
-            info.append(cobro
-                ? crear("span", "badge cobradoSeguimiento", "Cobrado: " + textoCobro(cobro))
-                : crear("span", "badge cobroPendienteSeguimiento", "Cobro pendiente"));
+            datos.appendChild(cobro
+                ? lineaTarjeta("moneda", "Cobrado  ·  " + String(textoCobro(cobro)).split("·")[0].trim(), "lineaCobrado")
+                : lineaTarjeta("moneda", "Falta cobrar", "lineaFaltaCobrar"));
+        }
+        info.appendChild(datos);
+        if (barra) info.appendChild(barra);
+
+        // Avisos que siguen como etiqueta: entregado con cambios, editado y
+        // sin sincronizar.
+        const etiquetas = [];
+        if (registro.estado === "entregado" && (entregaDe(pedido)?.cambios || 0) > 0) {
+            etiquetas.push(crear("span", "badge entregaSeguimiento", "Entregado con cambios"));
+        }
+        if (edicionesSinVer(pedido).length) etiquetas.push(crear("span", "badge edicionSeguimiento", "Editado"));
+        if (sinSubir(pedido)) etiquetas.push(etiquetaSinSubir());
+        if (etiquetas.length) {
+            const fila = crear("div", "etiquetasTarjeta");
+            fila.append(...etiquetas);
+            info.appendChild(fila);
         }
 
-        if (tieneIncidencia(pedido)) info.append(crear("span", "badge incidenciaSeguimiento", "Con incidencia"));
-        if (edicionesSinVer(pedido).length) info.append(crear("span", "badge edicionSeguimiento", "Editado"));
-        if (sinSubir(pedido)) info.append(etiquetaSinSubir());
+        // Abajo: el N° (el mismo del ticket impreso, T28b), si el comercio
+        // lo tiene o lo quiere (T124) y el total a la derecha.
+        const pie = crear("div", "pieTarjetaPedido");
+        const izquierda = crear("small", "");
+        const numero = numeroCortoDelPedido(pedido);
+        if (numero) izquierda.appendChild(crear("span", "numeroTarjeta", "N° " + numero));
+        const tiene = window.tieneQuiereVendeFrio?.esTiene?.(pedido);
+        izquierda.appendChild(crear("span", "tieneQuiere" + (tiene ? " tipoTiene" : " tipoQuiere"), tiene ? "Tiene" : "Quiere"));
+        pie.appendChild(izquierda);
+        if (seVeLaPlata()) pie.appendChild(crear("strong", "totalTarjeta", textoTotal(pedido)));
+        info.appendChild(pie);
 
         tarjeta.append(avatar, info);
         if (cambioDesdeLaUltimaVez(registro)) tarjeta.classList.add("filaCambio");
@@ -851,6 +979,14 @@
         tarjeta.setAttribute("aria-checked", elegido ? "true" : "false");
     }
 
+    // "3 pedidos · 9 u · $ 29.400" (la plata, solo si se puede ver).
+    function textoResumen(registros) {
+        const unidades = registros.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
+        const suma = registros.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
+        return (registros.length === 1 ? "1 pedido" : registros.length + " pedidos") + " · " + unidades + " u" +
+            (suma > 0 && seVeLaPlata() ? " · " + textoPrecio(suma) : "");
+    }
+
     function dibujarLista() {
         if (relojLista) {
             clearTimeout(relojLista);
@@ -870,16 +1006,19 @@
         const enHistorial = etapa.id === "historial";
         const deLaEtapa = (enHistorial
             ? historial.filter(coincideConElHistorial)
-            : registros.filter(registro => esDeLaEtapa(registro, etapa)))
+            : registros.filter(registro => esDeLaEtapa(registro, etapa) && coincideLaBusqueda(registro)))
             .sort((a, b) => horaParaOrdenar(b.pedido) - horaParaOrdenar(a.pedido));
 
         dibujarFiltros(registros, historial);
         // Los que no se ven en esta etapa igual se recuerdan, para que no se
         // iluminen todos al cambiar de pestaña.
         if (!listaDibujadaUnaVez || deLaEtapa.length === 0) recordarEstados(registros.concat(historial));
-        dibujarBarraHistorial(enHistorial);
+        dibujarBarraHistorial(enHistorial, historial);
         dibujarBarraTanda(etapa, deLaEtapa);
         lista.innerHTML = "";
+        lista.classList.toggle("conLineaTiempo", enHistorial);
+        botonCargarPedido.hidden = !!etapa.otros || enHistorial;
+        filaResumen.classList.toggle("centrada", botonCargarPedido.hidden);
         // Lo que suman otras partes arriba de la lista (T74: "A cobrar" por comercio).
         (window.listaPedidosExtras || []).forEach(extra => {
             try {
@@ -890,15 +1029,7 @@
             }
         });
 
-        const unidades = deLaEtapa.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
-        resumen.textContent = deLaEtapa.length === 1
-            ? "1 pedido  ·  " + textoUnidades(unidades)
-            : deLaEtapa.length + " pedidos  ·  " + textoUnidades(unidades);
-        // Terminados (T167): también cuánto suman.
-        if (enHistorial) {
-            const suma = deLaEtapa.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
-            if (suma > 0) resumen.textContent += "  ·  " + textoPrecio(suma);
-        }
+        resumen.textContent = textoResumen(deLaEtapa);
 
         if (deLaEtapa.length === 0 && enHistorial) {
             const vacio = crear("div", "card seguimientoVacio");
@@ -964,10 +1095,10 @@
         cartel.querySelector("strong").textContent = listaElegida.titulo;
         lista.appendChild(cartel);
 
-        const unidades = deLaLista.reduce((total, registro) => total + unidadesDelPedido(registro.pedido), 0);
-        const suma = deLaLista.reduce((total, registro) => total + montoDelPedido(registro.pedido), 0);
-        resumen.textContent = (deLaLista.length === 1 ? "1 pedido" : deLaLista.length + " pedidos") + "  ·  " + textoUnidades(unidades) +
-            (suma > 0 && window.verPlataVendeFrio?.puedoVer?.() !== false ? "  ·  " + textoPrecio(suma) : "");
+        resumen.textContent = textoResumen(deLaLista);
+        lista.classList.remove("conLineaTiempo");
+        botonCargarPedido.hidden = true;
+        filaResumen.classList.add("centrada");
 
         if (!deLaLista.length) {
             const vacio = crear("div", "card seguimientoVacio");
@@ -1020,6 +1151,12 @@
             dibujarLista();
             return;
         }
+        const agregar = evento.target.closest("[data-agregar-dato]");
+        if (agregar && !eligiendo) {
+            evento.stopPropagation();
+            agregarDatoDelComercio(agregar);
+            return;
+        }
 
         const tarjeta = evento.target.closest(".tarjetaSeguimiento");
         if (!tarjeta) return;
@@ -1035,6 +1172,7 @@
     lista.addEventListener("keydown", evento => {
         if (evento.key !== "Enter" && evento.key !== " ") return;
 
+        if (evento.target.closest("[data-agregar-dato]")) return;
         const tarjeta = evento.target.closest(".tarjetaSeguimiento");
         if (!tarjeta) return;
 
@@ -1107,7 +1245,7 @@
     const botonDejarDeElegir = crear("button", "btnAccion secundario botonDejarDeElegir", "Cancelar");
     botonDejarDeElegir.type = "button";
     barraTanda.append(botonMarcarTodos, botonDejarDeElegir);
-    resumen.after(barraTanda);
+    filaResumen.after(barraTanda);
 
     const pieTanda = crear("div", "pieTandaPedidos oculto");
     pieTanda.setAttribute("role", "group");
@@ -1498,6 +1636,8 @@
     // Ficha del pedido
     // -------------------------------------------------
 
+    // Repaso de Pedidos (2026-11-01): la ficha va centrada, como la del
+    // comercio, con el ⋯ flotante abajo a la derecha y su menú encima.
     function crearModalFicha() {
         let modal = document.getElementById("modalFichaPedido");
         if (modal) return modal;
@@ -1505,40 +1645,281 @@
         modal = crear("div", "modal oculto");
         modal.id = "modalFichaPedido";
 
-        const contenido = crear("div", "modalContenido fichaPedido");
-        contenido.setAttribute("role", "dialog");
-        contenido.setAttribute("aria-modal", "true");
-        contenido.setAttribute("aria-labelledby", "tituloFichaPedido");
+        const marco = crear("div", "fichaPedido fichaMarcoPedido");
+        marco.setAttribute("role", "dialog");
+        marco.setAttribute("aria-modal", "true");
+        marco.setAttribute("aria-labelledby", "tituloFichaPedido");
 
+        const contenido = crear("div", "modalContenido fichaPedidoContenido");
         const cuerpo = crear("div", "cuerpoFichaPedido");
         cuerpo.id = "cuerpoFichaPedido";
+        contenido.appendChild(cuerpo);
 
-        const botones = crear("div", "modalBotones");
-        const cerrar = crear("button", "btnModalSecundario", "Cerrar");
-        cerrar.type = "button";
-        // T160: el Asistente sabe qué pedido está abierto («imprimí el ticket»).
-        const asistente = crear("button", "btnModalSecundario botonAsistenteFicha");
-        asistente.type = "button";
-        asistente.dataset.abrirAsistente = "";
-        asistente.setAttribute("aria-label", "Asistente");
-        asistente.title = "Asistente";
-        asistente.innerHTML = window.icono ? window.icono("chispa", 20) : "";
-        botones.append(asistente, cerrar);
-
-        contenido.append(cuerpo, botones);
-        modal.appendChild(contenido);
+        const velo = crear("div", "fichaVelo");
+        velo.hidden = true;
+        const menu = crear("div", "fichaMenu");
+        menu.setAttribute("role", "menu");
+        menu.setAttribute("aria-label", "Más opciones");
+        menu.hidden = true;
+        const boton = crear("button", "fichaMenuBoton");
+        boton.type = "button";
+        boton.setAttribute("aria-haspopup", "menu");
+        marco.append(contenido, velo, menu, boton);
+        modal.appendChild(marco);
         document.body.appendChild(modal);
+        cerrarMenuFicha();
 
-        cerrar.addEventListener("click", cerrarFicha);
+        boton.addEventListener("click", () => (menuFichaAbierto() ? cerrarMenuFicha() : abrirMenuFicha()));
+        velo.addEventListener("click", cerrarMenuFicha);
         modal.addEventListener("click", evento => {
-            if (evento.target === modal) cerrarFicha();
+            if (evento.target === modal || evento.target === marco) cerrarFicha();
         });
 
         return modal;
     }
 
+    function menuFichaAbierto() {
+        const modal = document.getElementById("modalFichaPedido");
+        return Boolean(modal && modal.classList.contains("conMenu"));
+    }
+
+    function abrirMenuFicha() {
+        const modal = document.getElementById("modalFichaPedido");
+        if (!modal) return;
+        modal.classList.add("conMenu");
+        modal.querySelector(".fichaMenu").hidden = false;
+        modal.querySelector(".fichaVelo").hidden = false;
+        const boton = modal.querySelector(".fichaMenuBoton");
+        boton.setAttribute("aria-expanded", "true");
+        boton.setAttribute("aria-label", "Cerrar opciones");
+        boton.innerHTML = window.icono ? window.icono("cerrarX", 26) : "×";
+    }
+
+    function cerrarMenuFicha() {
+        const modal = document.getElementById("modalFichaPedido");
+        if (!modal) return;
+        modal.classList.remove("conMenu");
+        modal.querySelector(".fichaMenu").hidden = true;
+        modal.querySelector(".fichaVelo").hidden = true;
+        const boton = modal.querySelector(".fichaMenuBoton");
+        boton.setAttribute("aria-expanded", "false");
+        boton.setAttribute("aria-label", "Más opciones");
+        boton.innerHTML = window.icono ? window.icono("puntos", 26) : "⋯";
+    }
+
+    // Íconos del ⋯, según el botón de la ficha que repite.
+    const ICONOS_MENU_FICHA = [
+        ['[data-estado="enPreparacion"]', "paquete"], ['[data-estado="preparado"]', "check"],
+        ['[data-estado="enReparto"]', "camion"], ['[data-estado="entregado"]', "check"],
+        [".botonRegistrarCobro", "moneda"], [".botonEntregarConCambios", "documento"],
+        [".botonEditarPedido", "lapiz"], [".botonImprimirTicket", "impresora"],
+        [".botonVerMensajePedido", "whatsapp"], ['[data-accion="atras"]', "deshacer"],
+        [".marcarIncidencia", "bandera"], ['[data-accion="cancelar"]', "cerrarX"],
+        ['[data-accion="eliminar"]', "tacho"]
+    ];
+
+    // El ⋯ repite los botones de la ficha: arriba el paso principal, después
+    // lo demás y, al final y en rojo, cancelar y eliminar. Tocar una opción
+    // toca el botón de la ficha (así hace lo mismo de siempre).
+    function armarMenuFicha() {
+        const modal = document.getElementById("modalFichaPedido");
+        const cuerpo = document.getElementById("cuerpoFichaPedido");
+        if (!modal || !cuerpo) return;
+        const menu = modal.querySelector(".fichaMenu");
+        menu.innerHTML = "";
+        menu.setAttribute("aria-label", "Más opciones del pedido de " + String(fichaDibujada?.pedido?.comercio || "").trim());
+
+        const principal = cuerpo.querySelector(".accionesFichaPedido .pasoSiguientePedido:not(.incompleto)");
+        const opciones = [...cuerpo.querySelectorAll(".menuFichaPedido .opcionMenuFicha")];
+        const peligro = opciones.filter(boton => boton.classList.contains("peligroPedido"));
+        const comunes = opciones.filter(boton => !peligro.includes(boton));
+
+        const agregar = (origen, clase) => {
+            const item = crear("button", "fichaMenuItem" + (clase ? " " + clase : ""));
+            item.type = "button";
+            item.setAttribute("role", "menuitem");
+            const icono = origen.dataset.icono || (ICONOS_MENU_FICHA.find(([selector]) => origen.matches(selector)) || [])[1] || "chevDerecha";
+            item.innerHTML = window.icono ? window.icono(icono, 20) : "";
+            item.appendChild(crear("span", "fichaMenuTexto", origen.textContent.trim()));
+            item.disabled = origen.disabled;
+            item.addEventListener("click", () => {
+                cerrarMenuFicha();
+                origen.click();
+            });
+            menu.appendChild(item);
+        };
+        if (principal) agregar(principal, "fichaMenuPrincipal");
+        if (principal && comunes.length) menu.appendChild(document.createElement("hr"));
+        comunes.forEach(boton => agregar(boton, ""));
+        if (peligro.length && menu.children.length) menu.appendChild(document.createElement("hr"));
+        peligro.forEach(boton => agregar(boton, "fichaMenuPeligro"));
+
+        const hay = menu.querySelector(".fichaMenuItem");
+        modal.querySelector(".fichaMenuBoton").hidden = !hay;
+        modal.classList.toggle("sinMenu", !hay);
+        if (!hay && menuFichaAbierto()) cerrarMenuFicha();
+    }
+
+    // Cabeza: avatar, nombre, Asistente (T160) y la X.
+    function cabezaFicha(pedido) {
+        const comercio = String(pedido.comercio || "SIN NOMBRE").trim();
+        const cabeza = crear("div", "cabezaFichaPedido");
+        const avatar = crear("div", "avatar", iniciales(comercio));
+        avatar.style.background = colorAvatar(comercio);
+        const titulo = crear("h2", "", comercio);
+        titulo.id = "tituloFichaPedido";
+        const asistente = crear("button", "botonRedondoFicha botonAsistenteFicha");
+        asistente.type = "button";
+        asistente.dataset.abrirAsistente = "";
+        asistente.setAttribute("aria-label", "Asistente");
+        asistente.title = "Asistente";
+        asistente.innerHTML = window.icono ? window.icono("chispa", 20) : "";
+        const cerrar = crear("button", "botonRedondoFicha fichaCerrar");
+        cerrar.type = "button";
+        cerrar.setAttribute("aria-label", "Cerrar");
+        cerrar.innerHTML = window.icono ? window.icono("cerrarX", 22) : "×";
+        // Con el menú abierto, el atrás del celular primero cierra el menú.
+        cerrar.addEventListener("click", evento => {
+            evento.stopPropagation();
+            if (menuFichaAbierto()) cerrarMenuFicha();
+            else cerrarFicha();
+        });
+        cabeza.append(avatar, titulo, asistente, cerrar);
+        return cabeza;
+    }
+
+    // Dirección y teléfono (o "+ Agregar") a la izquierda; el estado y
+    // Tiene/Quiere apilados a la derecha.
+    function filaDatosFicha(pedido, estado) {
+        const nombre = String(pedido.comercio || "").trim();
+        const comercio = typeof comercioParaLeerPorNombre === "function" ? comercioParaLeerPorNombre(nombre) : null;
+        const fila = crear("div", "filaDatosFicha");
+        const datos = crear("div", "datosComercioFicha");
+        if (comercio && comercio.direccion) datos.appendChild(lineaTarjeta("ubicacion", comercio.direccion, "direccionFichaPedido"));
+        else if (comercio) datos.appendChild(botonAgregarDato(nombre, "direccion", "Agregar dirección"));
+        if (comercio && comercio.telefono) datos.appendChild(lineaTarjeta("telefono", comercio.telefono));
+        else if (comercio) datos.appendChild(botonAgregarDato(nombre, "telefono", "Agregar teléfono"));
+
+        const etiquetas = crear("div", "etiquetasFichaPedido");
+        etiquetas.appendChild(etiquetaEstado(estado || "historico"));
+        const tiene = window.tieneQuiereVendeFrio?.esTiene?.(pedido);
+        etiquetas.appendChild(crear("span", "tieneQuiere" + (tiene ? " tipoTiene" : " tipoQuiere"), tiene ? "Tiene" : "Quiere"));
+        if (estado ? fichaDibujada?.sinSubir : sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
+        fila.append(datos, etiquetas);
+        return fila;
+    }
+
+    // Seis cuadritos: unidades, productos, total, hora, quién lo cargó y N°.
+    function cuadrosFicha(pedido) {
+        const cuadros = crear("div", "cuadrosFichaPedido");
+        const hora = horaDelPedido(pedido);
+        const productos = (Array.isArray(pedido.productos) ? pedido.productos : [])
+            .filter(item => item && (Number(item.cantidad) || 0) > 0).length;
+        const esHoy = hora && new Date(hora).toDateString() === new Date().toDateString();
+        const autor = pedido.autor && typeof pedido.autor === "object" ? nombrePersona(pedido.autor) : "";
+        [
+            [String(unidadesDelPedido(pedido)), "unidades", "unidades"],
+            [String(productos), productos === 1 ? "producto" : "productos", "productos"],
+            seVeLaPlata() ? [textoTotal(pedido), "total", "total"] : null,
+            [hora ? textoHora(hora) : "—", hora ? (esHoy ? "cargado hoy" : textoFecha(hora)) : "sin fecha", "hora"],
+            autor ? [autor, "lo cargó", "autor"] : null,
+            [numeroCortoDelPedido(pedido), "N° de pedido", "numero"]
+        ].filter(Boolean).forEach(([valor, texto, clave]) => {
+            const cuadro = crear("div", "cuadroFicha");
+            cuadro.dataset.dato = clave;
+            cuadro.append(crear("strong", "", valor), crear("small", "", texto));
+            cuadros.appendChild(cuadro);
+        });
+        return cuadros;
+    }
+
+    // "Ver todo lo que pasó": el seguimiento completo, ahí mismo.
+    let historiaAbierta = "";
+    function historiaFicha(pedido) {
+        const id = String(pedido.id || "");
+        const abierta = historiaAbierta === id;
+        const boton = crear("button", "verHistoriaPedido");
+        boton.type = "button";
+        boton.setAttribute("aria-expanded", String(abierta));
+        const seccion = dibujarSeguimiento(pedido);
+        seccion.classList.add("historiaFichaPedido");
+        seccion.hidden = !abierta;
+        const pintar = () => {
+            const ahora = !seccion.hidden;
+            boton.innerHTML = "";
+            boton.append(crear("span", "", ahora ? "Ocultar lo que pasó" : "Ver todo lo que pasó"));
+            boton.insertAdjacentHTML("beforeend", window.icono ? window.icono(ahora ? "chevArriba" : "chevAbajo", 16) : "");
+            boton.setAttribute("aria-expanded", String(ahora));
+        };
+        boton.addEventListener("click", () => {
+            seccion.hidden = !seccion.hidden;
+            historiaAbierta = seccion.hidden ? "" : id;
+            pintar();
+        });
+        pintar();
+        return [boton, seccion];
+    }
+
+    // Entregado: "Falta cobrar" con "Registrar cobro", o cómo se cobró (con
+    // la foto del comprobante, si es una transferencia con foto).
+    const fotosComprobante = new Map();
+    function cartelCobro(pedido, cobro) {
+        const p = window.piezas;
+        const cartel = crear("div", "pzBanner cartelCobroFicha " + (cobro ? "pzBanOk" : "pzBanAviso"));
+        cartel.dataset.cobro = cobro ? "cobrado" : "pendiente";
+        cartel.innerHTML = p ? p.ico("moneda", 22) : "";
+        const texto = crear("div", "");
+        const monto = cobro && Number.isFinite(Number(cobro.monto)) && Number(cobro.monto) > 0 ? textoPrecio(Number(cobro.monto)) : textoTotal(pedido);
+        if (cobro) {
+            texto.append(
+                crear("strong", "", "Cobrado · " + String(textoCobro(cobro)).split("·")[0].trim()),
+                crear("small", "", [cobro.persona ? nombrePersona(cobro.persona) : "", cobro.horaCelular ? textoCuando(cobro.horaCelular) : ""].filter(Boolean).join(" · "))
+            );
+        } else {
+            const entrega = entregaDe(pedido);
+            texto.append(
+                crear("strong", "", "Falta cobrar"),
+                crear("small", "", entrega && entrega.persona
+                    ? "Entregó " + nombrePersona(entrega.persona) + " · " + textoCuando(entrega.horaCelular)
+                    : "Entregado")
+            );
+        }
+        cartel.append(texto);
+        if (seVeLaPlata()) cartel.appendChild(crear("span", "montoCartelCobro", monto));
+
+        const puede = puedeRegistrarCobro(pedido);
+        if (!cobro && puede) cartel.appendChild(crearBoton("btnAccion botonCartelCobro botonRegistrarCobro", "Registrar cobro", "cobrar"));
+        else if (!cobro) cartel.appendChild(crear("small", "pistaCartelCobro", "Lo registra quien cobra."));
+        if (cobro && puede) cartel.appendChild(crearBoton("enlaceCartelCobro botonCorregirCobro", "Corregir cobro", "cobrar"));
+
+        // La foto del comprobante (T28), ahora acá: se toca y se ve grande.
+        if (cobro && cobro.forma === "transferencia" && cobro.comprobante) {
+            const fila = crearBoton("comprobanteFichaPedido", "", "verComprobante");
+            const foto = crear("span", "miniComprobante");
+            const guardada = fotosComprobante.get(cobro.comprobante);
+            if (guardada) foto.style.backgroundImage = "url(" + JSON.stringify(guardada) + ")";
+            else {
+                window.nubeVendeFrio?.leerComprobante?.(cobro.comprobante).then(registro => {
+                    if (!registro || !registro.foto) return;
+                    fotosComprobante.set(cobro.comprobante, registro.foto);
+                    foto.style.backgroundImage = "url(" + JSON.stringify(registro.foto) + ")";
+                }).catch(() => {});
+            }
+            const sinSubirFoto = window.nubeVendeFrio?.comprobanteSinSubir?.(cobro.comprobante);
+            const letras = crear("span", "textoComprobante");
+            letras.append(crear("b", "", "Comprobante"), crear("small", "", sinSubirFoto ? "Sin subir todavía · tocá para verlo" : "Tocá para verlo grande"));
+            fila.append(foto, letras);
+            fila.insertAdjacentHTML("beforeend", window.icono ? window.icono("chevDerecha", 18) : "");
+            fila.setAttribute("aria-label", "Ver la foto del comprobante");
+            cartel.appendChild(fila);
+        }
+        return cartel;
+    }
+
     function cerrarFicha() {
         idFichaAbierta = "";
+        historiaAbierta = "";
+        cerrarMenuFicha();
         const modal = document.getElementById("modalFichaPedido");
         if (modal) modal.classList.add("oculto");
 
@@ -1825,13 +2206,17 @@
         const actual = PASOS_LINEA.findIndex(paso => paso.estados.includes(estado));
 
         PASOS_LINEA.forEach((paso, indice) => {
-            const hora = entradas
+            // La última vez que pasó por ese paso: la hora y quién (repaso).
+            const ultima = entradas
                 .filter(entrada => paso.estados.includes(entrada.estado))
-                .reduce((mayor, entrada) => Math.max(mayor, Number(entrada.horaCelular) || 0), 0);
+                .reduce((mayor, entrada) => (Number(entrada.horaCelular) || 0) >= (Number(mayor?.horaCelular) || 0) ? entrada : mayor, null);
+            const hora = ultima ? Number(ultima.horaCelular) || 0 : 0;
             const item = crear("li", "pasoLinea");
             if (actual >= 0 && indice < actual) item.dataset.paso = hora ? "hecho" : "salteado";
             if (indice === actual) item.dataset.paso = "actual";
-            item.append(crear("span", "puntoPaso"), crear("strong", "", paso.nombre), crear("small", "", hora && indice <= actual ? textoHora(hora) : "—"));
+            const seVe = hora && indice <= actual;
+            item.append(crear("span", "puntoPaso"), crear("strong", "", paso.nombre), crear("small", "", seVe ? textoHora(hora) : "—"));
+            if (seVe && ultima.persona) item.appendChild(crear("small", "quienPaso", nombrePersona(ultima.persona)));
             linea.appendChild(item);
         });
         return linea;
@@ -1872,9 +2257,6 @@
         const enfoque = activo && cuerpo.contains(activo) && activo.dataset && activo.dataset.accion
             ? { accion: activo.dataset.accion, linea: activo.dataset.linea || "" }
             : null;
-        // Repasada: "Más opciones" abierto sigue abierto (se cerraba solo si
-        // llegaba un cambio justo al tocarlo, como la confirmación de la nube).
-        const menuAbierto = Boolean(cuerpo.querySelector(".menuFichaPedido:not(.oculto)"));
 
         // Al rehacerla, la ficha queda en el mismo lugar (no salta).
         const caja = cuerpo.closest(".modalContenido");
@@ -1882,74 +2264,20 @@
 
         cuerpo.innerHTML = "";
 
-        const titulo = crear("h2", "", String(pedido.comercio || "SIN NOMBRE").trim());
-        titulo.id = "tituloFichaPedido";
-
-        const etiquetas = crear("div", "etiquetasFichaPedido");
-        etiquetas.appendChild(etiquetaEstado(estado));
         fichaDibujada = { pedido, sinSubir: sinSubirHaceRato(pedido) };
-        if (fichaDibujada.sinSubir) etiquetas.appendChild(etiquetaSinSubir());
 
         // En "Cargado" y "En preparación" (T24, T29b) la ficha es la
-        // checklist: comercio, autor y observaciones arriba, los productos
-        // con su casilla y, al final, los pasos y la entrega.
+        // checklist: los productos con su casilla y, al final, el paso.
         const enChecklist = ESTADOS_CON_CHECKLIST.includes(estado);
-
-        const datos = crear("div", "datosFichaPedido");
-        const hora = horaDelPedido(pedido);
-        const productos = (Array.isArray(pedido.productos) ? pedido.productos : [])
-            .filter(item => item && (Number(item.cantidad) || 0) > 0).length;
-
-        const filasDatos = [
-            // Número corto (T28b): el mismo del ticket impreso.
-            ["Pedido N°", numeroCortoDelPedido(pedido)],
-            ["Cargado por", nombrePersona(pedido.autor)],
-            ["Fecha", hora ? textoFecha(hora) + " " + textoHora(hora) : String(pedido.fecha || "Sin fecha")],
-            ["Unidades", unidadesDelPedido(pedido) + "  ·  " + productos + (productos === 1 ? " producto" : " productos")]
-        ];
-        if (enChecklist) filasDatos.push(["Total", textoTotal(pedido)]);
-
-        // Entregado (T27): quién lo entregó y el cobro (T28): "Pendiente" o
-        // cómo se cobró, quién y cuándo.
         const cobro = estado === "entregado" ? cobroDe(pedido) : null;
-        if (estado === "entregado") {
-            const entrega = entregaDe(pedido);
-            if (entrega && entrega.persona) {
-                filasDatos.push(["Entregado por", nombrePersona(entrega.persona) + "  ·  " + textoCuando(entrega.horaCelular)]);
-            }
-            filasDatos.push(["Cobro", textoCobro(cobro), cobro ? "cobrado" : "pendiente"]);
-            if (cobro && cobro.persona) {
-                filasDatos.push(["Cobrado por", nombrePersona(cobro.persona) + "  ·  " + textoCuando(cobro.horaCelular)]);
-            }
-        }
 
-        filasDatos.forEach(([nombre, valor, cobroFila]) => {
-            const fila = crear("div", "datoFichaPedido");
-            if (cobroFila) fila.dataset.cobro = cobroFila;
-            fila.append(crear("span", "", nombre), crear("strong", "", valor));
-            datos.appendChild(fila);
-        });
-
-        // Transferencia con foto (T28): se ve desde cualquier celular.
-        if (cobro && cobro.forma === "transferencia" && cobro.comprobante) {
-            const fila = crear("div", "datoFichaPedido comprobanteFichaPedido");
-            const sinSubirFoto = window.nubeVendeFrio?.comprobanteSinSubir?.(cobro.comprobante);
-            fila.append(
-                crear("span", "", sinSubirFoto ? "Comprobante · sin subir todavía" : "Comprobante"),
-                crearBoton("botonVerComprobante", "Ver foto", "verComprobante")
-            );
-            datos.appendChild(fila);
-        }
-
-        // Encabezado (T35): número, comercio con su estado y la línea de pasos.
-        const numero = crear("p", "numeroFichaPedido", "Pedido N° " + numeroCortoDelPedido(pedido));
-        const comercio = comercioParaLeerPorNombre(String(pedido.comercio || ""));
-        const direccion = comercio && comercio.direccion ? crear("p", "direccionFichaPedido", comercio.direccion) : null;
+        // Repaso de Pedidos (2026-11-01): arriba, como la ficha del comercio,
+        // la cabeza, la dirección y el teléfono (o "+ Agregar"), el estado
+        // con Tiene/Quiere, seis cuadritos y la barra de pasos.
         const tarjeta = crear("div", "tarjetaFichaPedido");
-        tarjeta.append(numero, titulo);
-        if (direccion) tarjeta.appendChild(direccion);
-        tarjeta.appendChild(etiquetas);
+        tarjeta.append(cabezaFicha(pedido), filaDatosFicha(pedido, estado), cuadrosFicha(pedido));
         if (estado !== "cancelado") tarjeta.appendChild(dibujarLineaPasos(pedido, estado));
+        tarjeta.append(...historiaFicha(pedido));
         cuerpo.append(tarjeta);
 
         const incidencia = dibujarIncidencias(pedido);
@@ -1962,9 +2290,9 @@
         if (cancelacion) cuerpo.appendChild(cancelacion);
 
         const acciones = dibujarAcciones(pedido, estado);
+        if (estado === "entregado") cuerpo.appendChild(cartelCobro(pedido, cobro));
         if (acciones && !enChecklist) cuerpo.appendChild(acciones);
 
-        cuerpo.append(datos);
         // Secciones que suman otros módulos (prueba de entrega, devoluciones).
         (window.fichaPedidoExtras || []).forEach(crearSeccion => {
             try {
@@ -1988,19 +2316,13 @@
             if (acciones) cuerpo.appendChild(acciones);
         }
 
-        cuerpo.appendChild(dibujarSeguimiento(pedido));
+        armarMenuFicha();
 
         if (enfoque) {
             const selector = '[data-accion="' + enfoque.accion + '"]' +
                 (enfoque.linea ? '[data-linea="' + enfoque.linea.replace(/["\\]/g, "") + '"]' : "");
             const igual = cuerpo.querySelector(selector);
             if (igual) igual.focus({ preventScroll: true });
-        }
-        const menu = menuAbierto ? cuerpo.querySelector(".menuFichaPedido") : null;
-        const abrirMenu = menu ? cuerpo.querySelector(".botonMenuFicha") : null;
-        if (menu && abrirMenu) {
-            menu.classList.remove("oculto");
-            abrirMenu.setAttribute("aria-expanded", "true");
         }
         if (caja && caja.scrollTop !== desplazado) caja.scrollTop = desplazado;
     }
@@ -2033,37 +2355,18 @@
     // pedido, se reenvía su mensaje y el dueño lo elimina (T26).
     function dibujarFichaHistorica(cuerpo, pedido) {
         cuerpo.innerHTML = "";
+        fichaDibujada = { pedido, sinSubir: sinSubir(pedido) };
 
-        const titulo = crear("h2", "", String(pedido.comercio || "SIN NOMBRE").trim());
-        titulo.id = "tituloFichaPedido";
+        const tarjeta = crear("div", "tarjetaFichaPedido");
+        tarjeta.append(cabezaFicha(pedido), filaDatosFicha(pedido, ""), cuadrosFicha(pedido));
 
-        const etiquetas = crear("div", "etiquetasFichaPedido");
-        etiquetas.appendChild(etiquetaEstado("historico"));
-        if (sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
+        // Lo que se puede hacer va en el ⋯ (repaso de Pedidos).
+        const guardados = crear("div", "menuFichaPedido");
+        guardados.hidden = true;
+        guardados.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido opcionMenuFicha", "Ver mensaje del pedido", "verMensaje"));
+        if (puedeEliminar(pedido)) guardados.appendChild(crearBoton("btnAccion secundario peligroPedido opcionMenuFicha", "Eliminar pedido", "eliminar"));
 
-        const acciones = crear("div", "accionesFichaPedido");
-        acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
-        if (puedeEliminar(pedido)) {
-            const peligro = crear("div", "accionesSecundariasPedido");
-            peligro.appendChild(crearBoton("btnAccion secundario peligroPedido", "Eliminar pedido", "eliminar"));
-            acciones.appendChild(peligro);
-        }
-
-        const datos = crear("div", "datosFichaPedido");
-        const hora = horaDelPedido(pedido);
-        const filasDatos = [
-            ["Pedido N°", numeroCortoDelPedido(pedido)],
-            pedido.autor && typeof pedido.autor === "object" ? ["Cargado por", nombrePersona(pedido.autor)] : null,
-            ["Fecha", hora ? textoFecha(hora) + " " + textoHora(hora) : String(pedido.fecha || "Sin fecha")],
-            ["Unidades", textoUnidades(unidadesDelPedido(pedido))]
-        ].filter(fila => fila && fila[1]);
-        filasDatos.forEach(([nombre, valor]) => {
-            const fila = crear("div", "datoFichaPedido");
-            fila.append(crear("span", "", nombre), crear("strong", "", valor));
-            datos.appendChild(fila);
-        });
-
-        cuerpo.append(titulo, etiquetas, acciones, datos);
+        cuerpo.append(tarjeta, guardados);
 
         // Los "Histórico" muy viejos tienen solo el texto del pedido.
         const conProductos = (Array.isArray(pedido.productos) ? pedido.productos : [])
@@ -2084,6 +2387,7 @@
         }
 
         cuerpo.appendChild(crear("p", "pistaChecklist", "Pedido de antes de los estados: no tiene seguimiento."));
+        armarMenuFicha();
     }
 
     // "Ver mensaje del pedido" (T27b): la ventana de siempre con el mensaje
@@ -2115,22 +2419,26 @@
             .sort((a, b) => (Number(b.horaCelular) || 0) - (Number(a.horaCelular) || 0));
         if (!abiertas.length) return null;
 
-        const franja = crear("div", "incidenciaFichaPedido");
+        // Repaso: el cartel rojo de la app, con la bandera.
+        const franja = crear("div", "pzBanner pzBanPeligro cartelFichaPedido incidenciaFichaPedido");
         franja.setAttribute("role", "status");
-        franja.appendChild(crear("strong", "", abiertas.length === 1 ? "Con incidencia" : "Con " + abiertas.length + " incidencias"));
+        franja.innerHTML = window.piezas ? window.piezas.ico("bandera", 22) : "";
+        const texto = crear("div", "");
+        texto.appendChild(crear("strong", "", abiertas.length === 1 ? "Con incidencia" : "Con " + abiertas.length + " incidencias"));
 
         abiertas.forEach(incidencia => {
             const hora = Number(incidencia.horaCelular) || 0;
-            franja.append(
+            texto.append(
                 crear("p", "motivoIncidencia", String(incidencia.motivo || "")),
-                crear("small", "", [textoCuando(hora), nombrePersona(incidencia.persona)].join("  ·  "))
+                crear("small", "", [textoCuando(hora), nombrePersona(incidencia.persona)].join(" · "))
             );
         });
+        franja.appendChild(texto);
 
         if (puedeResolverIncidencias()) {
-            franja.appendChild(crearBoton("btnAccion resolverIncidencia", "Resolver incidencia", "resolver"));
+            franja.appendChild(crearBoton("btnAccion botonCartelCobro resolverIncidencia", "Resolver incidencia", "resolver"));
         } else {
-            franja.appendChild(crear("small", "avisoIncidencia", "La resuelve el dueño o quien controla pedidos."));
+            texto.appendChild(crear("small", "avisoIncidencia", "La resuelve el dueño o quien controla pedidos."));
         }
 
         return franja;
@@ -2181,14 +2489,16 @@
         });
         if (!cancelacion) return null;
 
-        const franja = crear("div", "canceladoFichaPedido");
+        const franja = crear("div", "pzBanner pzBanPeligro cartelFichaPedido canceladoFichaPedido");
         franja.setAttribute("role", "status");
-        franja.appendChild(crear("strong", "", "Pedido cancelado"));
+        franja.innerHTML = window.piezas ? window.piezas.ico("cerrarX", 22) : "";
+        const texto = crear("div", "");
+        texto.appendChild(crear("strong", "", "Pedido cancelado"));
 
         const motivo = String(cancelacion.nota || "").trim();
-        if (motivo) franja.appendChild(crear("p", "motivoCancelacion", motivo));
-        franja.appendChild(crear("small", "", [textoCuando(Number(cancelacion.horaCelular) || 0), nombrePersona(cancelacion.persona)].join("  ·  ")));
-        franja.appendChild(crear("small", "", "No cuenta en Historial ni en Estadísticas."));
+        if (motivo) texto.appendChild(crear("p", "motivoCancelacion", motivo));
+        texto.appendChild(crear("small", "", [textoCuando(Number(cancelacion.horaCelular) || 0), nombrePersona(cancelacion.persona), "no cuenta en las ventas"].join(" · ")));
+        franja.appendChild(texto);
 
         return franja;
     }
@@ -2230,7 +2540,7 @@
 
         const acciones = crear("div", "accionesFichaPedido");
 
-        if (cobrar && !cobrado) acciones.appendChild(crearBoton("btnAccion pasoSiguientePedido botonRegistrarCobro", "Registrar cobro", "cobrar"));
+        // El cobro (T28) va en el cartel de "Entregado" (repaso de Pedidos).
 
         // Los pasos que siguen. En "En preparación", "Marcar preparado" va
         // primero y "Salir a repartir" (sin pasar por "Preparado", T29b) al
@@ -2274,7 +2584,6 @@
                 enCurso === String(pedido.id || "") ? "Imprimiendo…" : "Imprimir ticket",
                 "imprimir"
             );
-            boton.insertAdjacentHTML("afterbegin", window.icono ? window.icono("impresora", 18) : "");
             boton.disabled = Boolean(enCurso);
             acciones.appendChild(boton);
         }
@@ -2282,18 +2591,16 @@
         // Historial (T27b): el mensaje del pedido, para reenviarlo.
         if (estado === "entregado") acciones.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido", "Ver mensaje del pedido", "verMensaje"));
 
-        if (cobrar && cobrado) acciones.appendChild(crearBoton("btnAccion secundario botonCorregirCobro", "Corregir cobro", "cobrar"));
 
         // Opciones que suman otros módulos (devolución, prueba de entrega).
         (window.accionesPedidoExtras || []).forEach(crearAcciones => {
             try {
                 (crearAcciones(pedido, estado) || []).forEach(extra => {
                     const boton = crearBoton("btnAccion secundario botonExtraPedido", extra.texto, "");
-                    if (extra.icono && window.icono) boton.insertAdjacentHTML("afterbegin", window.icono(extra.icono, 18));
+                    if (extra.icono) boton.dataset.icono = extra.icono;
                     boton.removeAttribute("data-accion");
                     boton.addEventListener("click", evento => {
                         evento.stopPropagation();
-                        document.getElementById("menuFichaPedido")?.classList.add("oculto");
                         extra.alTocar(pedido);
                     });
                     acciones.appendChild(boton);
@@ -2302,7 +2609,6 @@
                 console.error("Falló una opción de la ficha del pedido.", error);
             }
         });
-        if (cobrado) acciones.appendChild(crear("p", "pistaChecklist", "Tiene el cobro registrado: ya no vuelve atrás de \u00abEntregado\u00bb."));
 
         const secundarias = crear("div", "accionesSecundariasPedido");
         if (anterior) secundarias.appendChild(crearBoton("btnAccion secundario", "Volver un paso atrás", "atras"));
@@ -2322,39 +2628,20 @@
         if (pasos) acciones.prepend(pasos);
 
         // Estilo nuevo (T35): a la vista queda solo el próximo paso (y la
-        // entrega). Lo demás va en "Más opciones" (⋯).
+        // entrega). Lo demás va en el ⋯ flotante (repaso de Pedidos), que
+        // repite estos botones guardados acá sin verse.
         const opciones = Array.from(acciones.querySelectorAll(
-            ".botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonCorregirCobro, .botonExtraPedido, .accionesSecundariasPedido .btnAccion"
+            ".botonPasoDespues, .botonEntregarConCambios, .botonEditarPedido, .botonImprimirTicket, .botonVerMensajePedido, .botonExtraPedido, .accionesSecundariasPedido .btnAccion"
         ));
         if (opciones.length) {
-            const menu = crear("div", "menuFichaPedido oculto");
-            menu.id = "menuFichaPedido";
-            menu.setAttribute("role", "menu");
+            const guardados = crear("div", "menuFichaPedido");
+            guardados.hidden = true;
             opciones.forEach(boton => {
                 boton.classList.add("opcionMenuFicha");
-                boton.setAttribute("role", "menuitem");
-                menu.appendChild(boton);
+                guardados.appendChild(boton);
             });
             acciones.querySelectorAll(".accionesSecundariasPedido").forEach(caja => { if (!caja.children.length) caja.remove(); });
-
-            const abrir = crear("button", "botonMenuFicha");
-            abrir.type = "button";
-            abrir.setAttribute("aria-label", "Más opciones");
-            abrir.setAttribute("aria-expanded", "false");
-            abrir.setAttribute("aria-controls", "menuFichaPedido");
-            abrir.innerHTML = (window.icono ? window.icono("puntos", 20) : "⋯") + "<span>Más opciones</span>";
-            abrir.addEventListener("click", () => {
-                const abierto = menu.classList.toggle("oculto") === false;
-                abrir.setAttribute("aria-expanded", String(abierto));
-            });
-            // Al elegir una opción, el menú se cierra antes de hacerla (así
-            // no vuelve a quedar abierto cuando la ficha se redibuja).
-            menu.addEventListener("click", evento => {
-                if (!evento.target.closest(".opcionMenuFicha")) return;
-                menu.classList.add("oculto");
-                abrir.setAttribute("aria-expanded", "false");
-            }, true);
-            acciones.append(abrir, menu);
+            acciones.append(guardados);
         }
 
         return acciones;
@@ -2374,25 +2661,43 @@
             { titulo: "Entregalo", hecho: actual > 2, elementos: deslizador ? [deslizador] : [] },
             { titulo: "Registrá el cobro", hecho: cobrado, elementos: hijos.filter(elemento => elemento.classList.contains("botonRegistrarCobro")) }
         ];
-        const caja = crear("ol", "pasosFichaPedido");
-        caja.setAttribute("aria-label", "Pasos del pedido");
-        pasos.forEach((paso, indice) => {
-            const item = crear("li", "pasoFicha");
-            const disponible = paso.elementos.length > 0;
-            item.classList.add(paso.hecho ? "hecho" : disponible ? "ahora" : "despues");
-            const titulo = crear("p", "pasoFichaTitulo");
-            titulo.innerHTML = `<span class="pasoFichaNumero" aria-hidden="true">${paso.hecho && window.icono ? window.icono("check", 14) : indice + 1}</span>`;
-            titulo.append(crear("span", "", "Paso " + (indice + 1) + ": " + paso.titulo + (paso.hecho ? " (hecho)" : "")));
-            item.appendChild(titulo);
-            paso.elementos.forEach(elemento => item.appendChild(elemento));
-            if (!paso.hecho && !disponible) {
-                const nota = indice === 3 && !puedeCobrar() ? "Lo registra quien cobra."
-                    : indice === 3 ? "Se registra después de entregar."
-                        : indice < actual ? "" : "Lo hace quien tiene ese permiso.";
-                if (nota) item.appendChild(crear("small", "pasoFichaNota", nota));
-            }
-            caja.appendChild(item);
+        // Repaso de Pedidos: se ve solo el paso de ahora, en una caja con su
+        // nombre ("Entregalo"). Si esta persona no lo puede hacer, el que
+        // sigue con la nota de quién lo hace.
+        if (estado === "entregado") return null;
+        const indice = pasos.findIndex(paso => !paso.hecho);
+        if (indice < 0) return null;
+        const paso = pasos[indice];
+        // Lo de los pasos que vienen después va al ⋯ (el deslizador, no).
+        pasos.forEach((otro, cual) => {
+            if (cual === indice || otro.hecho) return;
+            otro.elementos.forEach(elemento => {
+                if (elemento.classList.contains("deslizador")) elemento.remove();
+                else if (elemento.matches("button")) elemento.classList.add("botonPasoDespues");
+                else elemento.remove();
+            });
         });
+        const caja = crear("ol", "pasosFichaPedido");
+        caja.setAttribute("aria-label", "Paso del pedido");
+        const item = crear("li", "pasoFicha");
+        const disponible = paso.elementos.length > 0;
+        item.classList.add(disponible ? "ahora" : "despues");
+        item.appendChild(crear("p", "pasoFichaTitulo", paso.titulo));
+        paso.elementos.forEach(elemento => item.appendChild(elemento));
+        if (indice === 2 && disponible && seVeLaPlata()) {
+            // "Entregalo": el recordatorio del cobro, en una línea.
+            const nota = crear("p", "notaEntregaFicha");
+            nota.innerHTML = window.icono ? window.icono("moneda", 15) : "";
+            nota.appendChild(crear("span", "", "Al entregarlo vas a poder anotar el cobro de " + textoTotal(fichaDibujada?.pedido || {}) + "."));
+            item.appendChild(nota);
+        }
+        if (!disponible) {
+            const nota = indice === 3 && !puedeCobrar() ? "Lo registra quien cobra."
+                : indice === 3 ? "Se registra después de entregar."
+                    : "Lo hace quien tiene ese permiso.";
+            item.appendChild(crear("small", "pasoFichaNota", nota));
+        }
+        caja.appendChild(item);
         return caja;
     }
 
@@ -2663,6 +2968,12 @@
             }
         });
     }
+
+    // "+ Agregar dirección / teléfono" de la ficha: la hoja "Datos del comercio".
+    document.addEventListener("click", evento => {
+        const boton = evento.target.closest("#cuerpoFichaPedido [data-agregar-dato]");
+        if (boton) agregarDatoDelComercio(boton);
+    });
 
     document.addEventListener("click", evento => {
         const boton = evento.target.closest("#cuerpoFichaPedido button[data-accion]");

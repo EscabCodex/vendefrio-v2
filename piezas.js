@@ -743,8 +743,13 @@
             if (!item) return;
             const boton = document.createElement("button");
             boton.type = "button";
-            boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "");
-            boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span>${esc(item.texto)}</span>`;
+            boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "") + (item.actual ? " actual" : "");
+            if (item.tono) boton.dataset.tono = item.tono;
+            if (item.actual) boton.setAttribute("aria-current", "true");
+            if (item.desactivado) boton.disabled = true;
+            // Cantidad (repaso de Pedidos): el globito de la derecha, como en los filtros.
+            const cantidad = item.cantidad === undefined || item.cantidad === null ? "" : `<span class="filtroEtapaCantidad menuFlotanteCantidad">${esc(item.cantidad)}</span>`;
+            boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span class="menuFlotanteTexto">${esc(item.texto)}</span>` + cantidad;
             boton.addEventListener("click", () => {
                 cerrarMenu();
                 if (typeof item.alTocar === "function") item.alTocar();
@@ -774,13 +779,79 @@
         return caja;
     }
 
+    // ---------- Lupa (repaso de Pedidos, 2026-11-01) ----------
+    // lupa(input, { etiqueta }): la lupa es el primer botón de la fila de
+    // filtros, fija a la izquierda. Al tocarla, el buscador se abre ahí mismo
+    // como una pastilla con una X que lo limpia y lo cierra. Usa el mismo
+    // input de antes (sus eventos siguen igual). poner(fila) la pone primera
+    // en la fila: se llama cada vez que la fila se vuelve a dibujar.
+    function lupa(input, { etiqueta = "Buscar" } = {}) {
+        const caja = document.createElement("span");
+        caja.className = "pzLupa";
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "pzLupaBoton";
+        boton.setAttribute("aria-label", etiqueta);
+        boton.innerHTML = ico("buscar", 20);
+        const pastilla = document.createElement("label");
+        pastilla.className = "pzLupaPastilla";
+        pastilla.innerHTML = ico("buscar", 18);
+        const equis = document.createElement("button");
+        equis.type = "button";
+        equis.className = "pzLupaX";
+        equis.setAttribute("aria-label", "Cerrar el buscador");
+        equis.innerHTML = ico("cerrarX", 16);
+        input.classList.add("pzLupaInput");
+        if (!input.getAttribute("aria-label")) input.setAttribute("aria-label", etiqueta);
+        pastilla.append(input, equis);
+        caja.append(boton, pastilla);
+
+        const abierta = () => caja.classList.contains("abierta");
+        function abrir() {
+            caja.classList.add("abierta");
+            input.focus({ preventScroll: true });
+            const fila = caja.parentElement;
+            if (fila) fila.scrollLeft = 0;
+        }
+        function cerrar() {
+            const habia = input.value !== "";
+            caja.classList.remove("abierta");
+            if (habia) {
+                input.value = "";
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+        }
+        boton.addEventListener("click", abrir);
+        equis.addEventListener("click", cerrar);
+        input.addEventListener("keydown", evento => {
+            if (evento.key === "Escape" && abierta()) {
+                evento.stopPropagation();
+                cerrar();
+            }
+        });
+        if (input.value) caja.classList.add("abierta");
+
+        return {
+            caja,
+            abrir,
+            cerrar,
+            abierta,
+            poner(fila) {
+                if (!fila || fila.firstElementChild === caja) return;
+                const conFoco = document.activeElement === input;
+                fila.prepend(caja);
+                if (conFoco) input.focus({ preventScroll: true });
+            }
+        };
+    }
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer, tocable, menu,
+        hoja, modal, preguntar, cerrar, deshacer, tocable, menu, lupa,
         avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

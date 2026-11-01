@@ -64,6 +64,12 @@ function actualizarResumenComercios(comercios, fueVisitado = estaVisitadoEstaSem
     }
 }
 
+// Repaso de Pedidos: la lupa es el primer botón de la fila de filtros y el
+// buscador se abre ahí mismo, al lado.
+if (filtrosEstadoComercios && buscarComercio && window.piezas?.lupa) {
+    window.piezas.lupa(buscarComercio, { etiqueta: "Buscar comercio" }).poner(filtrosEstadoComercios);
+}
+
 if (filtrosEstadoComercios) {
     filtrosEstadoComercios.addEventListener("click", evento => {
         const boton = evento.target.closest("[data-filtro]");

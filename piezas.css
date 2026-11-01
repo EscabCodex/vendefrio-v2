@@ -1405,3 +1405,139 @@ html:not([data-tema="oscuro"]) .filaOrdenMarca{background:#eef2f8;}
 html[data-tema="oscuro"] .textosFichaMarca small{color:var(--visitado) !important;}
 html[data-tema="oscuro"] .textosFichaMarca small:is(.stock-bajo,.stock-no),
 html[data-tema="oscuro"] .modalFichaMarca .fichaNumeros .fichaNumeroAviso strong{color:var(--pendiente) !important;}
+
+/* ---------- Repaso de Pedidos (2026-11-01): lupa y menú con cantidades ---------- */
+/* Lupa: primer botón de la fila de filtros, fija a la izquierda. Abierta, el
+   buscador es una pastilla ahí mismo, con el texto centrado con la lupa. */
+.pzLupa{position:sticky;left:0;z-index:2;display:inline-flex;flex:0 0 auto;align-items:center;}
+html .pzLupaBoton{display:grid;place-items:center;width:40px;height:40px;min-height:0;margin:0;padding:0;border:1px solid var(--borde);border-radius:50%;background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);flex:0 0 auto;}
+.pzLupaPastilla{display:none;align-items:center;gap:4px;width:210px;max-width:62vw;height:40px;margin:0;padding:0 4px 0 10px;border:2px solid var(--acento);border-radius:999px;background:var(--superficie);box-sizing:border-box;line-height:1;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .pzLupaPastilla{color:var(--acento);}
+.pzLupa.abierta .pzLupaBoton{display:none;}
+.pzLupa.abierta .pzLupaPastilla{display:flex;}
+.pzLupaPastilla > .pzIco{display:grid;place-items:center;flex:0 0 auto;line-height:0;}
+html .pzLupaPastilla input.pzLupaInput{flex:1;min-width:0;width:auto;height:22px;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;outline:none;color:var(--texto);font-size:15px;font-weight:600;line-height:22px;-webkit-appearance:none;appearance:none;}
+.pzLupaPastilla input.pzLupaInput::-webkit-search-cancel-button{display:none;}
+html .pzLupaX{display:grid;place-items:center;width:28px;height:28px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);flex:0 0 auto;}
+/* Menú ⋯: globito de cantidad a la derecha e íconos con su color. */
+html .menuFlotanteCaja .menuFlotanteItem .menuFlotanteTexto{flex:1;min-width:0;text-align:left;}
+html .menuFlotanteCaja .menuFlotanteItem .menuFlotanteCantidad{flex:0 0 auto;margin-left:8px;}
+html .menuFlotanteCaja .menuFlotanteItem.actual{background:var(--acento-bg);}
+html[data-tema="oscuro"] .menuFlotanteCaja .menuFlotanteItem.actual{background:var(--superficie-2);}
+html .menuFlotanteCaja .menuFlotanteItem[data-tono="aviso"] svg{color:var(--pendiente);}
+html .menuFlotanteCaja .menuFlotanteItem[data-tono="peligro"] svg{color:var(--peligro);}
+html .menuFlotanteCaja .menuFlotanteItem[data-tono="gris"] svg{color:var(--texto-sec);}
+html .menuFlotanteCaja .menuFlotanteItem:disabled{opacity:.45;}
+/* Lista de Pedidos: un dato por línea con su ícono, barra de armado, pie con
+   N°, Tiene/Quiere y total. */
+html .tarjetaSeguimiento{align-items:flex-start;padding:14px;}
+.datosTarjeta{display:grid;gap:5px;margin-top:6px;}
+html .lineaTarjeta{display:flex;align-items:center;gap:8px;margin:0;padding:0;border:0;background:none;box-shadow:none;min-height:0;width:auto;font:inherit;font-size:14px;line-height:1.25;color:var(--texto);text-align:left;}
+.lineaTarjeta > svg{flex:0 0 auto;opacity:.6;}
+.lineaTarjeta > span{min-width:0;overflow-wrap:anywhere;}
+html .lineaTarjeta.agregarDatoPedido{color:var(--acento-oscuro);font-weight:700;cursor:pointer;}
+html[data-tema="oscuro"] .lineaTarjeta.agregarDatoPedido{color:var(--acento);}
+.lineaTarjeta:is(.agregarDatoPedido,.lineaIncidencia,.lineaFaltante,.lineaCobrado,.lineaFaltaCobrar) > svg{opacity:1;}
+.lineaTarjeta.lineaIncidencia{color:var(--peligro);font-weight:700;}
+.lineaTarjeta.lineaFaltante{color:var(--pendiente);font-weight:700;}
+.lineaTarjeta.lineaCobrado{color:var(--visitado);font-weight:700;}
+.lineaTarjeta.lineaFaltaCobrar{color:var(--pendiente);font-weight:700;}
+html .infoSeguimiento .progresoTarjeta{margin-top:8px;color:var(--texto-sec);font-weight:700;}
+.progresoTarjeta .barraArmado{display:block;height:6px;border-radius:6px;background:var(--gris-claro);overflow:hidden;}
+.progresoTarjeta .barraArmado > i{display:block;height:100%;background:var(--acento);}
+.progresoTarjeta small{display:block;margin-top:4px;font-size:13px;}
+.etiquetasTarjeta{display:flex;flex-wrap:wrap;gap:4px;}
+.pieTarjetaPedido{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);}
+.pieTarjetaPedido small{display:flex;align-items:center;gap:8px;color:var(--texto-sec);font-weight:600;font-size:13px;}
+.pieTarjetaPedido .totalTarjeta{font-size:17px;color:var(--texto);white-space:nowrap;}
+.tieneQuiere{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .tieneQuiere{background:var(--superficie-2);color:var(--acento);}
+.tieneQuiere.tipoTiene{background:var(--info-bg);color:var(--info);}
+html .tarjetaSeguimiento.tarjetaCancelada{opacity:.62;}
+.tarjetaCancelada .totalTarjeta{text-decoration:line-through;}
+/* Resumen: "3 pedidos · 9 u · $ 29.400" con "Cargar pedido" a la derecha. */
+.filaResumenPedidos{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 2px 8px;}
+.filaResumenPedidos.centrada{justify-content:center;text-align:center;}
+html .filaResumenPedidos .resumenVistaPedidos{margin:0;font-weight:700;font-size:13.5px;color:var(--texto-sec);white-space:nowrap;}
+html .filaResumenPedidos .botonCargarPedido{display:inline-flex;align-items:center;gap:6px;width:auto;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);box-shadow:none;font-size:14px;font-weight:700;white-space:nowrap;}
+html[data-tema="oscuro"] .filaResumenPedidos .botonCargarPedido{background:var(--superficie-2);color:var(--acento);}
+.filaResumenPedidos .botonCargarPedido[hidden]{display:none;}
+/* Terminados: fila de períodos con cantidad y línea de tiempo por día. */
+html #pantallaPedido .filtrosHistorialPedidos{margin:0;padding:0;background:none;border:0;box-shadow:none;}
+html #pantallaPedido .filaPeriodoPedidos{margin-top:4px;}
+html[data-tema] #listaVistaPedidos.conLineaTiempo{position:relative;padding-left:24px;}
+html[data-tema] #listaVistaPedidos.conLineaTiempo::before{content:"";position:absolute;left:8px;top:14px;bottom:0;width:3px;border-radius:3px;background:var(--borde-fuerte);}
+html[data-tema] #listaVistaPedidos.conLineaTiempo .marcadorFechaHistorial{position:relative;margin:18px 0 10px;align-items:center;}
+html[data-tema] #listaVistaPedidos.conLineaTiempo .marcadorFechaHistorial:first-child{margin-top:6px;}
+html[data-tema] #listaVistaPedidos.conLineaTiempo .marcadorFechaHistorial::before{content:"";position:absolute;left:-23px;top:50%;width:15px;height:15px;margin-top:-7.5px;border-radius:50%;background:var(--acento);box-shadow:0 0 0 4px var(--fondo);}
+html[data-tema] #listaVistaPedidos.conLineaTiempo .marcadorFechaHistorial strong{padding:5px 12px;border-radius:999px;background:var(--acento);color:var(--fondo);font-size:13px;letter-spacing:.04em;}
+html[data-tema] #listaVistaPedidos.conLineaTiempo .marcadorFechaHistorial small{color:var(--texto-sec);font-weight:700;}
+/* Ficha del pedido: centrada como la del comercio, con el ⋯ flotante. */
+html #modalFichaPedido:not(.oculto){display:flex !important;align-items:center !important;justify-content:center !important;padding:calc(14px + env(safe-area-inset-top, 0px)) 12px calc(100px + env(safe-area-inset-bottom, 0px)) !important;overflow:hidden;box-sizing:border-box;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+html #modalFichaPedido.conMenu{-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);}
+html #modalFichaPedido .fichaMarcoPedido{position:relative;display:flex;flex-direction:column;width:min(100%,430px);max-height:100%;padding:0;background:none;}
+html #modalFichaPedido .fichaPedidoContenido{position:static !important;transform:none !important;flex:0 1 auto;min-height:0;width:100% !important;max-height:none !important;margin:0 !important;padding:16px 14px 76px !important;border-radius:28px !important;overflow-y:auto;background:var(--fondo);animation:none;}
+html #modalFichaPedido.sinMenu .fichaPedidoContenido{padding-bottom:16px !important;}
+html #modalFichaPedido .fichaPedidoContenido::before{display:none !important;}
+html #modalFichaPedido .fichaMenuBoton{position:absolute;right:12px;bottom:12px;z-index:4;display:grid;place-items:center;width:58px;height:58px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--acento);color:var(--acento-txt);box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer;}
+html #modalFichaPedido .fichaMenuBoton[hidden]{display:none;}
+html #modalFichaPedido .fichaVelo{position:absolute;inset:0;z-index:3;border-radius:28px;background:rgba(0,0,0,.12);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+html #modalFichaPedido .fichaVelo[hidden],html #modalFichaPedido .fichaMenu[hidden]{display:none;}
+html #modalFichaPedido .fichaMenu{position:absolute;right:12px;bottom:80px;z-index:4;display:grid;width:260px;max-height:calc(100% - 96px);overflow-y:auto;padding:6px;border-radius:20px;background:var(--superficie);border:var(--borde-tarjeta);box-shadow:0 10px 30px rgba(0,0,0,.25);animation:fichaMenuSube .16s ease;}
+html #modalFichaPedido .fichaMenu hr{margin:4px 8px;border:0;border-top:1px solid var(--borde);}
+html #modalFichaPedido .fichaMenu .fichaMenuItem{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;margin:0;padding:0 12px;border:0;border-radius:14px;background:none;box-shadow:none;color:var(--texto);font:inherit;font-size:15.5px;font-weight:650;text-align:left;cursor:pointer;}
+html #modalFichaPedido .fichaMenu .fichaMenuItem:disabled{opacity:.45;}
+html #modalFichaPedido .fichaMenu .fichaMenuItem svg{flex-shrink:0;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] #modalFichaPedido .fichaMenu .fichaMenuItem:not(.fichaMenuPrincipal) svg{color:var(--acento) !important;}
+html #modalFichaPedido .fichaMenu .fichaMenuPrincipal{background:var(--acento);color:var(--acento-txt);}
+html #modalFichaPedido .fichaMenu .fichaMenuPrincipal svg,
+html[data-tema="oscuro"] #modalFichaPedido .fichaMenu .fichaMenuPrincipal :is(svg, span){color:var(--acento-txt) !important;}
+html #modalFichaPedido .fichaMenu .fichaMenuPeligro,
+html #modalFichaPedido .fichaMenu .fichaMenuPeligro svg,
+html[data-tema="oscuro"] #modalFichaPedido .fichaMenu .fichaMenuPeligro :is(span, svg){color:var(--peligro) !important;}
+html #modalFichaPedido .tarjetaFichaPedido{padding:0;margin:0;background:none;box-shadow:none;border:0;}
+.cabezaFichaPedido{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.cabezaFichaPedido .avatar{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;flex:0 0 auto;}
+html .fichaPedido .cabezaFichaPedido h2{flex:1;min-width:0;margin:0;font-size:21px;line-height:1.15;overflow-wrap:anywhere;}
+html .cabezaFichaPedido .botonRedondoFicha{position:static;display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;}
+html .cabezaFichaPedido .botonAsistenteFicha{color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .cabezaFichaPedido .botonAsistenteFicha{color:var(--acento);}
+.filaDatosFicha{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 10px;}
+.datosComercioFicha{display:grid;gap:4px;min-width:0;}
+.datosComercioFicha .lineaTarjeta{font-size:14.5px;}
+html #modalFichaPedido .filaDatosFicha .etiquetasFichaPedido{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin:0;flex:0 0 auto;}
+html #modalFichaPedido .filaDatosFicha .etiquetasFichaPedido .badge{margin:0;}
+.cuadrosFichaPedido{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 4px;}
+.cuadroFicha{padding:10px 6px;border-radius:16px;background:var(--gris-claro);text-align:center;min-width:0;}
+.cuadroFicha strong{display:block;font-size:17px;color:var(--texto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cuadroFicha small{font-size:12.5px;color:var(--texto-sec);}
+html .lineaPasosPedido .pasoLinea small.quienPaso{display:block;margin-top:0;font-size:11px;color:var(--texto-sec);}
+html .verHistoriaPedido{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:0;margin:6px 0 2px;padding:8px;border:0;border-radius:999px;background:transparent;box-shadow:none;color:var(--acento-oscuro);font-weight:700;font-size:14px;}
+html[data-tema="oscuro"] .verHistoriaPedido{color:var(--acento);}
+html #modalFichaPedido .historiaFichaPedido{margin:4px 0 6px;padding:10px 12px;border-radius:16px;background:var(--gris-claro);}
+html #modalFichaPedido .historiaFichaPedido[hidden]{display:none;}
+html #modalFichaPedido .historiaFichaPedido > h3{display:none;}
+html #modalFichaPedido .cartelFichaPedido,html #modalFichaPedido .cartelCobroFicha{flex-wrap:wrap;align-items:flex-start;row-gap:10px;margin:10px 0 0;}
+html #modalFichaPedido .cartelFichaPedido > svg,html #modalFichaPedido .cartelCobroFicha > svg{margin-top:2px;}
+html #modalFichaPedido .cartelFichaPedido p{margin:2px 0 0;font-size:14.5px;color:var(--texto);}
+html #modalFichaPedido .cartelCobroFicha strong{font-size:15.5px;}
+.montoCartelCobro{margin-left:auto;font-size:18px;font-weight:800;color:var(--texto);white-space:nowrap;}
+html #modalFichaPedido .botonCartelCobro{flex:1 0 100%;width:100%;min-height:46px;margin:0;border:0;border-radius:999px;background:var(--acento);color:var(--acento-txt);font-weight:800;font-size:16px;}
+html #modalFichaPedido .enlaceCartelCobro{flex:1 0 100%;min-height:0;margin:0;padding:0 0 0 34px;border:0;background:none;box-shadow:none;color:var(--acento-oscuro);font-weight:700;font-size:14px;text-align:left;}
+html[data-tema="oscuro"] #modalFichaPedido .enlaceCartelCobro{color:var(--acento);}
+.pistaCartelCobro{flex:1 0 100%;padding-left:34px;}
+html #modalFichaPedido .comprobanteFichaPedido{flex:1 0 100%;display:flex;align-items:center;gap:10px;min-height:0;margin:0;padding:8px;border:0;border-radius:14px;background:var(--superficie);box-shadow:none;color:var(--texto);text-align:left;}
+.miniComprobante{width:44px;height:58px;flex:0 0 auto;border-radius:8px;border:1px solid var(--borde);background:var(--gris-claro) center/cover no-repeat;}
+.textoComprobante{flex:1;display:grid;}
+.textoComprobante b{font-size:15px;}
+.textoComprobante small{font-size:12.5px;color:var(--texto-sec);}
+html #modalFichaPedido .pasosFichaPedido{margin:10px 0 0;padding:0;}
+html #modalFichaPedido .pasoFicha{padding:12px;border-radius:20px;}
+html #modalFichaPedido .pasoFicha.despues{opacity:1;}
+html #modalFichaPedido .pasoFichaTitulo{margin:0 0 2px;font-size:15px;}
+.notaEntregaFicha{display:flex;gap:6px;align-items:center;margin:0 2px;font-size:13px;color:var(--texto-sec);}
+.notaEntregaFicha svg{flex:0 0 auto;color:var(--pendiente);}
+html #modalFichaPedido .accionesFichaPedido{margin-bottom:0;padding-bottom:0;}
+html #modalFichaPedido .seccionFichaPedido h3{margin-top:14px;}
+html #modalFichaPedido .menuFichaPedido[hidden]{display:none !important;}
+html #modalFichaPedido .botonCartelCobro{display:flex;align-items:center;justify-content:center;}

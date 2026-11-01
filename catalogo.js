@@ -86,6 +86,7 @@
     // arriba del buscador. Primero Todas y las marcas; al final los avisos
     // ("Poco stock", "Sin precio"), que muestran solo esos productos. El
     // desplegable queda escondido y sigue siendo el que manda la marca.
+    let lupaCatalogo = null;
     function dibujarChipsMarcas(filtro, marcas, lista) {
         let chips = document.getElementById("chipsMarcasCatalogo");
         if (!chips) {
@@ -97,7 +98,16 @@
             filtro.closest(".catalogoFiltros").before(chips);
             filtro.classList.add("oculto");
         }
-        chips.innerHTML = "";
+        // Repaso de Pedidos: la lupa es el primer botón de la fila y el
+        // buscador se abre ahí mismo (la fila de abajo queda sin nada).
+        if (!lupaCatalogo && window.piezas?.lupa) {
+            const buscar = document.getElementById("buscarCatalogo");
+            if (buscar) {
+                lupaCatalogo = window.piezas.lupa(buscar, { etiqueta: "Buscar producto" });
+                filtro.closest(".catalogoFiltros")?.classList.add("oculto");
+            }
+        }
+        [...chips.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
         const ico = window.icono;
         const pocoStock = lista.filter(p => estaBajo(p)).length;
         const sinPrecio = verArchivados ? 0 : lista.filter(p => !(Number(p.precio) > 0)).length;
@@ -121,6 +131,7 @@
             () => { filtro.value = m; soloPocoStock = false; soloSinPrecio = false; renderizar(); }));
         if (pocoStock) boton("Poco stock", pocoStock, soloPocoStock, "chipAviso", () => { soloPocoStock = !soloPocoStock; soloSinPrecio = false; filtro.value = "todas"; renderizar(); }, ico("alerta", 16));
         if (sinPrecio) boton("Sin precio", sinPrecio, soloSinPrecio, "chipAviso", () => { soloSinPrecio = !soloSinPrecio; soloPocoStock = false; filtro.value = "todas"; renderizar(); }, ico("alerta", 16));
+        if (lupaCatalogo) lupaCatalogo.poner(chips);
     }
     function estaBajo(p) {
         const stock = window.stockVendeFrio;
