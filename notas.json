@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 252,
+      "fecha": "2026-10-28",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Los números de Inicio muestran justo lo que contaron",
+      "texto": "Con cuenta, «Cargados», «Cargados hoy», «Vendido hoy» y «Ver todos» abren esos mismos pedidos, en todos los pasos, con un cartelito arriba. «Visitados hoy» abre solo los visitados hoy."
+    },
+    {
       "version": 251,
       "fecha": "2026-10-28",
       "tipo": "arreglado",

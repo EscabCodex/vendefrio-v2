@@ -105,7 +105,13 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitados");
     await expect(page.locator("#listaComerciosAdmin .comercioCard")).toHaveCount(2);
     await barra.getByRole("button", { name: "Inicio" }).click();
+    // "Visitados hoy" -> solo los de hoy (2), con el cartel; el cartel vuelve
+    // a los de toda la semana.
     await page.locator('#dashKpis [data-kpi="visitadosHoy"]').click();
+    await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitadosHoy");
+    await expect(page.locator("#filtrosEstadoComercios .activo")).toContainText("Visitados");
+    await expect(page.locator("#listaComerciosAdmin .comercioCard")).toHaveCount(2);
+    await page.locator(".cartelVisitadosHoy").click();
     await expect(page.locator("#filtroEstadoComercios")).toHaveValue("visitados");
 
     // "Pedidos" de la semana (sin cuenta) -> los pedidos de esta semana, y
@@ -182,5 +188,20 @@ test.describe("con cuenta", () => {
             expect(await page.evaluate(() => window.seguimientoVendeFrio.etapa())).toBe("historial");
             await expect(periodo).toHaveValue(valor);
         }
+
+        // "Cargados hoy" -> justo los pedidos que contó, con el cartel;
+        // tocar el cartel vuelve a las pestañas.
+        const { cargarPedido } = require("./recorridos");
+        await cargarPedido(page, false);
+        await barra.getByRole("button", { name: "Inicio" }).click();
+        await expect(page.locator('#dashKpis [data-kpi="cargadosHoy"] strong')).toHaveText("1");
+        await page.locator('#dashKpis [data-kpi="cargadosHoy"]').click();
+        const cartel = page.locator(".cartelListaElegida");
+        await expect(cartel).toContainText("Cargados hoy");
+        await expect(page.locator("#listaVistaPedidos .tarjetaSeguimiento")).toHaveCount(1);
+        await expect(page.locator("#filtrosEtapaPedidos .filtroEtapa.activo")).toHaveCount(0);
+        await cartel.click();
+        await expect(cartel).toHaveCount(0);
+        await expect(page.locator("#filtrosEtapaPedidos .filtroEtapa.activo")).toHaveCount(1);
     });
 });
