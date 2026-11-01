@@ -628,16 +628,19 @@ html[data-tema="oscuro"] .pzSiempreAbrir > .pzIco{color:var(--acento);}
 .estrellaFavorito svg{fill:#F5C542;}
 #productos .fila{-webkit-touch-callout:none;user-select:none;}
 
-/* Botón flotante ⋯ (T95): arriba de "Guardar pedido", a mano del pulgar. */
-.fabPedido{
-  position:fixed;right:max(16px, env(safe-area-inset-right));bottom:calc(92px + env(safe-area-inset-bottom));z-index:1201;
-  display:grid;place-items:center;width:58px;height:58px;padding:0;border:0;border-radius:50%;
-  background:var(--texto);color:var(--superficie);box-shadow:0 8px 22px -6px rgba(15,27,45,.45);cursor:pointer;
-}
-html[data-tema="oscuro"] .fabPedido{background:var(--acento);color:var(--acento-txt);}
-.fabPedido:active{transform:scale(.95);}
-#pantallaPedido[data-vista="pedidos"] .fabPedido,#pantallaPedido.oculto .fabPedido{display:none;}
-html.conEscaner .fabPedido{display:none;}
+/* Botón ⋯ (T95): redondo, al lado de "Guardar pedido" (repaso de diseño,
+   2026-11-01). Ya no flota encima de los productos. */
+html #pantallaPedido footer.piePedido .masPiePedido{flex:0 0 auto;display:grid;place-items:center;width:52px;height:52px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);box-shadow:var(--sombra);cursor:pointer;}
+html #pantallaPedido footer.piePedido .masPiePedido:active{transform:scale(.95);}
+html.conEscaner #pantallaPedido .masPiePedido{display:none;}
+html #pantallaPedido footer.piePedido{gap:10px;}
+html #pantallaPedido footer.piePedido .piePedidoResumen{flex:1 1 auto;}
+html #pantallaPedido footer.piePedido #generar{padding:0 20px;}
+/* En el pie, "unidades" se ve como "u" para que entre todo en un renglón. */
+#pantallaPedido .piePedidoResumen #palabraUnidadesPedido{font-size:0;}
+#pantallaPedido .piePedidoResumen #palabraUnidadesPedido::after{content:"u";font-size:13px;}
+/* Menús con íconos de colores (regla 8). */
+html[data-tema] .menuFlotanteCaja .menuFlotanteItem.conColor svg{color:var(--ico-menu) !important;}
 #pantallaPedido .clientePedidoCabecera .vaciarPedido{display:none;}
 
 /* Fecha de entrega y cambios (T95, T96). */
@@ -1613,3 +1616,73 @@ html[data-tema="oscuro"] .agregarAliasCobro{color:var(--acento);}
 html .pastillaComercioHistorial .quitarComercioHistorial{display:grid;place-items:center;width:28px;height:28px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;flex:0 0 auto;}
 /* La fecha de cada día, siempre en una línea. */
 html[data-tema] #listaVistaPedidos .marcadorFechaHistorial strong{white-space:nowrap;}
+/* Nuevo pedido: marcas con los mismos botones que Catálogo, lupa primero. */
+html #pantallaPedido .chipsMarcasPedido{align-items:center;gap:6px;margin:0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 8px;padding:2px max(16px, env(safe-area-inset-left, 0px)) 6px;}
+#pantallaPedido .chipsMarcasPedido .filtroEtapa{min-height:40px;font-size:13.5px;flex-shrink:0;}
+#pantallaPedido .chipsMarcasPedido .filtroEtapa.conTono::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--tono-punto);flex-shrink:0;}
+#pantallaPedido .chipsMarcasPedido .filtroEtapa.activo.conTono::before{box-shadow:0 0 0 2px rgba(255,255,255,.7);}
+/* Nuevo pedido: la nota en una sola línea que crece al escribir. */
+html #pantallaPedido .notaPedido{display:flex;align-items:flex-start;gap:10px;margin:14px 0 8px !important;padding:12px 14px;border-radius:18px;background:var(--superficie);box-shadow:var(--sombra);color:var(--texto-sec);cursor:text;}
+html[data-tema="oscuro"] #pantallaPedido .notaPedido{box-shadow:inset 0 0 0 1px var(--borde);}
+#pantallaPedido .notaPedido > .pzIco, #pantallaPedido .notaPedido > i{flex:0 0 auto;margin-top:1px;color:var(--texto-sec);}
+html body #pantallaPedido .notaPedido textarea{flex:1 1 auto;min-width:0;min-height:22px;height:22px;max-height:140px;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;outline:none;resize:none;overflow:hidden;color:var(--texto);font:inherit;font-size:15px;line-height:22px;}
+html body #pantallaPedido .notaPedido textarea::placeholder{color:var(--texto-sec);}
+
+/* =====================================================
+   Repaso de diseño de Nuevo pedido (aprobado 2026-11-01)
+   ===================================================== */
+/* "Elegí un comercio": tarjeta punteada; el campo queda encima, invisible. */
+html #pantallaPedido .clientePedido.elegirComercioPedido{position:relative;display:block;margin-bottom:12px;padding:14px;border-radius:22px;background:var(--superficie);border:2px dashed var(--borde-fuerte);box-shadow:var(--sombra);}
+#pantallaPedido .elegirComercioPedido .clientePedidoCabecera{display:none;}
+html body #pantallaPedido .elegirComercioPedido #cliente{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;border-radius:22px;opacity:0;cursor:pointer;caret-color:transparent;}
+.elegirComercioVista{display:flex;align-items:center;gap:12px;color:var(--texto);}
+.elegirComercioIcono{flex:0 0 auto;display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--acento-bg);color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .elegirComercioIcono{background:var(--superficie-2);color:var(--acento);}
+.elegirComercioTxt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+.elegirComercioTxt strong{font-size:17px;color:var(--texto);}
+.elegirComercioTxt small{font-size:13px;color:var(--texto-sec);margin-top:2px;}
+
+/* La tarjeta del comercio elegido, como la ficha. */
+html #pantallaPedido .pzComercioElegido{margin-bottom:12px;padding:14px 14px 6px;border-radius:22px;}
+#pantallaPedido .pzComercioElegido.comercioSinGuardar{padding-bottom:14px;}
+.cabComercioPedido{display:flex;align-items:center;gap:12px;}
+.cabComercioPedido .pzIni{flex:0 0 auto;width:48px;height:48px;border-radius:15px;font-size:17px;}
+.cabComercioPedido .pzFilaTxt{flex:1 1 auto;min-width:0;}
+.cabComercioPedido .pzFilaTxt strong{display:block;font-size:17.5px;line-height:1.2;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cabComercioPedido .pzFilaTxt small{display:block;margin-top:2px;font-size:13px;color:var(--texto-sec);}
+html .cabComercioPedido .cambiarComercioPedido{flex:0 0 auto;min-height:36px;margin:0;padding:0 14px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);font:inherit;font-size:14px;font-weight:700;box-shadow:none;cursor:pointer;}
+html[data-tema="oscuro"] .cabComercioPedido .cambiarComercioPedido{background:var(--superficie-2);color:var(--acento);}
+.datosComercioPedido{display:grid;gap:2px;margin:10px 0 4px;}
+html .datosComercioPedido .datoComercioPedido{display:flex;align-items:center;gap:9px;min-height:28px;margin:0;padding:0 2px;border:0;background:none;box-shadow:none;font:inherit;font-size:14px;color:var(--texto);text-align:left;}
+.datosComercioPedido .datoComercioPedido > .pzIco{color:var(--texto-sec);}
+html .datosComercioPedido .agregarDatoPedido,html .datosComercioPedido .agregarDatoPedido .pzIco{color:var(--acento-oscuro);font-weight:700;cursor:pointer;}
+html[data-tema="oscuro"] .datosComercioPedido .agregarDatoPedido,html[data-tema="oscuro"] .datosComercioPedido .agregarDatoPedido .pzIco{color:var(--acento);}
+html #pantallaPedido .pzComercioElegido .listaDelPedido{padding:8px 2px;margin-top:4px;}
+#pantallaPedido .avisoComercioNuevo{margin:12px 0 10px;}
+html #pantallaPedido .crearComercioPedido{width:100%;min-height:46px;margin:0;}
+
+/* Hoja "Elegí un comercio". */
+.hojaElegirComercio .filtrosElegirComercio{align-items:center;margin:2px -4px 8px;padding:2px 4px 6px;}
+.hojaElegirComercio .botonesElegirComercio{display:contents;}
+.hojaElegirComercio .filtrosElegirComercio .filtroEtapa{min-height:40px;flex-shrink:0;}
+.filaElegirComercio{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 4px;border-bottom:1px solid var(--borde);cursor:pointer;}
+.filaElegirComercio:active{background:var(--superficie-2);}
+.filaElegirComercio .pzIni{flex:0 0 auto;width:42px;height:42px;border-radius:13px;}
+.filaElegirTxt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+.filaElegirTxt strong{font-size:15.5px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.filaElegirTxt small{font-size:13px;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+html .agregarDireccionElegir{display:inline-flex;align-items:center;gap:4px;min-height:0;margin:0;padding:2px 0;border:0;background:none;box-shadow:none;font:inherit;font-size:13px;font-weight:700;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .agregarDireccionElegir{color:var(--acento);}
+.estadoElegirComercio{flex:0 0 auto;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;}
+.estadoElegirComercio.pendiente{background:var(--pendiente-bg);color:var(--pendiente);}
+.estadoElegirComercio.visitado{background:var(--visitado-bg);color:var(--visitado);}
+.vacioElegirComercio{margin:18px 4px;text-align:center;color:var(--texto-sec);font-size:14px;}
+html .hojaElegirComercio .nuevoComercioElegir{width:100%;margin-top:12px;}
+.noExisteComercio{display:flex;flex-direction:column;align-items:center;margin-top:6px;padding:16px;border-radius:20px;background:var(--superficie-2);text-align:center;}
+.noExisteIcono{display:grid;place-items:center;width:52px;height:52px;margin-bottom:8px;border-radius:16px;background:var(--pendiente-bg);color:var(--pendiente);}
+.noExisteComercio strong{font-size:16px;color:var(--texto);overflow-wrap:anywhere;}
+.noExisteComercio small{margin:4px 0 14px;font-size:13.5px;color:var(--texto-sec);}
+html .noExisteComercio .pzBtn{width:100%;margin:0 0 8px;}
+.hojaElegirComercio:has(.noExisteComercio) .nuevoComercioElegir{display:none;}
+html #pantallaPedido footer.piePedido #generar{white-space:nowrap;padding:0 18px;}
+html #pantallaPedido footer.piePedido .piePedidoResumen{min-width:0;}

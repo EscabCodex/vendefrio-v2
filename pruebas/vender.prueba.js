@@ -80,7 +80,7 @@ test("vender: lo de siempre, favoritos y ¿seguro?", async ({ page }, testInfo) 
 
     const elegido = page.locator("#comercioElegidoPedido");
     await expect(elegido).toContainText("Almacén Don Pepe");
-    await expect(elegido).toContainText(/Suele pedir cada \d+ días? · \$ 9\.800/);
+    await expect(elegido).toContainText(/Pide cada \d+ días? · \$ 9\.800/);
     const siempre = page.locator("#loDeSiempre");
     await expect(siempre).toContainText("2 productos · 3 u · $ 9.800");
     // T94: ya no está "Lo que más compra"; "Lo de siempre" se despliega.

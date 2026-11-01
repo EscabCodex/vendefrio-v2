@@ -77,6 +77,9 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     const elegir = page.getByRole("dialog", { name: "Lista de precios" });
     await expect(elegir.locator('[data-lista-pedido="Almacenes"]')).toContainText("la de Almacén Don Pepe");
     await elegir.locator('[data-lista-pedido="Súper"]').click();
+    const siempre = page.getByRole("alertdialog", { name: "¿Usar siempre la lista Súper?" });
+    await expect(siempre).toContainText("Hoy tiene la lista Almacenes");
+    await siempre.getByRole("button", { name: "Solo este pedido" }).click();
     await expect(lista).toContainText("Precios: Súper · solo este pedido");
     await expect(page.locator("#totalPlataPedido")).toHaveText("$ 7.800");
     await expect(helado).toContainText("$ 3.900");

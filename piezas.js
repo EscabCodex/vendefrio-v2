@@ -718,7 +718,7 @@
     document.addEventListener("touchcancel", terminarArrastre, { passive: true });
 
     // ---------- Menú ⋯ flotante (repaso de Comercios y Catálogo) ----------
-    // menu(boton, { titulo, sub, items: [{ icono, texto, principal, peligro,
+    // menu(boton, { titulo, sub, items: [{ icono, color, texto, principal, peligro,
     // alTocar }, "-"] }): se abre redondeado junto al botón, con el fondo
     // apenas difuminado; el ⋯ pasa a ser una X. Se cierra tocando afuera, la
     // X, una opción o el atrás del celular (es una .modal).
@@ -745,6 +745,11 @@
             boton.type = "button";
             boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "") + (item.actual ? " actual" : "");
             if (item.tono) boton.dataset.tono = item.tono;
+            // color: el del ícono, para menús con íconos de colores (regla 8).
+            if (item.color) {
+                boton.classList.add("conColor");
+                boton.style.setProperty("--ico-menu", item.color);
+            }
             if (item.actual) boton.setAttribute("aria-current", "true");
             if (item.desactivado) boton.disabled = true;
             // Cantidad (repaso de Pedidos): el globito de la derecha, como en los filtros.

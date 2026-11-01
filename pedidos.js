@@ -341,14 +341,12 @@ function restaurarBorradorPedido() {
 function prepararBuscadorProductosPedido() {
     if (!contenedorProductos || buscadorProductosPedido) return;
 
-    const accionesBusqueda = document.createElement("div");
-    accionesBusqueda.className = "accionesBusquedaPedido";
-
-    // "Repetir último pedido" está en el botón ⋯ de Nuevo pedido (T95).
+    // Repaso de diseño (2026-11-01): sin renglón de búsqueda. El buscador
+    // vive en la lupa, primera de la fila de marcas (piezas.lupa).
     buscadorProductosPedido = document.createElement("input");
     buscadorProductosPedido.type = "search";
     buscadorProductosPedido.className = "buscadorPedido";
-    buscadorProductosPedido.placeholder = "Buscar producto o marca...";
+    buscadorProductosPedido.placeholder = "Buscar producto…";
     buscadorProductosPedido.setAttribute(
         "aria-label",
         "Buscar producto o marca"
@@ -357,13 +355,6 @@ function prepararBuscadorProductosPedido() {
     buscadorProductosPedido.addEventListener("input", () => {
         aplicarFiltroProductosPedido();
     });
-
-    accionesBusqueda.append(buscadorProductosPedido);
-
-    contenedorProductos.parentNode.insertBefore(
-        accionesBusqueda,
-        contenedorProductos
-    );
 
     mensajeSinResultadosPedido = document.createElement("p");
     mensajeSinResultadosPedido.className = "mensajeBusquedaPedido";
@@ -567,47 +558,65 @@ function crearMarca(nombreMarca, productos, indiceMarca, plegable) {
 // Chips de marcas arriba de los productos (T34): "Todas" o una marca.
 let marcaElegidaPedido = "";
 
+let lupaProductosPedido = null;
+
 function dibujarChipsMarcasPedido(marcas, productos) {
     if (!contenedorProductos) return;
     let chips = document.getElementById("chipsMarcasPedido");
     if (!chips) {
         chips = document.createElement("div");
         chips.id = "chipsMarcasPedido";
-        chips.className = "chipsMarcasPedido";
-        chips.setAttribute("role", "tablist");
+        chips.className = "chipsMarcasPedido filtrosEtapaPedidos";
+        chips.setAttribute("role", "group");
         chips.setAttribute("aria-label", "Marcas");
         contenedorProductos.parentNode.insertBefore(chips, contenedorProductos);
     }
     if (marcaElegidaPedido && !marcas.includes(marcaElegidaPedido)) marcaElegidaPedido = "";
+    // La lupa (con lo que tenga escrito) se guarda y vuelve primera.
+    if (!lupaProductosPedido && buscadorProductosPedido && window.piezas && window.piezas.lupa) {
+        lupaProductosPedido = window.piezas.lupa(buscadorProductosPedido, { etiqueta: "Buscar producto o marca" });
+    }
+    const conFoco = Boolean(buscadorProductosPedido) && document.activeElement === buscadorProductosPedido;
+    if (lupaProductosPedido) lupaProductosPedido.caja.remove();
     chips.innerHTML = "";
-    chips.classList.toggle("oculto", marcas.length < 2);
+    chips.classList.toggle("oculto", marcas.length < 1);
 
-    const chip = (valor, texto, cantidad) => {
+    // Mismos botones que Catálogo: el nombre, el punto de color de la marca y
+    // la cantidad adentro.
+    const chip = (valor, texto, cantidad, tono) => {
         const boton = document.createElement("button");
         boton.type = "button";
-        boton.className = "chipMarca" + (marcaElegidaPedido === valor ? " activo" : "");
-        boton.setAttribute("role", "tab");
-        boton.setAttribute("aria-selected", String(marcaElegidaPedido === valor));
-        boton.textContent = texto;
-        if (cantidad !== undefined) {
-            const numero = document.createElement("small");
-            numero.textContent = String(cantidad);
-            boton.appendChild(numero);
-        }
+        boton.className = "filtroEtapa chipMarcaPedido" + (tono ? " conTono " + tono : "") + (marcaElegidaPedido === valor ? " activo" : "");
+        boton.setAttribute("aria-pressed", String(marcaElegidaPedido === valor));
+        const nombre = document.createElement("span");
+        nombre.className = "filtroEtapaNombre";
+        nombre.textContent = texto;
+        const numero = document.createElement("small");
+        numero.className = "filtroEtapaCantidad";
+        numero.textContent = String(cantidad);
+        boton.append(nombre, numero);
         boton.addEventListener("click", () => {
             marcaElegidaPedido = valor;
-            chips.querySelectorAll(".chipMarca").forEach(otro => {
+            chips.querySelectorAll(".chipMarcaPedido").forEach(otro => {
                 const activo = otro === boton;
                 otro.classList.toggle("activo", activo);
-                otro.setAttribute("aria-selected", String(activo));
+                otro.setAttribute("aria-pressed", String(activo));
             });
             aplicarFiltroProductosPedido();
         });
         return boton;
     };
 
-    chips.appendChild(chip("", "Todas"));
-    marcas.forEach(marca => chips.appendChild(chip(marca, marca, (productos[marca] || []).length)));
+    const total = marcas.reduce((suma, marca) => suma + (productos[marca] || []).length, 0);
+    const tono = marca => (typeof window.tonoDeMarca === "function" ? window.tonoDeMarca(marca) : "");
+    if (marcas.length > 1) {
+        chips.appendChild(chip("", "Todas", total));
+        marcas.forEach(marca => chips.appendChild(chip(marca, marca, (productos[marca] || []).length, tono(marca))));
+    }
+    if (lupaProductosPedido) {
+        lupaProductosPedido.poner(chips);
+        if (conFoco) buscadorProductosPedido.focus({ preventScroll: true });
+    }
 }
 
 function renderizarPedido() {

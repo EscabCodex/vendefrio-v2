@@ -5,7 +5,7 @@
 //
 //   window.abrirDatosComercio(nombre, campo, alGuardar)
 //   window.datosComercioVendeFrio.editar(nombre, { campo, alGuardar })
-//   window.datosComercioVendeFrio.nuevo({ alGuardar })
+//   window.datosComercioVendeFrio.nuevo({ alGuardar, nombre })  (nombre: ya escrito)
 //
 // alGuardar(nombre) se llama después de guardar, con el nombre como quedó.
 (function () {
@@ -143,12 +143,12 @@
     }
 
     // ---------- La hoja ----------
-    function abrir(nombre, { campo = "", alGuardar = null } = {}) {
+    function abrir(nombre, { campo = "", alGuardar = null, nombre: escrito = "" } = {}) {
         const p = window.piezas;
         if (!p) return null;
         const comercio = nombre ? buscarComercioPorNombre(nombre) : null;
         if (nombre && !comercio) return null;
-        const c = comercio || {};
+        const c = comercio || (escrito ? { nombre: String(escrito) } : {});
         const envases = c.envases && typeof c.envases === "object" ? c.envases : {};
         const listas = typeof window.listasDePrecios === "function" ? window.listasDePrecios() : [];
         const leido = leerHorario(c.horario);

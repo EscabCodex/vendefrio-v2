@@ -42,7 +42,10 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await page.evaluate(() => renderizarPedido());
     await expect(aromos.locator(".fila", { hasText: "Tapas criolla" })).toBeVisible();
     await expect(frioSur.locator(".fila").first()).toBeHidden();
-    // Al buscar, la marca se abre sola.
+    // Al buscar, la marca se abre sola. La búsqueda es la lupa, primera de
+    // la fila de marcas (repaso de diseño de Nuevo pedido).
+    await expect(page.locator("#chipsMarcasPedido > .pzLupa")).toBeVisible();
+    await page.getByRole("button", { name: "Buscar producto o marca" }).click();
     await page.locator(".buscadorPedido").fill("palito");
     await expect(frioSur.locator(".fila", { hasText: "Palito bombón" })).toBeVisible();
     await page.locator(".buscadorPedido").fill("");
@@ -56,14 +59,15 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(page.locator("#reset")).toBeHidden();
     const masOpciones = page.getByRole("button", { name: "Más opciones del pedido" });
     await expect(masOpciones).toBeVisible();
-    // No tapa "Guardar pedido".
+    // Está abajo, al lado de "Guardar pedido" (ya no flota sobre los productos).
     const fab = await masOpciones.boundingBox();
     const guardar = await page.locator("#generar").boundingBox();
-    expect(fab.y + fab.height).toBeLessThanOrEqual(guardar.y);
+    expect(fab.x).toBeGreaterThanOrEqual(guardar.x + guardar.width);
+    expect(Math.abs((fab.y + fab.height / 2) - (guardar.y + guardar.height / 2))).toBeLessThan(4);
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator("#cliente").blur();
     await masOpciones.click();
-    const opciones = page.getByRole("dialog", { name: "Opciones del pedido" });
+    const opciones = page.getByRole("menu", { name: "Opciones del pedido" });
     for (const nombre of ["Repetir último pedido", "Dictar o pegar pedido", "Escanear código de barras", "Anotar un cambio", "Elegir fecha de entrega", "Vaciar pedido"]) {
         await expect(opciones.getByRole("button", { name: nombre })).toBeVisible();
     }
@@ -99,6 +103,10 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(hojaPrecio).toContainText("de lista $ 4.500");
     await hojaPrecio.getByLabel("Precio por unidad").fill("4000");
     await hojaPrecio.getByRole("button", { name: "Guardar precio" }).click();
+    // ¿Solo este pedido o para siempre? Este, solo este pedido.
+    const siempre = page.getByRole("alertdialog", { name: "¿Guardar este precio para siempre?" });
+    await expect(siempre).toContainText("Helado 1 kg a $ 4.000 en todos los próximos pedidos de Almacén Don Pepe");
+    await siempre.getByRole("button", { name: "Solo este pedido" }).click();
     await expect(helado.locator(".precioEspecial")).toHaveText("$ 4.000");
     await expect(helado.locator(".pzTachado")).toHaveText("$ 4.500");
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
@@ -318,7 +326,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("1");
     await page.getByRole("button", { name: "Más opciones del pedido" }).click();
-    await page.getByRole("dialog", { name: "Opciones del pedido" }).getByRole("button", { name: "Vaciar pedido" }).click();
+    await page.getByRole("menu", { name: "Opciones del pedido" }).getByRole("button", { name: "Vaciar pedido" }).click();
     await expect(page.getByRole("heading", { name: "Vaciar pedido" })).toBeHidden();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("0");
     const aviso = page.locator(".pzDeshacer");

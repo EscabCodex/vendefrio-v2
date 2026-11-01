@@ -2,6 +2,38 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 258,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Elegí el comercio más fácil",
+      "texto": "Tocá «Elegí un comercio»: buscás con la lupa o elegís entre los de hoy, todos o los que tenés cerca."
+    },
+    {
+      "version": 258,
+      "fecha": "2026-11-01",
+      "tipo": "nuevo",
+      "icono": "mas",
+      "titulo": "Pedido a un comercio nuevo",
+      "texto": "Si el comercio no está guardado, la app te avisa y lo creás con ese nombre sin salir del pedido."
+    },
+    {
+      "version": 258,
+      "fecha": "2026-11-01",
+      "tipo": "nuevo",
+      "icono": "etiqueta",
+      "titulo": "Precios y listas para siempre",
+      "texto": "Al cambiar un precio o la lista, elegís si es solo para este pedido o para todos los de ese comercio."
+    },
+    {
+      "version": 258,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "documento",
+      "titulo": "Nuevo pedido más ordenado",
+      "texto": "La tarjeta del comercio muestra sus datos, la lupa está con las marcas y el ⋯ quedó al lado de Guardar."
+    },
+    {
       "version": 257,
       "fecha": "2026-11-01",
       "tipo": "mejor",

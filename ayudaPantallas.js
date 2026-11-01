@@ -16,9 +16,9 @@
             "Tocá un pedido para armarlo o entregarlo. Adentro tenés los pasos en orden.",
             "Para cargar uno nuevo, tocá el + de abajo y «Nuevo pedido»."] },
         pantallaPedido: { titulo: "Nuevo pedido", pasos: [
-            "Arriba, elegí el comercio.",
+            "Arriba, tocá «Elegí un comercio» y buscalo con la lupa.",
             "Tocá una marca para abrirla y sumá cada producto con el +.",
-            "Tocá «Guardar pedido». Con el botón redondo ⋯ repetís el último, dictás o anotás un cambio."] },
+            "Tocá «Guardar pedido». Con el ⋯ de al lado repetís el último, dictás o anotás un cambio."] },
         pantallaComercios: { titulo: "Comercios", pasos: [
             "Acá están todos tus comercios. Arriba ves cuántos te faltan visitar.",
             "Tocá uno para abrir su ficha: llamarlo, ir, o cargarle un pedido.",

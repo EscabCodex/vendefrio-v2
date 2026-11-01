@@ -11,7 +11,7 @@
     const CLAVE = "vendefrio_notas_vistas";
     // Quien pasa varias versiones de golpe ve todo lo acumulado; el tope es
     // solo por si acaso. Con muchas, van en páginas que se deslizan de costado.
-    const MAXIMO = 60;
+    const MAXIMO = 150;
     const POR_PAGINA = 6;
     const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 

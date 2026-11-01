@@ -2802,12 +2802,30 @@ function ofertaVigente(producto, fecha) {
 // Precio sin oferta: el de la lista del comercio (T78) o el de siempre.
 function precioDeLista(producto, comercio) {
     if (!producto) return null;
+    // El precio guardado "para siempre" para este comercio (repaso de Nuevo
+    // pedido, 2026-11-01): manda sobre su lista y sobre el del catálogo.
+    const propio = precioPropioDelComercio(producto, comercio);
+    if (propio !== null) return propio;
     const lista = comercio && typeof comercio === "object" ? String(comercio.listaPrecios || "") : "";
     const precios = producto.precios && typeof producto.precios === "object" ? producto.precios : null;
     const deLista = lista && precios ? Number(precios[lista]) : NaN;
     if (Number.isFinite(deLista) && deLista > 0) return deLista;
     const base = Number(producto.precio);
     return Number.isFinite(base) && base > 0 ? base : null;
+}
+
+// comercio.preciosPropios: { [id del producto]: precio } (o por nombre, si el
+// producto no tiene id). Devuelve el precio o null.
+function claveDePrecioPropio(producto) {
+    return producto ? String(producto.id || producto.nombre || "") : "";
+}
+
+function precioPropioDelComercio(producto, comercio) {
+    const propios = comercio && typeof comercio === "object" && comercio.preciosPropios && typeof comercio.preciosPropios === "object" ? comercio.preciosPropios : null;
+    const clave = claveDePrecioPropio(producto);
+    if (!propios || !clave) return null;
+    const precio = Number(propios[clave]);
+    return Number.isFinite(precio) && precio > 0 ? precio : null;
 }
 
 // El precio que corre hoy para este comercio: la oferta, si es más barata,

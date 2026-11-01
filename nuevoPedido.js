@@ -113,27 +113,94 @@
         return precio === null || precio === undefined || !Number.isFinite(Number(precio)) ? null : Number(precio);
     }
 
+    // ---------- Precio "para siempre" de un comercio (repaso, 2026-11-01) ----------
+    // comercio.preciosPropios (database.js) manda sobre su lista y el catálogo.
+    function comercioGuardado() {
+        const comercio = comercioSinLista();
+        return comercio && comercio.id ? comercio : null;
+    }
+
+    function precioPropio(marca, nombre) {
+        const real = productoDelCatalogo(marca, nombre);
+        const comercio = comercioGuardado();
+        return real && comercio && typeof precioPropioDelComercio === "function" ? precioPropioDelComercio(real.producto, comercio) : null;
+    }
+
+    // El precio que tendría sin el guardado para este comercio.
+    function precioSinPropio(marca, nombre) {
+        const real = productoDelCatalogo(marca, nombre);
+        const comercio = comercioGuardado();
+        if (!real || typeof precioVigente !== "function") return null;
+        const precio = precioVigente(real.producto, comercio ? { ...comercio, preciosPropios: null, listaPrecios: listaElegida(comercio) !== null ? listaElegida(comercio) : comercio.listaPrecios } : null);
+        return precio === null || precio === undefined || !Number.isFinite(Number(precio)) ? null : Number(precio);
+    }
+
+    function guardarPrecioPropio(marca, nombre, precio) {
+        const real = productoDelCatalogo(marca, nombre);
+        const comercio = comercioGuardado();
+        if (!real || !comercio || typeof claveDePrecioPropio !== "function") return false;
+        const propios = { ...(comercio.preciosPropios && typeof comercio.preciosPropios === "object" ? comercio.preciosPropios : {}) };
+        const k = claveDePrecioPropio(real.producto);
+        if (precio === null) delete propios[k];
+        else propios[k] = precio;
+        if (!actualizarComercioPorId(comercio.id, { preciosPropios: propios })) return false;
+        // Ya vale para este pedido también: no hace falta el cambio suelto.
+        const datos = leer();
+        delete datos.precios[clave(marca, nombre)];
+        guardar(datos);
+        if (typeof window.actualizarResumenPedido === "function") window.actualizarResumenPedido();
+        return true;
+    }
+
+    function preguntarPrecioParaSiempre(marca, nombre, precio) {
+        const comercio = comercioGuardado();
+        if (!comercio) return;
+        const base = precioSinPropio(marca, nombre);
+        p.preguntar({
+            icono: "etiqueta",
+            color: "pri",
+            titulo: "¿Guardar este precio para siempre?",
+            texto: `${nombre} a ${p.plata(precio)} en todos los próximos pedidos de ${comercio.nombre}. Los demás comercios siguen con el precio del catálogo${base !== null ? " (" + p.plata(base) + ")" : ""}.`,
+            si: "Para siempre",
+            no: "Solo este pedido"
+        }).then(respuesta => {
+            if (!respuesta) return;
+            if (guardarPrecioPropio(marca, nombre, precio)) mostrarToast("Precio guardado para " + comercio.nombre);
+        });
+    }
+
     function editarPrecio(marca, nombre) {
         if (!puedeCambiarPrecio()) return;
         const lista = precioDeLista(marca, nombre);
         const actual = precioCambiado(marca, nombre);
+        const propio = precioPropio(marca, nombre);
+        const comercio = comercioGuardado();
+        const quitarPropio = actual === null && propio !== null;
         p.hoja({
             titulo: "Precio para este pedido",
-            sub: nombre + (lista !== null ? " · de lista " + p.plata(lista) : ""),
+            sub: nombre + (lista !== null ? (propio !== null && comercio ? " · el de " + comercio.nombre + " " : " · de lista ") + p.plata(lista) : ""),
             html: `<label class="pzCampo">Precio por unidad<input type="number" inputmode="decimal" min="0" step="any" id="precioEstePedido" value="${actual !== null ? actual : (lista !== null ? lista : "")}"></label>
-                <p class="pzHojaSub">Cambia solo en este pedido. El catálogo queda igual.</p>`,
+                <p class="pzHojaSub">${comercio ? "Después te preguntamos si es solo para este pedido o para siempre." : "Cambia solo en este pedido. El catálogo queda igual."}</p>`,
             botones: [
                 actual !== null ? { texto: "Volver al de lista", clase: "pzBtnSec", par: true, alTocar: () => ponerPrecio(marca, nombre, null) } : null,
+                quitarPropio ? {
+                    texto: "Volver al del catálogo", clase: "pzBtnSec", par: true,
+                    alTocar: () => { if (guardarPrecioPropio(marca, nombre, null)) mostrarToast("Vuelve al precio del catálogo"); }
+                } : null,
                 {
                     texto: "Guardar precio",
-                    par: actual !== null,
+                    par: actual !== null || quitarPropio,
                     alTocar: caja => {
                         const valor = Number(String(caja.querySelector("#precioEstePedido").value).replace(",", "."));
                         if (!Number.isFinite(valor) || valor < 0) {
                             mostrarToast("Escribí un precio");
                             return false;
                         }
-                        ponerPrecio(marca, nombre, lista !== null && valor === lista ? null : Math.round(valor * 100) / 100);
+                        const precio = Math.round(valor * 100) / 100;
+                        const igual = lista !== null && valor === lista;
+                        ponerPrecio(marca, nombre, igual ? null : precio);
+                        // Después de cerrar esta hoja: ¿solo este pedido o para siempre?
+                        if (!igual && comercio && precio > 0) setTimeout(() => preguntarPrecioParaSiempre(marca, nombre, precio), 260);
                         return true;
                     }
                 }
@@ -207,6 +274,27 @@
             p.cerrar();
             guardar(datos);
             mostrarToast("Precios de la lista " + (nombre || "General"));
+            // ¿Solo este pedido o para siempre? (repaso de diseño, 2026-11-01)
+            if (nombre !== propia && comercio.id) setTimeout(() => preguntarListaParaSiempre(comercio, nombre, propia), 260);
+        });
+    }
+
+    function preguntarListaParaSiempre(comercio, nombre, propia) {
+        p.preguntar({
+            icono: "etiqueta",
+            color: "pri",
+            titulo: `¿Usar siempre la lista ${nombre || "General"}?`,
+            texto: `${comercio.nombre} va a tener los precios de la lista ${nombre || "General"} en todos sus próximos pedidos. Hoy tiene la lista ${propia || "General"}.`,
+            si: "Para siempre",
+            no: "Solo este pedido"
+        }).then(respuesta => {
+            if (!respuesta) return;
+            if (!actualizarComercioPorId(comercio.id, { listaPrecios: nombre })) return;
+            const datos = leer();
+            datos.lista = null;
+            guardar(datos);
+            if (typeof window.actualizarResumenPedido === "function") window.actualizarResumenPedido();
+            mostrarToast(`${comercio.nombre} queda con la lista ${nombre || "General"}`);
         });
     }
 
@@ -492,15 +580,17 @@
     input.addEventListener("change", marcarFavoritos);
     input.addEventListener("blur", () => setTimeout(marcarFavoritos, 160));
 
-    // ---------- Botón flotante ⋯ (T95) ----------
+    // ---------- Botón ⋯ (T95), al lado de "Guardar pedido" ----------
+    // Repaso de diseño (2026-11-01): ya no flota encima de los productos;
+    // abre un menú chico con íconos de colores (regla 8), Vaciar al final.
     const fab = document.createElement("button");
     fab.type = "button";
     fab.id = "masOpcionesPedido";
-    fab.className = "fabPedido";
+    fab.className = "masPiePedido";
     fab.setAttribute("aria-label", "Más opciones del pedido");
-    fab.setAttribute("aria-haspopup", "dialog");
-    fab.innerHTML = p.ico("puntos", 26);
-    pantalla.appendChild(fab);
+    fab.setAttribute("aria-haspopup", "menu");
+    fab.innerHTML = p.ico("puntos", 22);
+    (pantalla.querySelector(".piePedido") || pantalla).appendChild(fab);
 
     function hayProductosCargados() {
         return Array.from(document.querySelectorAll("#productos .marca select")).some(select => Number(select.value) > 0);
@@ -510,48 +600,32 @@
         const comercio = comercioDelPedidoActual();
         const hayPedidos = typeof pedidosQueCuentanParaLeer === "function" && pedidosQueCuentanParaLeer().length > 0;
         const voz = window.vozVendeFrio;
-        const opcion = (clave, icono, texto) => `<button type="button" class="pzOpcion" data-opcion="${clave}">${p.ico(icono, 22)}${texto}</button>`;
         const verSaldo = comercio && window.saldosVendeFrio && puedeCambiarPrecio() && window.saldosVendeFrio.cuentaDe(comercio.nombre);
-        const caja = p.hoja({
+        const despues = accion => () => setTimeout(accion, 0);
+        p.menu(fab, {
             titulo: "Opciones del pedido",
-            etiqueta: "Opciones del pedido",
-            html: `<div class="pzOpciones">
-                ${hayPedidos ? opcion("repetir", "refrescar", "Repetir último pedido") : ""}
-                ${voz ? opcion("dictar", voz.disponible ? "microfono" : "copiar", voz.disponible ? "Dictar o pegar pedido" : "Pegar pedido de un mensaje") : ""}
-                ${window.codigoBarrasVendeFrio ? opcion("escanear", "codigo", "Escanear código de barras") : ""}
-                ${opcion("cambio", "deshacer", "Anotar un cambio")}
-                ${opcion("fecha", "calendario", leer().fechaEntrega ? "Cambiar fecha de entrega" : "Elegir fecha de entrega")}
-                ${hayListas() ? opcion("lista", "etiqueta", "Elegir lista de precios") : ""}
-                ${verSaldo ? opcion("saldo", "moneda", "Ver saldo del comercio") : ""}
-                ${hayProductosCargados() ? opcion("duplicar", "copiar", "Duplicar para otro comercio") : ""}
-                ${opcion("vaciar", "tacho", "Vaciar pedido")}
-            </div>`
-        });
-        caja.addEventListener("click", evento => {
-            const elegida = evento.target.closest("[data-opcion]")?.dataset.opcion;
-            if (!elegida) return;
-            p.cerrar();
-            setTimeout(() => {
-                if (elegida === "repetir") repetirUltimoPedido();
-                if (elegida === "dictar") voz.abrirDictado();
-                if (elegida === "escanear") window.codigoBarrasVendeFrio.abrir();
-                if (elegida === "cambio") anotarCambio();
-                if (elegida === "fecha") elegirFecha();
-                if (elegida === "lista") elegirLista();
-                if (elegida === "saldo") window.saldosVendeFrio.verCuenta(comercio.nombre);
-                if (elegida === "duplicar") duplicar();
-                if (elegida === "vaciar") document.getElementById("reset")?.click();
-            }, 0);
+            clase: "menuOpcionesPedido",
+            items: [
+                hayPedidos ? { icono: "refrescar", color: "var(--acento)", texto: "Repetir último pedido", alTocar: despues(() => repetirUltimoPedido()) } : null,
+                voz ? { icono: voz.disponible ? "microfono" : "copiar", color: "#8b5cf6", texto: voz.disponible ? "Dictar o pegar pedido" : "Pegar pedido de un mensaje", alTocar: despues(() => voz.abrirDictado()) } : null,
+                window.codigoBarrasVendeFrio ? { icono: "codigo", color: "var(--texto)", texto: "Escanear código de barras", alTocar: despues(() => window.codigoBarrasVendeFrio.abrir()) } : null,
+                { icono: "deshacer", color: "var(--pendiente)", texto: "Anotar un cambio", alTocar: despues(anotarCambio) },
+                { icono: "calendario", color: "var(--info)", texto: leer().fechaEntrega ? "Cambiar fecha de entrega" : "Elegir fecha de entrega", alTocar: despues(elegirFecha) },
+                hayListas() ? { icono: "etiqueta", color: "var(--visitado)", texto: "Elegir lista de precios", alTocar: despues(elegirLista) } : null,
+                verSaldo ? { icono: "moneda", color: "var(--pendiente)", texto: "Ver saldo del comercio", alTocar: despues(() => window.saldosVendeFrio.verCuenta(comercio.nombre)) } : null,
+                hayProductosCargados() ? { icono: "copiar", color: "var(--texto-sec)", texto: "Duplicar para otro comercio", alTocar: despues(duplicar) } : null,
+                "-",
+                { icono: "tacho", texto: "Vaciar pedido", peligro: true, alTocar: despues(() => document.getElementById("reset")?.click()) }
+            ]
         });
     }
 
     // Deja los productos y pide el otro comercio.
     function duplicar() {
-        const cambiar = document.getElementById("cambiarComercioPedido");
-        if (cambiar && cambiar.offsetParent) cambiar.click();
         input.value = "";
         input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.focus();
+        if (window.elegirComercioVendeFrio) window.elegirComercioVendeFrio.abrir();
+        else input.focus();
         mostrarToast("Elegí el otro comercio: los productos quedan");
     }
 
