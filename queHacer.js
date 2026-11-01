@@ -87,6 +87,9 @@
             if (typeof abrirNuevoPedido === "function") abrirNuevoPedido();
             else mostrarPantalla("pedido");
         } else if (accion === "pedidosHoy") {
+            // Los mismos "Pedidos de hoy" que cuenta (en todos los pasos).
+            const deHoy = typeof cuentasDeInicio === "function" ? cuentasDeInicio().pedidosHoy : null;
+            if (enLaNube() && deHoy && window.seguimientoVendeFrio?.abrirLista?.({ titulo: "Pedidos de hoy", pedidos: deHoy })) return;
             if (enLaNube() && window.seguimientoVendeFrio?.abrirEtapa?.("paraArmar")) return;
             if (!enLaNube() && typeof abrirHistorialPorPeriodo === "function") abrirHistorialPorPeriodo("hoy");
             else mostrarPantalla(enLaNube() ? "pedido" : "historial");

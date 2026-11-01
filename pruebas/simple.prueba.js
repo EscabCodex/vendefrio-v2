@@ -232,8 +232,10 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "simple-09-inicio-que-hacer");
 
+    // "Pedidos de hoy" abre justo los pedidos de hoy, en todos los pasos.
     await queHacer.getByRole("button", { name: /Pedidos de hoy/ }).click();
-    await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Para armar/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".cartelListaElegida")).toContainText("Pedidos de hoy");
+    await expect(page.locator("#listaVistaPedidos .tarjetaSeguimiento")).toHaveCount(1);
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await queHacer.getByRole("button", { name: /Cargar un pedido/ }).click();
     await expect(page.locator("#generar")).toBeVisible();
