@@ -610,7 +610,6 @@
                 { destino: "estadisticas", icono: "grafico", texto: "Estadísticas" },
                 { destino: "whatsapp", icono: "whatsapp", texto: "WhatsApp" },
                 window.cierreVendeFrio?.disponible?.() ? { destino: "cierre", icono: "recibo", texto: "Cierre del día" } : null,
-                !usaNubeReal() ? { destino: "historial", icono: "historial", texto: "Historial" } : null,
                 // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
                 ...(window.accesosMasExtras || []).filter(acceso => {
                     if (acceso.enMas === false) return false;

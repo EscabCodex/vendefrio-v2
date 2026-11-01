@@ -30,9 +30,10 @@ function mostrarPantalla(nombre) {
         abrirMenuMas();
         return;
     }
-    // Historial dentro de Pedidos (T27b): en la nube no se abre la pantalla
-    // Historial de antes, sino el filtro "Historial" de la sección Pedido.
-    if (nombre === "historial" && usaNubeReal() && window.seguimientoVendeFrio?.abrirHistorial?.({})) {
+    // Historial dentro de Pedidos (T27b): no se abre la pantalla Historial de
+    // antes, sino «Terminados» de Pedidos, con o sin cuenta (pedido del
+    // dueño, 2026-11-01: el historial son los Terminados).
+    if (nombre === "historial" && window.seguimientoVendeFrio?.abrirHistorial?.({})) {
         return;
     }
     document.querySelectorAll('body > section[id^="pantalla"]').forEach(pantalla => {

@@ -86,14 +86,14 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(estadisticas.locator('[data-periodo="semana"]')).toHaveClass(/activo/);
     await ranking.getByRole("tab", { name: "Comercios" }).click();
     await ranking.locator(".statsListaRanking:visible .statsFilaRanking", { hasText: "Kiosco Luna" }).click();
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#textoFiltroHistorial")).toHaveText("Mostrando solamente pedidos de: Kiosco Luna");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator(".pastillaComercioHistorial")).toContainText("Kiosco Luna");
 
     // "Esta semana" (comparada con la anterior) -> los pedidos de esta semana.
     await page.evaluate(() => window.abrirEstadisticas());
     await estadisticas.locator(".statsComparativa .statsFila").first().click();
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("semana");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator('.filtrosHistorialPedidos [data-periodo="semana"]')).toHaveAttribute("aria-checked", "true");
 
     // Inicio: "Visitados esta semana 2 de 4" -> los visitados, y
     // "Visitados hoy" -> los visitados.
@@ -118,8 +118,8 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     // "Productos distintos" -> Estadísticas de hoy.
     await barra.getByRole("button", { name: "Inicio" }).click();
     await page.locator('#dashKpis [data-kpi="semana"]').click();
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("semana");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator('.filtrosHistorialPedidos [data-periodo="semana"]')).toHaveAttribute("aria-checked", "true");
     await barra.getByRole("button", { name: "Inicio" }).click();
     await expect(page.locator("#dashDerechaHoy")).toContainText("Productos distintos");
     await page.locator("#dashDerechaHoy").click();
@@ -133,8 +133,8 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     // quedara en otro período.
     await barra.getByRole("button", { name: "Inicio" }).click();
     await page.locator("#dashVerTodos").click();
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("hoy");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator('.filtrosHistorialPedidos [data-periodo="hoy"]')).toHaveAttribute("aria-checked", "true");
 
     // "Sin visitar" muestra la lista entera aunque Historial haya dejado un
     // solo comercio a la vista.
@@ -157,18 +157,18 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await capturar(page, "tocables-02-ficha-con-numeros");
     await numeros.first().click();
     await expect(ficha).toHaveCount(0);
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#textoFiltroHistorial")).toHaveText("Mostrando solamente pedidos de: Kiosco Luna");
-    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("todos");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator(".pastillaComercioHistorial")).toContainText("Kiosco Luna");
+    await expect(page.locator('.filtrosHistorialPedidos [data-periodo="todos"]')).toHaveAttribute("aria-checked", "true");
 
     // "pedidos este mes" -> sus pedidos, en "Mes".
     await barra.getByRole("button", { name: "Comercios" }).click();
     await page.locator("#listaComerciosAdmin .comercioCard", { hasText: "Kiosco Luna" }).locator("h3").click();
     await numeros.filter({ hasText: "este mes" }).first().click();
     await expect(ficha).toHaveCount(0);
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#textoFiltroHistorial")).toHaveText("Mostrando solamente pedidos de: Kiosco Luna");
-    await expect(page.locator("#filtroFechaHistorial")).toHaveValue("mes");
+    await expect(page.locator("#vistaPedidos")).toBeVisible();
+    await expect(page.locator(".pastillaComercioHistorial")).toContainText("Kiosco Luna");
+    await expect(page.locator('.filtrosHistorialPedidos [data-periodo="mes"]')).toHaveAttribute("aria-checked", "true");
 });
 
 // Con cuenta: "Entregados" y "Entregados hoy" abren Terminados en su período

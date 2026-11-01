@@ -55,26 +55,33 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
     await page.locator("#cerrarCargaPedido").click();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
-    // Historial: el pedido quedó guardado en el celular.
-    // En el modo personal, "Pedidos" de la barra abre Historial.
+    // Terminados: el pedido quedó guardado en el celular. Sin cuenta,
+    // "Pedidos" de la barra abre Pedidos > Terminados (el historial son los
+    // Terminados, con o sin cuenta: pedido del dueño, 2026-11-01).
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
-    await expect(page.locator("#pantallaHistorial")).toBeVisible();
-    await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
-    // Período con botones (T33): el de hoy aparece en "Hoy" y en "Mes".
-    await page.locator("#pantallaHistorial").getByRole("radio", { name: "Hoy" }).click();
-    await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
-    await page.locator("#pantallaHistorial").getByRole("radio", { name: "Mes" }).click();
-    await expect(page.locator("#pantallaHistorial").getByText("Anibal").first()).toBeVisible();
-    await expect(page.locator("#pantallaHistorial .marcadorFechaHistorial").first()).toContainText(/^Hoy · /);
-    await expect(page.locator("#resumenHistorial")).toHaveText(/^1 pedido · \d+ unidad/);
+    const vista = page.locator("#vistaPedidos");
+    await expect(vista).toBeVisible();
+    await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab")).toHaveCount(1);
+    await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Terminados/ })).toBeVisible();
+    const tarjeta = vista.locator(".tarjetaSeguimiento", { hasText: "Anibal" });
+    await expect(tarjeta).toBeVisible();
+    // Período con botones: el de hoy aparece en "Hoy" y en "Mes".
+    const periodo = page.locator(".filtrosHistorialPedidos");
+    await periodo.getByRole("radio", { name: "Hoy" }).click();
+    await expect(tarjeta).toBeVisible();
+    await periodo.getByRole("radio", { name: "Mes" }).click();
+    await expect(tarjeta).toBeVisible();
+    await expect(vista.locator(".marcadorFechaHistorial").first()).toContainText(/^Hoy · /);
+    await expect(page.locator("#resumenVistaPedidos")).toHaveText(/^1 pedido · 2 u/);
     await capturar(page, "personal-05-historial");
 
-    // T167: "⋯" abre una hoja con Ver pedido y Eliminar pedido.
-    await page.getByRole("button", { name: "Opciones del pedido de Anibal" }).click();
-    const opciones = page.getByRole("dialog", { name: "Opciones del pedido" });
-    await expect(opciones.getByRole("button", { name: "Eliminar pedido" })).toBeVisible();
+    // La ficha: el ⋯ tiene Ver mensaje y Eliminar pedido.
+    await tarjeta.click();
+    const ficha = page.locator(".fichaPedido");
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await expect(ficha.getByRole("menuitem", { name: "Eliminar pedido" })).toBeVisible();
     await capturar(page, "personal-06-opciones-del-pedido");
-    await opciones.getByRole("button", { name: "Ver pedido" }).click();
+    await ficha.getByRole("menuitem", { name: "Ver mensaje del pedido" }).click();
     await expect(page.locator("#modalPedido")).toBeVisible();
     await expect(page.locator("#pedidoCliente")).toHaveText("Anibal");
     await page.locator("#modalPedido").click({ position: { x: 10, y: 10 } });

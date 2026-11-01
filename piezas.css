@@ -1606,3 +1606,10 @@ html[data-tema="oscuro"] .agregarAliasCobro{color:var(--acento);}
 .agregarAliasCobro > span{flex:1;display:grid;gap:2px;}
 .agregarAliasCobro b{font-size:16px;}
 .agregarAliasCobro small{font-size:13px;color:var(--texto-sec);}
+/* Terminados de un comercio: su pastilla al lado de la lupa, con X. */
+.pastillaComercioHistorial{position:sticky;left:48px;z-index:2;display:inline-flex;flex:0 0 auto;align-items:center;gap:8px;height:40px;padding:0 4px 0 4px;border:2px solid var(--acento);border-radius:999px;background:var(--superficie);box-sizing:border-box;}
+.pastillaComercioHistorial .avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;color:#fff;font-size:11px;font-weight:800;flex:0 0 auto;}
+.pastillaComercioHistorial strong{font-size:14.5px;color:var(--texto);white-space:nowrap;max-width:44vw;overflow:hidden;text-overflow:ellipsis;}
+html .pastillaComercioHistorial .quitarComercioHistorial{display:grid;place-items:center;width:28px;height:28px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;flex:0 0 auto;}
+/* La fecha de cada día, siempre en una línea. */
+html[data-tema] #listaVistaPedidos .marcadorFechaHistorial strong{white-space:nowrap;}

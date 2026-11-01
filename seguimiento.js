@@ -535,14 +535,14 @@
     if (encabezado) encabezado.insertBefore(botonVolver, encabezado.firstChild);
 
     function cambiarVista(nueva) {
-        const nube = enLaNube();
-        vistaActual = nube && nueva === "pedidos" ? "pedidos" : "nuevo";
+        // Sin cuenta también hay lista: solo «Terminados» (2026-11-01).
+        vistaActual = nueva === "pedidos" ? "pedidos" : "nuevo";
         if (vistaActual !== "pedidos") dejarDeElegir();
 
         pantalla.dataset.vista = vistaActual;
         vista.classList.toggle("oculto", vistaActual !== "pedidos");
         if (tituloPantalla) tituloPantalla.textContent = vistaActual === "pedidos" ? "Pedidos" : TITULO_NUEVO;
-        botonVolver.classList.toggle("oculto", !nube || vistaActual !== "nuevo");
+        botonVolver.classList.toggle("oculto", vistaActual !== "nuevo");
         actualizarBotonNuevo();
 
         if (vistaActual === "pedidos") {
@@ -636,6 +636,8 @@
 
     // "A cobrar" (T28) solo aparece para quien cobra.
     function etapasVisibles() {
+        // Sin cuenta los pedidos no tienen pasos: todos son «Terminados».
+        if (!enLaNube()) return ETAPAS.filter(etapa => etapa.id === "historial");
         const cobra = puedeCobrar();
         return ETAPAS.filter(etapa => !etapa.soloCobra || cobra);
     }
@@ -709,6 +711,20 @@
     function dibujarFilaPeriodo(historial) {
         const sinPeriodo = historial.filter(registro => coincideConElHistorial(registro, "todos"));
         [...filaPeriodo.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
+        // "Ver sus pedidos" de un comercio: su pastilla al lado de la lupa,
+        // con una X que vuelve a todos (repaso de Pedidos).
+        if (comercioHistorial) {
+            const pastilla = crear("span", "pastillaComercioHistorial");
+            const avatar = crear("span", "avatar", iniciales(comercioHistorial));
+            avatar.style.background = colorAvatar(comercioHistorial);
+            const quitar = crear("button", "quitarComercioHistorial");
+            quitar.type = "button";
+            quitar.setAttribute("aria-label", "Ver los pedidos de todos los comercios");
+            quitar.innerHTML = window.icono ? window.icono("cerrarX", 14) : "×";
+            quitar.addEventListener("click", () => verTodosHistorial.click());
+            pastilla.append(avatar, crear("strong", "", comercioHistorial), quitar);
+            filaPeriodo.appendChild(pastilla);
+        }
         [...fechaHistorial.options].forEach(opcion => {
             const boton = crear("button", "filtroEtapa");
             boton.type = "button";
@@ -734,9 +750,8 @@
         fechaHistorial.value = periodoHistorial;
         dibujarFilaPeriodo(historial || []);
 
-        const aviso = idPedidoHistorial
-            ? "Mostrando solamente el pedido seleccionado"
-            : comercioHistorial ? "Mostrando solamente pedidos de: " + comercioHistorial : "";
+        // El comercio elegido va en su pastilla; el aviso queda para un pedido solo.
+        const aviso = idPedidoHistorial ? "Mostrando solamente el pedido seleccionado" : "";
         textoAvisoHistorial.textContent = aviso;
         avisoFiltroHistorial.classList.toggle("oculto", !aviso);
     }
@@ -767,6 +782,7 @@
         });
 
         // "Otros": del mismo tamaño que las demás; dice cuál se está viendo.
+        if (!cantidadesOtros.length) return;
         const elegida = cantidadesOtros.find(item => item.etapa.id === etapaActual);
         const otros = crear("button", "filtroEtapa filtroEtapaOtros");
         otros.type = "button";
@@ -2370,6 +2386,11 @@
         guardados.hidden = true;
         guardados.appendChild(crearBoton("btnAccion secundario botonVerMensajePedido opcionMenuFicha", "Ver mensaje del pedido", "verMensaje"));
         if (puedeEliminar(pedido)) guardados.appendChild(crearBoton("btnAccion secundario peligroPedido opcionMenuFicha", "Eliminar pedido", "eliminar"));
+        // Sin cuenta (los Terminados son el historial): se borra del celular,
+        // con "Deshacer", como en el Historial de antes.
+        else if (!enLaNube() && typeof eliminarPedidoDelHistorial === "function") {
+            guardados.appendChild(crearBoton("btnAccion secundario peligroPedido opcionMenuFicha", "Eliminar pedido", "eliminarLocal"));
+        }
 
         cuerpo.append(tarjeta, guardados);
 
@@ -3007,6 +3028,10 @@
         else if (boton.dataset.accion === "verComprobante") abrirComprobante(id);
         else if (boton.dataset.accion === "imprimir") window.impresionVendeFrio?.elegirCopias(id);
         else if (boton.dataset.accion === "verMensaje") verMensajeDelPedido(id);
+        else if (boton.dataset.accion === "eliminarLocal") {
+            cerrarFicha();
+            eliminarPedidoDelHistorial(id);
+        }
     });
 
     // "Entendido" (T25): cierra la franja de las ediciones para esta persona.
@@ -5193,14 +5218,12 @@
         // hoy", "Pedidos semana" y "Último pedido" de Inicio, "Historial" de
         // un comercio e "Ir a historial". Devuelve false en el modo personal.
         abrirHistorial({ periodo = "todos", comercio = "", idPedido = "" } = {}) {
-            if (!enLaNube()) return false;
-
             etapaActual = "historial";
             listaElegida = null;
             comercioHistorial = String(comercio || "").trim();
             idPedidoHistorial = String(idPedido || "");
-            // Como antes: el buscador muestra el comercio elegido.
-            busquedaHistorial = comercioHistorial;
+            // El comercio va en su pastilla, al lado de la lupa (repaso).
+            busquedaHistorial = "";
             periodoHistorial = ["hoy", "semana", "mes"].includes(periodo) ? periodo : "todos";
             if (idFichaAbierta) cerrarFicha();
 

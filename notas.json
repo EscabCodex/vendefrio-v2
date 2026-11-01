@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 257,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "historial",
+      "titulo": "El historial son los Terminados",
+      "texto": "Los pedidos de un comercio se ven en Terminados, con su nombre arriba. También sin cuenta."
+    },
+    {
       "version": 256,
       "fecha": "2026-11-01",
       "tipo": "mejor",

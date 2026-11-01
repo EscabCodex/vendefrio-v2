@@ -347,7 +347,8 @@ function actualizarFiltroActivoHistorial() {
 // "Historial" de la sección Pedido (seguimiento.js). Devuelve true si lo
 // abrió ahí; en el modo personal sigue esta pantalla de siempre.
 function abrirHistorialEnPedidos(opciones) {
-    return usaNubeReal() && Boolean(window.seguimientoVendeFrio?.abrirHistorial?.(opciones));
+    // Con o sin cuenta, el historial son los Terminados de Pedidos.
+    return Boolean(window.seguimientoVendeFrio?.abrirHistorial?.(opciones));
 }
 
 // periodo (opcional): "mes" para los números "este mes" de la ficha.
