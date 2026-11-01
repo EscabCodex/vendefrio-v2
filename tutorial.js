@@ -76,8 +76,8 @@
             mientras: "Elegí la marca, escribí el nombre del producto y su precio, y guardalo.",
             listo: (antes, ahora) => ahora.productos > antes.productos },
         { tipo: "hacer", pantalla: "menu", objetivo: ".bottom-nav .nav-nuevo", titulo: "4. El primer pedido",
-            texto: "Tocá el + de abajo. Desde cualquier pantalla carga un pedido nuevo.",
-            mientras: "Elegí el comercio que creaste, sumá el producto con el + y tocá «Guardar pedido».", sinMostrar: true,
+            texto: "Tocá el + de abajo. Desde cualquier pantalla creás lo que necesites.",
+            mientras: "Tocá «Nuevo pedido», elegí el comercio que creaste, sumá el producto con el + y tocá «Guardar pedido».", sinMostrar: true,
             listo: (antes, ahora) => ahora.pedidos > antes.pedidos },
         { tipo: "ver", pantalla: "rutas", objetivo: "#btnElegirRutas", titulo: "5. La ruta del día",
             texto: "Con «Elegir» marcás los comercios que vas a visitar hoy." },
@@ -109,7 +109,7 @@
         { tipo: "ver", pantalla: "catalogo", objetivo: '.bottom-nav [data-pantalla="catalogo"]', titulo: "Catálogo",
             texto: "Los productos con su precio." },
         { tipo: "ver", pantalla: "menu", objetivo: ".bottom-nav .nav-nuevo", titulo: "Cargar un pedido",
-            texto: "Con el + de abajo cargás un pedido: elegís el comercio, sumás los productos y tocás «Guardar pedido»." },
+            texto: "Con el + de abajo creás todo. Con «Nuevo pedido» elegís el comercio, sumás los productos y tocás «Guardar pedido»." },
         { tipo: "ver", pantalla: "menu", objetivo: '.bottom-nav [data-pantalla="pedido"]', titulo: "Pedidos",
             texto: "Acá seguís cada pedido: armarlo, repartirlo y entregarlo deslizando «Entregado»." },
         { tipo: "ver", pantalla: "rutas", objetivo: "#btnNavegarRuta", titulo: "Rutas",
@@ -324,12 +324,20 @@
     // Mientras completa la ventana (o cuando ya lo hizo y falta cerrarla),
     // un cartel chico que no tapa nada: abajo si hay una ventana arriba, y
     // arriba en las pantallas enteras como Nuevo pedido.
+    // Dónde va el cartel: cambia si se abre o cierra una ventana (por
+    // ejemplo, el menú "Crear" del +) o si aparece Nuevo pedido.
+    function lugarMientras() {
+        return (document.querySelector(".modal:not(.oculto)") ? "v" : "") +
+            (visible(document.querySelector("#pantallaPedido:not(.oculto) .piePedido")) ? "p" : "");
+    }
+
     function modoMientras(texto, conMostrar) {
         capa.dataset.modo = "mientras";
+        capa.dataset.lugar = lugarMientras();
         capa.querySelector(".tutorialTexto").textContent = texto;
         botones({ saltarPaso: true, mostrarBoton: conMostrar });
         ubicar(null, false);
-        globo.classList.toggle("abajo", Boolean(document.querySelector(".modal:not(.oculto)")));
+        globo.classList.toggle("abajo", Boolean(document.querySelector(".modal:not(.oculto):not(.menuCrear)")));
         // En Nuevo pedido, arriba está el comercio: el cartel va justo
         // encima de «Guardar pedido».
         const pie = document.querySelector("#pantallaPedido:not(.oculto) .piePedido");
@@ -356,7 +364,9 @@
         }
         const libre = visible(objetivo) && !ventanaAbierta(objetivo);
         if (libre && capa.dataset.modo !== "hacer") modoHacer(paso, objetivo);
-        else if (!libre && capa.dataset.modo === "hacer") modoMientras(paso.mientras || paso.texto, !paso.sinMostrar && !ventanaAbierta(objetivo));
+        else if (!libre && (capa.dataset.modo === "hacer" || (capa.dataset.modo === "mientras" && capa.dataset.lugar !== lugarMientras()))) {
+            modoMientras(paso.mientras || paso.texto, !paso.sinMostrar && !ventanaAbierta(objetivo));
+        }
     }
 
     function detenerReloj() {

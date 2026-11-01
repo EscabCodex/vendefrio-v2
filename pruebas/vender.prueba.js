@@ -73,7 +73,8 @@ test("vender: lo de siempre, favoritos y ¿seguro?", async ({ page }, testInfo) 
     await cargarPedido(page, false);
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator("#cliente").blur();
 
@@ -137,7 +138,8 @@ test("vender: ofertas con fecha y ficha del comercio completa", async ({ page },
 
     // Nuevo pedido: el precio de oferta y el total.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator("#cliente").fill("Almacén Don Pepe");
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const palito = page.locator(".listaProdutos .fila", { hasText: "Palito bombón" });

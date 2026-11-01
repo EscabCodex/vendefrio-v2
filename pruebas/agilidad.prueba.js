@@ -13,7 +13,9 @@ test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page 
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await expect(barra).toBeHidden();
 
-    await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await page.locator("#cliente").fill("Anibal");
     await page.locator("#cliente").blur();
@@ -50,17 +52,10 @@ test("agilidad: el pedido a medio cargar se retoma desde Inicio", async ({ page 
     await expect(barra).toBeHidden();
 });
 
-// Mantener apretado el + abre el menú rápido (hoja desde abajo); el toque
-// corto sigue abriendo Nuevo pedido.
-async function mantenerApretado(page, localizador) {
-    const caja = await localizador.boundingBox();
-    await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(650);
-    await page.mouse.up();
-}
-
-test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) => {
+// El + abre el menú "Crear" (el menú ⋯ de la app): arriba la venta del
+// día (Nuevo pedido, la próxima parada, repetir el último), después lo que
+// se carga una vez (comercio, marca, producto) y el gasto.
+test("agilidad: el + abre el menú Crear con todo lo que se puede crear", async ({ page }) => {
     await entrarSinCuenta(page);
     // Un celular nuevo arranca vacío: se carga la lista de fábrica de antes.
     await page.evaluate(() => { guardarComercios(COMERCIOS); guardarProductos(PRODUCTOS); window.actualizarDashboard?.(); });
@@ -68,14 +63,17 @@ test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) 
     const mas = page.locator(".bottom-nav .nav-nuevo");
 
     // Sin pedidos guardados: no ofrece repetir.
-    await mantenerApretado(page, mas);
-    const hoja = page.locator(".hojaMenuRapido");
+    await mas.click();
+    const hoja = page.locator(".menuCrear");
     await expect(hoja).toBeVisible();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await expect(hoja.getByRole("button", { name: /Repetir el último pedido/ })).toHaveCount(0);
     const proxima = (await page.locator("#dashProximaParada .paradaInfo strong").textContent()).trim();
     await expect(hoja.getByRole("button", { name: /Pedido para / })).toContainText(proxima);
-    await capturar(page, "agilidad-02-menu-rapido");
+    for (const nombre of ["Nuevo pedido", "Comercio", "Marca", "Producto", "Gasto"]) {
+        await expect(hoja.getByRole("button", { name: nombre, exact: true })).toBeVisible();
+    }
+    await capturar(page, "agilidad-02-menu-crear");
 
     // Pedido para la próxima parada: Nuevo pedido con ese comercio.
     await hoja.getByRole("button", { name: /Pedido para / }).click();
@@ -93,8 +91,8 @@ test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) 
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // Repetir el último pedido: lo carga igual en Nuevo pedido.
-    await mantenerApretado(page, mas);
-    await expect(hoja.getByRole("button", { name: /Repetir el último pedido/ })).toContainText(proxima);
+    await mas.click();
+    await expect(hoja.getByRole("button", { name: /Repetir el último pedido/ })).toBeVisible();
     await hoja.getByRole("button", { name: /Repetir el último pedido/ }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await expect(page.locator("#cliente")).toHaveValue(proxima);
@@ -102,9 +100,14 @@ test("agilidad: mantener apretado el + abre el menú rápido", async ({ page }) 
     await page.getByRole("button", { name: "Entendido" }).click();
     await page.locator("#cerrarCargaPedido").click();
 
-    // El toque corto abre Nuevo pedido, como siempre.
+    // El menú se cierra con la X (donde estaba el +) y abre lo elegido.
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     await mas.click();
-    await expect(page.locator("#pantallaPedido")).toBeVisible();
-    await expect(page.locator(".hojaMenuRapido")).toHaveCount(0);
+    await expect(hoja).toBeVisible();
+    await page.getByRole("button", { name: "Cerrar las opciones" }).click();
+    await expect(hoja).toHaveCount(0);
+    await mas.click();
+    await hoja.getByRole("button", { name: "Comercio", exact: true }).click();
+    await expect(hoja).toHaveCount(0);
+    await expect(page.getByText("Nuevo comercio", { exact: true }).first()).toBeVisible();
 });

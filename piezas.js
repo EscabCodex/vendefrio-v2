@@ -722,9 +722,9 @@
     // alTocar }, "-"] }): se abre redondeado junto al botón, con el fondo
     // apenas difuminado; el ⋯ pasa a ser una X. Se cierra tocando afuera, la
     // X, una opción o el atrás del celular (es una .modal).
-    function menu(ancla, { titulo = "", sub = "", items = [] } = {}) {
+    function menu(ancla, { titulo = "", sub = "", items = [], clase = "" } = {}) {
         const fondo = document.createElement("div");
-        fondo.className = "modal menuFlotante";
+        fondo.className = "modal menuFlotante" + (clase ? " " + clase : "");
         const caja = document.createElement("div");
         caja.className = "menuFlotanteCaja";
         caja.setAttribute("role", "menu");

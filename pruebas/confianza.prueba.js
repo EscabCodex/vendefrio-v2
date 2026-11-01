@@ -168,7 +168,8 @@ test("confianza: archivar productos y comercios con deshacer", async ({ page }, 
     await expect(page.locator("#grillaCatalogo")).toContainText("Archivado");
     await capturar(page, "confianza-08-archivados");
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     await expect(page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" })).toBeVisible();
     await expect(page.locator(".listaProdutos .fila", { hasText: "Palito bombón" })).toHaveCount(0);

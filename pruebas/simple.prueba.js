@@ -26,7 +26,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     });
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
 
     // 1. Marcas desplegables (T97).
     const frioSur = page.locator('.marca[data-marca="Frío Sur"]');
@@ -119,7 +120,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
 
     // Lo de este pedido no queda para el siguiente.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#cambiosPedido")).toHaveCount(0);
     await expect(page.locator("#fechaEntregaPedido")).toHaveCount(0);
     await expect(frioSur.locator(".precioEspecial")).toHaveCount(0);
@@ -195,7 +197,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     // 4. Un empleado sin permiso de ver la plata no cambia precios.
     const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);
     await empleado.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
-    await empleado.getByRole("button", { name: "Nuevo pedido" }).click();
+    await empleado.locator(".bottom-nav .nav-nuevo").click();
+    await empleado.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     const frioSurEmpleado = empleado.locator('.marca[data-marca="Frío Sur"]');
     await frioSurEmpleado.locator(".tituloMarca").click();
     await expect(frioSurEmpleado.locator(".fila", { hasText: "Helado 1 kg" })).toBeVisible();
@@ -307,7 +310,8 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 3. "Vaciar pedido" sin "¿Seguro?": se vacía y "Deshacer" lo devuelve.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator("#cliente").blur();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });

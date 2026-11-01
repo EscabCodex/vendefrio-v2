@@ -261,13 +261,15 @@ test.describe("en la nube", () => {
         await page.locator('.bottom-nav [data-pantalla="menu"]').click();
         await expect(page.locator("#pantallaMenu")).toBeVisible();
         // Desde Inicio: el atrás vuelve a Inicio, no a la lista de Pedidos.
-        await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+        await page.locator(".bottom-nav .nav-nuevo").click();
+        await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
         await expect(page.locator("#pantallaPedido")).toHaveAttribute("data-vista", "nuevo");
         await atrasDelCelular(page);
         await expect(page.locator("#pantallaMenu")).toBeVisible();
         // Desde la lista de Pedidos: vuelve a la lista y después a Inicio.
         await irAPedidos(page);
-        await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+        await page.locator(".bottom-nav .nav-nuevo").click();
+        await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
         await expect(page.locator("#pantallaPedido")).toHaveAttribute("data-vista", "nuevo");
         await atrasDelCelular(page);
         await expect(page.locator("#vistaPedidos")).toBeVisible();

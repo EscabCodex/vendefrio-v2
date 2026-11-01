@@ -31,7 +31,9 @@ test("raros: el mismo pedido no se guarda dos veces sin querer", async ({ page }
     await expect(page.locator("#pantallaMenu")).toBeVisible();
     const cuantos = () => page.evaluate(() => obtenerHistorial().length);
 
-    await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Kiosco Luna");
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();

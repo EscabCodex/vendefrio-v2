@@ -125,7 +125,8 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
     await page.keyboard.press("Escape");
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await expect(page.locator("#avisoDeudaPedido")).toContainText("Debe $ 7.600");
     await expect(page.locator("#avisoDeudaPedido")).toContainText("1 pedido sin cobrar · tope $ 15.000");
@@ -231,7 +232,8 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await page.keyboard.press("Escape");
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });

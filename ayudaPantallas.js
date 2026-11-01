@@ -14,7 +14,7 @@
         pedidos: { titulo: "Pedidos", pasos: [
             "Acá están los pedidos de hoy, separados por lo que falta hacer.",
             "Tocá un pedido para armarlo o entregarlo. Adentro tenés los pasos en orden.",
-            "Para cargar uno nuevo, tocá el + de abajo."] },
+            "Para cargar uno nuevo, tocá el + de abajo y «Nuevo pedido»."] },
         pantallaPedido: { titulo: "Nuevo pedido", pasos: [
             "Arriba, elegí el comercio.",
             "Tocá una marca para abrirla y sumá cada producto con el +.",

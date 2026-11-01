@@ -8,7 +8,7 @@
         {
             id: "cargarPedido", titulo: "Cargar un pedido",
             claves: /(cargo|cargar|hago|hacer|armo|tomo|tomar|anoto|anotar) (un )?pedido|pedido nuevo|nuevo pedido/,
-            pasos: ["Tocá el + de abajo o «Cargar un pedido» en Inicio.", "Elegí el comercio.", "Sumá los productos con el +.", "Tocá «Guardar pedido»."]
+            pasos: ["Tocá el + de abajo y «Nuevo pedido», o «Cargar un pedido» en Inicio.", "Elegí el comercio.", "Sumá los productos con el +.", "Tocá «Guardar pedido»."]
         },
         {
             id: "armarPedido", titulo: "Armar un pedido",

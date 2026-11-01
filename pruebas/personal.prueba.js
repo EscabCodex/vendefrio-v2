@@ -26,7 +26,8 @@ test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ pa
         agregarMarca("Pastas Sur") && agregarProducto("Pastas Sur", { nombre: "Ravioles", precio: 2500 }));
 
     // Nuevo pedido: comercio, productos y observaciones.
-    await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#pantallaPedido")).toBeVisible();
     await page.locator("#cliente").fill("Anibal");
     await page.locator("#cliente").blur();

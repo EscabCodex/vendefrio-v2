@@ -38,7 +38,8 @@ test("repasada: la hoja de copias del ticket queda arriba de la ficha", async ({
     // Al terminar un pedido, "Imprimir ticket" desde "Pedido generado": la
     // hoja de copias se crea ahora (antes que la ficha del pedido).
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     if (!(await helado.isVisible())) await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();

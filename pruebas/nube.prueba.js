@@ -177,7 +177,7 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(1);
     await expect(pie.getByRole("button", { name: "Salir a repartir (1)" })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeHidden();
+    await expect(page.locator(".bottom-nav").getByRole("button", { name: "Crear" })).toBeHidden();
     await page.getByRole("checkbox", { name: /Kiosco Luna/ }).click();
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(2);
     await expect(page.locator(".fichaPedido")).toBeHidden();
@@ -188,7 +188,7 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await expect(pie).toBeHidden();
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(tarjetas).toHaveCount(3);
-    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeVisible();
+    await expect(page.locator(".bottom-nav").getByRole("button", { name: "Crear" })).toBeVisible();
 
     // "Marcar todos" y confirmar con el resumen.
     await mantenerApretada(page, tarjetas.first());

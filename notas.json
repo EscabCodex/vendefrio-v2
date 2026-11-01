@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 255,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "mas",
+      "titulo": "Creá todo desde el + de abajo",
+      "texto": "El + abre un menú: pedido, comercio, marca, producto, lista de precios, gasto y más."
+    },
+    {
       "version": 254,
       "fecha": "2026-11-01",
       "tipo": "arreglado",

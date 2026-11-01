@@ -27,7 +27,7 @@ test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ pag
     // página y la prueba misma trabaría el celular.
     const botones = { "Comercios": "comercios", "Pedidos": "pedido", "Catálogo": "catalogo", "Más": "mas" };
     const barra = nombre => page.locator(nombre === "Nuevo pedido"
-        ? '.bottom-nav [data-accion="nuevoPedido"]'
+        ? '.bottom-nav [data-accion="crear"]'
         : `.bottom-nav [data-pantalla="${botones[nombre]}"]`);
 
     async function peorTraba(tocar) {
@@ -64,7 +64,8 @@ test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ pag
     expect(await peorTraba(() => barra("Más").click()), "Más (ms)").toBeLessThan(TRABA_MAXIMA);
 
     // Nuevo pedido y los "+".
-    expect(await peorTraba(() => barra("Nuevo pedido").click()), "Nuevo pedido (ms)").toBeLessThan(TRABA_MAXIMA);
+    expect(await peorTraba(() => barra("Nuevo pedido").click()), "Menú Crear (ms)").toBeLessThan(TRABA_MAXIMA);
+    expect(await peorTraba(() => page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click()), "Nuevo pedido (ms)").toBeLessThan(TRABA_MAXIMA);
     await page.locator("#cliente").fill("Comercio 5");
     await page.locator("#cliente").blur();
     await page.locator(".tituloMarca").first().click();

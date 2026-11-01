@@ -573,5 +573,10 @@
     }
 
     window.listasDePrecios = listas;
-    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista, abrirPantalla, cambiarLista, exportarPlanilla, abrirFolleto };
+    // Desde el menú "Crear" del +: pide el nombre y abre la lista nueva.
+    function nueva() {
+        pedirNombre({ titulo: "Lista nueva", boton: "Crear lista", alGuardar: nombre => { setTimeout(() => crearLista(nombre), 220); } });
+    }
+
+    window.listasPreciosVendeFrio = { listas, comerciosEn, abrir, abrirLista, abrirPantalla, cambiarLista, exportarPlanilla, abrirFolleto, nueva, puedeCrear: puedeEditar };
 }());

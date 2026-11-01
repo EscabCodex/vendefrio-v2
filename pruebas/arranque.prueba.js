@@ -28,7 +28,8 @@ test("arranque: con 200 comercios y 600 pedidos abre sin trabarse", async ({ pag
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
     await expect(page.locator("#listaComerciosAdmin .comercioCard").first()).toBeVisible();
     await bajarHastaElFinal(page.locator("#listaComerciosAdmin"), ".comercioCard", 199);
-    await page.locator(".bottom-nav").getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#productos .tituloMarca").first()).toBeVisible();
 });
 

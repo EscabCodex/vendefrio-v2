@@ -63,7 +63,8 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     // Don Pepe usa "Almacenes"; en este pedido se elige "Súper".
     await page.evaluate(() => actualizarComercioPorNombre("Almacén Don Pepe", { listaPrecios: "Almacenes" }));
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
@@ -94,7 +95,8 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
 
     // El pedido siguiente vuelve a arrancar con la lista del comercio.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     await expect(page.locator("#listaDelPedido")).toContainText("Precios: Almacenes");

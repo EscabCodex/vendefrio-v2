@@ -34,7 +34,8 @@ async function registrarDistribuidora(page, testInfo) {
 // Carga un pedido de 2 helados y 1 palito (sin captura si no se pide).
 async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, comercio);
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     // Con varias marcas, cada una se abre tocándola (T97): solo si está cerrada.

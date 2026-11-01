@@ -1076,8 +1076,6 @@ html .configMenuAjustes > .configGrupoTitulo:first-child{margin-top:8px;}
 html .chipsComercio{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
 html .chipEstado[data-tono="peligro"]{background:var(--peligro-bg);color:var(--peligro) !important;}
 /* Menú rápido del + (mantener apretado): cada opción con su detalle abajo. */
-.hojaMenuRapido .pzOpcion{min-height:62px;padding-top:6px;padding-bottom:6px;}
-.opcionRapidaSub{display:block;color:var(--texto-sec);font-size:14px;font-weight:500;margin-top:2px;}
 
 /* Notas de cambios (notasDeCambios.js): la tarjeta de Inicio avisa que se
    puede tocar, y la ventana en el medio (como las notas de los juegos)
@@ -1297,7 +1295,11 @@ html .menuFlotanteCaja .menuFlotanteItem svg{flex-shrink:0;color:var(--acento-os
 html[data-tema="oscuro"] .menuFlotanteCaja .menuFlotanteItem svg{color:var(--acento);}
 html .menuFlotanteCaja .menuFlotanteItem.principal{background:var(--acento);color:var(--acento-txt);}
 html .menuFlotanteCaja .menuFlotanteItem.principal svg{color:var(--acento-txt);}
+html[data-tema="oscuro"] .menuFlotanteCaja .menuFlotanteItem.principal :is(svg, span){color:var(--acento-txt) !important;}
 html .menuFlotanteCaja .menuFlotanteItem.peligro,html .menuFlotanteCaja .menuFlotanteItem.peligro svg{color:#d93a3a;}
+/* Menú "Crear" del +: por encima de la barra de abajo, que también se difumina. */
+html .modal.menuFlotante.menuCrear{z-index:10050 !important;}
+.menuCrear .menuFlotanteCaja{width:min(300px,calc(100vw - 24px));}
 html .menuFlotanteX{position:fixed;display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--acento);color:var(--acento-txt);box-shadow:0 6px 16px rgba(0,0,0,.25);}
 
 /* Repaso de Catálogo: filtros con el número adentro arriba del buscador; las

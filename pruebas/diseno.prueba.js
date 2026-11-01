@@ -39,7 +39,9 @@ test("diseño: cada pantalla principal con el estilo nuevo", async ({ page }, te
     await page.locator("#modalFichaPedido").click({ position: { x: 10, y: 10 } });
     await expect(page.locator(".fichaPedido")).toBeHidden();
 
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     await expect(async () => {

@@ -86,7 +86,11 @@ test("tutorial: lo básico de verdad al crear la cuenta y uno chico por pantalla
     await expect(globo).toContainText("4. El primer pedido");
     await esperarFocoSobre(page, ".bottom-nav .nav-nuevo");
     await page.locator(".bottom-nav .nav-nuevo").click();
-    await expect(globo).toContainText("Elegí el comercio que creaste");
+    await expect(globo).toContainText("Tocá «Nuevo pedido»");
+    await capturar(page, "tutorial-05-menu-crear");
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
+    await expect(page.locator("#pantallaPedido")).toBeVisible();
+    await expect(globo).toContainText("elegí el comercio que creaste");
     await page.locator("#cliente").fill("Almacén Don Pepe");
     const ravioles = page.locator(".listaProdutos .fila", { hasText: "Ravioles x 1 kg" });
     if (!(await ravioles.isVisible())) await page.locator(".tituloMarca", { hasText: "Pastas La Nonna" }).click();

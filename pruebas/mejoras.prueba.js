@@ -47,7 +47,8 @@ test("mejoras: faltante, vuelto, avisos por tarea y 1 unidad", async ({ page }, 
     await irAPedidos(page);
 
     // "1 unidad", no "1 unidades".
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Kiosco Luna");
     await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#palabraUnidadesPedido")).toHaveText("unidad");
@@ -215,7 +216,8 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
 
     // Dictado: lo no entendido pregunta «¿cuál es?».
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await page.getByRole("button", { name: "Más opciones del pedido" }).click();
     await page.getByRole("button", { name: "Dictar o pegar pedido" }).click();
     const dictado = page.locator(".ventanaDictado");
@@ -339,7 +341,9 @@ test("mejoras: nuevo pedido con «Quiere» o «Tiene» y el cartelito en Pedidos
     await irAPedidos(page);
     await cargarPedido(page, false, "Super Norte");
 
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Kiosco Luna");
     const modo = page.locator("#modoPedido");
     await expect(modo.getByRole("button", { name: "Quiere" })).toHaveAttribute("aria-pressed", "true");
