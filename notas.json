@@ -14,8 +14,8 @@
       "fecha": "2026-10-28",
       "tipo": "arreglado",
       "icono": "check",
-      "titulo": "Los números de Inicio muestran justo lo que contaron",
-      "texto": "Con cuenta, «Cargados», «Cargados hoy», «Vendido hoy» y «Ver todos» abren esos mismos pedidos, en todos los pasos, con un cartelito arriba. «Visitados hoy» abre solo los visitados hoy."
+      "titulo": "Cada número de Inicio abre lo que contó",
+      "texto": "«Cargados hoy», «Vendido hoy» y otros abren justo esos pedidos. «Visitados hoy» abre solo los de hoy."
     },
     {
       "version": 251,
@@ -23,14 +23,14 @@
       "tipo": "arreglado",
       "icono": "check",
       "titulo": "Cada número te lleva a lo que dice",
-      "texto": "«Entregados» abre los terminados de la semana o de hoy, «Productos distintos» abre lo más vendido hoy, «Ver todos» abre los pedidos de hoy y los números «este mes» de un comercio abren sus pedidos del mes."
+      "texto": "«Entregados» abre los de la semana o de hoy y los números «este mes» de un comercio, sus pedidos del mes."
     },
     {
       "version": 250,
       "fecha": "2026-10-28",
       "tipo": "arreglado",
       "icono": "check",
-      "titulo": "La barra de visitados muestra los visitados",
+      "titulo": "La barra de visitados abre los visitados",
       "texto": "En Inicio, al tocar «Visitados esta semana» ahora ves los comercios que ya visitaste."
     },
     {
