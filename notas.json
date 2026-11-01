@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 254,
+      "fecha": "2026-11-01",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Checklist más fluida",
+      "texto": "El tilde se ve al instante y no se destilda solo. La ficha ya no salta con cada tilde, así no tocás otro producto sin querer."
+    },
+    {
       "version": 253,
       "fecha": "2026-11-01",
       "tipo": "mejor",

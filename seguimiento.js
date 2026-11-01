@@ -97,6 +97,11 @@
     let etapaActual = "paraArmar";
     let mostrando = TANDA;
     let idFichaAbierta = "";
+    // Redibujo de la ficha pedido (pedirDibujarFicha) y hora del último
+    // tilde (pedirDibujarLista espera mientras se tilda).
+    let relojFicha = null;
+    let ultimoTilde = 0;
+    let fichaDibujada = { pedido: null, sinSubir: false };
 
     // Filtros del Historial (T27b), como en la sección Historial de antes.
     let busquedaHistorial = "";
@@ -1871,6 +1876,10 @@
         // llegaba un cambio justo al tocarlo, como la confirmación de la nube).
         const menuAbierto = Boolean(cuerpo.querySelector(".menuFichaPedido:not(.oculto)"));
 
+        // Al rehacerla, la ficha queda en el mismo lugar (no salta).
+        const caja = cuerpo.closest(".modalContenido");
+        const desplazado = caja ? caja.scrollTop : 0;
+
         cuerpo.innerHTML = "";
 
         const titulo = crear("h2", "", String(pedido.comercio || "SIN NOMBRE").trim());
@@ -1878,7 +1887,8 @@
 
         const etiquetas = crear("div", "etiquetasFichaPedido");
         etiquetas.appendChild(etiquetaEstado(estado));
-        if (sinSubir(pedido)) etiquetas.appendChild(etiquetaSinSubir());
+        fichaDibujada = { pedido, sinSubir: sinSubirHaceRato(pedido) };
+        if (fichaDibujada.sinSubir) etiquetas.appendChild(etiquetaSinSubir());
 
         // En "Cargado" y "En preparación" (T24, T29b) la ficha es la
         // checklist: comercio, autor y observaciones arriba, los productos
@@ -1992,6 +2002,31 @@
             menu.classList.remove("oculto");
             abrirMenu.setAttribute("aria-expanded", "true");
         }
+        if (caja && caja.scrollTop !== desplazado) caja.scrollTop = desplazado;
+    }
+
+    // "Pendiente de sincronizar" en la ficha: solo si lleva un rato sin
+    // subir (sin señal). Cada tilde lo mostraba medio segundo, la fila de
+    // arriba cambiaba de alto, la pantalla se movía y el dedo tocaba otro
+    // producto.
+    const ESPERA_SIN_SUBIR_FICHA = 4000;
+    const sinSubirDesde = new Map();
+    let relojSinSubir = null;
+
+    function sinSubirHaceRato(pedido) {
+        const id = String(pedido.id || "");
+        if (!sinSubir(pedido)) {
+            sinSubirDesde.delete(id);
+            return false;
+        }
+        if (!sinSubirDesde.has(id)) sinSubirDesde.set(id, Date.now());
+        const falta = sinSubirDesde.get(id) + ESPERA_SIN_SUBIR_FICHA - Date.now();
+        if (falta <= 0) return true;
+        clearTimeout(relojSinSubir);
+        relojSinSubir = setTimeout(() => {
+            if (idFichaAbierta === id && sinSubir(pedido)) dibujarFicha();
+        }, falta + 50);
+        return false;
     }
 
     // Ficha de un "Histórico" (T27b): sin seguimiento ni pasos. Se ve el
@@ -2741,8 +2776,45 @@
         return fila;
     }
 
+    // Tildes de este celular que la ficha todavía no ve en los datos (la
+    // nube o la copia del celular tardan un momento en un celular barato).
+    // Mientras tanto la ficha muestra lo que se tocó: antes se veía
+    // destildado un instante y después tildado otra vez.
+    const tildesEnCamino = new Map();
+    const ESPERA_TILDE_EN_CAMINO = 15000;
+
+    function conTildesEnCamino(pedido, preparacion) {
+        const id = String(pedido.id || "");
+        let cambio = false;
+        const lineas = preparacion.lineas.map(linea => {
+            const clave = id + "|" + linea.clave;
+            const enCamino = tildesEnCamino.get(clave);
+            if (!enCamino) return linea;
+            if (linea.faltante || Boolean(linea.lista) === enCamino.tildado || Date.now() > enCamino.hasta) {
+                tildesEnCamino.delete(clave);
+                return linea;
+            }
+            cambio = true;
+            return { ...linea, lista: enCamino.tildado };
+        });
+        if (!cambio) return preparacion;
+        const listos = lineas.filter(linea => linea.lista && !linea.faltante).length;
+        const pendientes = lineas.filter(linea => !linea.lista && !linea.faltante).length;
+        return { ...preparacion, lineas, listos, pendientes, completa: pendientes === 0 };
+    }
+
+    // Dibuja el progreso (el texto y la barra) en el lugar.
+    function pintarProgreso(progreso, preparacion) {
+        progreso.querySelector(".textoProgresoChecklist").textContent = preparacion.listos + " de " + preparacion.productos + " listos" +
+            (preparacion.faltantes ? "  ·  " + textoFaltantes(preparacion.faltantes) : "");
+        const barra = progreso.querySelector(".barraChecklist");
+        barra.setAttribute("aria-valuenow", String(preparacion.listos));
+        barra.firstChild.style.width = (preparacion.productos ? Math.round(preparacion.listos * 100 / preparacion.productos) : 100) + "%";
+        progreso.classList.toggle("completa", Boolean(preparacion.completa));
+    }
+
     function dibujarChecklist(pedido) {
-        const preparacion = preparacionDe(pedido);
+        const preparacion = conTildesEnCamino(pedido, preparacionDe(pedido));
         const seccion = seccionFicha("Checklist");
         seccion.classList.add("checklistPedido");
 
@@ -2798,10 +2870,35 @@
     function tildar(id, clave, tildado) {
         try {
             window.nubeVendeFrio.tildarProducto(id, clave, tildado);
-            if (navigator.vibrate) navigator.vibrate(12);
         } catch (error) {
+            tildesEnCamino.delete(id + "|" + clave);
             avisarError(error);
+            if (idFichaAbierta === id) dibujarFicha();
         }
+    }
+
+    // El tilde se ve al instante (la fila, el texto y la barra) y se guarda
+    // recién después de mostrarlo: en un celular barato guardar y redibujar
+    // tardaba medio segundo y el dedo ya estaba en otro producto.
+    function tildarAlInstante(id, clave, casilla, tildado) {
+        tildesEnCamino.set(id + "|" + clave, { tildado, hasta: Date.now() + ESPERA_TILDE_EN_CAMINO });
+        if (navigator.vibrate) navigator.vibrate(12);
+        ultimoTilde = Date.now();
+        const fila = casilla?.closest(".lineaChecklist");
+        if (fila) {
+            fila.dataset.estado = tildado ? "lista" : "pendiente";
+            casilla.setAttribute("aria-checked", tildado ? "true" : "false");
+            const pedido = buscarPedido(id);
+            const progreso = fila.closest(".checklistPedido")?.querySelector(".progresoChecklist");
+            if (pedido && progreso) pintarProgreso(progreso, conTildesEnCamino(pedido, preparacionDe(pedido)));
+        }
+        requestAnimationFrame(() => setTimeout(() => {
+            if (!lineaDelPedido(id, clave)) {
+                tildesEnCamino.delete(id + "|" + clave);
+                return;
+            }
+            tildar(id, clave, tildado);
+        }, 0));
     }
 
     // Tocar un producto: lo tilda o lo destilda. Si lo tildó otro, pregunta
@@ -2816,17 +2913,11 @@
             return;
         }
 
-        if (!linea.lista) {
-            // Se ve tildado al instante; la nube (o la copia del celular)
-            // confirma enseguida y la ficha se redibuja.
-            casilla?.closest(".lineaChecklist")?.setAttribute("data-estado", "lista");
-            tildar(id, clave, true);
-            return;
-        }
+        const enCamino = tildesEnCamino.get(id + "|" + clave);
+        const seVeLista = enCamino && Date.now() <= enCamino.hasta ? enCamino.tildado : Boolean(linea.lista);
 
-        if (esMio(linea.tilde && linea.tilde.persona)) {
-            casilla?.closest(".lineaChecklist")?.setAttribute("data-estado", "pendiente");
-            tildar(id, clave, false);
+        if (!seVeLista || esMio(linea.tilde && linea.tilde.persona) || (enCamino && !linea.lista)) {
+            tildarAlInstante(id, clave, casilla, !seVeLista);
             return;
         }
 
@@ -4557,10 +4648,28 @@
     // Lo demás (la ficha abierta, la entrega y el cobro) sigue al instante.
     function pedirDibujarLista() {
         if (relojLista) return;
+        // Mientras se tilda en la ficha, la lista de atrás espera: cada tilde
+        // la rehacía y trababa el celular justo entre un toque y otro.
+        const espera = idFichaAbierta ? Math.max(80, ultimoTilde + 1500 - Date.now()) : 80;
         relojLista = setTimeout(() => {
             relojLista = null;
             if (vistaVisible()) dibujarLista();
-        }, 80);
+        }, espera);
+    }
+
+    // Lo que llega de la nube con la ficha abierta (cada tilde trae dos o
+    // tres avisos) la rehace una sola vez, y no mientras se está tildando:
+    // el tilde ya se ve al instante (tildarAlInstante).
+    function pedirDibujarFicha() {
+        clearTimeout(relojFicha);
+        relojFicha = setTimeout(() => {
+            relojFicha = null;
+            if (!idFichaAbierta) return;
+            // Si solo llegó "ya se subió" y no cambia nada a la vista, no se rehace.
+            const pedido = buscarPedido(idFichaAbierta);
+            if (pedido && pedido === fichaDibujada.pedido && sinSubirHaceRato(pedido) === fichaDibujada.sinSubir) return;
+            dibujarFicha();
+        }, Math.max(120, ultimoTilde + 600 - Date.now()));
     }
 
     function dibujar({ listaEnUnRato = false } = {}) {
@@ -4568,7 +4677,10 @@
             if (listaEnUnRato) pedirDibujarLista();
             else dibujarLista();
         }
-        if (idFichaAbierta) dibujarFicha();
+        if (idFichaAbierta) {
+            if (listaEnUnRato) pedirDibujarFicha();
+            else dibujarFicha();
+        }
         if (idResumenAbierto) dibujarResumen();
         if (entregaAbierta) revisarEntrega();
         if (cobroPorAbrir) abrirCobroPendienteDeAbrir();
