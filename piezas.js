@@ -750,6 +750,8 @@
             // Cantidad (repaso de Pedidos): el globito de la derecha, como en los filtros.
             const cantidad = item.cantidad === undefined || item.cantidad === null ? "" : `<span class="filtroEtapaCantidad menuFlotanteCantidad">${esc(item.cantidad)}</span>`;
             boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span class="menuFlotanteTexto">${esc(item.texto)}</span>` + cantidad;
+            // Con cantidad, se lee "En preparación (2)" (como los botones de antes).
+            if (cantidad) boton.setAttribute("aria-label", item.texto + " (" + item.cantidad + ")");
             boton.addEventListener("click", () => {
                 cerrarMenu();
                 if (typeof item.alTocar === "function") item.alTocar();

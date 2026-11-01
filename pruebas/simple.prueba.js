@@ -133,20 +133,19 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("Entregar mañana");
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("2 × Helado 1 kg");
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("Roto");
-    await expect(ficha.locator(".datosFichaPedido")).toContainText("$ 8.000");
+    await expect(ficha.locator('.cuadroFicha[data-dato="total"]')).toContainText("$ 8.000");
     await ficha.locator(".seccionDetallesPedido").scrollIntoViewIfNeeded();
     await capturar(page, "simple-05-ficha-con-cambios");
-    // Los cuatro pasos del pedido, cada uno con su botón (pedido del dueño).
+    // Repaso de Pedidos: a la vista, solo el paso de ahora (con el deslizador
+    // para entregar desde antes); los otros pasos van en el ⋯.
     const pasos = ficha.locator(".pasoFicha");
-    await expect(pasos).toHaveCount(4);
-    await expect(pasos.nth(0)).toContainText("Paso 1: Armá el pedido");
-    await expect(pasos.nth(1)).toContainText("Paso 2: Salí a repartir");
-    await expect(pasos.nth(1).getByRole("button", { name: "Salir a repartir" })).toBeVisible();
-    await expect(pasos.nth(2)).toContainText("Paso 3: Entregalo");
-    await expect(pasos.nth(2).locator(".deslizador")).toBeVisible();
-    await expect(pasos.nth(3)).toContainText("Paso 4: Registrá el cobro");
-    await expect(pasos.nth(3)).toContainText("Se registra después de entregar.");
-    await pasos.nth(1).evaluate(paso => paso.scrollIntoView({ block: "center" }));
+    await expect(pasos).toHaveCount(1);
+    await expect(pasos.first()).toContainText("Armá el pedido");
+    await expect(pasos.first().locator(".deslizador")).toBeVisible();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await expect(ficha.getByRole("menuitem", { name: "Salir a repartir" })).toBeVisible();
+    await ficha.getByRole("button", { name: "Cerrar opciones" }).click();
+    await pasos.first().evaluate(paso => paso.scrollIntoView({ block: "center" }));
     await capturar(page, "simple-05b-pasos-del-pedido");
 
     // En la nube: el pedido con su precio y los detalles aparte.
@@ -168,7 +167,7 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     const etapas = page.locator("#filtrosEtapaPedidos");
     await expect(etapas.getByRole("tab")).toHaveText([/Para armar/, /Para entregar/, /Terminados/, /Otros/]);
     await etapas.getByRole("tab", { name: /Otros/ }).click();
-    const otros = page.getByRole("dialog", { name: "Otros pedidos" });
+    const otros = page.getByRole("menu", { name: "Otros pedidos" });
     await expect(otros.getByRole("button")).toHaveText([/A cobrar/, /Incidencias/, /Cancelados/]);
     await capturar(page, "simple-06-otros-pedidos");
     await otros.getByRole("button", { name: /Cancelados/ }).click();

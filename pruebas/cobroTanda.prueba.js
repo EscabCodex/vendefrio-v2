@@ -31,8 +31,8 @@ test("nube: cobrar varios pedidos seguidos", async ({ page }, testInfo) => {
     // Elegir todos y entregarlos en tanda.
     await mantenerApretada(page, tarjetas.first());
     await page.getByRole("button", { name: "Marcar todos" }).click();
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Entregado (3)" }).click();
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "Entregado (3)" }).click();
     await confirmar.getByRole("button", { name: "Entregado (3)" }).click();
 
     // Cobro 1 de 3: efectivo, con el total escrito.
@@ -70,7 +70,7 @@ test("nube: cobrar varios pedidos seguidos", async ({ page }, testInfo) => {
     const dia = page.locator("#listaVistaPedidos .marcadorFechaHistorial");
     await expect(dia).toHaveCount(1);
     await expect(dia).toContainText(/^Hoy · .*3 pedidos · \$ 29\.400$/);
-    await expect(page.locator("#resumenVistaPedidos")).toContainText("3 pedidos  ·  9 unidades  ·  $ 29.400");
+    await expect(page.locator("#resumenVistaPedidos")).toContainText("3 pedidos · 9 u · $ 29.400");
     await capturar(page, "cobroTanda-04a-terminados-por-dia");
     await mantenerApretada(page, tarjetas.first());
     await page.getByRole("button", { name: "Marcar todos" }).click();
@@ -86,7 +86,7 @@ test("nube: cobrar varios pedidos seguidos", async ({ page }, testInfo) => {
 
     // En «A cobrar» (en "Otros") queda el saltado, y se cobra.
     await etapas.getByRole("tab", { name: /Otros/ }).click();
-    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await page.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     await expect(tarjetas).toHaveCount(1);
     await mantenerApretada(page, tarjetas.first());
     await pie.getByRole("button", { name: "Cobrar (1)" }).click();

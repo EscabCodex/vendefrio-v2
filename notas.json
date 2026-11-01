@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 256,
+      "fecha": "2026-11-01",
+      "tipo": "mejor",
+      "icono": "lista",
+      "titulo": "Pedidos con diseño nuevo",
+      "texto": "Tarjetas más claras, lupa, ficha centrada con ⋯, elegir varios y cobro con tu alias y QR."
+    },
+    {
       "version": 255,
       "fecha": "2026-11-01",
       "tipo": "mejor",

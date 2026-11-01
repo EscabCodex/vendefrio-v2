@@ -55,7 +55,7 @@ test("reparto: prueba de entrega y devolución", async ({ page }, testInfo) => {
 
     // Cobro: después de la entrega, como siempre.
     await expect(page.getByText("¿Cómo pagó?")).toBeVisible();
-    await page.locator("#modalCobroPedido").getByRole("button", { name: "Volver" }).click();
+    await page.locator("#modalCobroPedido").getByRole("button", { name: "Cerrar" }).click();
 
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Entregado");
     const prueba = ficha.locator(".seccionPruebaEntrega");
@@ -111,7 +111,8 @@ test("reparto: ya llego por WhatsApp y repartidores en el mapa", async ({ page }
     // Un pedido En reparto: el aviso para compartir la ubicación.
     await cargarPedido(page, false);
     const ficha = await abrirPedido(page);
-    await ficha.getByRole("button", { name: "Salir a repartir" }).click();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await ficha.getByRole("menuitem", { name: "Salir a repartir" }).click();
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("En reparto");
     await ficha.getByRole("button", { name: "Cerrar", exact: true }).click();
     await expect(ficha).toBeHidden();

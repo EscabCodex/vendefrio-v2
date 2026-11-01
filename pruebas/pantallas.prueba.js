@@ -48,6 +48,7 @@ test("pantallas: con 200 comercios y 600 pedidos ninguna se traba", async ({ pag
     await expect(lista.locator(":scope > :last-child")).toHaveClass(/filaComerciosArchivados/);
 
     // Buscar mientras se dibuja: solo quedan los que coinciden.
+    await page.getByRole("button", { name: "Buscar comercio" }).click();
     await page.locator("#buscarComercio").fill("Comercio 12");
     await expect(lista.locator(".comercioCard")).toHaveCount(11);
     await page.waitForTimeout(1000);

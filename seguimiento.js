@@ -1734,7 +1734,7 @@
         menu.innerHTML = "";
         menu.setAttribute("aria-label", "Más opciones del pedido de " + String(fichaDibujada?.pedido?.comercio || "").trim());
 
-        const principal = cuerpo.querySelector(".accionesFichaPedido .pasoSiguientePedido:not(.incompleto)");
+        const principal = cuerpo.querySelector(".pasosFichaPedido .pasoSiguientePedido:not(.incompleto)");
         const opciones = [...cuerpo.querySelectorAll(".menuFichaPedido .opcionMenuFicha")];
         const peligro = opciones.filter(boton => boton.classList.contains("peligroPedido"));
         const comunes = opciones.filter(boton => !peligro.includes(boton));
@@ -2673,11 +2673,13 @@
         const indice = pasos.findIndex(paso => !paso.hecho);
         if (indice < 0) return null;
         const paso = pasos[indice];
-        // Lo de los pasos que vienen después va al ⋯ (el deslizador, no).
+        // Lo de los pasos que vienen después va al ⋯. El deslizador para
+        // entregar desde antes (T29b) sigue a la vista, abajo de la caja.
+        const deslizadorDespues = [];
         pasos.forEach((otro, cual) => {
             if (cual === indice || otro.hecho) return;
             otro.elementos.forEach(elemento => {
-                if (elemento.classList.contains("deslizador")) elemento.remove();
+                if (elemento.classList.contains("deslizador")) deslizadorDespues.push(elemento);
                 else if (elemento.matches("button")) elemento.classList.add("botonPasoDespues");
                 else elemento.remove();
             });
@@ -2702,6 +2704,7 @@
                     : "Lo hace quien tiene ese permiso.";
             item.appendChild(crear("small", "pasoFichaNota", nota));
         }
+        deslizadorDespues.forEach(elemento => item.appendChild(elemento));
         caja.appendChild(item);
         return caja;
     }
@@ -3517,6 +3520,35 @@
         return modal;
     }
 
+    // Repaso de Pedidos: las hojas de la ficha llevan arriba el avatar del
+    // comercio, un título corto, una línea chica y la X (sin explicación
+    // larga ni botón de volver).
+    function cabezaHojaPedido(modal, { titulo, sub, comercio, alCerrar }) {
+        const contenido = modal.querySelector(".modalContenido");
+        const h2 = contenido.querySelector("h2");
+        let cabeza = contenido.querySelector(".cabezaHojaPedido");
+        if (!cabeza) {
+            cabeza = crear("div", "cabezaHojaPedido");
+            const avatar = crear("div", "avatar");
+            const letras = crear("div", "textoCabezaHoja");
+            const cerrar = crear("button", "botonRedondoFicha cerrarHojaPedido");
+            cerrar.type = "button";
+            cerrar.setAttribute("aria-label", "Cerrar");
+            cerrar.innerHTML = window.icono ? window.icono("cerrarX", 22) : "×";
+            h2.before(cabeza);
+            letras.append(h2, crear("small", "subCabezaHoja", ""));
+            cabeza.append(avatar, letras, cerrar);
+            modal.classList.add("hojaPedidoNueva");
+        }
+        const nombre = String(comercio || "").trim();
+        const avatar = cabeza.querySelector(".avatar");
+        avatar.textContent = iniciales(nombre || "?");
+        avatar.style.background = colorAvatar(nombre || "?");
+        h2.textContent = titulo;
+        cabeza.querySelector(".subCabezaHoja").textContent = sub || "";
+        cabeza.querySelector(".cerrarHojaPedido").onclick = alCerrar;
+    }
+
     function abrirFaltante(id, clave) {
         if (!puedeAnotarFaltantes()) return;
 
@@ -3542,6 +3574,13 @@
         elegirMotivoFaltante(MOTIVOS_FALTANTE.includes(observacionVieja) ? observacionVieja : observacionVieja ? MOTIVO_OTRO : "");
         dibujarFaltan();
 
+        const pedidoFaltante = buscarPedido(id);
+        cabezaHojaPedido(modal, {
+            titulo: "Falta " + String(linea.item.producto || "Sin producto"),
+            sub: (linea.cantidad === 1 ? "Se pidió 1" : "Se pidieron " + linea.cantidad) + " · avisa a quien lo cargó",
+            comercio: pedidoFaltante ? pedidoFaltante.comercio : "",
+            alCerrar: cerrarFaltante
+        });
         modal.classList.remove("oculto");
     }
 
@@ -3711,6 +3750,12 @@
         idResumenAbierto = id;
         textoResumenDibujado = "";
         const modal = crearModalResumen();
+        cabezaHojaPedido(modal, {
+            titulo: "Marcar preparado",
+            sub: String(pedido.comercio || "").trim() + " · revisá que coincida",
+            comercio: pedido.comercio,
+            alCerrar: cerrarResumen
+        });
         dibujarResumen();
         if (idResumenAbierto) modal.classList.remove("oculto");
     }
@@ -3977,6 +4022,12 @@
         };
 
         const modal = crearModalEntrega();
+        cabezaHojaPedido(modal, {
+            titulo: conCambios ? "Entregar con cambios" : "Entregar pedido",
+            sub: String(pedido.comercio || "").trim(),
+            comercio: pedido.comercio,
+            alCerrar: cerrarEntrega
+        });
         dibujarEntrega();
         modal.classList.remove("oculto");
 
@@ -4569,6 +4620,52 @@
         seguirCobroEnTanda();
     }
 
+    function tarjetaAliasCobro(cobrarQr, pedido) {
+        const d = cobrarQr.datos();
+        const tarjeta = crear("div", "tarjetaAliasCobro");
+        if (d.qr) {
+            const imagen = document.createElement("img");
+            imagen.className = "qrAliasCobro";
+            imagen.alt = "QR para transferir";
+            imagen.src = d.qr;
+            tarjeta.appendChild(imagen);
+        }
+        const texto = crear("div", "textoAliasCobro");
+        if (d.alias) texto.append(crear("small", "etiquetaAliasCobro", "ALIAS:"), crear("strong", "aliasCobro", d.alias.toUpperCase()));
+        if (d.titular) texto.append(crear("small", "etiquetaAliasCobro", "A NOMBRE DE:"), crear("span", "titularAliasCobro", d.titular));
+        const botones = crear("div", "botonesAliasCobro");
+        if (d.alias) {
+            const copiar = crear("button", "");
+            copiar.type = "button";
+            copiar.innerHTML = window.icono ? window.icono("copiar", 14) : "";
+            copiar.appendChild(crear("span", "", "Copiar alias"));
+            copiar.addEventListener("click", () => cobrarQr.copiar?.(d.alias));
+            botones.appendChild(copiar);
+        }
+        const grande = crear("button", "mostrarAliasCobro");
+        grande.type = "button";
+        grande.id = "mostrarAliasCobro";
+        grande.innerHTML = window.icono ? window.icono("qr", 14) : "";
+        grande.appendChild(crear("span", "", "Mostrar grande"));
+        grande.addEventListener("click", () => {
+            if (!cobroAbierto) return;
+            const abierto = cobroAbierto;
+            cobrarQr.mostrar({
+                comercio: String(pedido.comercio || ""),
+                monto: leerMonto(abierto.monto),
+                alConfirmar: () => {
+                    if (cobroAbierto !== abierto) return;
+                    abierto.forma = "transferencia";
+                    guardarCobro();
+                }
+            });
+        });
+        botones.appendChild(grande);
+        texto.appendChild(botones);
+        tarjeta.appendChild(texto);
+        return tarjeta;
+    }
+
     function dibujarCobro() {
         const cuerpo = document.getElementById("cuerpoCobroPedido");
         if (!cuerpo || !cobroAbierto) return;
@@ -4582,6 +4679,15 @@
         }
         const volver = document.getElementById("volverCobroPedido");
         if (volver) volver.textContent = colaCobro ? "Saltar" : "Volver";
+        // Repaso: la X cierra (en tanda, termina); "Saltar" queda solo en tanda.
+        if (volver) volver.hidden = !colaCobro;
+        const pedidoCobro = buscarPedido(cobroAbierto.id);
+        cabezaHojaPedido(document.getElementById("modalCobroPedido"), {
+            titulo: "¿Cómo pagó?",
+            sub: pedidoCobro ? String(pedidoCobro.comercio || "").trim() : "",
+            comercio: pedidoCobro ? pedidoCobro.comercio : "",
+            alCerrar: () => (colaCobro ? terminarCobroEnTanda() : cerrarCobro(true))
+        });
 
         const pedido = buscarPedido(cobroAbierto.id);
         if (!pedido) {
@@ -4606,6 +4712,14 @@
             const total = crear("div", "totalFichaPedido totalEntrega");
             total.append(crear("span", "", "Total a cobrar"), crear("strong", "", textoMonto(entrega.total)));
             cuerpo.appendChild(total);
+            // Repaso: el cartel de la app con lo que falta cobrar.
+            const cartel = crear("div", "pzBanner pzBanAviso cartelHojaCobro");
+            cartel.innerHTML = window.piezas ? window.piezas.ico("moneda", 22) : "";
+            const letras = crear("div", "");
+            letras.append(crear("strong", "", anterior ? "Cobrado · " + String(textoCobro(anterior)).split("·")[0].trim() : "Falta cobrar"),
+                crear("small", "", anterior ? "Elegí cómo quedó" : "Elegí cómo pagó"));
+            cartel.append(letras, crear("span", "montoCartelCobro", textoMonto(entrega.total)));
+            cuerpo.appendChild(cartel);
         }
 
         const opciones = crear("div", "opcionesCobro");
@@ -4616,8 +4730,10 @@
             ["transferencia", "Transferencia"],
             ["pendiente", "Todavía no pagó"]
         ].forEach(([id, nombre]) => {
-            const boton = crear("button", "opcionCobro", nombre);
+            const boton = crear("button", "opcionCobro");
             boton.type = "button";
+            boton.innerHTML = window.icono ? window.icono({ efectivo: "moneda", transferencia: "celular", pendiente: "reloj" }[id], 26) : "";
+            boton.appendChild(crear("span", "", nombre));
             boton.dataset.cobro = id;
             boton.setAttribute("aria-pressed", forma === id ? "true" : "false");
             if (forma === id) boton.classList.add("activa");
@@ -4709,26 +4825,23 @@
             foto.appendChild(acciones);
             cuerpo.appendChild(foto);
 
-            // Alias y QR de la distribuidora (T77): se le muestran al comercio.
+            // Alias y QR de la distribuidora (T77), ahí mismo (repaso de
+            // Pedidos): el QR a la izquierda y, a su lado, el alias, a nombre
+            // de quién, "Copiar alias" y "Mostrar grande". Sin alias, el
+            // dueño lo carga en el momento.
             const cobrarQr = window.cobrarQrVendeFrio;
             if (cobrarQr && cobrarQr.hay()) {
-                const mostrar = crear("button", "btnAccion secundario mostrarAliasCobro", "Mostrar alias y QR");
-                mostrar.type = "button";
-                mostrar.id = "mostrarAliasCobro";
-                mostrar.addEventListener("click", () => {
-                    if (!cobroAbierto) return;
-                    const abierto = cobroAbierto;
-                    cobrarQr.mostrar({
-                        comercio: String(pedido.comercio || ""),
-                        monto: leerMonto(abierto.monto),
-                        alConfirmar: () => {
-                            if (cobroAbierto !== abierto) return;
-                            abierto.forma = "transferencia";
-                            guardarCobro();
-                        }
-                    });
-                });
-                cuerpo.appendChild(mostrar);
+                cuerpo.appendChild(tarjetaAliasCobro(cobrarQr, pedido));
+            } else if (cobrarQr && window.piezas?.esDueno?.() !== false) {
+                const agregar = crear("button", "agregarAliasCobro");
+                agregar.type = "button";
+                agregar.innerHTML = window.icono ? window.icono("mas", 20) : "+";
+                const letras = crear("span", "");
+                letras.append(crear("b", "", "Agregar tu alias y QR"), crear("small", "", "Para mostrárselo al comercio y que te transfiera"));
+                agregar.appendChild(letras);
+                agregar.insertAdjacentHTML("beforeend", window.icono ? window.icono("chevDerecha", 18) : "");
+                agregar.addEventListener("click", () => cobrarQr.editar(() => { if (cobroAbierto) dibujarCobro(); }));
+                cuerpo.appendChild(agregar);
             }
         }
 

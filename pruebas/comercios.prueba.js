@@ -40,6 +40,7 @@ test("comercios: lista, tarjeta, datos del comercio y ficha", async ({ page }) =
     await expect(pantalla.locator(".comercioCard")).toHaveCount(1);
     await expect(pantalla.locator("#cantidadComercios")).toHaveText("1 comercio");
     await filtros.getByRole("button", { name: /Todos/ }).click();
+    await pantalla.getByRole("button", { name: "Buscar comercio" }).click();
     await pantalla.locator("#buscarComercio").fill("luna");
     await expect(pantalla.locator(".comercioCard")).toHaveCount(1);
     await pantalla.locator("#buscarComercio").fill("");

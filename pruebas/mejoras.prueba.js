@@ -124,12 +124,12 @@ test("mejoras: elegir varios, catálogo en lista y ronda de WhatsApp", async ({ 
         await expect(page.locator(".pieTandaPedidos")).toBeVisible({ timeout: 1000 });
     }).toPass();
     await page.getByRole("checkbox", { name: /Almacén Don Pepe/ }).click();
-    await page.getByRole("button", { name: /Mover a otro paso/ }).click();
-    const mover = page.getByRole("dialog", { name: "Mover a otro paso" });
-    await expect(mover).toContainText("Preparado (2)");
+    await page.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    const mover = page.getByRole("menu");
+    await expect(mover.getByRole("button", { name: "Preparado (2)" })).toBeVisible();
     await capturar(page, "mejoras-04-mover-a-otro-paso");
-    await page.evaluate(() => window.piezas.cerrar());
-    await page.getByRole("button", { name: "Cancelar" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Dejar de elegir" }).click();
 
     // Catálogo en lista.
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
@@ -356,7 +356,7 @@ test("mejoras: nuevo pedido con «Quiere» o «Tiene» y el cartelito en Pedidos
     await page.locator("#modalPedido").click({ position: { x: 10, y: 10 } });
 
     const tarjetas = page.locator(".tarjetaSeguimiento");
-    await expect(tarjetas.filter({ hasText: "Kiosco Luna" }).locator(".badge.tipoTiene")).toHaveText("Tiene");
-    await expect(tarjetas.filter({ hasText: "Super Norte" }).locator(".badge.tipoQuiere")).toHaveText("Quiere");
+    await expect(tarjetas.filter({ hasText: "Kiosco Luna" }).locator(".tieneQuiere.tipoTiene")).toHaveText("Tiene");
+    await expect(tarjetas.filter({ hasText: "Super Norte" }).locator(".tieneQuiere.tipoQuiere")).toHaveText("Quiere");
     await capturar(page, "mejoras-16-pedidos-tiene-y-quiere");
 });

@@ -53,7 +53,7 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
     // Pedidos > A cobrar: "Te deben" y "ver por comercio".
     await irAPedidos(page);
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await page.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     const banner = page.locator("#verACobrarPorComercio");
     await expect(banner).toContainText("Te deben $ 19.600");
     await banner.click();
@@ -158,12 +158,16 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await page.evaluate(id => window.nubeVendeFrio.registrarCobro(id, { forma: "efectivo", monto: 9800 }), ids[0]);
     await irAPedidos(page);
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await page.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     await page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first().click();
     const ficha = page.locator(".fichaPedido");
     await ficha.getByRole("button", { name: "Registrar cobro" }).click();
     await page.locator("#modalCobroPedido").getByRole("button", { name: "Transferencia" }).click();
-    await page.getByRole("button", { name: "Mostrar alias y QR" }).click();
+    // Repaso de Pedidos: el alias y el QR se ven ahí mismo, con "Mostrar grande".
+    const tarjetaAlias = page.locator("#modalCobroPedido .tarjetaAliasCobro");
+    await expect(tarjetaAlias).toContainText("DISTRI.PRUEBA.MP");
+    await expect(tarjetaAlias.locator("img")).toBeVisible();
+    await tarjetaAlias.getByRole("button", { name: "Mostrar grande" }).click();
     const qr = page.getByRole("dialog", { name: "Cobrar por transferencia" });
     await expect(qr).toContainText("Almacén Don Pepe paga $ 9.800");
     await expect(qr).toContainText("Mostrale esta pantalla");
@@ -171,7 +175,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await expect(qr.locator("#copiarAlias")).toContainText("distri.prueba.mp");
     await capturar(page, "plata-05-cobrar-qr");
     await qr.getByRole("button", { name: "Ya me transfirió" }).click();
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" })).toContainText("Transferencia");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Cobrado · Transferencia");
     expect(await page.evaluate(id => window.nubeVendeFrio.cobroDelPedido(obtenerHistorial().find(p => p.id === id)).forma, ids[1])).toBe("transferencia");
     await ficha.getByRole("button", { name: "Cerrar", exact: true }).click();
 

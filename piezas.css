@@ -1561,3 +1561,48 @@ html .pieTandaPedidos.soloMasTanda{left:auto;}
 html .pieTandaPedidos .botonTanda{flex:1;min-height:50px;margin:0;border-radius:999px;box-shadow:none;}
 html .pieTandaPedidos .botonMasTanda{display:grid;place-items:center;flex:0 0 auto;width:50px;height:50px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;}
 html .pieTandaPedidos .botonMasTanda.oculto{display:none;}
+/* Hojas de la ficha del pedido: cabeza con avatar, título corto y X. */
+.cabezaHojaPedido{display:flex;align-items:center;gap:12px;margin:0 0 12px;}
+.cabezaHojaPedido .avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;flex:0 0 auto;}
+.cabezaHojaPedido .textoCabezaHoja{flex:1;min-width:0;}
+html .hojaPedidoNueva .cabezaHojaPedido h2{margin:0;font-size:20px;line-height:1.2;text-align:left;overflow-wrap:anywhere;}
+.cabezaHojaPedido .subCabezaHoja{display:block;margin-top:2px;font-size:13.5px;color:var(--texto-sec);}
+html .cabezaHojaPedido .botonRedondoFicha{position:static;display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);box-shadow:none;}
+html .hojaPedidoNueva .explicacionTextoPedido{display:none;}
+html body .hojaPedidoNueva .modalBotones .btnModalCancelar{display:none !important;}
+html body .hojaPedidoNueva .modalBotones #volverCobroPedido:not([hidden]){display:flex !important;}
+html .hojaPedidoNueva .modalBotones:not(:has(.btnModalConfirmar, #volverCobroPedido:not([hidden]))){display:none;}
+html .hojaPedidoNueva .modalBotones .btnModalConfirmar{flex:1 1 100%;width:100%;max-width:none;min-height:52px;border-radius:999px;}
+html .hojaPedidoNueva .numeroResumen{background:var(--gris-claro);border:0;border-radius:16px;box-shadow:none;}
+/* Falta: motivos como pastillas que se acomodan y "Falta N" naranja. */
+html .hojaPedidoNueva .motivosFaltante{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;}
+html .hojaPedidoNueva .motivosFaltante .motivoFaltante{display:inline-flex;align-items:center;flex:0 0 auto;width:auto;max-width:none;min-height:40px;padding:0 16px;border-radius:999px;font-size:14.5px;}
+html .hojaPedidoNueva .faltanCuantosFaltante:not(:empty){display:inline-flex;align-self:flex-start;width:max-content;margin:8px 0;padding:3px 12px;border-radius:999px;background:var(--pendiente-bg);color:var(--pendiente) !important;font-weight:800;}
+html .hojaPedidoNueva .contadorFaltante button{border-radius:50%;}
+html .hojaPedidoNueva .alternarEntrega{border-radius:999px;}
+/* Cobro: el cartel "Falta cobrar" y tres opciones con ícono. */
+html .hojaPedidoNueva .cartelHojaCobro{margin:0 0 12px;}
+html .hojaPedidoNueva .cartelHojaCobro .montoCartelCobro{font-size:19px;}
+html .hojaPedidoNueva .cuerpoCobroPedido > .totalFichaPedido{display:none;}
+html .hojaPedidoNueva .opcionesCobro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+html .hojaPedidoNueva .opcionCobro{grid-column:auto;display:grid;justify-items:center;align-content:center;gap:6px;min-height:86px;border-radius:18px;font-size:13.5px;}
+html .hojaPedidoNueva .opcionCobro svg{color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .hojaPedidoNueva .opcionCobro:not(.activa) svg{color:var(--acento) !important;}
+html .hojaPedidoNueva .opcionCobro[data-cobro="pendiente"]:not(.activa) svg{color:var(--pendiente) !important;}
+html .hojaPedidoNueva .opcionCobro.activa svg{color:currentColor;}
+/* Transferencia: tarjeta del alto del QR con el alias a la derecha. */
+.tarjetaAliasCobro{display:flex;align-items:stretch;gap:10px;margin:12px 0 4px;padding:10px;border-radius:18px;background:var(--gris-claro);color:var(--texto);}
+.qrAliasCobro{width:112px;height:112px;flex:0 0 auto;padding:3px;box-sizing:border-box;border-radius:12px;background:#fff;object-fit:contain;}
+.textoAliasCobro{flex:1 1 0;min-width:0;display:flex;flex-direction:column;justify-content:space-between;}
+.etiquetaAliasCobro{font-size:10.5px;line-height:1.2;font-weight:800;letter-spacing:.06em;color:var(--texto-sec);}
+.aliasCobro{margin:0 0 3px;font-size:18px;font-weight:800;line-height:1.15;letter-spacing:.02em;color:var(--acento-oscuro);word-break:break-all;}
+html[data-tema="oscuro"] .aliasCobro{color:var(--acento) !important;}
+.titularAliasCobro{font-size:13.5px;line-height:1.2;font-weight:700;color:var(--texto);}
+.botonesAliasCobro{display:flex;gap:5px;margin-top:6px;}
+html .botonesAliasCobro button{display:inline-flex;align-items:center;justify-content:center;flex:1 1 0;gap:3px;min-width:0;min-height:30px;margin:0;padding:0 5px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);box-shadow:none;font-weight:700;font-size:11.5px;white-space:nowrap;}
+html[data-tema="oscuro"] .botonesAliasCobro button{background:var(--superficie);color:var(--acento);}
+html .agregarAliasCobro{display:flex;align-items:center;gap:12px;width:100%;min-height:0;margin:12px 0 4px;padding:14px;border:2px dashed var(--acento);border-radius:18px;background:transparent;box-shadow:none;color:var(--acento-oscuro);text-align:left;}
+html[data-tema="oscuro"] .agregarAliasCobro{color:var(--acento);}
+.agregarAliasCobro > span{flex:1;display:grid;gap:2px;}
+.agregarAliasCobro b{font-size:16px;}
+.agregarAliasCobro small{font-size:13px;color:var(--texto-sec);}

@@ -146,6 +146,7 @@ test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser
     await cargarPedido(page, false);
     await imprimirTicket(page, "Almacén Don Pepe");
     const ficha = page.locator(".fichaPedido");
+    await ficha.getByRole("button", { name: "Ver todo lo que pasó" }).click();
     const impresionDueno = ficha.locator(".pasoSeguimiento.impresion", { hasText: "Jere" });
     await expect(impresionDueno).toContainText("Ticket impreso");
     await expect(impresionDueno).toContainText("Dos copias (comercio y distribuidora)");
@@ -154,6 +155,8 @@ test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser
     await irAPedidos(empleado);
     await empleado.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).click();
     const fichaEmpleado = empleado.locator(".fichaPedido");
+    // Repaso de Pedidos: lo que pasó se ve al tocar "Ver todo lo que pasó".
+    await fichaEmpleado.getByRole("button", { name: "Ver todo lo que pasó" }).click();
     await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion", { hasText: "Jere" })).toBeVisible();
     await imprimirTicket(empleado, "Almacén Don Pepe", "Una copia");
     await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion").first()).toContainText("Maxi");
@@ -220,9 +223,9 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
         window.nubeVendeFrio.entregarPedido(pedido.id, {});
     });
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toContainText("A cobrar");
+    await expect(page.getByRole("menu", { name: "Otros pedidos" })).toContainText("A cobrar");
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toBeHidden();
+    await expect(page.getByRole("menu", { name: "Otros pedidos" })).toBeHidden();
 
     // Rutas: todos los comercios y "Optimizar ruta".
     await abrirMas(page);

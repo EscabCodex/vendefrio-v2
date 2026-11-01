@@ -124,7 +124,7 @@ test("tutorial: lo básico de verdad al crear la cuenta y uno chico por pantalla
     await capturar(page, "tutorial-07-entregar");
     await deslizar(page, "Deslizá para marcar Entregado");
     await expect(page.getByText("¿Cómo pagó?")).toBeVisible();
-    await page.locator("#modalCobroPedido").getByRole("button", { name: "Volver" }).click();
+    await page.locator("#modalCobroPedido").getByRole("button", { name: "Cerrar" }).click();
     await expect(globo).toContainText("Cerrá la ventana para seguir");
     await page.locator(".fichaPedido").getByRole("button", { name: "Cerrar", exact: true }).click();
 
