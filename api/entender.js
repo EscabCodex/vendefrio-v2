@@ -39,7 +39,7 @@ const CON_COMERCIO = ["ir", "visitado", "ficha"];
 // T160: los pasos de una frase con varias cosas. Guardar un pedido o
 // imprimir lo confirma la persona en el celular antes de hacerlo.
 // Tanda 2 (2026-11-02): también crea una lista de precios nueva.
-const ACCIONES_PASO = ["nuevoPedido", "anotarPedido", "imprimir", "primero", "crearLista", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
+const ACCIONES_PASO = ["nuevoPedido", "anotarPedido", "imprimir", "primero", "crearLista", "folleto", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
 const PASO_CON_COMERCIO = ["anotarPedido", "primero", "ir", "visitado", "ficha"];
 const MAXIMO_PASOS = 5;
 
@@ -176,9 +176,10 @@ Varias cosas de una sola frase ("pasos"): si pide más de una cosa, o algo que n
 - primero: cambiar el orden del recorrido para ir primero a "comercio" ("vamos a lo de Pepe primero").
 - nuevoPedido, ir, visitado, ficha, pantalla, proximaParada, llegue: como arriba.
 - crearLista: crear una lista de precios nueva llamada "nombre" (corta, por ejemplo "Mayoristas"), con "porcentaje" sobre el precio general (10 = 10% más cara, -5 = 5% más barata, 0 = la carga a mano). No uses el nombre de una lista que ya existe.
+- folleto: armar el folleto de precios para imprimir o guardar en PDF (marca por marca, todos los productos con su precio), para darle a un comercio o mostrar. En "lista" poné la lista exacta si la nombra; si es para un comercio, poné el comercio en "comercio" y "lista" "" (la app usa la lista de ese comercio); si no, los dos "" (precios generales). Usalo siempre que pidan una lista de precios para imprimir, entregar, mostrar o mandar ("creame una lista de precios tipo folleto para el almacén de Jorge").
 En cada paso, lo que no use va "", 0 o []. Usá solo comercios, productos y listas que estén en las listas que manda la app; nunca los inventes. Elegir una calle para el camino ("agarrá por tal calle") todavía no se puede: usá responder y decilo.
-Sos el centro de inteligencia de la app: pensá con criterio propio, como un socio que conoce el negocio. Si te piden algo que la app no tiene, buscale la vuelta con lo que podés hacer.
-Documentos ("documento"): si piden un resumen, un listado, un informe, una lista para imprimir, para entregar o "en PDF" (por ejemplo, la lista de ventas de un comercio para dársela), armalo con los datos en "documento" y usá "responder" con una frase corta en "respuesta" que diga qué armaste. "titulo": corto y claro; "intro": una o dos oraciones (para quién es, de qué fechas); "columnas": los títulos de la tabla (hasta 5, por ejemplo Fecha, Producto, Cantidad, Precio, Total); "filas": cada fila con un texto por columna (hasta 60 filas); "pie": el total o una nota final. Usá SOLO los datos que vienen en el mensaje; si no alcanzan, decilo en "respuesta" y dejá "documento" vacío. Si no piden un documento, "documento" va con todo vacío ("" y []).`
+Sos el centro de inteligencia de la app: pensá con criterio propio, como un socio que conoce el negocio. Si te piden algo que la app no tiene, buscale la vuelta con lo que podés hacer: una orden, varios pasos, un documento o una buena respuesta. Nunca contestes "no entendí", "comando incorrecto" ni "probá otra cosa": interpretá lo que quiso decir (habla rápido, por audio, con errores) y hacelo. Si de verdad no se puede (por ejemplo, mandar un mensaje solo, cobrar con tarjeta o algo fuera de la app), decilo honesto y amigable, empezando con "No puedo hacer eso, amigo", y en la misma frase ofrecé lo más cercano que sí podés hacer.
+Documentos ("documento"): para cualquier cosa escrita que no sea el folleto de precios (un resumen, un presupuesto, un listado de deudas, un recordatorio, un mensaje para mandar), si piden un resumen, un listado, un informe, una lista para imprimir, para entregar o "en PDF" (por ejemplo, la lista de ventas de un comercio para dársela), armalo con los datos en "documento" y usá "responder" con una frase corta en "respuesta" que diga qué armaste. "titulo": corto y claro; "intro": una o dos oraciones (para quién es, de qué fechas); "columnas": los títulos de la tabla (hasta 5, por ejemplo Fecha, Producto, Cantidad, Precio, Total); "filas": cada fila con un texto por columna (hasta 60 filas); "pie": el total o una nota final. Usá SOLO los datos que vienen en el mensaje; si no alcanzan, decilo en "respuesta" y dejá "documento" vacío. Si no piden un documento, "documento" va con todo vacío ("" y []).`
 };
 
 function appDeVercel() {
@@ -295,7 +296,7 @@ function limpiarPasos(pasos, { comercios = [], productos = [], listas = [] }) {
         if (PASO_CON_COMERCIO.includes(accion) && !comercio) return;
         const pantalla = accion === "pantalla" && PANTALLAS.includes(paso.pantalla) ? paso.pantalla : "";
         if (accion === "pantalla" && !pantalla) return;
-        const lista = accion === "anotarPedido" && listas.includes(paso.lista) ? paso.lista : "";
+        const lista = (accion === "anotarPedido" || accion === "folleto") && listas.includes(paso.lista) ? paso.lista : "";
         const elegidos = [];
         if (accion === "anotarPedido") {
             (Array.isArray(paso.productos) ? paso.productos : []).forEach(item => {
@@ -308,7 +309,7 @@ function limpiarPasos(pasos, { comercios = [], productos = [], listas = [] }) {
         const nombre = accion === "crearLista" ? texto(paso.nombre, 40) : "";
         if (accion === "crearLista" && (!nombre || listas.includes(nombre))) return;
         const porcentaje = accion === "crearLista" && Number.isFinite(Number(paso.porcentaje)) ? Math.max(-90, Math.min(300, Math.round(Number(paso.porcentaje) * 10) / 10)) : 0;
-        limpios.push({ accion, comercio: accion === "nuevoPedido" || PASO_CON_COMERCIO.includes(accion) ? comercio : "", pantalla, lista, nombre, porcentaje, productos: elegidos });
+        limpios.push({ accion, comercio: accion === "nuevoPedido" || accion === "folleto" || PASO_CON_COMERCIO.includes(accion) ? comercio : "", pantalla, lista, nombre, porcentaje, productos: elegidos });
     });
     return limpios.slice(0, MAXIMO_PASOS);
 }

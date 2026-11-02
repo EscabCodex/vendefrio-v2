@@ -262,7 +262,7 @@ test("ia: un solo asistente, el de Claude, en Inicio, el dictado y navegando", a
     await page.evaluate(() => { window.__fraseVoz = ""; window.asistenteVendeFrio.abrir({ escuchar: false }); });
     await campo.fill("cantame una canción");
     await ventana.getByRole("button", { name: "Enviar" }).click();
-    await expect(ventana.locator(".burbujaApp").last()).toContainText("No entendí «cantame una canción»");
+    await expect(ventana.locator(".burbujaApp").last()).toContainText("No puedo hacer eso, amigo.");
     await expect(ventana.locator(".burbujaApp").last()).toContainText("Con Claude prendido (Más › Preferencias de trabajo › Asistente) entiendo mucho más.");
     expect(preguntas).toHaveLength(0);
 

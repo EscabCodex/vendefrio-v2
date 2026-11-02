@@ -7,6 +7,8 @@
 //    hoja de papel, lista para guardar en PDF.
 // 2. «Creá una lista para mayoristas 10% más barata»: muestra qué va a
 //    hacer, espera el «Sí» y crea la lista con su porcentaje.
+// 3. «Creame una lista de precios tipo folleto para Almacén Don Pepe»: abre
+//    el folleto para imprimir con los precios de su lista y para quién es.
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora } = require("./recorridos");
 
@@ -35,6 +37,12 @@ const manejador = crearManejador({
                     filas: [["01/11/2026", "Helado 1 kg", "4"], ["02/11/2026", "Palito de agua", "12"]],
                     pie: "Total: 16 unidades"
                 }
+            };
+        }
+        if (/folleto/i.test(dijo)) {
+            return {
+                accion: "responder", comercio: "", pantalla: "", respuesta: "Te armo el folleto.", destacado: "", barras: [],
+                pasos: [{ ...vacio, accion: "folleto", comercio: "Almacén Don Pepe" }], documento: sinDocumento
             };
         }
         if (/lista/i.test(dijo)) {
@@ -122,4 +130,25 @@ test("asistente: chat por pantalla que arma un PDF y crea una lista de precios",
     await ventana.getByRole("button", { name: "Sí, hacelo" }).click();
     await expect.poll(() => page.evaluate(() => window.listasDePrecios().includes("Mayoristas"))).toBe(true);
     expect(await page.evaluate(() => window.listasPreciosVendeFrio.reglas().Mayoristas?.porcentaje)).toBe(-10);
+
+    // 3. El folleto de precios para darle a un comercio, con su lista.
+    await page.evaluate(() => {
+        guardarProductos({ "Pastas Doña Rosa": [{ nombre: "Ravioles de ricota", precio: 3200 }, { nombre: "Ñoquis de papa", precio: 2500 }, { nombre: "Tapas de empanada", precio: 1800 }] });
+        const comercio = obtenerComercios().find(otro => otro.nombre === "Almacén Don Pepe");
+        comercio.listaPrecios = "Mayoristas";
+        guardarComercios(obtenerComercios().map(otro => otro.nombre === comercio.nombre ? comercio : otro));
+        window.listasPreciosVendeFrio.aplicarReglas?.(productosParaLeer());
+        mostrarPantalla("comercios");
+    });
+    await page.locator("#pantallaComercios > .barraVolver").getByRole("button", { name: "Asistente" }).click();
+    await ventana.getByRole("textbox", { name: "Hablale o escribile al Asistente" }).fill("creame una lista de precios tipo folleto para el Almacén Don Pepe, para imprimir");
+    await ventana.getByRole("button", { name: "Enviar" }).click();
+    const folleto = page.locator("#pantallaFolleto");
+    await expect(folleto).toBeVisible();
+    await expect(folleto.locator(".folletoTitulo")).toContainText("Lista de precios · Mayoristas");
+    await expect(folleto.locator(".folletoTitulo")).toContainText("Para Almacén Don Pepe");
+    await expect(folleto.locator(".folletoMarcas")).toContainText("Ravioles de ricota");
+    await expect(folleto.getByRole("button", { name: "Imprimir o guardar en PDF" })).toBeVisible();
+    expect(preguntas.at(-1)).toContain("## Catálogo con precios");
+    await capturar(page, "asistenteCrea-04-folleto");
 });

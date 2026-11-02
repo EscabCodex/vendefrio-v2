@@ -294,7 +294,7 @@
     // ---------- Varias cosas de una sola frase (T160) ----------
     const NECESITAN_SI = ["anotarPedido", "imprimir", "crearLista"];
     // Pedidos para crear algo (un PDF, un resumen, una lista nueva).
-    const PARA_CREAR = /\b(pdf|resumen|informe|listado|documento|planilla|imprimible|haceme|hace(me)?lo|armame|arma|crea|crear|crealo|genera|generame|redacta|escribime|compara|compar[aá]me)\b/;
+    const PARA_CREAR = /\b(pdf|resumen|informe|listado|documento|planilla|imprimible|haceme|hace(me)?lo|armame|arma|crea|crear|crealo|genera|generame|redacta|escribime|compara|compar[aá]me|folleto|creame|preparame|presupuesto|cartel)\b/;
     // «… e imprimí el ticket», «y sacale el ticket».
     const IMPRIMIR = /[,.\s]*(?:\b(?:y|e)\s+)?(?:(?:despu[eé]s|luego)\s+)?\b(?:imprim[ií]\w*|sac[aá](?:le|me|lo)?|larg[aá](?:le|me)?)\s+(?:el\s+|un\s+|los\s+)?(?:ticket|comprobante|remito)s?\b/i;
     // «a precio especial», «con la lista Mayorista».
@@ -382,8 +382,14 @@
             }
             case "primero": return "Ir primero a " + nombre + ".";
             case "crearLista": return "Crear la lista de precios «" + paso.nombre + "»" + (paso.porcentaje ? ", " + Math.abs(paso.porcentaje) + "% más " + (paso.porcentaje > 0 ? "cara" : "barata") + " que el general." : ", para cargarla a mano.");
+            case "folleto": return "Te armo el folleto de precios" + (nombre ? " para " + nombre : "") + (listaDelFolleto(paso) ? " (lista " + listaDelFolleto(paso) + ")" : "") + ". Tocá «Imprimir o guardar en PDF».";
             default: return contarOrden(paso);
         }
+    }
+
+    // El folleto usa la lista que nombró o la del comercio para el que es.
+    function listaDelFolleto(paso) {
+        return paso.lista || paso.comercio?.listaPrecios || "";
     }
 
     // Lo que no guarda ni imprime se hace al toque; lo demás espera el «sí».
@@ -484,6 +490,8 @@
                 const hecha = listas?.crearConRegla?.(paso.nombre, paso.porcentaje);
                 if (typeof mostrarToast === "function") mostrarToast(hecha ? "Lista «" + paso.nombre + "» creada" : "No pude crear la lista «" + paso.nombre + "»");
                 if (hecha) listas.abrirLista?.(paso.nombre, listas.abrirPantalla);
+            } else if (paso.accion === "folleto") {
+                window.listasPreciosVendeFrio?.abrirFolleto?.(listaDelFolleto(paso), { para: paso.comercio?.nombre || "" });
             } else if (paso.accion === "primero") {
                 if (!window.navegacionVendeFrio?.irPrimero?.(paso.comercio.nombre)) voz?.ejecutarOrden?.({ accion: "ir", comercio: paso.comercio });
             } else {
@@ -601,7 +609,7 @@
             // Si cerraron la charla mientras pensaba, no hace nada.
             if (!hoja || hoja !== abierta) return;
             const pasos = resultado?.pasos || [];
-            if (pasos.length > 1 || pasos.some(paso => NECESITAN_SI.includes(paso.accion) || paso.accion === "primero")) return proponer(pasos);
+            if (pasos.length > 1 || pasos.some(paso => NECESITAN_SI.includes(paso.accion) || paso.accion === "primero" || paso.accion === "folleto")) return proponer(pasos);
             if (resultado?.orden) return hacer(resultado.orden);
             if (resultado) return contestar({ texto: resultado.texto, destacado: resultado.destacado, barras: resultado.barras, documento: resultado.documento });
             // Claude no contestó: sigue con lo que sabe el celular, y dice por qué.
@@ -613,9 +621,10 @@
         if (noEncontrado && noEncontrado.accion === "noEncontrado") {
             return contestar({ texto: "No encontré el comercio «" + noEncontrado.texto + "». Fijate cómo está escrito en Comercios." + (motivo ? " " + motivo : "") });
         }
+        // Sin vueltas ni «comando incorrecto»: lo dice como un compañero.
         contestar({
-            texto: "No entendí «" + pedido + "». Probá con «nuevo pedido para…», «¿cuánto vendí hoy?» o «¿cómo registro un cobro?»." + (motivo ? " " + motivo : ""),
-            decir: "No entendí. Probá de nuevo"
+            texto: "No puedo hacer eso, amigo." + (motivo ? " " + motivo : " Sí te puedo anotar pedidos, decirte cuánto vendiste o explicarte cómo se usa la app."),
+            decir: "No puedo hacer eso, amigo."
         });
     }
 
@@ -681,7 +690,9 @@
             .filter(pedido => normalizar(pedido.comercio) === normalizar(nombre) && (fechaDe(pedido)?.getTime?.() || 0) >= desde)
             .sort((a, b) => (fechaDe(a)?.getTime?.() || 0) - (fechaDe(b)?.getTime?.() || 0))
             .slice(-40);
-        if (!pedidos.length) return "## Pedidos de " + nombre + " (últimos 3 meses)\nNo tiene pedidos en los últimos 3 meses.";
+        const ficha = (typeof obtenerComercios === "function" ? obtenerComercios() : []).find(comercio => normalizar(comercio?.nombre) === normalizar(nombre));
+        const suLista = "Lista de precios de " + nombre + ": " + (ficha?.listaPrecios || "precios generales") + ".\n";
+        if (!pedidos.length) return suLista + "## Pedidos de " + nombre + " (últimos 3 meses)\nNo tiene pedidos en los últimos 3 meses.";
         const verPlata = vePlata();
         const lineas = pedidos.map(pedido => {
             const fecha = fechaDe(pedido)?.toLocaleDateString?.("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) || "";
@@ -690,7 +701,23 @@
             const total = verPlata && typeof totalDelPedido === "function" ? " | Total " + p.plata(Number(totalDelPedido(pedido)?.total || 0)) : "";
             return "- " + fecha + ": " + productos + total;
         });
-        return "## Pedidos de " + nombre + " (últimos 3 meses, del más viejo al más nuevo)\n" + lineas.join("\n");
+        return suLista + "## Pedidos de " + nombre + " (últimos 3 meses, del más viejo al más nuevo)\n" + lineas.join("\n");
+    }
+
+    // Los precios de cada producto (general y por lista), para que pueda
+    // armar presupuestos, comparar o contestar «¿a cuánto vendo…?».
+    function catalogoConPrecios() {
+        if (!vePlata() || typeof productosParaLeer !== "function") return "";
+        const productos = productosParaLeer() || {};
+        const lineas = [];
+        Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(item => {
+            const producto = typeof item === "string" ? { nombre: item } : item;
+            if (!producto || producto.archivado === true || lineas.length >= 150) return;
+            const listas = Object.entries(producto.precios || {}).filter(([, precio]) => Number(precio) > 0)
+                .map(([lista, precio]) => lista + " " + p.plata(precio));
+            lineas.push("- " + marca + " | " + producto.nombre + " | " + (Number(producto.precio) ? p.plata(producto.precio) : "sin precio") + (listas.length ? " | " + listas.join(", ") : ""));
+        }));
+        return lineas.length ? "## Catálogo con precios (marca | producto | precio general | listas)\n" + lineas.join("\n") + "\n\n" : "";
     }
 
     function datosParaLaIA(vista = contexto(), pedido = "") {
@@ -704,7 +731,7 @@
             .sort((a, b) => b.nombre.length - a.nombre.length)[0] : null;
         const comercio = nombrado?.nombre || vista.comercio?.nombre || "";
         const detalle = comercio ? detalleDeComercio(comercio) + "\n\n" : "";
-        return viendo + detalle + numeros + "\n\n" + guia;
+        return viendo + detalle + catalogoConPrecios() + numeros + "\n\n" + guia;
     }
 
     function hacer(orden) {

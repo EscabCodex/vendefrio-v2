@@ -87,7 +87,7 @@ test("voz: comandos desde Inicio y pedido dictado o pegado", async ({ page }, te
     // No escucha sola (tanda 2): el micrófono se prende al tocarlo.
     await expect(ventana.locator(".botonHablarAsistente")).not.toHaveClass(/escuchando/);
     await ventana.getByRole("button", { name: "Hablar" }).click();
-    await expect(ventana.locator(".burbujaApp").last()).toContainText("No entendí");
+    await expect(ventana.locator(".burbujaApp").last()).toContainText("No puedo hacer eso, amigo.");
     await capturar(page, "voz-01-te-escucho");
 
     // Hablando normal: "Haceme un pedido para el de la esquina".

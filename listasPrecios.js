@@ -856,7 +856,7 @@
 
     // La hoja del folleto: siempre en blanco y negro con un toque de color,
     // igual en modo claro y oscuro, para que salga bien impresa.
-    function htmlFolleto(nombre) {
+    function htmlFolleto(nombre, para = "") {
         const datos = window.distribuidoraVendeFrio?.datosTicket?.() || {};
         const contacto = [datos.direccion, datos.telefono ? "Tel.: " + datos.telefono : "", datos.cuit ? "CUIT: " + datos.cuit : ""]
             .filter(Boolean).map(p.esc).join(" · ");
@@ -869,7 +869,7 @@
                 <h1>${p.esc(nombreDistribuidora())}</h1>
                 ${contacto ? `<p>${contacto}</p>` : ""}
             </div>
-            <div class="folletoTitulo"><strong>Lista de precios · ${p.esc(nombre)}</strong><span>Precios al ${hoyTexto()}</span></div>
+            <div class="folletoTitulo"><strong>${nombre ? "Lista de precios · " + p.esc(nombre) : "Lista de precios"}</strong><span>${para ? "Para " + p.esc(para) + " · " : ""}Precios al ${hoyTexto()}</span></div>
             <div class="folletoMarcas">${marcas || `<p class="folletoVacio">Todavía no hay productos en el catálogo.</p>`}</div>
             <div class="folletoPie">Precios sujetos a cambio sin previo aviso.</div>
         </article>`;
@@ -878,14 +878,14 @@
     // Imprime solo el folleto: una copia directa en <body> y, al imprimir, se
     // esconde todo lo demás (ver tema.css, «Folleto»). Desde la ventana de
     // imprimir también se guarda como PDF para mandarlo.
-    function imprimirFolleto(nombre) {
+    function imprimirFolleto(nombre, para = "") {
         let copia = document.getElementById("folletoImprimir");
         if (!copia) {
             copia = document.createElement("div");
             copia.id = "folletoImprimir";
             document.body.appendChild(copia);
         }
-        copia.innerHTML = htmlFolleto(nombre);
+        copia.innerHTML = htmlFolleto(nombre, para);
         document.body.classList.add("imprimiendoFolleto");
         window.addEventListener("afterprint", () => document.body.classList.remove("imprimiendoFolleto"), { once: true });
         try {
@@ -895,16 +895,18 @@
         }
     }
 
-    function abrirFolleto(nombre) {
+    // El Asistente también lo abre: sin lista son los precios generales, y
+    // «para» pone a quién se lo entregan.
+    function abrirFolleto(nombre = "", { para = "" } = {}) {
         const seccion = p.pantalla("pantallaFolleto", {
-            titulo: "Folleto · " + nombre,
+            titulo: "Folleto · " + (nombre || para || "Precios generales"),
             volverA: () => abrirPantalla()
         });
         p.mostrar(seccion);
         seccion.querySelector("main").innerHTML = `<div class="pzNota">Así se ve la hoja. Para mandarla por WhatsApp, en la ventana de imprimir elegí «Guardar como PDF».</div>
-            <div class="folletoVista">${htmlFolleto(nombre)}</div>
+            <div class="folletoVista">${htmlFolleto(nombre, para)}</div>
             <div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="imprimirFolleto">${p.ico("impresora", 18)}Imprimir o guardar en PDF</button></div>`;
-        seccion.querySelector("#imprimirFolleto").onclick = () => imprimirFolleto(nombre);
+        seccion.querySelector("#imprimirFolleto").onclick = () => imprimirFolleto(nombre, para);
     }
 
     let seccionMas = null;

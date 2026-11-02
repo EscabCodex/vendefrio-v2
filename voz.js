@@ -402,7 +402,7 @@
         return {
             orden,
             pasos: pasosDeClaude(resultado.pasos),
-            texto: String(resultado.respuesta || (orden ? "" : "No te entendí. ¿Me lo decís de otra forma?")),
+            texto: String(resultado.respuesta || (orden ? "" : "No puedo hacer eso, amigo.")),
             destacado: orden ? "" : String(resultado.destacado || ""),
             barras: orden ? [] : (Array.isArray(resultado.barras) ? resultado.barras : []),
             // Tanda 2: un documento para ver y guardar en PDF.
@@ -432,6 +432,7 @@
                 const nombre = String(paso.nombre || "").trim().slice(0, 40);
                 return nombre && !listas.includes(nombre) ? { accion: "crearLista", nombre, porcentaje: Number(paso.porcentaje) || 0 } : null;
             }
+            if (paso.accion === "folleto") return { accion: "folleto", comercio, lista: listas.includes(paso.lista) ? paso.lista : "" };
             if (["nuevoPedido", "imprimir", "proximaParada", "llegue"].includes(paso.accion)) return comercio ? { accion: paso.accion, comercio } : { accion: paso.accion };
             return comercio && ["primero", "ir", "visitado", "ficha"].includes(paso.accion) ? { accion: paso.accion, comercio } : null;
         }).filter(Boolean).slice(0, 5);
