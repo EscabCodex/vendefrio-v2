@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 271,
+      "fecha": "2026-11-02",
+      "tipo": "arreglado",
+      "icono": "alarma",
+      "titulo": "Agregar horario desde Rutas",
+      "texto": "En «Completar los datos», «+ Agregar horario» ahora abre siempre y, al guardar, volvés a la lista."
+    },
+    {
       "version": 270,
       "fecha": "2026-11-02",
       "tipo": "mejor",

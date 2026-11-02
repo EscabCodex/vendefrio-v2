@@ -281,8 +281,16 @@ test("rutas: horarios de las paradas y completar los datos", async ({ page }) =>
     await completar.locator(".filaCompletarRuta", { hasText: "Kiosco Tres" }).getByRole("button", { name: "Guardar los lunes" }).click();
     await expect(completar.locator(".filaCompletarRuta")).toHaveCount(2);
     expect(await page.evaluate(() => buscarComercioPorNombre("Kiosco Tres").diaVisita)).toBe("Lunes");
+    // Agregar horario: se va esta hoja, sube la de los datos y, al guardar,
+    // vuelve «Completar los datos» (a Bar Dos le queda solo el día).
     await completar.locator(".filaCompletarRuta", { hasText: "Bar Dos" }).getByRole("button", { name: "Agregar horario" }).click();
-    await expect(page.locator(".datosHorario")).toBeVisible();
+    const datos = page.getByRole("dialog", { name: "Datos del comercio" });
+    await expect(datos.locator(".datosHorario")).toBeVisible();
+    await datos.locator('[data-dia="0"]').click();
+    await datos.getByRole("button", { name: "Guardar" }).click();
+    await expect(completar).toBeVisible();
+    await expect(completar.locator(".filaCompletarRuta", { hasText: "Bar Dos" }).getByRole("button")).toHaveText(["Guardar los lunes"]);
+    expect(await page.evaluate(() => buscarComercioPorNombre("Bar Dos").horario)).toBe("Lun · 8 a 13 y 17 a 21");
 });
 
 test("rutas: el depósito también desde Más > Cuenta", async ({ page }) => {

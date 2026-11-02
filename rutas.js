@@ -525,15 +525,14 @@ function textoAgregarDato(nombre, campo, texto) {
 
 function agregarDatoEnRuta(nombre, campo, alGuardar) {
     if (typeof window.abrirDatosComercio !== "function") return false;
-    window.abrirDatosComercio(nombre, campo, nombreFinal => {
+    return Boolean(window.abrirDatosComercio(nombre, campo, nombreFinal => {
         const nuevo = nombreFinal || nombre;
         if (nuevo !== nombre && comerciosSeleccionadosRuta.delete(nombre)) comerciosSeleccionadosRuta.add(nuevo);
         rutaOrdenada = rutaOrdenada.map(comercio => buscarComercioPorNombre(comercio.nombre === nombre ? nuevo : comercio.nombre) || comercio);
         refrescarPines();
         mostrarRutaEnLista();
         if (typeof alGuardar === "function") alGuardar(nuevo);
-    });
-    return true;
+    }));
 }
 
 // Va antes que el toque de la parada (la línea está adentro de su botón).
@@ -2061,7 +2060,15 @@ function abrirCompletarDatosRuta() {
             rutaOrdenada = rutaOrdenada.map(parada => parada.nombre === nombre ? (buscarComercioPorNombre(nombre) || parada) : parada);
             redibujar();
         } else {
-            agregarDatoEnRuta(nombre, "horario", () => abrirCompletarDatosRuta());
+            // Primero se va esta hoja y después sube la de los datos; al
+            // guardar, vuelve esta (después de que la de los datos se cierre:
+            // si no, su «Guardar» la cerraba enseguida).
+            p.cerrar();
+            setTimeout(() => {
+                if (!agregarDatoEnRuta(nombre, "horario", () => setTimeout(() => {
+                    if (faltanDatosRuta().length) abrirCompletarDatosRuta();
+                }, 300))) mostrarAviso("No se pudo abrir", "No encontré los datos de " + nombre + ".");
+            }, 220);
         }
     });
 }
