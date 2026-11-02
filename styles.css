@@ -1833,20 +1833,6 @@ body > nav.bottom-nav {
   color:var(--acento-oscuro);
 }
 
-.bloquePerfilesComerciales,
-.bloqueAlertasComerciales{
-  margin-top:12px;
-  padding-top:10px;
-  border-top:1px solid var(--borde);
-}
-
-.bloquePerfilesComerciales h3,
-.bloqueAlertasComerciales h3{
-  margin:0 0 8px;
-  color:var(--texto);
-  font-size:13px;
-}
-
 .filaPerfilComercial,
 .filaAlertaComercial{
   padding:7px 0;
@@ -1876,8 +1862,7 @@ body > nav.bottom-nav {
 }
 
 .filaPerfilComercial small,
-.filaAlertaComercial,
-.bloqueAlertasComerciales p{
+.filaAlertaComercial{
   color:var(--texto-sec);
   font-size:11px;
   line-height:1.4;
@@ -1887,22 +1872,7 @@ body > nav.bottom-nav {
   color:var(--pendiente);
 }
 
-.bloqueSeguimientoSemanal{
-  margin-top:12px;
-  padding:10px;
-  border:1px solid var(--pendiente-bg);
-  border-radius:var(--radius-sm);
-  background:var(--pendiente-bg);
-}
-
-.bloqueSeguimientoSemanal h3{
-  margin:0 0 7px;
-  color:var(--pendiente);
-  font-size:13px;
-}
-
-.filaSeguimientoSemanal,
-.bloqueSeguimientoSemanal p{
+.filaSeguimientoSemanal{
   padding:5px 0;
   color:var(--pendiente);
   font-size:11px;
@@ -2601,10 +2571,7 @@ html[data-tema="oscuro"] .opcionSeleccionRuta input{
 html[data-tema="oscuro"] .panelInteligenciaComercial,
 html[data-tema="oscuro"] .bloqueEstadisticaComercial,
 html[data-tema="oscuro"] .comparativaSemanalComercial,
-html[data-tema="oscuro"] .resumenMensualComercial,
-html[data-tema="oscuro"] .bloquePerfilesComerciales,
-html[data-tema="oscuro"] .bloqueSeguimientoSemanal,
-html[data-tema="oscuro"] .bloqueAlertasComerciales{
+html[data-tema="oscuro"] .resumenMensualComercial{
   background:var(--superficie) !important;
   border-color:var(--borde) !important;
   color:var(--texto) !important;
@@ -2788,13 +2755,7 @@ html[data-tema="oscuro"] .configMenuPrincipal{
 /* Estadísticas y Catálogo: primeras pantallas compactas del rework */
 .pantallaExtra .container{padding-top:10px;}
 .extraVolver{width:100%;min-height:44px;margin-bottom:8px;border:0;border-radius:12px;background:#e5e7eb;color:#374151;font-weight:700;text-align:left;padding:8px 12px;}
-.estadisticaResumen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px;}
-.estadisticaResumen div{display:grid;gap:3px;padding:10px;border-radius:12px;background:#f3f4f6;text-align:center;}
-.estadisticaResumen small{font-size:10px;color:#6b7280;}
-.estadisticaResumen strong{font-size:21px;color:var(--verde-oscuro);}
-.listaEstadistica{display:grid;gap:9px;padding:12px;margin-bottom:8px;border-bottom:1px solid #e5e7eb;}
-.listaEstadistica h2{font-size:15px;color:#1f2937;}
-.listaEstadistica p{font-size:12px;color:#6b7280;}
+
 .filaEstadistica{display:grid;gap:4px;}
 .filaEstadistica>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:12px;}
 .filaEstadistica b{color:var(--verde-oscuro);}
@@ -2806,33 +2767,21 @@ html[data-tema="oscuro"] .configMenuPrincipal{
 .fotoCatalogo{display:grid;aspect-ratio:1;place-items:center;border-radius:10px;background:#e6f7ef;color:var(--verde-oscuro);font-size:32px;font-weight:800;}
 .itemCatalogo strong,.itemCatalogo small,.itemCatalogo b{overflow-wrap:anywhere;}
 .itemCatalogo strong{font-size:13px;}.itemCatalogo small{color:#6b7280;font-size:11px;}.itemCatalogo b{color:var(--verde-oscuro);font-size:13px;}
-html[data-tema="oscuro"] .extraVolver,html[data-tema="oscuro"] .estadisticaResumen div,html[data-tema="oscuro"] .itemCatalogo{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
-html[data-tema="oscuro"] .listaEstadistica{border-color:var(--borde);}
-html[data-tema="oscuro"] .estadisticaResumen small,html[data-tema="oscuro"] .listaEstadistica p,html[data-tema="oscuro"] .itemCatalogo small{color:var(--texto-sec);}
+html[data-tema="oscuro"] .extraVolver,html[data-tema="oscuro"] .itemCatalogo{background:var(--superficie);color:var(--texto);border-color:var(--borde);}
+
+html[data-tema="oscuro"] .itemCatalogo small{color:var(--texto-sec);}
 html[data-tema="oscuro"] .buscadorCatalogo{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
 html[data-tema="oscuro"] .fotoCatalogo{background:var(--visitado-bg);color:var(--visitado);}
 
 /* Estadísticas: informe completo visible en una sola pantalla */
 .informeEstadisticas{display:grid;gap:8px;}
-.informeEstadisticas .listaEstadistica{margin:0;padding:11px;border-bottom:1px solid #e5e7eb;}
-.informeEstadisticas .listaEstadistica h2{margin:0 0 2px;}
-.informeEstadisticas .bloquePerfilesComerciales,
-.informeEstadisticas .bloqueSeguimientoSemanal,
-.informeEstadisticas .bloqueAlertasComerciales{margin:0!important;}
-html[data-tema="oscuro"] .informeEstadisticas .listaEstadistica{border-color:var(--borde);}
 
 .filtroPeriodoEstadisticas{display:grid;gap:5px;margin-bottom:8px;color:#4b5563;font-size:12px;font-weight:700;}
 .filtroPeriodoEstadisticas select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#374151;font-size:14px;}
 html[data-tema="oscuro"] .filtroPeriodoEstadisticas{color:var(--texto);}
 html[data-tema="oscuro"] .filtroPeriodoEstadisticas select{background:var(--fondo);color:var(--texto);border-color:var(--borde-fuerte);}
 
-.selectorPeriodoEstadisticas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 10px;padding:4px;border-radius:12px;background:#e5e7eb;}
-.selectorPeriodoEstadisticas button{min-height:42px;padding:7px 4px;border:0;border-radius:9px;background:transparent;color:#4b5563;font-size:12px;font-weight:800;}
-.selectorPeriodoEstadisticas button.activo{background:#fff;color:var(--verde-oscuro);box-shadow:0 1px 4px rgba(15,23,42,.12);}
 .selectorPeriodoOculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas{background:var(--fondo);}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas button{color:var(--texto-sec);}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:var(--borde);color:var(--visitado);}
 
 /* Navegación principal compacta y menú Más */
 .menuMasMovil{position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-end;background:rgba(15,23,42,.45);padding:12px;}
@@ -2908,7 +2857,6 @@ html[data-tema="oscuro"] .canvasEditorFoto{border:1px solid var(--borde-fuerte);
 html[data-tema="oscuro"] #pantallaMenu #dashProximaParada h3{color:var(--texto)!important;}
 html[data-tema="oscuro"] #pantallaMenu #dashProximaParada p,html[data-tema="oscuro"] #pantallaMenu #dashUltimoPedido p{color:var(--texto-sec)!important;}
 html[data-tema="oscuro"] #pantallaMenu .container>div[style*="grid-template-columns"] .menuBtn{background:var(--superficie)!important;border-color:var(--borde)!important;color:var(--texto)!important;}
-
 
 /* Rework visual de Pedido: compacto y táctil */
 #pantallaPedido>.container{padding-top:8px;}
@@ -3092,7 +3040,6 @@ html[data-tema="oscuro"] .configDetalle .configCuentaClave input[type="text"]{ba
 html[data-tema="oscuro"] .configDetalle .configCuentaVer{background:transparent;color:var(--texto-sec);}
 html[data-tema="oscuro"] .configDetalle .configCuentaIngresar{background:var(--acento);border-color:var(--acento);color:var(--acento-txt);}
 html[data-tema="oscuro"] .configCuentaError{background:var(--fondo);color:var(--texto);border:1px solid var(--peligro);}
-
 
 /* Subir mis datos a la nube (T11) */
 .configMigracion{display:flex;flex-direction:column;gap:8px;}

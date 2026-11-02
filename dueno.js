@@ -1,7 +1,7 @@
 // VendeFrío - Para el dueño (T80, T81, T83).
-// En Estadísticas: "Se están enfriando" (comercios que dejaron de pedir, con
-// WhatsApp) y "Metas del mes" por vendedor (`metas/`). En Más: "Mapa de
-// ventas" con cada comercio pintado según lo que compró este mes.
+// En Estadísticas: "Metas del mes" por vendedor (`metas/`) y el "Mapa de
+// ventas" grande (desde "Ver grande"), con cada comercio pintado según lo que
+// compró este mes.
 (function () {
     "use strict";
 
@@ -40,54 +40,6 @@
         if (numero >= 1000000) return "$ " + (Math.round(numero / 10000) / 100).toLocaleString("es-AR") + " M";
         if (numero >= 10000) return "$ " + Math.round(numero / 1000).toLocaleString("es-AR") + " mil";
         return p.plata(numero);
-    }
-
-    function enlaceWhatsapp(nombre, texto) {
-        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombre) : null;
-        const base = comercio && window.yaLlegoVendeFrio ? window.yaLlegoVendeFrio.enlace(comercio, 0) : "";
-        return base ? base.split("?")[0] + "?text=" + encodeURIComponent(texto) : "";
-    }
-
-    // ---------- Se están enfriando (T80) ----------
-    let verTodosEnfriando = false;
-
-    function cadaCuanto(dias) {
-        if (dias >= 6 && dias <= 8) return "cada semana";
-        if (dias >= 13 && dias <= 16) return "cada dos semanas";
-        return "cada " + dias + (dias === 1 ? " día" : " días");
-    }
-
-    function tarjetaEnfriando(historial, completo) {
-        const estadisticas = window.estadisticasVendeFrio;
-        if (!estadisticas || typeof obtenerPerfilesComerciales !== "function") return null;
-        const lista = completo || historial;
-        const enfriando = (estadisticas.perfilesDe ? estadisticas.perfilesDe(lista) : obtenerPerfilesComerciales(lista))
-            .filter(perfil => perfil.atrasado && perfil.nombre !== "Sin comercio")
-            .sort((a, b) => (b.diasDesdeUltimo / b.promedioDias) - (a.diasDesdeUltimo / a.promedioDias));
-        if (!enfriando.length) return null;
-        const card = estadisticas.tarjeta("alerta", "naranja", "Se están enfriando", "Pedían seguido y dejaron de pedir", "statsEnfriando");
-        const mostrar = verTodosEnfriando ? enfriando : enfriando.slice(0, 3);
-        const distribuidora = window.distribuidoraVendeFrio?.nombreActual?.() || "";
-        const filas = mostrar.map(perfil => {
-            const enlace = enlaceWhatsapp(perfil.nombre, "¡Hola! " + (distribuidora ? "Te escribo de " + distribuidora + ". " : "") + "Hace unos días que no te vemos, ¿te preparo un pedido?");
-            return `<div class="statsFila filaEnfriando" data-ficha="${p.esc(perfil.nombre)}">
-                <span class="pzIni ${p.colorIni(perfil.nombre)}">${p.esc(p.iniciales(perfil.nombre))}</span>
-                <div class="statsFilaTexto"><strong>${p.esc(perfil.nombre)}</strong><small>Pedía ${cadaCuanto(perfil.promedioDias)} · hace ${perfil.diasDesdeUltimo} días que no</small></div>
-                ${enlace ? `<a class="botonWaEnfriando" href="${enlace}" target="_blank" rel="noopener" aria-label="WhatsApp a ${p.esc(perfil.nombre)}">${p.ico("whatsapp", 20)}</a>` : ""}
-            </div>`;
-        }).join("");
-        const verTodos = enfriando.length > 3 && !verTodosEnfriando
-            ? `<button type="button" class="pzEnlace verTodosEnfriando">Ver los ${enfriando.length}</button>` : "";
-        card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div>${verTodos}`);
-        // Repasada: tocar el comercio abre su ficha (el WhatsApp sigue aparte).
-        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
-            p.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha), { rol: false });
-        });
-        card.querySelector(".verTodosEnfriando")?.addEventListener("click", () => {
-            verTodosEnfriando = true;
-            estadisticas.redibujar();
-        });
-        return card;
     }
 
     // ---------- Metas del mes (T81) ----------
@@ -283,5 +235,5 @@
     // El mapa de ventas ahora está dentro de Estadísticas ("Ver grande" abre
     // esta pantalla); ya no tiene su acceso en Más (pedido del dueño).
 
-    window.duenoVendeFrio = { tarjetaEnfriando, tarjetaMetas, editarMetas, vendidoPorPersona, abrirMapa, ventasPorComercio };
+    window.duenoVendeFrio = { tarjetaMetas, editarMetas, vendidoPorPersona, abrirMapa, ventasPorComercio };
 }());

@@ -455,10 +455,7 @@ body > section.pzPantalla > header .logo:empty{display:none;}
 .filaCambio .pzFilaTxt strong,.filaCambio .pzFilaTxt small{white-space:normal;}
 /* ---------- Para el dueño (T80, T81, T83) ---------- */
 .statsCabeza .pzEnlace{margin-left:auto;align-self:center;}
-.filaEnfriando{align-items:center;}
-.filaEnfriando .pzIni{width:44px;height:44px;}
-.botonWaEnfriando{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:14px;background:var(--pz-wa-bg);color:var(--pz-wa);}
-.verTodosEnfriando{display:block;margin:8px auto 0;}
+
 .listaMetas{gap:14px;}
 .filaMeta{display:grid;gap:6px;}
 .filaMetaCab{display:flex;justify-content:space-between;gap:10px;font-size:15.5px;}

@@ -1961,10 +1961,6 @@ html[data-tema="oscuro"] .leaflet-control-attribution a{color:var(--acento) !imp
 html .pantallaExtra .extraVolver,html #pantallaEstadisticas .extraVolver{display:none !important;}
 
 /* ---------- Estadísticas (T52) ---------- */
-html .selectorPeriodoEstadisticas{margin:4px 0 12px;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);gap:4px;}
-html .selectorPeriodoEstadisticas button{min-height:40px;border-radius:var(--radio-pildora);background:transparent;color:var(--texto-sec);font-size:13.5px;font-weight:700;}
-html .selectorPeriodoEstadisticas button.activo{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
-html[data-tema="oscuro"] .selectorPeriodoEstadisticas button.activo{background:var(--acento);color:var(--acento-txt);}
 .informeEstadisticas{display:grid;gap:12px;}
 .statsResumen{
   padding:18px;border-radius:var(--radius-lg);color:#fff;
@@ -1995,17 +1991,6 @@ html[data-tema="oscuro"] .statsNumIcono{background:var(--acento-bg);color:var(--
 .statsVacio{display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;border:1.5px dashed var(--borde-fuerte);color:var(--texto-sec);font-size:13.5px;}
 .statsTodoBien{border-style:solid;border-color:transparent;background:var(--visitado-bg);color:var(--visitado);}
 
-.statsColumnas{display:grid;grid-template-columns:repeat(var(--columnas),minmax(0,1fr));gap:4px;align-items:end;height:150px;padding-top:4px;}
-.statsColumna{display:grid;grid-template-rows:16px 1fr 18px;height:100%;justify-items:center;gap:2px;min-width:0;}
-.statsValor{font-size:11px;font-weight:800;color:var(--texto-sec);}
-.statsBarraDia{width:100%;max-width:26px;height:100%;display:flex;align-items:flex-end;border-radius:9px;background:var(--superficie-2);overflow:hidden;}
-.statsBarraDia i{display:block;width:100%;border-radius:9px;background:color-mix(in srgb, var(--acento) 45%, var(--superficie));}
-.statsColumna.hoy .statsBarraDia i{background:var(--acento);}
-.statsColumna.hoy .statsValor{color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .statsColumna.hoy .statsValor{color:var(--acento);}
-.statsColumna small{font-size:11px;font-weight:600;color:var(--texto-ter);}
-.statsColumna.hoy small{color:var(--texto);font-weight:800;}
-
 .statsPestanas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin-bottom:6px;border-radius:var(--radio-pildora);background:var(--superficie-2);}
 .statsPestanas button{min-height:36px;border:0;border-radius:var(--radio-pildora);background:transparent;color:var(--texto-sec);font-size:13px;font-weight:700;cursor:pointer;}
 .statsPestanas button[aria-selected="true"]{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
@@ -2017,16 +2002,13 @@ html[data-tema="oscuro"] .statsPestanas button[aria-selected="true"]{background:
   border:0;border-bottom:1px solid var(--borde);background:transparent;color:var(--texto);text-align:left;font:inherit;
 }
 .statsLista > :last-child,.statsListaRanking > :last-child{border-bottom:0;}
-.statsFilaBoton{cursor:pointer;}
-.statsFilaBoton:active{background:var(--superficie-2);}
-.statsFilaBoton > svg{flex-shrink:0;color:var(--texto-ter);}
+
 .statsFilaIcono,.statsAvatar{
   display:grid;place-items:center;flex-shrink:0;width:38px;height:38px;border-radius:50%;
   background:var(--superficie-2);color:var(--texto-sec);font-size:13px;font-weight:800;
 }
 .statsFilaIcono{border-radius:12px;}
-.statsMes{font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:var(--acento-bg);color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .statsMes{color:var(--acento);}
+
 .statsFilaRanking[data-puesto="1"] .statsAvatar{background:var(--acento);color:var(--acento-txt);}
 /* Repasada: la regla vieja del modo oscuro (styles.css, con !important)
    pintaba de blanco estas letras sobre el verde lima y no se leían. */
@@ -2049,9 +2031,7 @@ html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[da
 .statsCambio[data-tono="sube"]{background:var(--visitado-bg);color:var(--visitado);}
 .statsCambio[data-tono="baja"]{background:var(--peligro-bg);color:var(--peligro);}
 .statsCambio[data-tono="igual"]{background:var(--superficie-2);color:var(--texto-sec);}
-.statsChips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;}
-.statsChip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto-sec);font-size:11.5px;font-weight:700;white-space:nowrap;}
-.statsChip[data-tono="falta"]{background:var(--peligro-bg);color:var(--peligro);flex-shrink:0;}
+
 .statsPlanilla{
   display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:14px 16px;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);background:var(--superficie);box-shadow:var(--sombra);
@@ -2067,7 +2047,6 @@ html[data-tema="oscuro"] .statsFilaRanking[data-puesto="2"] .statsAvatar,html[da
 html,body{overflow-x:clip !important;}
 /* Pantallas de entrada: "Volver" con la flecha nueva, sin el "‹" viejo (T52). */
 html .inicioVolver{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--texto-sec);font-weight:700;}
-.statsFilaTexto > .statsChips{justify-content:flex-start;}
 
 /* ===== Pedidos por WhatsApp (T55 a T59) ===== */
 [data-color="whatsapp"]{background:var(--visitado-bg) !important;color:var(--visitado) !important;}
@@ -2324,22 +2303,6 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 .opcionListaPedido[aria-pressed="true"]{color:var(--pz-pri-fuerte);font-weight:700;}
 
 /* T116: Estadísticas: qué mirar, período anterior y tocar una barra */
-.statsMedidas{margin:4px 0 12px;}
-.statsMedidas button{flex:1;min-height:38px;font-size:13.5px;}
-button.statsColumna{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;}
-.statsColumna .statsBarraDia{position:relative;justify-content:center;}
-.statsColumna .statsBarraDia i{position:relative;z-index:1;}
-.statsBarraAntes{position:absolute;left:0;right:0;bottom:0;border-radius:9px;background:color-mix(in srgb, var(--texto-ter) 30%, transparent);}
-.statsColumna.elegida .statsBarraDia{outline:2px solid var(--acento);outline-offset:2px;}
-.statsColumna.elegida small{color:var(--texto);font-weight:800;}
-.statsLeyenda{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--texto-sec);}
-.statsLeyenda span{display:inline-flex;align-items:center;gap:6px;}
-.statsLeyenda i{width:10px;height:10px;border-radius:3px;display:inline-block;}
-.statsPuntoAhora{background:var(--acento);}
-.statsPuntoAntes{background:color-mix(in srgb, var(--texto-ter) 30%, transparent);}
-.statsDetalleDia{display:grid;gap:2px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--superficie-2);font-size:13px;color:var(--texto-sec);}
-.statsDetalleDia strong{font-size:14px;color:var(--texto);}
-.statsDetalleDia span{font-size:14px;font-weight:700;color:var(--texto);}
 
 /* T118: lo no entendido pregunta «¿cuál es?» con productos parecidos */
 .sinEntenderDictado{display:grid;gap:10px;}
