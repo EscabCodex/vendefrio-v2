@@ -9,11 +9,13 @@
 (function () {
     // Botones volver que ya tenía cada pantalla en su encabezado.
     const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
-    // Los que llevan a Inicio no necesitan la casita al lado.
-    const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
     const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
-    const SIN_CASITA = ["pantallaEstadisticas", "pantallaListasPrecios", "pantallaTodaLista", "pantallaPreciosLista"];
+    // Encabezados (tanda 1, pedido del dueño, 2026-11-02): las pantallas
+    // principales llevan solo la flecha; las subpantallas (las que se abren
+    // desde otra pantalla) suman la casita para ir directo a Inicio.
+    const SUBPANTALLAS = ["pantallaMapaVentas", "pantallaRecibo", "pantallaPreciosLista", "pantallaTodaLista",
+        "pantallaFolleto", "pantallaProblemas", "pantallaSinSubir", "pantallaHeladera", "pantallaEscanear"];
 
     function preferencia(campo) {
         try {
@@ -108,15 +110,25 @@
                 ? (document.querySelector("#configDetalle .configSubVolver")?.textContent || "").replace("‹", "").trim()
                 : "";
             const texto = seccion || "Más";
-            if (titulo.textContent !== texto) titulo.textContent = texto;
+            if (titulo.textContent !== texto) {
+                titulo.textContent = texto;
+                // Que el nombre nuevo entre al lado de la flecha (letra más chica).
+                window.piezas?.acomodarCabeceras?.();
+            }
         }
 
-        const vaAInicio = VAN_A_INICIO.some(selector => volver.matches(selector))
-            || (volver.matches(".configVolver") && !enSeccionDeMas());
-        // Estadísticas no lleva casita: así el título entra entero al lado de
-        // la flecha (repaso de diseño, 2026-11-01).
-        const sinCasita = vaAInicio || SIN_CASITA.includes(pantalla.id);
+        const enSeccion = pantalla.id === "pantallaConfiguracion" && enSeccionDeMas();
+        const esSubpantalla = enSeccion || SUBPANTALLAS.includes(pantalla.id) || pantalla.dataset.volverA === "propio";
+        const sinCasita = !esSubpantalla;
         if (casita.hidden !== sinCasita) casita.hidden = sinCasita;
+        // El Asistente queda arriba solo en Más (en Inicio tiene el suyo).
+        const asistente = barra.querySelector(".botonAsistentePantalla");
+        const conAsistente = pantalla.id === "pantallaConfiguracion" && !enSeccion;
+        if (asistente && asistente.hidden !== !conAsistente) asistente.hidden = !conAsistente;
+        const marca = conAsistente ? "si" : "no";
+        if (pantalla.dataset.conAsistente !== marca) pantalla.dataset.conAsistente = marca;
+        const seccionMarca = enSeccion ? "si" : "no";
+        if (pantalla.dataset.enSeccion !== seccionMarca) pantalla.dataset.enSeccion = seccionMarca;
         const botones = sinCasita ? "1" : "2";
         if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
 

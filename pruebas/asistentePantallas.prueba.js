@@ -1,8 +1,9 @@
 // VendeFrío - El Asistente en todas las pantallas (T160), con los
 // emuladores de Firebase, una IA falsa (no gasta la clave), un GPS falso y
 // una impresora Bluetooth falsa.
-// 1. Cada pantalla tiene el botón del Asistente arriba a la derecha (también
-//    Rutas, las fichas y la navegación), y Claude recibe lo que se está viendo.
+// 1. El botón del Asistente va arriba en Inicio y Más (tanda 1 de
+//    encabezados), en las fichas y en la navegación; abierto sobre una
+//    pantalla, Claude recibe lo que se está viendo.
 // 2. De una sola frase, sin Claude: «anotá un pedido para…, 5 helados… a
 //    precio de la lista…, e imprimí el ticket». Antes de guardar o imprimir
 //    muestra lo que va a hacer: con «No» no hace nada, con «Sí» lo guarda y
@@ -136,12 +137,13 @@ test("asistente: en todas las pantallas, con lo que estás viendo y varias cosas
         await ventana.getByRole("button", { name: "Enviar" }).click();
     };
 
-    // 1. En Comercios, el botón de arriba a la derecha; Claude sabe dónde está.
+    // 1. En Comercios ya no hay botón arriba (tanda 1 de encabezados); abierto
+    // sobre Comercios, Claude sabe dónde está. Dónde va el botón en cada
+    // pantalla se decide después.
     await page.evaluate(() => mostrarPantalla("comercios"));
-    const boton = page.locator("#pantallaComercios > .barraVolver").getByRole("button", { name: "Asistente" });
-    await expect(boton).toBeVisible();
+    await expect(page.locator("#pantallaComercios > .barraVolver").getByRole("button", { name: "Asistente" })).toBeHidden();
     await capturar(page, "asistentePantallas-01-boton");
-    await boton.click();
+    await page.evaluate(() => window.asistenteVendeFrio.abrir());
     await expect(ventana).toBeVisible();
     await escribir("¿qué me conviene ofrecerle a la gente de este barrio?");
     await expect(ventana.locator(".burbujaApp:not(.burbujaPensando)").last()).toContainText("Ofrecele los palitos");
@@ -226,9 +228,9 @@ test("asistente: en todas las pantallas, con lo que estás viendo y varias cosas
     expect(await textoImpreso(page)).toContain("Kiosco La Esquina");
     await ficha.getByRole("button", { name: "Cerrar" }).click();
 
-    // Rutas y la ficha del comercio también tienen el botón.
+    // Rutas ya no tiene el botón arriba; la ficha del comercio sí.
     await page.evaluate(() => mostrarPantalla("rutas"));
-    await expect(page.locator(".cabezaRutas").getByRole("button", { name: "Asistente" })).toBeVisible();
+    await expect(page.locator(".cabezaRutas").getByRole("button", { name: "Asistente" })).toHaveCount(0);
     await page.evaluate(() => { mostrarPantalla("menu"); window.abrirFichaComercio("Super Norte"); });
     await page.locator(".fichaComercioNueva").getByRole("button", { name: "Asistente" }).click();
     await expect(ventana.getByRole("button", { name: "Nuevo pedido para Super Norte" })).toBeVisible();

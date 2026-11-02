@@ -1643,3 +1643,24 @@ html #pantallaPedido footer.piePedido #generar{white-space:nowrap;padding:0 18px
 html #pantallaPedido footer.piePedido .piePedidoResumen{min-width:0;}
 /* La lupa dentro de una hoja: el texto sin la caja de los campos (modo oscuro). */
 html[data-tema] body .pzLupaPastilla input.pzLupaInput{background:transparent !important;border:0 !important;box-shadow:none !important;}
+
+/* ---------- Tanda 1: encabezados (pedido del dueño, 2026-11-02) ----------
+   Pantallas principales: flecha y título. Subpantallas: flecha, casita y
+   título. A la derecha, un solo botón "?" más chico, centrado con la flecha.
+   El Asistente queda arriba solo en Inicio y en Más, y la campanita solo en
+   Inicio y en la lista de Más. */
+html body > section > header .botonAyudaPantalla,
+html #pantallaRutas .cabezaRutas .botonAyudaPantalla{
+  width:36px !important;height:36px !important;min-height:36px;margin-bottom:0 !important;
+  align-self:center;font-size:17px;font-weight:800;
+}
+html body > section[data-botones-volver]:not(#pantallaConfiguracion) > header > .botonAyudaPantalla{margin:0 !important;}
+html body > section[data-con-asistente="no"] > header{padding-right:max(16px, env(safe-area-inset-right, 0px)) !important;}
+html.volverConBarra body > section[data-con-asistente="no"] > .barraVolver::before{padding-right:max(16px, env(safe-area-inset-right, 0px));}
+html #pantallaConfiguracion[data-en-seccion="si"] .campanaAvisos{display:none !important;}
+/* En las secciones de Más el "?" va pegado a la derecha, como en las demás. */
+html #pantallaConfiguracion[data-en-seccion="si"] .configHeader > div:has(> h1){flex:1;}
+html #pantallaConfiguracion[data-en-seccion="si"] .configHeader > .botonAyudaPantalla{margin-left:auto !important;}
+/* En la lista de Más, el "?" queda centrado con la campanita y el Asistente. */
+html #pantallaConfiguracion[data-en-seccion="no"] .configHeader > .botonAyudaPantalla{align-self:flex-start;margin-top:-2px !important;}
+html #pantallaConfiguracion[data-en-seccion="si"] .configHeader > .botonAyudaPantalla{margin-top:-4px !important;}

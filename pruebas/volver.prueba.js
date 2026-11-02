@@ -44,10 +44,14 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
     await expect(barra(page).locator(".nav-item.activo")).toHaveText(/Más/);
 
-    // Las pantallas de la barra vuelven a Inicio.
+    // Las pantallas de la barra vuelven a Inicio. Son pantallas principales:
+    // solo flecha y "?", sin casita ni Asistente (tanda 1 de encabezados).
     for (const [boton, pantalla] of [["Pedidos", "#pantallaPedido"], ["Comercios", "#pantallaComercios"], ["Catálogo", "#pantallaCatalogo"]]) {
         await barra(page).getByRole("button", { name: boton }).click();
         await expect(page.locator(pantalla)).toBeVisible();
+        await expect(casita(page)).toBeHidden();
+        await expect(arriba(page).getByRole("button", { name: "Asistente" })).toBeHidden();
+        await expect(page.locator(pantalla).getByRole("button", { name: "Ayuda de esta pantalla" })).toBeVisible();
         await page.locator(pantalla).getByRole("button", { name: "Volver a Inicio" }).click();
         await expect(page.locator("#pantallaMenu")).toBeVisible();
     }
@@ -88,6 +92,13 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator(".configHeader h1")).toHaveText("Apariencia");
     await expect(casita(page)).toBeVisible();
+    // Tanda 1 de encabezados: en una sección de Más, sin campanita ni
+    // Asistente; el "?" a la misma altura que la flecha.
+    await expect(page.locator("#pantallaConfiguracion .campanaAvisos")).toBeHidden();
+    await expect(arriba(page).getByRole("button", { name: "Asistente" })).toBeHidden();
+    const alturaCentro = async boton => { const caja = await boton.boundingBox(); return caja.y + caja.height / 2; };
+    const ayudaSeccion = page.locator("#pantallaConfiguracion .configHeader .botonAyudaPantalla");
+    expect(Math.abs(await alturaCentro(ayudaSeccion) - await alturaCentro(casita(page)))).toBeLessThan(1.5);
     const flechaMas = arriba(page).getByRole("button", { name: "Volver", exact: true });
     await bajarYMirar(page, flechaMas);
     await bajarYMirar(page, casita(page));

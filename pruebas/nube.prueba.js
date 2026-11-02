@@ -481,7 +481,8 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     // La campanita está solo en Inicio y en Más (repaso de diseño).
     await irAPedidos(page);
     await expect(page.locator("#pantallaPedido .campanaAvisos")).toHaveCount(0);
-    await expect(page.locator("#pantallaPedido .botonAsistentePantalla")).toBeVisible();
+    // Tanda 1 de encabezados: el Asistente queda arriba solo en Inicio y Más.
+    await expect(page.locator("#pantallaPedido .botonAsistentePantalla")).toBeHidden();
     await page.evaluate(() => mostrarPantalla("menu"));
     await page.locator("#pantallaMenu .campanaAvisos").click();
     const itemAviso = page.locator(".itemAviso[data-tipo=\"rolPendiente\"]");
