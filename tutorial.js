@@ -130,9 +130,9 @@
 
     const DE_PANTALLA = {
         pantallaEstadisticas: [
-            { objetivo: ".selectorPeriodoEstadisticas", titulo: "El período", texto: "Elegí si querés ver hoy, la semana, el mes o todo." },
+            { objetivo: ".selectorPeriodoEstadisticas", titulo: "El período", texto: "Elegí hoy, los últimos 7 o 30 días o el año. Cada uno dice cuántos pedidos tiene." },
             { objetivo: ".statsNumeros", titulo: "Cuánto vendiste", texto: "Lo vendido y los pedidos del período, comparados con el anterior." },
-            { objetivo: ".statsPestanas", titulo: "Lo más pedido", texto: "Cambiá de pestaña para ver los productos o los comercios que más compran." }
+            { objetivo: ".statsPestanas", titulo: "Quién te deja más plata", texto: "Cambiá de pestaña para ver comercios, productos, marcas o zonas, y si suben o bajan." }
         ],
         pantallaHistorial: [
             { objetivo: "#buscarHistorial", titulo: "Buscar", texto: "Escribí el nombre de un comercio para encontrar sus pedidos." },

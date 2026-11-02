@@ -80,7 +80,11 @@ for (const ancho of [390, 320]) {
             if (enAjustes) await abrirAjustes(page);
             else await abrirMas(page);
             await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-            if (!enAjustes) expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+            // Bajada del todo (si Más es más alta que la pantalla; sin "Mapa de
+            // ventas", que pasó a Estadísticas, a veces entra entera).
+            if (!enAjustes && await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 4)) {
+                expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+            }
             await page.locator(`.configFila[data-config-seccion="${seccion.replace("ajustes/", "")}"]`).first().click();
             await expect(page.locator("#configDetalle")).toBeVisible();
             expect(await page.evaluate(() => window.scrollY), seccion).toBe(0);

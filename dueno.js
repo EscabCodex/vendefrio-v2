@@ -147,9 +147,12 @@
                 ${vePlata ? `<small>${plataCorta(total)} de ${plataCorta(meta)}</small>` : ""}
             </div>`;
         }).join("");
-        card.insertAdjacentHTML("beforeend", ids.length
-            ? `<div class="statsLista listaMetas">${filas}</div>`
-            : estadisticas.vacio("Poné una meta de ventas del mes para cada vendedor y mirá cómo van."));
+        // Sin metas, un solo renglón con "Poner metas" (repaso de diseño).
+        if (ids.length) card.insertAdjacentHTML("beforeend", `<div class="statsLista listaMetas">${filas}</div>`);
+        else {
+            card.classList.add("statsMetasVacia");
+            card.querySelector(".statsCabeza p").textContent = "Todavía no pusiste metas";
+        }
         card.querySelector(".editarMetas")?.addEventListener("click", editarMetas);
         return card;
     }
@@ -183,8 +186,9 @@
         });
     }
 
+    // Repaso de diseño (2026-11-01): "Se están enfriando" pasó a "Llamalos"
+    // de Estadísticas; acá quedan las metas.
     (window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || []).unshift(tarjetaMetas);
-    window.tarjetasEstadisticasExtra.unshift(tarjetaEnfriando);
     extras.escuchar("metas", () => window.estadisticasVendeFrio?.redibujar());
 
     // ---------- Mapa de ventas (T83) ----------
@@ -209,7 +213,7 @@
 
     function abrirMapa() {
         const mes = MESES[new Date().getMonth()];
-        const seccion = p.pantalla("pantallaMapaVentas", { titulo: "Ventas de " + mes, sub: "Cada comercio según lo que compró este mes", icono: "mapa", volverA: "mas" });
+        const seccion = p.pantalla("pantallaMapaVentas", { titulo: "Ventas de " + mes, sub: "Cada comercio según lo que compró este mes", icono: "mapa", volverA: () => window.abrirEstadisticas?.() });
         if (!seccion.querySelector("#mapaVentas")) {
             seccion.querySelector("main").innerHTML = `<div class="pzMapa pzMapaVentas" id="mapaVentas"></div>
                 <div class="pzTarjeta leyendaVentas">
@@ -276,11 +280,8 @@
         }, 60);
     }
 
-    (window.accesosMasExtras = window.accesosMasExtras || []).push({
-        destino: "mapaVentas", icono: "mapa", texto: "Mapa de ventas",
-        mostrar: () => p.esDueno() || !(typeof usaNubeReal === "function" && usaNubeReal()),
-        abrir: abrirMapa
-    });
+    // El mapa de ventas ahora está dentro de Estadísticas ("Ver grande" abre
+    // esta pantalla); ya no tiene su acceso en Más (pedido del dueño).
 
     window.duenoVendeFrio = { tarjetaEnfriando, tarjetaMetas, editarMetas, vendidoPorPersona, abrirMapa, ventasPorComercio };
 }());

@@ -13,6 +13,7 @@
     const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
     const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
+    const SIN_CASITA = ["pantallaEstadisticas"];
 
     function preferencia(campo) {
         try {
@@ -112,8 +113,11 @@
 
         const vaAInicio = VAN_A_INICIO.some(selector => volver.matches(selector))
             || (volver.matches(".configVolver") && !enSeccionDeMas());
-        if (casita.hidden !== vaAInicio) casita.hidden = vaAInicio;
-        const botones = vaAInicio ? "1" : "2";
+        // Estadísticas no lleva casita: así el título entra entero al lado de
+        // la flecha (repaso de diseño, 2026-11-01).
+        const sinCasita = vaAInicio || SIN_CASITA.includes(pantalla.id);
+        if (casita.hidden !== sinCasita) casita.hidden = sinCasita;
+        const botones = sinCasita ? "1" : "2";
         if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
 
         // Al bajar, una barrita con el nombre de la pantalla queda detrás de

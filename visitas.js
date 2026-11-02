@@ -113,11 +113,9 @@
         const desde = stats.inicioPeriodo();
         const lista = visitas().filter(visita => !desde || Number(visita.horaCelular) >= desde.getTime());
         const card = stats.tarjeta("cerrarX", "naranja", "Visitas sin pedido",
-            lista.length ? lista.length + " " + ({ hoy: "hoy", semana: "en los últimos 7 días", mes: "este mes" }[stats.periodoElegido()] || "en total") : "Por qué no hubo pedido", "statsSinPedido");
-        if (!lista.length) {
-            card.insertAdjacentHTML("beforeend", stats.vacio("Cuando marques “Visité, sin pedido”, acá vas a ver los motivos."));
-            return card;
-        }
+            lista.length ? lista.length + " " + ({ hoy: "hoy", semana: "en los últimos 7 días", mes: "en los últimos 30 días" }[stats.periodoElegido()] || "en el último año") : "Por qué no hubo pedido", "statsSinPedido");
+        // Sin visitas marcadas no aparece (repaso de diseño de Estadísticas).
+        if (!lista.length) return null;
         const cuenta = {};
         lista.forEach(visita => { cuenta[visita.motivo] = (cuenta[visita.motivo] || 0) + 1; });
         const max = Math.max(...Object.values(cuenta), 1);

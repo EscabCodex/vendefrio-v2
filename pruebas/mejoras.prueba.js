@@ -193,15 +193,12 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
     expect(mensaje).toContain("Entregados: 2 de 2 cargados");
     expect(mensaje).toContain("A cobrar: $ 19.600");
 
-    // Estadísticas: Unidades y tocar una barra.
+    // Estadísticas: los 2 pedidos de hoy y qué día se vende más.
     await page.evaluate(() => window.abrirEstadisticas());
-    await page.locator('[data-periodo="semana"]').click();
-    await page.locator('[data-medida="unidades"]').click();
-    await expect(page.locator(".statsGrafico h2")).toHaveText("Unidades por día");
-    await expect(page.locator(".statsColumna.hoy .statsValor")).toHaveText("6");
-    await page.locator(".statsColumna.hoy").click();
-    await expect(page.locator("#detalleDiaEstadisticas")).toContainText("2 pedidos · 6 u");
-    await page.locator(".statsGrafico").scrollIntoViewIfNeeded();
+    await page.locator('[data-periodo="hoy"]').click();
+    await expect(page.locator('[data-periodo="hoy"] .filtroEtapaCantidad')).toHaveText("2");
+    await expect(page.locator(".statsDias .statsDiasBarras .mejor")).toHaveCount(1);
+    await page.locator(".statsDias").scrollIntoViewIfNeeded();
     await capturar(page, "mejoras-09-estadisticas");
 
     // Toda la lista de precios: −10% redondeado a $ 100.

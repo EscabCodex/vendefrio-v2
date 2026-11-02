@@ -59,12 +59,12 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await expect(page.locator("#cliente")).toHaveValue("Kiosco Luna");
 
     // Planilla del período desde Estadísticas.
-    await page.evaluate(() => window.abrirEstadisticas());
+    await page.evaluate(() => window.abrirEstadisticas("anio"));
     const [descarga] = await Promise.all([
         page.waitForEvent("download"),
         page.getByRole("button", { name: "Descargar planilla del período" }).click()
     ]);
-    expect(descarga.suggestedFilename()).toMatch(/^VendeFrio pedidos todos .*\.csv$/);
+    expect(descarga.suggestedFilename()).toMatch(/^VendeFrio pedidos del ano .*\.csv$/);
     const texto = fs.readFileSync(await descarga.path(), "utf8");
     const lineas = texto.replace(/^﻿/, "").trim().split("\r\n");
     expect(lineas[0]).toBe("Fecha;Hora;N° de pedido;Comercio;Estado;Productos;Unidades;Total;Cobro;Monto cobrado;Cargado por");

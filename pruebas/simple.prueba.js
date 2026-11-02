@@ -258,7 +258,7 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     const grupos = page.locator("#masAccesos");
     await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "De vez en cuando"]);
     await expect(grupos.locator(".masAccesos .masAcceso strong")).toHaveText(["A cobrar", "Cierre del día", "Estadísticas", "Rutas", "WhatsApp", "Listas de precios"]);
-    await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["Mapa de ventas", "Registro de cambios", "Importar planilla"]);
+    await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["Registro de cambios", "Importar planilla"]);
     await expect(grupos).not.toContainText("Preguntale");
     await expect(page.locator(".configMenuPrincipal > .configLista .configFila")).toHaveCount(1);
     await expect(page.locator("#configFilaAjustes")).toContainText("Ajustes");

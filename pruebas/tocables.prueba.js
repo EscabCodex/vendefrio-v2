@@ -1,7 +1,7 @@
 // VendeFrío - Números y tarjetas que llevan a su detalle (repasada).
 // Lo que parecía solo información ahora se toca y lleva a lo concreto:
 // "Vendido hoy" a Estadísticas de hoy, "23 de 80 comercios visitados" a los
-// visitados, los números de Estadísticas a su gráfico o a "Lo más pedido",
+// visitados, los números de Estadísticas a Terminados o a quién deja más plata,
 // cada comercio o producto del ranking a sus pedidos o al Catálogo, y los
 // números de la ficha de un comercio a sus pedidos. En reposo se ven igual.
 const { test, expect, capturar } = require("./ayudas");
@@ -58,21 +58,21 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(estadisticas).toBeVisible();
     await expect(estadisticas.locator('[data-periodo="hoy"]')).toHaveClass(/activo/);
     await expect(estadisticas.locator(".statsResumen")).toContainText("Hoy");
-    await expect(estadisticas.locator(".statsResumen strong").first()).toHaveText("2");
+    await expect(estadisticas.locator(".statsNumeros > div").first().locator("strong")).toHaveText(/^2(\D|$)/);
     expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(0);
     await capturar(page, "tocables-01-estadisticas-de-hoy");
 
-    // "unidades" -> "Lo más pedido" en Productos; "Vendido" -> el gráfico en plata.
+    // "comercios" y lo vendido -> quién te deja más plata, en Comercios.
     await estadisticas.locator(".statsNumeros > div").nth(1).click();
     const ranking = estadisticas.locator(".statsRanking");
-    await expect(ranking.getByRole("tab", { name: "Productos" })).toHaveAttribute("aria-selected", "true");
+    await expect(ranking.getByRole("tab", { name: "Comercios" })).toHaveAttribute("aria-selected", "true");
     await expect(ranking).toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await estadisticas.locator(".statsVendido").click();
-    await expect(estadisticas.locator('.statsGrafico [data-medida="plata"]')).toHaveAttribute("aria-pressed", "true");
-    await expect(estadisticas.locator(".statsGrafico")).toBeInViewport();
+    await expect(ranking).toBeInViewport();
 
     // Un producto del ranking -> el Catálogo en su marca, con el producto a la vista.
-    await estadisticas.locator(".statsNumeros > div").nth(1).click();
+    await ranking.getByRole("tab", { name: "Productos" }).click();
     await ranking.locator(".statsListaRanking:visible .statsFilaRanking", { hasText: "Helado 1 kg" }).click();
     const catalogo = page.locator("#pantallaCatalogo");
     await expect(catalogo).toBeVisible();
@@ -89,9 +89,9 @@ test("tocables: cada número lleva a su detalle", async ({ page }) => {
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await expect(page.locator(".pastillaComercioHistorial")).toContainText("Kiosco Luna");
 
-    // "Esta semana" (comparada con la anterior) -> los pedidos de esta semana.
-    await page.evaluate(() => window.abrirEstadisticas());
-    await estadisticas.locator(".statsComparativa .statsFila").first().click();
+    // Los pedidos de los últimos 7 días -> Pedidos > Terminados de la semana.
+    await page.evaluate(() => window.abrirEstadisticas("semana"));
+    await estadisticas.locator(".statsNumeros > div").first().click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
     await expect(page.locator('.filtrosHistorialPedidos [data-periodo="semana"]')).toHaveAttribute("aria-checked", "true");
 

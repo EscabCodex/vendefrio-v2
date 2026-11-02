@@ -2989,3 +2989,80 @@ html[data-tema="oscuro"] .modalBotones .botonAsistenteFicha{color:var(--acento);
 .avisoPlanAsistente{margin:8px 0 0;font-size:13.5px;color:var(--pendiente);font-weight:650;}
 .botonesPlanAsistente{display:grid;grid-template-columns:1fr 1.6fr;gap:8px;margin-top:12px;}
 .botonesPlanAsistente .pzBtn{min-height:48px;}
+
+/* ---- Estadísticas para estudiar el mercado (repaso de diseño, 2026-11-01):
+   períodos como los filtros de Pedidos, cuatro partes con su título,
+   Llamalos, Ofreceles, quién deja más plata, qué día se vende más, tus
+   clientes y el mapa de ventas adentro. */
+html .selectorPeriodoEstadisticas.filaPeriodosStats{display:flex;gap:8px;overflow-x:auto;margin:2px -16px 6px;padding:2px 16px 6px;border-radius:0;background:transparent;scrollbar-width:none;}
+html .selectorPeriodoEstadisticas.filaPeriodosStats::-webkit-scrollbar{display:none;}
+html .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa{min-height:40px;padding:0 8px 0 14px;font-size:13px;box-shadow:none;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas.filaPeriodosStats{background:transparent;}
+html[data-tema="oscuro"] .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa.activo{background:var(--acento);color:var(--acento-txt);}
+.statsSeccion{display:grid;gap:1px;margin:14px 4px -2px;}
+.statsSeccion:first-child{margin-top:2px;}
+.statsSeccion h2{margin:0;font-size:19px;font-weight:800;color:var(--texto);}
+.statsSeccion small{font-size:13px;color:var(--texto-sec);}
+.statsTextoRojo{color:var(--peligro) !important;font-weight:600;}
+.statsTextoNaranja{color:var(--pendiente) !important;font-weight:600;}
+.statsTextoVerde{color:var(--visitado) !important;font-weight:600;}
+.statsFilaTexto > small b{font-weight:800;color:var(--texto);font-size:inherit;}
+.statsWhatsapp{flex-shrink:0;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--visitado-bg);color:var(--visitado);}
+.statsAgregarTel,.statsPildora{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 12px;border-radius:var(--radio-pildora);font-size:13px;font-weight:700;cursor:pointer;}
+.statsAgregarTel{border:1.5px dashed var(--acento);background:transparent;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .statsAgregarTel{color:var(--acento);}
+.statsPildora{border:0;background:var(--acento);color:var(--acento-txt);}
+html[data-tema="oscuro"] .statsPildora{color:var(--acento-txt) !important;}
+.statsVerTodos{display:block;margin:6px auto 0;padding:8px 14px;}
+.statsFilaRanking .statsFilaTexto > .statsFilaBarra{align-items:center;}
+.statsFilaBarra .statsPista{flex:1;margin:0;}
+.statsFilaBarra .statsCambio{min-width:54px;padding:2px 7px;}
+.statsRanking .statsPestanas{grid-template-columns:repeat(var(--pestanas,3),minmax(0,1fr));}
+.statsRanking .statsPestanas button{padding:0 4px;font-size:12.5px;white-space:nowrap;}
+.statsRanking .statsFilaRanking .statsAvatar{font-size:12px;}
+.statsDiasBarras{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:150px;margin-top:4px;}
+.statsDiasBarras > div{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;}
+.statsDiasBarras small{font-size:11px;font-weight:700;color:var(--texto-sec);white-space:nowrap;}
+.statsDiasBarras span{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;}
+.statsDiasBarras i{display:block;width:72%;max-width:30px;border-radius:9px;background:color-mix(in srgb, var(--acento) 35%, var(--superficie));}
+.statsDiasBarras .mejor i{background:var(--acento);}
+.statsDiasBarras b{font-size:12px;font-weight:700;color:var(--texto-ter);}
+.statsDiasBarras .mejor b,.statsDiasBarras .mejor small{color:var(--texto);font-weight:800;}
+.statsClientesNumeros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 6px;}
+.statsClientesNumeros > div{display:grid;gap:1px;padding:10px 12px;border-radius:14px;background:var(--superficie-2);}
+.statsClientesNumeros strong{font-size:22px;font-weight:800;color:var(--texto);line-height:1.1;}
+.statsClientesNumeros small{font-size:12.5px;color:var(--texto-sec);}
+.statsClientesNumeros [data-tono="sube"] strong{color:var(--visitado);}
+.statsClientesNumeros [data-tono="baja"] strong{color:var(--peligro);}
+.statsAvisoSinGuardar{display:flex;align-items:center;gap:10px;margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--pendiente-bg);}
+.statsAvisoSinGuardar > div{display:grid;gap:1px;min-width:0;}
+.statsAvisoSinGuardar strong{font-size:14.5px;font-weight:700;color:var(--texto);}
+.statsAvisoSinGuardar small{font-size:12.5px;color:var(--texto-sec);}
+.statsAvisoSinGuardar .ajIcono{flex-shrink:0;width:34px;height:34px;}
+.statsClientes .statsSubtitulo{margin:12px 0 0;font-size:12.5px;font-weight:700;color:var(--texto-sec);}
+.statsMiniMapa{position:relative;height:190px;margin:2px 0 8px;border-radius:16px;overflow:hidden;background:var(--superficie-2);cursor:pointer;}
+.statsMiniMapaCaja{position:absolute;inset:0;}
+.statsMiniMapa .leaflet-control-attribution{font-size:8px;}
+.statsVerGrande{position:absolute;right:10px;bottom:10px;z-index:500;display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border:0;border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);font-size:13px;font-weight:700;box-shadow:var(--sombra);}
+.statsLeyendaMapa{display:flex;flex-wrap:wrap;gap:14px;margin:0 2px 4px;font-size:12.5px;color:var(--texto-sec);}
+.statsLeyendaMapa span{display:inline-flex;align-items:center;gap:6px;}
+.statsLeyendaMapa i{width:10px;height:10px;border-radius:50%;}
+.statsLeyendaMapa [data-nivel="bueno"]{background:#14804A;}
+.statsLeyendaMapa [data-nivel="medio"]{background:#E0A100;}
+.statsLeyendaMapa [data-nivel="flojo"]{background:#D93636;}
+.statsMetasVacia .statsCabeza{margin-bottom:0;}
+.statsMetasVacia .statsCabeza > div{flex:1;min-width:0;}
+.statsResumen .statsVendido{text-align:left;}
+.statsResumen .statsVendido strong{font-size:40px;line-height:1;margin:6px 0 2px;letter-spacing:-.02em;}
+.statsResumen .statsVendido > span{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;}
+.statsResumen .statsCambio[data-tono]{min-width:0;background:rgba(255,255,255,.92);}
+html[data-tema="oscuro"] .statsResumen .statsCambio[data-tono="sube"]{background:var(--visitado-bg);}
+html[data-tema="oscuro"] .statsResumen .statsCambio[data-tono="baja"]{background:var(--peligro-bg);}
+.statsNumeros .statsDelta{font-size:11px;}
+html .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa{flex:0 0 auto;background:var(--superficie);color:var(--texto);border:1px solid var(--borde);}
+html .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa.activo{background:var(--acento);color:var(--acento-txt);border-color:var(--acento);box-shadow:none;}
+.statsLista > [hidden]{display:none !important;}
+.statsMiniMapa{isolation:isolate;z-index:0;}
+html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoRojo{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoNaranja{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoVerde{color:var(--visitado) !important;}

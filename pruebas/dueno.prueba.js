@@ -1,6 +1,6 @@
 // VendeFrío - Ideas para la 1.0, tanda 5 "Para el dueño" (T79 a T83).
-// 1. Estadísticas contra el período anterior, "Se están enfriando" y el
-//    mapa de ventas (modo personal, con pedidos de prueba).
+// 1. Estadísticas contra el período anterior, "Llamalos" (antes "Se están
+//    enfriando") y el mapa de ventas dentro de Estadísticas (modo personal).
 // 2. Registro de cambios, metas del mes y resumen de la noche (nube).
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora, cargarPedido, abrirMas } = require("./recorridos");
@@ -38,24 +38,30 @@ test.describe("personal", () => {
             window.abrirEstadisticas();
         });
 
-        // Semana contra la anterior: 3 pedidos contra 2.
+        // 7 días contra los 7 de antes: 3 pedidos contra 2.
         const pantalla = page.locator("#pantallaEstadisticas");
         await pantalla.locator('[data-periodo="semana"]').click();
         const resumen = pantalla.locator(".statsResumen");
-        await expect(resumen.locator(".statsResumenTop .statsDelta")).toHaveText("+1");
+        await expect(resumen.locator(".statsNumeros > div").first().locator(".statsDelta")).toHaveText("+1");
         await expect(resumen.locator(".statsVendido .statsCambio")).toBeVisible();
 
-        // Se están enfriando: Despensa Mary pedía cada semana.
-        const enfriando = pantalla.locator(".statsEnfriando");
-        await expect(enfriando).toContainText("Despensa Mary");
-        await expect(enfriando).toContainText("Pedía cada semana · hace 16 días que no");
-        await expect(enfriando.getByRole("link", { name: "WhatsApp a Despensa Mary" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491144442222\?text=/);
+        // Llamalos: Despensa Mary pedía cada semana y dejó de pedir.
+        const llamar = pantalla.locator(".statsLlamar");
+        await expect(llamar).toContainText("Despensa Mary");
+        await expect(llamar).toContainText("No pide hace 16 días · pedía cada semana");
+        await expect(llamar.getByRole("link", { name: "WhatsApp a Despensa Mary" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491144442222\?text=/);
         await page.evaluate(() => window.scrollTo(0, 0));
         await capturar(page, "dueno-01-estadisticas");
 
-        // Mapa de ventas (Más): Kiosco Luna bien, los otros flojos este mes.
+        // Mapa de ventas: dentro de Estadísticas (ya no en Más) y "Ver grande"
+        // abre el mapa completo: Kiosco Luna bien, los otros flojos este mes.
         await abrirMas(page);
-        await page.locator("#masAccesos").getByRole("button", { name: /Mapa de ventas/ }).click();
+        await expect(page.locator("#masAccesos")).not.toContainText("Mapa de ventas");
+        await page.evaluate(() => window.abrirEstadisticas());
+        const tarjetaMapa = pantalla.locator(".statsMapa");
+        await tarjetaMapa.scrollIntoViewIfNeeded();
+        await expect(tarjetaMapa.locator(".leaflet-interactive, .leaflet-marker-pane, .leaflet-overlay-pane").first()).toBeAttached();
+        await tarjetaMapa.getByRole("button", { name: "Ver grande" }).click();
         const mapa = page.locator("#pantallaMapaVentas");
         await expect(mapa).toBeVisible();
         await expect(mapa.locator(".leaflet-interactive")).toHaveCount(3);
