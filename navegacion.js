@@ -21,6 +21,7 @@
     const PERFILES = { bicicleta: "routed-bike", moto: "routed-car", auto: "routed-car", pie: "routed-foot" };
     const VELOCIDAD_SIN_RUTA = { bicicleta: 4.2, moto: 8.3, auto: 8.3, pie: 1.3 }; // m/s, para estimar sin camino
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
+    const DISTANCIA_SALIDA = 80;      // m: te fuiste del comercio (se para el reloj)
     const DISTANCIA_LLEGANDO = 150;   // m: se agranda la hoja (T135)
     const DISTANCIA_FUERA = 35;       // m: te saliste del camino
     const ESPERA_RECALCULO = 5000;    // ms entre dos cálculos del camino
@@ -55,6 +56,8 @@
     let calleActual = "";        // por dónde vas (el Asistente lo dice)
     let valhallaEnPausaHasta = 0; // T163: si Valhalla falló, se usa OSRM un rato
     let minimizada = false;      // T170: sigue andando debajo de la burbuja
+    let enComercio = null;       // { nombre, desde, punto }: el reloj de la parada (repaso de Rutas)
+    let relojComercio = 0;
     let encuadrarAlVolver = false; // T170: un camino nuevo mientras estaba minimizada
     let burbuja = null;
 
@@ -1146,6 +1149,7 @@
             pantalla.classList.remove("llegando");
             dibujarManiobra({ maniobra: { tipo: "arrive", lado: "" } }, 0);
             hablar("Llegaste a " + comercio.nombre);
+            empezarEstadia(comercio);
             abrirHoja(true);
             actualizar(false);
             return;
@@ -1268,6 +1272,7 @@
             rumbo = rumboEntre(posicion, nueva);
         }
         posicion = nueva;
+        if (enComercio && distancia(posicion, enComercio.punto) > DISTANCIA_SALIDA) terminarEstadia();
         if (!marcadorYo) {
             marcadorYo = L.marker(posicion, {
                 icon: L.divIcon({ className: "marcadorYoNav", html: '<span class="flechaYo"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 2 20 21 12 16.5 4 21z"/></svg></span>', iconSize: [44, 44], iconAnchor: [22, 22] }),
@@ -1473,6 +1478,7 @@
         camino = null;
         posicion = null;
         calleActual = "";
+        terminarEstadia();
         paradas = [];
         window.equipoRutaVendeFrio?.alCerrarNavegacion?.();
     }
@@ -1727,6 +1733,59 @@
             if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();
         }
     }, true);
+
+    // -------------------------------------------------
+    // El reloj de cada comercio (repaso de Rutas): al llegar arranca solo y
+    // se para cuando te alejás. El promedio de las últimas 10 visitas queda
+    // en el comercio (minutosEnComercio) y Rutas lo usa para las horas.
+    // -------------------------------------------------
+
+    function empezarEstadia(comercio) {
+        if (enComercio && enComercio.nombre === comercio.nombre) return;
+        terminarEstadia();
+        enComercio = { nombre: comercio.nombre, desde: Date.now(), punto: destinoDe(comercio) };
+        dibujarRelojComercio();
+        clearInterval(relojComercio);
+        relojComercio = setInterval(dibujarRelojComercio, 30000);
+    }
+
+    function dibujarRelojComercio() {
+        if (!pantalla) return;
+        let reloj = pantalla.querySelector(".relojComercioNav");
+        if (!enComercio) {
+            if (reloj) reloj.hidden = true;
+            return;
+        }
+        if (!reloj) {
+            reloj = document.createElement("div");
+            reloj.className = "relojComercioNav";
+            reloj.setAttribute("role", "timer");
+            pantalla.appendChild(reloj);
+        }
+        const minutos = Math.floor((Date.now() - enComercio.desde) / 60000);
+        reloj.hidden = false;
+        reloj.innerHTML = window.icono("reloj", 15) + "<span>" + minutos + "' en " + window.piezas.esc(enComercio.nombre) + "</span>";
+    }
+
+    function terminarEstadia() {
+        clearInterval(relojComercio);
+        relojComercio = 0;
+        const estadia = enComercio;
+        enComercio = null;
+        dibujarRelojComercio();
+        if (!estadia) return;
+        const minutos = Math.round((Date.now() - estadia.desde) / 60000);
+        if (minutos >= 1 && minutos <= 180) guardarTiempoEnComercio(estadia.nombre, minutos);
+    }
+
+    function guardarTiempoEnComercio(nombre, minutos) {
+        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombre) : null;
+        if (!comercio || typeof actualizarComercioPorId !== "function") return;
+        const tiempos = (Array.isArray(comercio.tiemposEnComercio) ? comercio.tiemposEnComercio : [])
+            .map(Number).filter(valor => valor > 0).concat(minutos).slice(-10);
+        const promedio = Math.round(tiempos.reduce((total, valor) => total + valor, 0) / tiempos.length);
+        actualizarComercioPorId(comercio.id, { tiemposEnComercio: tiempos, minutosEnComercio: promedio });
+    }
 
     // -------------------------------------------------
     // El ⋯ de la navegación y «Sumar parada» (repaso de Rutas, imágenes 7 y 8)

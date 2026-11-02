@@ -84,3 +84,45 @@ test("sumar parada: de paso, ahora y varios manteniendo apretado", async ({ page
     await expect.poll(() => page.evaluate(() => window.navegacionVendeFrio.paradasQueSiguen().map(comercio => comercio.nombre)))
         .toContain("Super Lejos");
 });
+
+test("reloj del comercio: arranca al llegar y guarda el promedio en la ficha", async ({ page }) => {
+    await page.clock.install();
+    await page.route("https://routing.openstreetmap.de/**", ruta => ruta.abort());
+    await page.route("https://valhalla1.openstreetmap.de/**", ruta => ruta.abort());
+    await page.addInitScript(() => {
+        if (window.speechSynthesis) window.speechSynthesis.speak = frase => setTimeout(() => frase.onend && frase.onend(), 30);
+        navigator.geolocation.watchPosition = exito => {
+            window.__gps = (lat, lng) => exito({ coords: { latitude: lat, longitude: lng, speed: 0, accuracy: 5, heading: null }, timestamp: Date.now() });
+            return 1;
+        };
+        navigator.geolocation.clearWatch = () => {};
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    await page.locator("#inicioNombrePersonal").fill("Jere");
+    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
+    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.evaluate(comercios => comercios.slice(0, 2).forEach((comercio, i) =>
+        agregarComercio({ ...comercio, direccion: "Calle " + (i + 1), origenGps: "gps" })), COMERCIOS);
+
+    await page.evaluate(() => window.navegacionVendeFrio.abrir(["Almacén Uno", "Bar Dos"]));
+    const navegacion = page.locator("#pantallaNavegacion");
+    await expect(navegacion).toBeVisible();
+    await page.evaluate(({ latitude, longitude }) => window.__gps(latitude, longitude), SALIDA);
+    // Llegás: arranca el reloj.
+    await page.evaluate(({ lat, lng }) => window.__gps(lat, lng), COMERCIOS[0]);
+    const reloj = navegacion.locator(".relojComercioNav");
+    await expect(reloj).toHaveText("0' en Almacén Uno");
+    await page.clock.fastForward("12:00");
+    await expect(reloj).toHaveText("12' en Almacén Uno");
+    await navegacion.getByRole("button", { name: "Achicar la tarjeta" }).click();
+    await capturar(page, "sumarParada-05-reloj");
+    // Te alejás: se para y queda el promedio en el comercio.
+    await page.evaluate(({ lat, lng }) => window.__gps(lat, lng + 0.003), COMERCIOS[0]);
+    await expect(reloj).toBeHidden();
+    expect(await page.evaluate(() => buscarComercioPorNombre("Almacén Uno").minutosEnComercio)).toBe(12);
+    await page.evaluate(() => window.navegacionVendeFrio.cerrar());
+    await page.evaluate(() => window.abrirFichaComercio("Almacén Uno"));
+    await expect(page.locator(".fichaTiempo")).toContainText("Tiempo promedio en este comercio12 min");
+});

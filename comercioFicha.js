@@ -132,6 +132,17 @@
         return "Tiene " + tiene + (tiene === 1 ? " cajón" : " cajones") + (devolvio ? " · devolvió " + devolvio : "");
     }
 
+    // Lo que suele tardar ahí (repaso de Rutas): lo mide la navegación sola.
+    function textoTiempoEnComercio(comercio) {
+        const minutos = Number(comercio.minutosEnComercio);
+        if (!(minutos > 0)) return "";
+        const visitas = Array.isArray(comercio.tiemposEnComercio) ? comercio.tiemposEnComercio.length : 0;
+        return `<div class="pzFila fichaDato fichaTiempo">
+                <span class="fichaDatoIco">${window.piezas.ico("reloj", 22)}</span>
+                <span class="pzFilaTxt"><small>Tiempo promedio en este comercio</small><strong>${minutos} min${visitas > 1 ? " · de " + visitas + " visitas" : ""}</strong></span>
+            </div>`;
+    }
+
     // Todos los datos, aunque falten: el que falta se agrega tocándolo.
     function lineasDeDatos(comercio) {
         const lineas = [
@@ -162,7 +173,7 @@
                 <span class="pzFilaTxt"><small>${p.esc(titulo)}</small><strong>${tiene ? p.esc(tiene) : "+ Agregar " + p.esc(titulo.toLocaleLowerCase("es"))}</strong></span>
                 ${gps}
             </div>`;
-        }).join("")}</div>`;
+        }).join("")}${textoTiempoEnComercio(comercio)}</div>`;
         const editar = fila => editarDato(comercio.nombre, fila.dataset.campo);
         contenedor.addEventListener("click", evento => {
             const gps = evento.target.closest(".fichaGps");
