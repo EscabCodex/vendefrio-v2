@@ -2,6 +2,30 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 272,
+      "fecha": "2026-11-02",
+      "tipo": "nuevo",
+      "icono": "chispa",
+      "titulo": "El Asistente arma documentos",
+      "texto": "Pedile un PDF, como las ventas de un comercio, o una lista de precios nueva. Antes de crear te pregunta."
+    },
+    {
+      "version": 272,
+      "fecha": "2026-11-02",
+      "tipo": "mejor",
+      "icono": "chispa",
+      "titulo": "Asistente en cada pantalla",
+      "texto": "Tocá ✨ arriba a la derecha. Sabe dónde estás, trae preguntas para tocar y solo escucha si tocás el micrófono."
+    },
+    {
+      "version": 272,
+      "fecha": "2026-11-02",
+      "tipo": "mejor",
+      "icono": "check",
+      "titulo": "Encabezados más prolijos",
+      "texto": "Botón de Ayuda más chico y alineado, sin texto bajo el título, y casita solo en las subpantallas."
+    },
+    {
       "version": 271,
       "fecha": "2026-11-02",
       "tipo": "arreglado",
