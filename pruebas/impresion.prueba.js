@@ -7,7 +7,7 @@
 // 2. "Ticket impreso por" en el seguimiento (T28d): cada impresión queda en el
 //    pedido (quién, cuándo y cuántas copias) y se ve en los dos celulares. La
 //    nube solo deja agregar impresiones a nombre propio.
-// 3. Hoja de reparto impresa (T28e): en Rutas, después de "Optimizar ruta",
+// 3. Hoja de reparto impresa (T28e): en Rutas, con la ruta armada,
 //    se imprime la hoja con los comercios en el orden de la ruta, sus
 //    pedidos sin entregar, lo que deben de antes y el total a cobrar.
 // 4. Cierre del día (T28f): sección nueva para el dueño y "Cobra", con la
@@ -227,23 +227,23 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu", { name: "Otros pedidos" })).toBeHidden();
 
-    // Rutas: todos los comercios y "Optimizar ruta".
+    // Rutas: todos los comercios y la ruta armada.
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     // El mapa viene dentro de la app (T40): abre aunque no haya internet
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    const aviso = page.locator("#modalAviso");
-    // «Elegir» abre «Comercios para esta ruta» (T136).
-    await page.locator("#btnElegirRutas").click();
-    await page.locator("#seleccionarTodosRuta").click();
-    await page.getByRole("button", { name: "Volver al mapa" }).click();
-    await page.locator("#btnOptimizarRuta").click();
-    await expect(aviso).toContainText("1. Kiosco Luna");
-    await aviso.getByRole("button", { name: "Entendido" }).click();
+    // «Armar ruta» > Elegir a mano > Marcar todos: la app la ordena sola.
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await elegir.getByRole("button", { name: /^Armar la ruta con \d+$/ }).click();
+    await expect(page.locator(".paradaOrden").first()).toHaveAttribute("data-nombre", "Kiosco Luna");
     await page.locator("#btnParadasRutas").click();
-
-    const boton = page.getByRole("button", { name: "Imprimir hoja de reparto" });
+    // La hoja de reparto, en el ⋯ de la ruta.
+    await page.locator("#btnMasParadas").click();
+    const boton = page.locator(".menuRutaHoy").getByRole("button", { name: "Imprimir hoja de reparto" });
     await expect(boton).toBeVisible();
     await page.locator("#listaRutaOrdenada").evaluate(lista => lista.scrollIntoView({ block: "start" }));
     await capturar(page, "impresion-04-hoja-de-reparto");

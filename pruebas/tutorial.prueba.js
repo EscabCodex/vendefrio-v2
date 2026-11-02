@@ -107,11 +107,7 @@ test("tutorial: lo básico de verdad al crear la cuenta y uno chico por pantalla
     // 5. La ruta: se mira en la pantalla de Rutas.
     await expect(globo).toContainText("5. La ruta del día");
     await expect(page.locator("#pantallaRutas")).toBeVisible();
-    await esperarFocoSobre(page, "#btnElegirRutas");
-    await globo.getByRole("button", { name: "Siguiente" }).click();
-    await esperarFocoSobre(page, "#btnOptimizarRuta");
-    await globo.getByRole("button", { name: "Siguiente" }).click();
-    await esperarFocoSobre(page, "#btnNavegarRuta");
+    await esperarFocoSobre(page, "#btnArmarRuta");
     await capturar(page, "tutorial-06-ruta");
     await globo.getByRole("button", { name: "Siguiente" }).click();
 

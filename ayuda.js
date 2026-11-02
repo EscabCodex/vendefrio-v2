@@ -68,7 +68,7 @@
         {
             id: "ruta", titulo: "Armar la ruta o ir a un comercio",
             claves: /ruta|recorrido|como llego|navegar|mapa/,
-            pasos: ["En Más, tocá «Rutas».", "Elegí los comercios y tocá «Optimizar ruta».", "Para ir a uno solo, en su ficha tocá «Ir»."]
+            pasos: ["En Más, tocá «Rutas».", "Tocá «Armar ruta» y elegí los comercios: la app los ordena sola.", "Para ir a uno solo, en su ficha tocá «Ir»."]
         },
         {
             id: "empleados", titulo: "Sumar un empleado",

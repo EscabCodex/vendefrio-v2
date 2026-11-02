@@ -224,9 +224,9 @@ test("avisar: el aviso del equipo en la vista previa de Rutas", async ({ page })
     await expect(cartel).toHaveText("Lucas avisó: control en San Martín");
     await expect(rutas.locator(".pinAvisoCalle")).toHaveCount(1);
     await expect(rutas.locator(".pinAvisoCalle")).toHaveAttribute("title", "Control · avisó Lucas");
-    // Va arriba de Iniciar, dentro de la hoja.
+    // Va arriba de «Armar ruta», dentro de la hoja.
     const cajaCartel = await cartel.boundingBox();
-    const cajaIniciar = await rutas.locator("#btnNavegarRuta").boundingBox();
+    const cajaIniciar = await rutas.locator("#btnArmarRuta").boundingBox();
     expect(cajaCartel.y + cajaCartel.height).toBeLessThanOrEqual(cajaIniciar.y);
     await page.waitForTimeout(300);
     await capturar(page, "equipo-03-rutas");

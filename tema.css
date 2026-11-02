@@ -120,9 +120,7 @@ html .configGrupo,
 html .tarjetaSeguimiento,
 html .tarjetaComercio,
 html .tarjetaProducto,
-html .tarjetaHistorial,
-html .filaRutaGuardada,
-html .tarjetaSeleccionRuta{
+html .tarjetaHistorial{
   background:var(--superficie);
   color:var(--texto);
   border:var(--borde-tarjeta);
@@ -1057,37 +1055,6 @@ html .extraVolver{
 /* Rutas: mapa arriba, paradas y, plegadas abajo, las ubicaciones. */
 html .tarjetaMapaRuta #mapaRuta{height:300px !important;border-radius:18px !important;background:var(--superficie-2) !important;}
 html .tarjetaMapaRuta .btnAccion{border-radius:var(--radio-pildora);}
-html .encabezadoTarjetaRuta{gap:12px;}
-html .iconoTarjetaRuta{border-radius:14px;background:var(--acento-bg);color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .iconoTarjetaRuta{color:var(--acento);}
-html .encabezadoTarjetaRuta h2{font-size:16px;font-weight:700;color:var(--texto);}
-html .encabezadoTarjetaRuta p{color:var(--texto-sec);}
-html .accionesSeleccionRuta{display:flex;gap:8px;flex-wrap:wrap;}
-html .accionesSeleccionRuta .btnAccion{
-  flex:0 0 auto;min-height:38px;padding:0 16px;
-  border:1px solid var(--borde) !important;border-radius:var(--radio-pildora);
-  background:var(--superficie) !important;color:var(--texto) !important;font-size:13.5px;
-}
-html .opcionSeleccionRuta{
-  border:0 !important;border-bottom:1px solid var(--borde) !important;border-radius:0 !important;
-  background:transparent !important;box-shadow:none !important;margin:0 !important;padding:12px 2px !important;
-}
-html .opcionSeleccionRuta:last-child{border-bottom:0 !important;}
-html .opcionSeleccionRuta span{color:var(--texto);font-weight:600;}
-html .opcionSeleccionRuta input{accent-color:var(--acento);width:20px;height:20px;}
-html .opcionSeleccionRuta .seleccionRutaGps,
-html .opcionSeleccionRuta .seleccionRutaSinGps{padding:3px 9px;border-radius:var(--radio-pildora);font-size:11px;font-weight:700;}
-html .opcionSeleccionRuta .seleccionRutaGps{background:var(--visitado-bg);color:var(--visitado);}
-html .opcionSeleccionRuta .seleccionRutaSinGps{background:var(--pendiente-bg);color:var(--pendiente);}
-html .tarjetaUbicacionesRuta > summary{list-style:none;cursor:pointer;}
-html .tarjetaUbicacionesRuta > summary::-webkit-details-marker{display:none;}
-html .tarjetaUbicacionesRuta > summary::after{content:"";margin-left:auto;width:10px;height:10px;border-right:2px solid var(--texto-ter);border-bottom:2px solid var(--texto-ter);transform:rotate(45deg);flex-shrink:0;}
-html .tarjetaUbicacionesRuta[open] > summary{margin-bottom:12px;}
-html .tarjetaUbicacionesRuta[open] > summary::after{transform:rotate(-135deg);}
-html .tarjetaUbicacionesRuta select{border-radius:14px !important;background:var(--superficie);color:var(--texto);border:1px solid var(--borde-fuerte);}
-html .tarjetaUbicacionesRuta .btnAccion{border-radius:var(--radio-pildora) !important;}
-html .notaGpsFicha{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:var(--info-bg);color:var(--info);font-size:13px;}
-html .resumenRuta{border-radius:12px;background:var(--superficie-2) !important;color:var(--texto-sec) !important;}
 
 /* Secciones de "Más": botones píldora. */
 html .configDetalle button.configCuentaIngresar,
@@ -1099,7 +1066,7 @@ html .tarjetaMapaRuta > div:has(#btnOptimizarRuta){display:grid !important;grid-
 .hojaPartesGoogleMaps > .pzBtn:last-child{background:transparent;color:var(--texto-sec);}
 html .tarjetaMapaRuta #btnOptimizarRuta{grid-column:1/-1;}
 html .tarjetaMapaRuta .btnAccion{min-height:46px;font-size:14px;}
-html .botonNavegacion3D{background:var(--superficie-2) !important;color:var(--texto) !important;}
+
 html .extraVolver{width:auto !important;align-self:flex-start;}
 html .modalBotones button{border-radius:var(--radio-pildora) !important;}
 
@@ -1132,9 +1099,7 @@ html[data-tema="oscuro"] :is(.agregarDatoRuta,.agregarDatoNavegacion){color:var(
 .agregarDatoNavegacion{min-height:32px;margin:0;padding:2px 0;border:0;background:none;box-shadow:none;font:inherit;font-weight:700;}
 .accesoNavegacion.accesoAgregarDato small{color:var(--acento-oscuro, var(--acento));}
 html[data-tema="oscuro"] .accesoNavegacion.accesoAgregarDato small{color:var(--acento);}
-.faltanDatosRuta{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 12px;}
-.faltanDatosRuta .agregarDatoChip{min-height:36px;border:1px dashed var(--borde-fuerte);background:transparent;color:var(--acento-oscuro, var(--acento));font-weight:700;cursor:pointer;}
-html[data-tema="oscuro"] .faltanDatosRuta .agregarDatoChip{color:var(--acento);}
+
 html[data-tema] #pantallaPedido.pedidoEnHoja > header > div{flex:1 1 auto !important;min-width:0;margin-left:0 !important;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header h1{font-size:22px;line-height:1.15;text-align:left;}
 html[data-tema] #pantallaPedido.pedidoEnHoja > header p{display:none;}
@@ -1381,7 +1346,6 @@ html[data-tema="oscuro"] .llegueHoja .tiradorDeslizador{background:#1E9E57;color
   content:"";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
   border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid #fff;
 }
-html .botonNavegarRuta{background:var(--superficie-2) !important;color:var(--texto) !important;}
 
 /* ---------- Voz (Etapa 5, T43 y T44) ---------- */
 
@@ -1767,8 +1731,8 @@ html[data-densidad="comodo"] #pantallaPedido .listaProdutos .fila{min-height:78p
 html[data-densidad="amplio"] #pantallaPedido .listaProdutos .fila{min-height:90px;}
 html[data-densidad="comodo"] .configDetalle .ajFila{min-height:74px;padding-top:15px;padding-bottom:15px;}
 html[data-densidad="amplio"] .configDetalle .ajFila{min-height:84px;padding-top:19px;padding-bottom:19px;}
-html[data-densidad="comodo"] .tarjetaSeguimiento,html[data-densidad="comodo"] .opcionSeleccionRuta{padding-top:16px !important;padding-bottom:16px !important;}
-html[data-densidad="amplio"] .tarjetaSeguimiento,html[data-densidad="amplio"] .opcionSeleccionRuta{padding-top:20px !important;padding-bottom:20px !important;}
+html[data-densidad="comodo"] .tarjetaSeguimiento{padding-top:16px !important;padding-bottom:16px !important;}
+html[data-densidad="amplio"] .tarjetaSeguimiento{padding-top:20px !important;padding-bottom:20px !important;}
 html[data-densidad="comodo"] main.container,html[data-densidad="comodo"] .container{row-gap:16px;}
 html[data-densidad="amplio"] main.container,html[data-densidad="amplio"] .container{row-gap:22px;}
 
@@ -1781,77 +1745,11 @@ html[data-barra="iconos"] body > nav.bottom-nav{min-height:64px;}
 html[data-precios="no"] #pantallaPedido .nombreProductoPedido small{display:none;}
 
 /* ---------- Rutas: "Comercios para esta ruta" (T50) ---------- */
-html .estadoSeleccionRuta{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;background:transparent !important;border:0;font-size:inherit;}
-.chipResumenRuta{
-  display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 11px;border-radius:var(--radio-pildora);
-  background:var(--acento-bg);color:var(--acento-oscuro);font-size:12.5px;font-weight:700;
-}
-html[data-tema="oscuro"] .chipResumenRuta{color:var(--acento);}
-.chipResumenRuta[data-tono="listo"]{background:var(--visitado-bg);color:var(--visitado) !important;}
-.chipResumenRuta[data-tono="falta"]{background:var(--pendiente-bg);color:var(--pendiente) !important;}
-html .accionesSeleccionRuta{display:flex;gap:6px;margin:12px 0 0;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);flex-wrap:nowrap;}
-html .accionesSeleccionRuta .btnAccion{
-  flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  min-height:38px;padding:0 8px;border:0 !important;border-radius:var(--radio-pildora);
-  background:transparent !important;color:var(--texto-sec) !important;font-size:13.5px;font-weight:700;box-shadow:none !important;
-}
-html .accionesSeleccionRuta .btnAccion:active{background:var(--superficie) !important;color:var(--texto) !important;}
-.buscadorSeleccionRuta{
-  display:flex;align-items:center;gap:8px;margin:10px 0 4px;padding:0 14px;min-height:46px;
-  border:1px solid var(--borde-fuerte);border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto-ter);
-}
-html .buscadorSeleccionRuta input{flex:1;min-width:0;min-height:44px;margin:0;padding:0;border:0 !important;background:transparent !important;box-shadow:none !important;color:var(--texto);font-size:15px;outline:0;}
-html .listaSeleccionRuta{display:grid;max-height:none;margin-top:4px;}
-html .opcionSeleccionRuta{
-  display:grid !important;grid-template-columns:24px 40px minmax(0,1fr);align-items:center;gap:10px !important;
-  padding:11px 2px !important;cursor:pointer;
-}
-html .opcionSeleccionRuta input{
-  -webkit-appearance:none;appearance:none;margin:0;width:24px !important;height:24px !important;min-height:0;
-  border:2px solid var(--borde-fuerte);border-radius:50%;background:var(--superficie);cursor:pointer;
-  position:relative;
-}
-html .opcionSeleccionRuta input:checked{border-color:var(--acento);background:var(--acento);}
-html .opcionSeleccionRuta input:checked::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid var(--acento-txt);border-width:0 2.5px 2.5px 0;transform:rotate(45deg);}
-.inicialesSeleccionRuta{
-  display:grid;place-items:center;width:40px;height:40px;border-radius:50%;
-  background:var(--superficie-2);color:var(--texto-sec);font-size:14px;font-weight:800;
-}
-html .opcionSeleccionRuta:has(input:checked) .inicialesSeleccionRuta{background:var(--acento-bg);color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .opcionSeleccionRuta:has(input:checked) .inicialesSeleccionRuta{color:var(--acento);}
-.textoSeleccionRuta{display:flex;flex-direction:column;gap:2px;min-width:0;}
-html .textoSeleccionRuta strong{font-size:15px;font-weight:600;color:var(--texto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-html .textoSeleccionRuta small{font-size:12.5px;color:var(--texto-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-html .opcionSeleccionRuta .seleccionRutaGps,
-html .opcionSeleccionRuta .seleccionRutaSinGps{display:inline-flex;align-items:center;gap:3px;align-self:flex-start;margin-top:3px;white-space:nowrap;}
-.vacioSeleccionRuta{margin:8px 0;padding:14px;border-radius:16px;border:1.5px dashed var(--borde-fuerte);color:var(--texto-sec);font-size:14px;text-align:center;}
 
-html .rutasGuardadasPanel{margin-top:16px;padding:14px;border:0;border-radius:20px;background:var(--superficie-2);}
-html .rutasGuardadasPanel h3{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:16px;color:var(--texto);}
-.iconoRutasGuardadas{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--superficie);color:var(--acento-oscuro);}
-html[data-tema="oscuro"] .iconoRutasGuardadas{color:var(--acento);}
-html .rutasGuardadasPanel > p{margin:0 0 10px;color:var(--texto-sec);font-size:13px;}
-html .filaRutaGuardada{
-  display:grid !important;grid-template-columns:minmax(0,1fr) !important;grid-template-areas:none !important;gap:8px !important;
-  padding:0 !important;border:0 !important;background:transparent !important;box-shadow:none !important;
-}
-html .filaRutaGuardada input,html .filaRutaGuardada select{
-  min-height:46px;margin:0;border:1px solid var(--borde-fuerte) !important;border-radius:var(--radio-pildora) !important;
-  background:var(--superficie) !important;color:var(--texto) !important;font-size:15px;padding:0 14px;width:100%;
-}
-html .filaRutaGuardada > *{grid-column:1/-1 !important;grid-row:auto !important;order:0 !important;}
-html .filaRutaGuardada .btnAccion{
-  grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100% !important;height:auto !important;min-height:48px;border-radius:var(--radio-pildora) !important;aspect-ratio:auto !important;
-}
-html .listaRutasGuardadas{margin-top:10px;}
-html .sinRutasGuardadas{margin:0;padding:12px;border-radius:14px;border:1.5px dashed var(--borde-fuerte);color:var(--texto-sec);font-size:13.5px;text-align:center;background:transparent;}
-html .filaRutaGuardadaItem{border-radius:16px !important;background:var(--superficie) !important;border:0 !important;}
 /* Las llaves, casillas y botones en fila ganan a los colores viejos del modo oscuro. */
 html .ajLlave{background:var(--borde-fuerte) !important;border:0 !important;}
 html .ajLlave:checked{background:var(--acento) !important;}
-html .opcionSeleccionRuta input{background:var(--superficie) !important;border-color:var(--borde-fuerte) !important;}
-html .opcionSeleccionRuta input:checked{background:var(--acento) !important;border-color:var(--acento) !important;}
+
 html[data-tema="oscuro"] .ajSegmento input:checked + span{color:var(--acento-txt) !important;}
 html .ajSegmento input:checked + span{color:var(--texto) !important;}
 html[data-tema="oscuro"] .ajSegmento input:checked + span{color:var(--acento-txt) !important;}
@@ -1914,7 +1812,7 @@ html[data-mas-barra="no"] body > nav.bottom-nav .nav-mas{display:none;}
 /* Rutas: tarjetas desplegables (T51). */
 html .tarjetaDesplegable > summary{list-style:none;cursor:pointer;margin-bottom:0;}
 html .tarjetaDesplegable > summary::-webkit-details-marker{display:none;}
-html .tarjetaDesplegable > summary > div:not(.iconoTarjetaRuta){flex:1;min-width:0;}
+
 html .tarjetaDesplegable > summary::after{
   content:"";margin:0 6px 0 auto;width:9px;height:9px;flex-shrink:0;
   border-right:2px solid var(--texto-ter);border-bottom:2px solid var(--texto-ter);
@@ -1923,13 +1821,7 @@ html .tarjetaDesplegable > summary::after{
 html .tarjetaDesplegable[open] > summary{margin-bottom:12px;}
 html .tarjetaDesplegable[open] > summary::after{transform:rotate(-135deg) translateY(-3px);}
 html .tarjetaDesplegable .ayudaDesplegable{margin:0 0 4px;color:var(--texto-sec);font-size:13px;}
-html .tarjetaSeleccionRuta .estadoSeleccionRuta{margin:8px 0 0;gap:5px;}
-html .tarjetaSeleccionRuta .chipResumenRuta{min-height:26px;padding:0 9px;font-size:12px;}
-html .tarjetaRutasGuardadas .rutasGuardadasPanel{margin:0;padding:0;background:transparent;}
-html .tarjetaRutasGuardadas .rutasGuardadasPanel > h3,
-html .tarjetaRutasGuardadas .rutasGuardadasPanel > p{display:none;}
-html .tarjetaRutasGuardadas .filaRutaGuardadaItem{background:var(--superficie-2) !important;}
-html .opcionSeleccionRuta{grid-template-columns:24px 40px minmax(0,1fr);column-gap:16px !important;padding-left:4px !important;}
+
 html body > nav.bottom-nav .nav-item{font-size:10.5px;letter-spacing:-.01em;}
 html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 8px;}
 /* Repasada: con la letra grande del celular la barra queda angosta y
@@ -2327,21 +2219,7 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .paradaOrden.arrastrando .agarreParada{color:var(--acento);background:var(--acento-bg);cursor:grabbing;}
 .listaParadas.ordenando{user-select:none;-webkit-user-select:none;}
 .ayudaParadas{margin:6px 2px 0;font-size:12.5px;color:var(--texto-sec);}
-.proximaParada{
-  position:fixed;left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(92px + env(safe-area-inset-bottom));
-  z-index:900;max-width:560px;margin:0 auto;padding:12px;border-radius:22px;background:var(--superficie);box-shadow:var(--sombra-flotante);border:1px solid var(--borde);
-}
-.cabProximaParada{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.cabProximaParada small{font-size:12.5px;color:var(--texto-sec);}
-.cabProximaParada .pzEnlace{font-size:13px;min-height:32px;}
-.nombreProximaParada{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 10px;}
-.nombreProximaParada strong{font-size:17px;font-weight:750;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.nombreProximaParada span{font-size:13.5px;color:var(--texto-sec);flex-shrink:0;}
-.botonesProximaParada{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;}
-.botonesProximaParada .pzBtn{min-height:50px;}
-.proximaParada.terminada{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.proximaParada.terminada strong{display:inline-flex;align-items:center;gap:6px;color:var(--visitado);}
-.proximaParada.terminada .pzBtn{width:auto;min-height:42px;padding:0 14px;}
+
 #pantallaRutas.conProximaParada main{padding-bottom:150px;}
 
 /* T123: pines del mapa para sumar, sacar o mover comercios */
@@ -2354,13 +2232,7 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .globoPinRuta.enRuta{background:var(--acento);border-color:#fff;}
 .globoPinRuta.enRuta b{color:var(--acento-txt, #fff);}
 .leaflet-marker-draggable .globoPinRuta{outline:3px solid var(--pendiente);outline-offset:2px;}
-.resumenPinesMapa{
-  position:absolute;top:10px;left:54px;z-index:800;display:flex;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 64px);
-  padding:7px 11px;border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto-sec);font-size:12.5px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);pointer-events:none;
-}
-.resumenPinesMapa b{color:var(--texto);}
-.puntoPinResumen{width:10px;height:10px;border-radius:50%;background:var(--acento);flex:none;}
-.separadorResumenPines{width:1px;height:12px;background:var(--borde);margin:0 2px;}
+
 .barraMoverPin{
   position:absolute;left:8px;right:8px;bottom:8px;z-index:800;display:grid;gap:8px;padding:10px;border-radius:16px;
   background:var(--superficie);box-shadow:0 4px 14px rgba(0,0,0,.2);
@@ -2369,12 +2241,10 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .barraMoverPin b{color:var(--texto);}
 .barraMoverPin > div{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;}
 .barraMoverPin .pzBtn{min-height:44px;}
-.detallePinRuta{margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--texto-sec);}
-.botonRutaPin{width:100%;min-height:52px;margin-bottom:6px;}
+
 .pzOpcion.pzOpcionPeligro,.pzOpcion.pzOpcionPeligro .pzIco{color:var(--peligro);}
-.resumenPinesMapa{overflow:hidden;}
-.ayudaResumenPines{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.barraMoverPin.oculto,.resumenPinesMapa.oculto{display:none;}
+
+.barraMoverPin.oculto{display:none;}
 
 /* T124: Nuevo pedido "Quiere" o "Tiene", y el cartelito en Pedidos */
 .modoPedido{display:grid;gap:6px;margin:0 0 12px;}
@@ -2428,28 +2298,32 @@ html:has(#pantallaRutas:not(.oculto)) body{overflow:hidden;}
   display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;margin:0;min-height:0;
   border:0;border-radius:50%;background:transparent;color:var(--texto);cursor:pointer;
 }
-.filasCabezaRutas{flex:1;min-width:0;display:grid;gap:5px;}
-.filaCabezaRutas{
-  display:flex;align-items:center;gap:8px;min-width:0;padding:7px 10px;border-radius:10px;
-  background:var(--superficie-2);font-size:14px;font-weight:600;white-space:nowrap;
+
+/* Repaso de Rutas (2026-11-02): título con Ayuda y Asistente (regla 6). */
+.cabezaRutas h1{flex:1;min-width:0;margin:0 0 0 2px;font-size:24px;font-weight:900;letter-spacing:-.03em;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#pantallaRutas .cabezaRutas :is(.botonAyudaPantalla, .asistenteRutas){
+  display:grid;place-items:center;flex:none;width:40px;height:40px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;
+  background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font:inherit;font-size:18px;font-weight:900;box-shadow:none;cursor:pointer;
 }
-.filaCabezaRutas > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.puntoDesdeRutas{flex:none;width:9px;height:9px;box-sizing:border-box;border-radius:50%;border:2px solid var(--acento);}
-.puntoHastaRutas{flex:none;width:9px;height:9px;border-radius:3px;background:var(--peligro);}
+html[data-tema="oscuro"] #pantallaRutas .cabezaRutas :is(.botonAyudaPantalla, .asistenteRutas){background:var(--superficie-2);color:var(--acento);}
+/* «Auto ▾», «Desde vos ▾» y el botón para ver dónde estás. */
 .chipsRutas{
-  position:absolute;z-index:1000;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
-  top:calc(116px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
+  position:absolute;z-index:1000;display:flex;align-items:center;gap:8px;
+  top:calc(84px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));
 }
-.chipsRutas::-webkit-scrollbar{display:none;}
+html[data-nombres-arriba="si"] .chipsRutas{top:calc(100px + env(safe-area-inset-top));}
 .chipRutas{
-  display:inline-flex;align-items:center;gap:6px;flex:none;min-height:36px;margin:0;padding:0 13px;border:0;border-radius:var(--radio-pildora);
-  background:var(--superficie);color:var(--texto);font:inherit;font-size:13px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:var(--radio-pildora);
+  background:var(--superficie);color:var(--texto);font:inherit;font-size:14px;font-weight:750;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;
 }
-.chipRutas[aria-pressed="true"]{background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font-weight:800;}
-html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
-/* Cuántos van en la ruta ya lo dice la cabecera. */
-#pantallaRutas .resumenPinesMapa{display:none;}
-/* Desde dónde sale: tu posición al optimizar. */
+.chipRutas span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.chipRutas svg{flex:none;}
+.centrarRutas{
+  display:grid;place-items:center;flex:none;width:44px;height:44px;min-height:0;margin:0 0 0 auto;padding:0;border:0;border-radius:50%;
+  background:var(--superficie);color:var(--acento-oscuro, var(--acento));box-shadow:0 1px 5px rgba(0,0,0,.18);cursor:pointer;
+}
+html[data-tema="oscuro"] .centrarRutas{color:var(--acento);}
+/* Desde dónde sale. */
 #pantallaRutas .yoPlanRutas{fill:var(--acento);stroke:#fff;}
 .hojaPlanRutas{
   position:absolute;z-index:1000;left:0;right:0;bottom:0;box-sizing:border-box;
@@ -2457,20 +2331,32 @@ html[data-tema="oscuro"] .chipRutas[aria-pressed="true"]{color:var(--acento);}
   border-radius:28px 28px 0 0;background:var(--superficie);color:var(--texto);box-shadow:0 -2px 8px rgba(0,0,0,.16);
 }
 .asaPlanRutas{width:44px;height:5px;margin:0 auto 8px;border-radius:3px;background:var(--borde-fuerte);}
-.resumenPlanRutas{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;margin:0;}
-#minutosPlanRutas{font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--visitado);}
-#minutosPlanRutas:empty{display:none;}
-#detallePlanRutas{font-size:16px;font-weight:600;color:var(--texto-sec);}
-.botonesPlanRutas{display:grid;grid-template-columns:1.3fr 1fr;gap:10px;margin-top:10px;}
-.botonesPlanRutas .pzBtn{min-height:54px;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
-.iniciarRutas.sinRuta{opacity:.55;}
-/* Repasada: con la letra grande del celular los cuatro no entraban y se
-   cortaban ("Opti…", "El…"): ahora, si no entran, pasan a otra fila. */
-.herramientasRutas{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.herramientasRutas button{
-  flex:1 1 auto;min-width:max-content;min-height:44px;margin:0;padding:0 8px;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);
-  font:inherit;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+/* Sin ruta: «Ruta de hoy» y «Armar ruta». Con ruta: los números y los botones. */
+#pantallaRutas.conRutaArmada .vaciaPlanRutas,
+#pantallaRutas:not(.conRutaArmada) .armadaPlanRutas{display:none;}
+.vaciaPlanRutas h2{margin:2px 0 4px;font-size:20px;font-weight:900;color:var(--texto);}
+.vaciaPlanRutas p{margin:0 0 12px;font-size:14.5px;color:var(--texto-sec);}
+.armarRutas{width:100%;min-height:54px;margin:0;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
+.numerosPlanRutas{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;margin:2px 0 6px;}
+.numeroPlanRutas{min-width:0;padding:10px 12px;border-radius:16px;background:var(--superficie-2);}
+.numeroPlanRutas strong{display:block;font-size:21px;font-weight:900;letter-spacing:-.03em;line-height:1.15;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.numeroPlanRutas small{font-size:12px;font-weight:700;color:var(--texto-sec);}
+.detallePlanRutas{margin:0 2px 10px;font-size:13.5px;color:var(--texto-sec);}
+.detallePlanRutas b{color:var(--visitado);}
+.botonesPlanRutas{display:flex;align-items:center;gap:8px;}
+.botonesPlanRutas .pzBtn{min-height:54px;margin:0;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
+.botonesPlanRutas .pzBtnPri{flex:1.4;}
+.botonesPlanRutas .pzBtnSec{flex:1;}
+.masPlanRutas{
+  display:grid;place-items:center;flex:none;width:54px;height:54px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;
+  background:var(--superficie-2);color:var(--texto);box-shadow:none;cursor:pointer;
 }
+.barraMoverPin > div:has(> :only-child){grid-template-columns:1fr;}
+/* Con los nombres debajo de los íconos, que queden adentro de la tarjeta. */
+html[data-nombres-arriba="si"] .cabezaRutas{padding-bottom:4px;}
+html[data-nombres-arriba="si"] .cabezaRutas .conNombre{margin-bottom:14px;}
+.lugarArmarRuta strong{white-space:normal;}
+
 /* T137: carrusel de paradas, justo arriba de la hoja. Se desliza de costado
    y cada tarjeta se frena en su lugar. */
 .carruselParadas{position:absolute;z-index:1001;left:0;right:0;bottom:calc(var(--altoHojaPlan, 200px) + 10px);}
@@ -2540,22 +2426,13 @@ html #pantallaRutas.conParadasAbiertas main.panelParadasRutas{padding-bottom:0 !
 .cabezaPanelParadas{display:flex;align-items:center;gap:2px;margin:0 0 10px -8px;}
 .cabezaPanelParadas .volverRutas{width:40px;height:40px;}
 .cabezaPanelParadas h2{flex:1;min-width:0;margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.optimizarOrden{
-  flex:none;min-height:40px;margin:0;padding:0 14px;border:0;border-radius:var(--radio-pildora);
-  background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));font:inherit;font-size:13px;font-weight:800;cursor:pointer;
-}
-html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
+
 .numerosParadas{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:6px;}
 .numeroParadas{display:grid;gap:5px;padding:9px 8px;border-radius:16px;background:var(--superficie);min-width:0;}
 .numeroParadas strong{font-size:20px;font-weight:900;letter-spacing:-0.03em;line-height:1;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .numeroParadas small{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
-#pantallaRutas .filtrosParadas{display:flex;align-items:center;gap:6px;margin:12px 0 0;padding:0;border-radius:0;background:none;}
-#pantallaRutas .filtrosParadas button{
-  min-height:36px;margin:0;padding:0 12px;border:0;border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);
-  font:inherit;font-size:13px;font-weight:650;cursor:pointer;
-}
-#pantallaRutas .filtrosParadas button:first-child{background:var(--texto);color:var(--fondo);font-weight:800;}
-#pantallaRutas .filtrosParadas .buscarParadas{display:grid;place-items:center;width:36px;padding:0;margin-left:auto;}
+#pantallaRutas .filtrosParadas{align-items:center;margin:12px -14px 0;padding:2px 14px 6px;}
+#pantallaRutas .filtrosParadas .filtroEtapa{min-height:40px;flex-shrink:0;font-size:13.5px;}
 /* La línea de tiempo: hora, número sobre la línea y la tarjeta de la parada. */
 #pantallaRutas .tarjetaMapaRuta{margin:8px 0 0;padding:0;overflow:visible;background:none !important;box-shadow:none !important;border:0 !important;}
 #pantallaRutas .ayudaParadas{padding:0 4px;}
@@ -2585,13 +2462,77 @@ html[data-tema="oscuro"] .optimizarOrden{color:var(--acento);}
 .filaSinUbicacion .pzBtn{width:auto;flex:none;min-height:40px;padding:0 12px;font-size:13px;}
 #pantallaRutas .panelParadasRutas > details{margin:12px 0 0;}
 .pieParadas{
-  position:sticky;bottom:0;z-index:2;display:flex;gap:8px;margin:12px calc(-1 * max(14px, env(safe-area-inset-left))) 0;
+  position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:8px;margin:12px calc(-1 * max(14px, env(safe-area-inset-left))) 0;
   padding:12px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background:var(--fondo);box-shadow:0 -8px 14px -10px rgba(0,0,0,.3);
 }
-.pieParadas .pzBtn{min-height:56px;border-radius:var(--radio-pildora);}
-.pieParadas .pzBtn:first-child{flex:1;font-size:14px;}
-.pieParadas .pzBtn:last-child{flex:1.4;font-size:17px;font-weight:900;}
+.pieParadas .pzBtn{flex:1;min-height:56px;margin:0;border-radius:var(--radio-pildora);font-size:17px;font-weight:900;}
+.pieParadas .masPlanRutas{width:56px;height:56px;background:var(--superficie);}
+.listaParadas.filtrada .cajaParada{padding-right:12px;}
+
+/* Repaso de Rutas: las hojas de armar, elegir, guardar y el lugar del depósito. */
+.opcionesArmarRuta{display:grid;gap:8px;}
+.opcionArmarRuta,.datosGuardadaRuta{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:0;margin:0;padding:12px;border:0;border-radius:16px;
+  background:var(--superficie);color:var(--texto);font:inherit;text-align:left;box-shadow:none;cursor:pointer;
+}
+.opcionArmarRuta[aria-pressed="true"]{outline:2px solid var(--acento);outline-offset:-2px;background:var(--acento-bg);}
+.icoArmarRuta{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:12px;background:var(--acento-bg);color:var(--pz-pri-fuerte);}
+.icoArmarRuta[data-tono="ok"]{background:var(--visitado-bg);color:var(--visitado);}
+.icoArmarRuta[data-tono="aviso"]{background:var(--pendiente-bg);color:var(--pendiente);}
+html[data-tema="oscuro"] .opcionArmarRuta[aria-pressed="true"] .icoArmarRuta{background:var(--superficie-2);}
+.textoArmarRuta{flex:1;min-width:0;display:grid;gap:1px;}
+.textoArmarRuta strong{font-size:15px;color:var(--texto);}
+.textoArmarRuta small{font-size:12.5px;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cantidadArmarRuta{flex:none;font-size:18px;font-weight:900;color:var(--texto);}
+.opcionArmarRuta > .pzIco,.opcionArmarRuta > svg{flex:none;color:var(--texto-sec);}
+.tituloSalidaRutas{margin:16px 2px 6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+.salidaVueltaRutas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.lugarArmarRuta{
+  display:flex;align-items:center;gap:8px;min-width:0;min-height:0;margin:0;padding:10px 12px;border:0;border-radius:16px;
+  background:var(--superficie);color:var(--texto);font:inherit;text-align:left;box-shadow:none;cursor:pointer;
+}
+.lugarArmarRuta > span{flex:1;min-width:0;display:grid;}
+.lugarArmarRuta small{font-size:12px;color:var(--texto-sec);}
+.lugarArmarRuta strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hojaArmarRuta #btnArmarConEsto{min-height:54px;border-radius:var(--radio-pildora);font-size:17px;font-weight:850;}
+.hojaArmarRuta #btnArmarConEsto:disabled{opacity:.5;}
+/* Elegir comercios, como elegir varios en Pedidos. */
+.pzHoja.hojaElegirRuta{height:calc(100% - 56px);max-height:none;display:flex;flex-direction:column;}
+.hojaElegirRuta .pzHojaCuerpo{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.barraElegirRuta{display:flex;align-items:center;gap:10px;margin:2px 0 10px;}
+html .barraElegirRuta .botonDejarDeElegir{display:grid;place-items:center;flex:none;width:40px;height:40px;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
+.cuantosElegidosRuta{flex:1;font-size:16px;color:var(--texto);}
+html .botonMarcarTodosRuta{flex:none;width:auto;min-height:40px;margin:0;padding:0 16px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);box-shadow:none;font:inherit;font-weight:800;font-size:14px;cursor:pointer;}
+html[data-tema="oscuro"] .botonMarcarTodosRuta{background:var(--superficie-2);color:var(--acento);}
+.filtrosElegirRuta{flex:none;align-items:center;margin:0 -4px 8px;padding:2px 4px 6px;}
+.filtrosElegirRuta .filtroEtapa{min-height:40px;flex-shrink:0;}
+.listaElegirRuta{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:86px;}
+.filaElegirRuta{display:flex;align-items:center;gap:11px;margin-bottom:8px;padding:11px 12px;border-radius:14px;background:var(--superficie);cursor:pointer;}
+.filaElegirRuta.elegida{outline:2px solid var(--acento);outline-offset:-2px;background:var(--acento-bg);}
+.avatarElegirRuta{position:relative;display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:12px;color:#fff;font-weight:800;font-size:13px;}
+.avatarElegirRuta::after{content:"";position:absolute;inset:-3px;border-radius:14px;border:2px dashed var(--borde-fuerte);}
+.tildeElegirRuta{display:none;}
+.filaElegirRuta.elegida .avatarElegirRuta{background:var(--acento) !important;color:var(--acento-txt);}
+.filaElegirRuta.elegida .avatarElegirRuta::after,.filaElegirRuta.elegida .inicialesElegirRuta{display:none;}
+.filaElegirRuta.elegida .tildeElegirRuta{display:grid;}
+html[data-tema="oscuro"] .filaElegirRuta.elegida .tildeElegirRuta svg{color:var(--acento-txt) !important;}
+.textoElegirRuta{flex:1;min-width:0;display:grid;}
+.textoElegirRuta strong{font-size:14.5px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.textoElegirRuta small{font-size:12.5px;color:var(--texto-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sinUbicacionElegir{color:var(--pendiente);font-weight:700;}
+.filaElegirRuta .pzChip{flex:none;}
+.vacioElegirRuta{margin:16px 4px;font-size:14px;color:var(--texto-sec);}
+.pieElegirRuta{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;padding:8px;border-radius:999px;background:var(--superficie);box-shadow:0 8px 30px rgba(0,0,0,.22);}
+.pieElegirRuta .pzBtn{flex:1;min-height:50px;margin:0;border-radius:999px;font-size:16px;font-weight:850;}
+.pieElegirRuta .pzBtn:disabled{opacity:.5;}
+.pieElegirRuta .masPlanRutas{width:50px;height:50px;}
+/* Rutas guardadas. */
+.listaGuardadasRuta{display:grid;gap:8px;}
+.filaGuardadaRuta{display:flex;align-items:center;gap:6px;border-radius:16px;background:var(--superficie);}
+.filaGuardadaRuta .datosGuardadaRuta{flex:1;min-width:0;background:none;}
+.masRutaGuardada{display:grid;place-items:center;flex:none;width:44px;height:44px;min-height:0;margin:0 6px 0 0;padding:0;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);box-shadow:none;cursor:pointer;}
+.ayudaLugarRutas{margin:4px 2px 12px;font-size:13.5px;color:var(--texto-sec);}
 
 /* ---------- T139 y T140: el equipo en los mapas ----------
    Avisos de la calle y compañeros, con los colores de la maqueta

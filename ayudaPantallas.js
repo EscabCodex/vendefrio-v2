@@ -33,9 +33,9 @@
             "Tocá los tres puntos de un producto para cambiarle el precio o la foto.",
             "En «Editar marcas» sumás productos y marcas nuevos."] },
         pantallaRutas: { titulo: "Rutas", pasos: [
-            "Elegí los comercios que vas a visitar.",
-            "Tocá «Optimizar ruta» para recorrerlos en el orden más corto.",
-            "Guardala con un nombre para usarla otro día."] },
+            "Tocá un pin para marcarlo, o tocá «Armar ruta» y elegí con qué arrancar.",
+            "La app ordena las paradas sola por el camino más corto. Arriba elegís desde dónde salís.",
+            "Con «Iniciar» te lleva. En ⋯ la guardás con un nombre para usarla otro día."] },
         pantallaHistorial: { titulo: "Historial", pasos: [
             "Acá están los pedidos terminados, del más nuevo al más viejo.",
             "Buscá por comercio o filtrá por fecha.",

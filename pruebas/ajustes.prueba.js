@@ -90,23 +90,18 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
         await capturar(page, "ajustes-" + captura);
     }
 
-    // Rutas: comercios para esta ruta, con buscador y resumen.
+    // Rutas: «Elegir comercios», con la lupa y la cuenta de elegidos.
     await page.evaluate(() => mostrarPantalla("rutas"));
-    // Está dentro de «Paradas» (T136).
-    await page.locator("#btnParadasRutas").click();
-    const tarjeta = page.locator(".tarjetaSeleccionRuta");
-    // Desplegable (T51): cerrada muestra el resumen; se abre al tocarla.
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toBeVisible();
-    await expect(page.getByLabel("Buscar comercio para la ruta")).toBeHidden();
-    await tarjeta.locator("summary").click();
-    await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(3);
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("1 elegido");
-    // Todos, Pendientes y Ninguno, arriba de la lista de paradas (T138).
-    await page.locator(".filtrosParadas").getByRole("button", { name: "Todos" }).click();
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("3 elegidos");
-    await page.getByLabel("Buscar comercio para la ruta").fill("luna");
-    await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(1);
-    await page.getByLabel("Buscar comercio para la ruta").fill("");
-    await tarjeta.scrollIntoViewIfNeeded();
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await expect(elegir.locator(".filaElegirRuta")).toHaveCount(3);
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText("0 elegidos");
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText("3 elegidos");
+    await elegir.getByRole("button", { name: "Buscar comercio" }).click();
+    await elegir.getByRole("searchbox").fill("luna");
+    await expect(elegir.locator(".filaElegirRuta")).toHaveCount(1);
+    await elegir.getByRole("searchbox").fill("");
     await capturar(page, "ajustes-10-comercios-para-la-ruta");
 });

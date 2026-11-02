@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 263,
+      "fecha": "2026-11-02",
+      "tipo": "nuevo",
+      "icono": "mapa",
+      "titulo": "Rutas más simple",
+      "texto": "Mapa limpio y «Armar ruta»: elegís de dónde salís y adónde volvés, y la app ordena sola."
+    },
+    {
       "version": 262,
       "fecha": "2026-11-02",
       "tipo": "nuevo",

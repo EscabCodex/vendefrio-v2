@@ -523,16 +523,6 @@ select.activo{
   color: #047857;
 }
 
-.resumenRuta {
-  margin: 0 0 12px;
-  padding: 9px 11px;
-  border-radius: 10px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 13px;
-  font-weight: 700;
-}
-
 .filtroHistorialActivo {
   display: flex;
   align-items: center;
@@ -1150,205 +1140,6 @@ body > nav.bottom-nav {
   color: var(--visitado);
 }
 
-.encabezadoTarjetaRuta{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:14px;
-}
-
-.iconoTarjetaRuta{
-  width:38px;
-  height:38px;
-  display:grid;
-  place-items:center;
-  border-radius:10px;
-  background:var(--acento-bg);
-  font-size:20px;
-  flex:none;
-}
-
-.encabezadoTarjetaRuta h2{
-  margin:0;
-  color:var(--texto);
-  font-size:16px;
-}
-
-.encabezadoTarjetaRuta p{
-  margin:3px 0 0;
-  color:var(--texto-sec);
-  font-size:12px;
-}
-
-.selectorRuta{
-  margin:12px 0 14px;
-  padding:12px;
-  border-radius:var(--radius-md);
-  background:var(--fondo);
-  border:1px solid var(--borde);
-}
-
-.selectorRuta h3{
-  margin:0 0 9px;
-  font-size:14px;
-  color:var(--texto);
-}
-
-.accionesSeleccionRuta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin-bottom:9px;
-}
-
-.accionesSeleccionRuta .btnAccion{
-  padding:7px 10px;
-  font-size:11px;
-}
-
-.listaSeleccionRuta{
-  display:grid;
-  gap:5px;
-  max-height:210px;
-  overflow-y:auto;
-}
-
-.opcionSeleccionRuta{
-  display:grid;
-  grid-template-columns:20px 1fr auto;
-  align-items:center;
-  gap:7px;
-  padding:8px;
-  border-radius:var(--radius-sm);
-  background:var(--superficie);
-  border:1px solid var(--borde);
-  font-size:12px;
-  cursor:pointer;
-}
-
-.opcionSeleccionRuta input{
-  width:16px;
-  height:16px;
-  accent-color:var(--acento);
-}
-
-.opcionSeleccionRuta small{
-  font-size:10px;
-  font-weight:700;
-}
-
-.seleccionRutaGps{
-  color:var(--visitado);
-}
-
-.seleccionRutaSinGps{
-  color:var(--pendiente);
-}
-
-.estadoSeleccionRuta{
-  margin:8px 0 0;
-  color:var(--texto-sec);
-  font-size:11px;
-  font-weight:700;
-}
-
-.rutasGuardadasPanel{
-  margin-top:14px;
-  padding-top:12px;
-  border-top:1px solid var(--borde);
-}
-
-.rutasGuardadasPanel h3{
-  margin:0;
-  color:var(--texto);
-  font-size:14px;
-}
-
-.rutasGuardadasPanel > p{
-  margin:4px 0 9px;
-  color:var(--texto-sec);
-  font-size:11px;
-}
-
-.filaRutaGuardada{
-  display:grid;
-  grid-template-columns:minmax(0, 1fr) minmax(125px, auto) auto;
-  gap:7px;
-}
-
-.filaRutaGuardada select{
-  min-width:0;
-  margin:0;
-  font-size:11px;
-}
-
-.filaRutaGuardada input{
-  min-width:0;
-  margin:0;
-}
-
-.filaRutaGuardada .btnAccion{
-  margin:0;
-  justify-content:center;
-}
-
-.listaRutasGuardadas{
-  display:grid;
-  gap:7px;
-  margin-top:10px;
-}
-
-.filaRutaGuardadaItem{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  padding:10px;
-  border:1px solid var(--borde);
-  border-radius:var(--radius-sm);
-  background:var(--superficie);
-  cursor:pointer;
-  transition:background .18s ease, border-color .18s ease;
-}
-
-.filaRutaGuardadaItem:hover,
-.filaRutaGuardadaItem:focus{
-  background:var(--acento-bg);
-  border-color:var(--acento);
-  outline:none;
-}
-
-.filaRutaGuardadaItem strong,
-.filaRutaGuardadaItem small{
-  display:block;
-}
-
-.filaRutaGuardadaItem strong{
-  color:var(--texto);
-  font-size:12px;
-}
-
-.filaRutaGuardadaItem small{
-  margin-top:2px;
-  color:var(--texto-sec);
-  font-size:10px;
-}
-
-.filaRutaGuardadaItem .diaRutaGuardada{
-  color:var(--acento-oscuro);
-}
-
-.accionesRutaGuardada{
-  display:flex;
-  gap:5px;
-}
-
-.accionesRutaGuardada .btnAccion{
-  margin:0;
-  padding:6px 8px;
-  font-size:10px;
-}
-
 .modalContenido #mensajeAviso{
   white-space:pre-line;
   text-align:left;
@@ -1357,198 +1148,8 @@ body > nav.bottom-nav {
   overflow-y:auto;
 }
 
-.modalBotonesRuta{
-  display:grid;
-  gap:8px;
-}
-
-.modalBotonesRuta button{
-  width:100%;
-  justify-content:center;
-}
-
-.sinRutasGuardadas{
-  margin:0;
-  color:#94a3b8;
-  font-size:11px;
-}
-
-.advertenciaRutaGuardada{
-  display:block;
-  margin-top:3px;
-  color:#b45309;
-  font-size:10px;
-}
-
-.origenUbicacionMapa{
-  display:block;
-  margin:4px 0 7px;
-  color:#64748b;
-  font-size:10px;
-}
-
-.panelNavegacionApp{
-  margin-top:12px;
-  padding:12px;
-  border:1px solid #bfdbfe;
-  border-radius:12px;
-  background:#eff6ff;
-}
-
-.panelNavegacionApp h3{
-  margin:0;
-  color:#1e40af;
-  font-size:14px;
-}
-
-.panelNavegacionApp p{
-  margin:5px 0 10px;
-  color:#475569;
-  font-size:11px;
-  white-space:pre-line;
-  line-height:1.5;
-}
-
-.accionesNavegacionApp{
-  display:flex;
-  flex-wrap:wrap;
-  gap:7px;
-}
-
-.accionesNavegacionApp .btnAccion{
-  margin:0;
-  flex:1;
-  justify-content:center;
-  min-width:145px;
-}
-
-.botonPinManual{
-  width:100%;
-  justify-content:center;
-  margin:0 0 8px;
-  background:var(--acento-bg);
-  color:var(--acento-oscuro);
-  border:1px solid transparent;
-}
-
-.btnEditarPinMapa{
-  display:block;
-  margin-top:8px;
-  padding:6px 8px;
-  border:0;
-  border-radius:7px;
-  background:#2563eb;
-  color:#fff;
-  font-size:11px;
-  font-weight:700;
-}
-
-.controlesPinPendiente{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-  margin:0 0 8px;
-}
-
-.controlesPinPendiente .btnAccion{
-  justify-content:center;
-  margin:0;
-  font-size:12px;
-}
-
-.encabezadoRuta {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
-}
-
-.encabezadoRuta h3 {
-  margin:0;
-}
-
-.encabezadoRuta .btnAccion {
-  padding:8px 12px;
-  font-size:12px;
-}
-
 #listaRutaOrdenada{
   counter-reset: parada;
-}
-
-.paradaRuta {
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:10px;
-  padding:0 0 20px 34px;
-  border-bottom:none;
-  position:relative;
-  counter-increment: parada;
-}
-
-.paradaRuta:last-child {
-  padding-bottom:0;
-}
-
-.paradaRuta::before{
-  content: counter(parada);
-  position:absolute;
-  left:0;
-  top:0;
-  width:24px;
-  height:24px;
-  border-radius:50%;
-  background:var(--superficie);
-  border:2px solid var(--acento);
-  color:var(--acento-oscuro);
-  font-size:11px;
-  font-weight:700;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:1;
-}
-
-.paradaRuta::after{
-  content:"";
-  position:absolute;
-  left:11px;
-  top:22px;
-  bottom:0;
-  width:2px;
-  background:var(--borde);
-}
-
-.paradaRuta:last-child::after{
-  display:none;
-}
-
-.paradaRuta > div {
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
-
-.paradaRuta strong{
-  font-size:14px;
-  font-weight:600;
-  color:var(--texto);
-}
-
-.paradaRuta span,
-.paradaRuta small {
-  color:var(--texto-sec);
-  font-size:12px;
-  overflow-wrap:anywhere;
-}
-
-.paradaRuta .btnAccion {
-  flex-shrink:0;
-  padding:8px 11px;
-  font-size:12px;
 }
 
 /* =====================================================
@@ -1917,18 +1518,11 @@ body > nav.bottom-nav {
     grid-template-columns:1fr;
   }
 
-  .filaRutaGuardada {
-    grid-template-columns:1fr auto;
-  }
+  
 
-  .filaRutaGuardada select {
-    grid-column:1;
-  }
+  
 
-  .filaRutaGuardada .btnAccion {
-    grid-column:2;
-    grid-row:1 / span 2;
-  }
+  
 
   .botonRepetirPedido {
     width: 100%;
@@ -1986,9 +1580,6 @@ main.container{
 }
 
 .card,
-.tarjetaSeleccionRuta,
-.filaRutaGuardada,
-.paradaRuta,
 .tarjetaComercio,
 .tarjetaProducto,
 .tarjetaHistorial{
@@ -2006,9 +1597,7 @@ main.container{
 .datoComercio,
 .infoCard,
 .infoCard h3,
-.infoCard p,
-.paradaRuta,
-.paradaRuta *{
+.infoCard p{
   min-width:0;
   max-width:100%;
 }
@@ -2023,18 +1612,14 @@ main.container{
   line-height:1.35;
 }
 
-.infoCard h3,
-.paradaRuta strong,
-.paradaRuta span,
-.paradaRuta small{
+.infoCard h3{
   overflow-wrap:anywhere;
   word-break:break-word;
 }
 
 .accionesComercio,
 .accionesHistorial,
-.filaBotones,
-.accionesSeleccionRuta{
+.filaBotones{
   gap:6px;
 }
 
@@ -2100,8 +1685,7 @@ header h1{
   overflow-wrap:anywhere;
 }
 
-.cabeceraCard,
-.encabezadoTarjetaRuta{
+.cabeceraCard{
   gap:9px;
   margin-bottom:7px;
 }
@@ -2533,38 +2117,13 @@ html[data-tema="oscuro"] .mensajeBusquedaPedido{
 }
 
 /* Corrección de Rutas y Resumen Comercial en modo oscuro */
-html[data-tema="oscuro"] .selectorRuta,
-html[data-tema="oscuro"] .opcionSeleccionRuta,
-html[data-tema="oscuro"] .filaRutaGuardadaItem,
-html[data-tema="oscuro"] .rutasGuardadasPanel,
+
 html[data-tema="oscuro"] .resumenComercios,
 html[data-tema="oscuro"] .resumenHistorial,
-html[data-tema="oscuro"] .resumenRuta,
 html[data-tema="oscuro"] .filtroHistorialActivo{
   color:var(--texto) !important;
   background:var(--superficie) !important;
   border-color:var(--borde) !important;
-}
-
-html[data-tema="oscuro"] .selectorRuta h3,
-html[data-tema="oscuro"] .rutasGuardadasPanel h3,
-html[data-tema="oscuro"] .rutasGuardadasPanel > p,
-html[data-tema="oscuro"] .estadoSeleccionRuta,
-html[data-tema="oscuro"] .filaRutaGuardadaItem strong,
-html[data-tema="oscuro"] .filaRutaGuardadaItem small,
-html[data-tema="oscuro"] .seleccionRutaGps,
-html[data-tema="oscuro"] .seleccionRutaSinGps{
-  color:var(--texto) !important;
-}
-
-html[data-tema="oscuro"] .filaRutaGuardadaItem:hover,
-html[data-tema="oscuro"] .filaRutaGuardadaItem:focus{
-  background:var(--superficie-2) !important;
-  border-color:#818cf8 !important;
-}
-
-html[data-tema="oscuro"] .opcionSeleccionRuta input{
-  accent-color:#60a5fa;
 }
 
 /* Inteligencia comercial completa en modo oscuro */

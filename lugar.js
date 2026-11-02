@@ -432,6 +432,8 @@
         const seccion = pantallaVisible();
         if (!seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion") return;
         if (seccion.id === "pantallaNavegacion") return;
+        // Rutas: primero suelta el pin que se mueve y cierra «Paradas».
+        if (seccion.id === "pantallaRutas" && window.rutasVendeFrio?.atras?.()) return;
         const boton = botonVolverDe(seccion);
         // Un paso atrás: si la flecha de arriba lleva a otra pantalla (Inicio
         // o Más), se vuelve a la pantalla de la que se vino: Más > Nuevo

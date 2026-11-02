@@ -278,7 +278,7 @@
             cartel.type = "button";
             cartel.className = "avisoEquipoRutas";
             cartel.addEventListener("click", () => cartel.dataset.id && abrirAviso(cartel.dataset.id));
-            hoja.querySelector(".botonesPlanRutas")?.insertAdjacentElement("beforebegin", cartel);
+            hoja.querySelector(".asaPlanRutas")?.insertAdjacentElement("afterend", cartel);
         }
         const aviso = ultimoDeOtro();
         cartel.hidden = !aviso;

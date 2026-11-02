@@ -56,13 +56,18 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
-    // Las tarjetas de Rutas (dentro de «Paradas», T136) arrancan plegadas,
-    // con el resumen a la vista.
+    // «Paradas» abre la lista de paradas sobre el mapa (comercios con GPS).
+    await page.evaluate(() => guardarComercios(obtenerComercios().map((comercio, i) => ({ ...comercio, lat: -34.6 + i * 0.002, lng: -58.4 + i * 0.002 }))));
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.61, longitude: -58.41 });
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await elegir.locator('[data-elegir="armar"]').click();
     await page.locator("#btnParadasRutas").click();
-    await expect(page.locator(".tarjetaSeleccionRuta")).not.toHaveAttribute("open", "");
-    await expect(page.locator(".tarjetaSeleccionRuta .chipResumenRuta").first()).toBeVisible();
-    await page.locator(".tarjetaRutasGuardadas").scrollIntoViewIfNeeded();
-    await capturar(page, "volver-02-rutas-plegada");
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
+    await capturar(page, "volver-02-rutas-paradas");
     // Desde las paradas se vuelve al mapa y, desde el mapa, a Más. Rutas
     // ocupa toda la pantalla como la navegación: sin casita (T136).
     await page.getByRole("button", { name: "Volver al mapa" }).click();

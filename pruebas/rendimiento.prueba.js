@@ -143,32 +143,40 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     const tiempos = {};
     tiempos.abrirRutas = await medir("mostrarPantalla('rutas')");
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    await page.locator("#btnElegirRutas").click();
-    tiempos.elegirTodos = await medir("document.getElementById('seleccionarTodosRuta').click()");
-    await expect(page.locator("#resumenPinesMapa")).toContainText(COMERCIOS + " en la ruta");
-    tiempos.tildarUno = await medir("document.querySelector('#listaSeleccionRuta input').click()");
-    await expect(page.locator("#resumenPinesMapa")).toContainText((COMERCIOS - 1) + " en la ruta");
-    await page.locator("#listaSeleccionRuta input").first().check();
-    await expect(page.locator("#resumenPinesMapa")).toContainText(COMERCIOS + " en la ruta");
+    // Armar ruta > Elegir a mano: marcar todos, sacar uno y volverlo a poner.
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await expect(elegir.locator(".filaElegirRuta").first()).toBeVisible();
+    tiempos.elegirTodos = await medir("document.querySelector('.botonMarcarTodosRuta').click()");
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText(COMERCIOS + " elegidos");
+    tiempos.tildarUno = await medir("document.querySelector('.filaElegirRuta').click()");
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText((COMERCIOS - 1) + " elegidos");
+    await elegir.locator(".filaElegirRuta").first().click();
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText(COMERCIOS + " elegidos");
 
-    await page.getByRole("button", { name: "Volver al mapa" }).click();
-    // Optimizar: la respuesta del GPS llega aparte, así que se espera la lista.
+    // Armar: se ordena sola; la respuesta del GPS llega aparte, así que se espera la lista.
     tiempos.optimizar = await page.evaluate(async () => {
         const inicio = performance.now();
-        document.getElementById("btnOptimizarRuta").click();
+        document.querySelector('[data-elegir="armar"]').click();
         while (!document.querySelector(".paradaOrden")) await new Promise(listo => setTimeout(listo, 5));
         await new Promise(listo => requestAnimationFrame(() => setTimeout(listo, 0)));
         return Math.round(performance.now() - inicio);
     });
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
     await expect(page.locator(".paradaOrden")).toHaveCount(COMERCIOS);
     // Los pines muestran el número de cada parada.
     await expect(page.locator(".globoPinRuta b", { hasText: /^80$/ })).toHaveCount(1);
     const primera = await page.locator(".paradaOrden").first().getAttribute("data-nombre");
-    // «Ya pasé» está en el ⋯ de la tarjeta de la próxima (T137).
+    // «Saltear» está en el ⋯ de la tarjeta de la próxima: pasa al final.
     await page.locator("#proximaParadaRuta .paradaCarrusel.actual .masCarrusel").click();
-    tiempos.saltearParada = await medir("document.querySelector('[data-carrusel=\"saltear\"]').click()");
-    await expect(page.locator(".paradaOrden").first()).toHaveClass(/hecha/);
+    tiempos.saltearParada = await page.evaluate(async () => {
+        const boton = [...document.querySelectorAll(".menuParadaRuta [role=menuitem], .menuParadaRuta button")].find(b => /Saltear/.test(b.textContent));
+        const inicio = performance.now();
+        boton.click();
+        await new Promise(listo => requestAnimationFrame(() => setTimeout(listo, 0)));
+        return Math.round(performance.now() - inicio);
+    });
+    await expect(page.locator(".paradaOrden").last()).toHaveAttribute("data-nombre", primera);
     await expect(page.locator("#proximaParadaRuta .paradaCarrusel.actual")).not.toHaveAttribute("data-nombre", primera);
 
     // Mover el mapa con el dedo (entre la cabecera y la parada de abajo) y

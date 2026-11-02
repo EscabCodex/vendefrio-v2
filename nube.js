@@ -2190,7 +2190,7 @@
             if (typeof actualizarDatalistPedido === "function") intentar(actualizarDatalistPedido);
             if (typeof actualizarDatalist === "function") intentar(actualizarDatalist);
             if (typeof renderizarComercios === "function") intentar(renderizarComercios);
-            if (typeof cargarSelectComerciosRuta === "function") intentar(cargarSelectComerciosRuta);
+            if (typeof refrescarRutasDesdeNube === "function") intentar(refrescarRutasDesdeNube);
         }
 
         if (cambioProductos) {
@@ -2214,8 +2214,8 @@
             intentar(renderizarHistorial);
         }
 
-        if (cambio("rutasGuardadas") && typeof renderizarRutasGuardadas === "function") {
-            intentar(renderizarRutasGuardadas);
+        if (cambio("rutasGuardadas") && typeof refrescarRutasDesdeNube === "function") {
+            intentar(refrescarRutasDesdeNube);
         }
 
         // Cierre del día (T28f): se recalcula con cada cambio de los pedidos.

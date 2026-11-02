@@ -233,36 +233,37 @@
     </div>
   </header>
 
-  <!-- T136: Rutas como vista previa. El mapa ocupa toda la pantalla; arriba,
-       desde dónde y hasta dónde y cómo se arma el camino; abajo, cuánto
-       tarda, Iniciar y Paradas, y las herramientas. -->
+  <!-- Rutas (repaso 2026-11-02): el mapa ocupa toda la pantalla. Arriba,
+       el título con Ayuda y Asistente, y cómo y desde dónde se sale. Abajo,
+       «Armar ruta» o, con la ruta armada, sus números, Iniciar, Paradas y ⋯. -->
   <div class="vistaPreviaRutas">
     <div id="mapaRuta"></div>
     <div class="cabezaRutas">
       <button class="volverRutas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
-      <div class="filasCabezaRutas">
-        <div class="filaCabezaRutas"><span class="puntoDesdeRutas" aria-hidden="true"></span>Tu ubicación</div>
-        <div class="filaCabezaRutas"><span class="puntoHastaRutas" aria-hidden="true"></span><span id="destinoRutas">Elegí los comercios de la ruta</span></div>
-      </div>
-      <button class="asistenteRutas" type="button" aria-label="Asistente" title="Asistente" data-abrir-asistente><i data-ico="chispa" data-ico-tam="20"></i></button>
+      <h1>Rutas</h1>
+      <button class="botonAyudaPantalla conNombre" type="button" data-nombre="Ayuda" aria-label="Ayuda de esta pantalla" title="¿Qué hago acá?"><span aria-hidden="true">?</span></button>
+      <button class="asistenteRutas conNombre" type="button" data-nombre="Asistente" aria-label="Asistente" title="Asistente" data-abrir-asistente><i data-ico="chispa" data-ico-tam="20"></i></button>
     </div>
-    <div class="chipsRutas" role="group" aria-label="Cómo se arma el camino">
-      <button type="button" class="chipRutas" data-vehiculo="auto" aria-pressed="true"><i data-ico="auto" data-ico-tam="15"></i> Auto</button>
-      <button type="button" class="chipRutas" data-vehiculo="moto" aria-pressed="false">Moto</button>
-      <button type="button" class="chipRutas" id="chipSinAutopistas" aria-pressed="false">Sin autopistas</button>
+    <div class="chipsRutas">
+      <button type="button" id="pillVehiculoRutas" class="chipRutas" aria-haspopup="menu"><i data-ico="auto" data-ico-tam="17"></i> <span>Auto</span> <i data-ico="chevAbajo" data-ico-tam="15"></i></button>
+      <button type="button" id="pillDesdeRutas" class="chipRutas" aria-haspopup="menu"><span>Desde vos</span> <i data-ico="chevAbajo" data-ico-tam="15"></i></button>
+      <button type="button" id="btnCentrarRutas" class="centrarRutas" aria-label="Ver dónde estoy" title="Ver dónde estoy"><i data-ico="mira" data-ico-tam="22"></i></button>
     </div>
-    <div class="hojaPlanRutas" role="region" aria-label="Resumen de la ruta">
+    <div class="hojaPlanRutas" role="region" aria-label="Ruta de hoy">
       <div class="asaPlanRutas" aria-hidden="true"></div>
-      <p class="resumenPlanRutas" aria-live="polite"><strong id="minutosPlanRutas"></strong> <span id="detallePlanRutas">Elegí los comercios y tocá Optimizar.</span></p>
-      <div class="botonesPlanRutas">
-        <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
-        <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="menu" data-ico-tam="18"></i> Paradas</button>
+      <div class="vaciaPlanRutas">
+        <h2>Ruta de hoy</h2>
+        <p id="textoVaciaRutas">Todavía no armaste la ruta.</p>
+        <button id="btnArmarRuta" class="pzBtn pzBtnPri armarRutas" type="button"><i data-ico="ubicacion" data-ico-tam="20"></i> Armar ruta</button>
       </div>
-      <div class="herramientasRutas">
-        <button id="btnOptimizarRuta" type="button">Optimizar</button>
-        <button id="btnElegirRutas" type="button">Elegir</button>
-        <button id="btnGuardadasRutas" type="button">Guardadas</button>
-        <button id="btnGoogleMaps" type="button">Google Maps</button>
+      <div class="armadaPlanRutas" aria-live="polite">
+        <div id="numerosPlanRutas" class="numerosPlanRutas"></div>
+        <p id="detallePlanRutas" class="detallePlanRutas"></p>
+        <div class="botonesPlanRutas">
+          <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
+          <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="lista" data-ico-tam="18"></i> Paradas</button>
+          <button id="btnMasRutas" class="masPlanRutas" type="button" aria-label="Más opciones de la ruta" title="Más opciones"><i data-ico="puntos" data-ico-tam="24"></i></button>
+        </div>
       </div>
     </div>
   </div>
@@ -272,76 +273,17 @@
     <div class="cabezaPanelParadas">
       <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
       <h2>Paradas de hoy</h2>
-      <button id="btnOptimizarOrden" class="optimizarOrden" type="button">Optimizar orden</button>
     </div>
     <div id="numerosParadas" class="numerosParadas"></div>
-    <div class="accionesSeleccionRuta filtrosParadas" role="group" aria-label="Elegir comercios">
-      <button id="seleccionarTodosRuta" type="button">Todos</button>
-      <button id="seleccionarPendientesRuta" type="button">Pendientes</button>
-      <button id="limpiarSeleccionRuta" type="button">Ninguno</button>
-      <button id="btnBuscarParadas" class="buscarParadas" type="button" aria-label="Buscar comercio" title="Buscar comercio"><i data-ico="buscar" data-ico-tam="16"></i></button>
-    </div>
+    <div id="filtrosParadas" class="filtrosEtapaPedidos filtrosParadas" role="group" aria-label="Ver paradas"></div>
+    <input id="buscarParadas" type="search" placeholder="Buscar parada" autocomplete="off">
     <div class="card tarjetaMapaRuta">
-      <div id="listaRutaOrdenada" style="font-size: 14px;"></div>
+      <div id="listaRutaOrdenada"></div>
     </div>
     <div id="sinUbicacionParadas" class="sinUbicacionParadas"></div>
-    <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
-        <div>
-          <h2>Comercios para esta ruta</h2>
-          <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
-        </div>
-      </summary>
-      <p class="ayudaDesplegable">Tildá uno por uno o buscalo por nombre.</p>
-
-      <label class="buscadorSeleccionRuta">
-        <i data-ico="buscar" data-ico-tam="17"></i>
-        <input id="buscarSeleccionRuta" type="search" placeholder="Buscar comercio" aria-label="Buscar comercio para la ruta">
-      </label>
-
-      <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
-    </details>
-
-    <details class="card tarjetaRutasGuardadas tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="disquete" data-ico-tam="19"></div>
-        <div>
-          <h2>Rutas guardadas</h2>
-          <p id="resumenRutasGuardadas">Guardá esta selección para volver a usarla.</p>
-        </div>
-      </summary>
-    </details>
-
-    <details class="card tarjetaUbicacionesRuta tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
-        <div>
-          <h2>Ubicaciones de los comercios</h2>
-          <p>Poner un pin a mano o borrar una ubicación.</p>
-        </div>
-      </summary>
-      <p class="notaGpsFicha">Para guardar el GPS parado en la puerta, abrí el comercio en Comercios y tocá «Actualizar con mi GPS».</p>
-
-      <label>Comercio:</label>
-
-      <select id="selectComercioGps" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px;"></select>
-
-      <p id="resumenRuta" class="resumenRuta" aria-live="polite">
-        Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
-      </p>
-
-      <button id="btnGuardarGps" class="btnAccion agregar oculto" style="width: 100%; justify-content: center; margin-bottom: 8px;">
-        <i data-ico="ubicacion" data-ico-tam="14"></i> Guardar mi GPS actual en este comercio
-      </button>
-
-      <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
-        <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
-      </button>
-    </details>
     <div class="pieParadas">
-      <button id="btnGuardarRutaParadas" class="pzBtn pzBtnGris" type="button">Guardar ruta</button>
       <button id="btnListoParadas" class="pzBtn pzBtnPri" type="button">Listo, ver mapa</button>
+      <button id="btnMasParadas" class="masPlanRutas" type="button" aria-label="Más opciones de la ruta" title="Más opciones"><i data-ico="puntos" data-ico-tam="24"></i></button>
     </div>
   </main>
 </section>

@@ -39,11 +39,7 @@ test("rutas: agregar la dirección que falta sin salir de Rutas", async ({ page 
     await prepararRutas(page);
     await page.evaluate(() => mostrarPantalla("rutas"));
     const pantalla = page.locator("#pantallaRutas");
-    await pantalla.getByRole("button", { name: "Elegir" }).click();
-    await page.locator("#seleccionarTodosRuta").click();
-    await pantalla.getByRole("button", { name: "Volver al mapa" }).click();
-    await pantalla.getByRole("button", { name: "Optimizar" }).click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await page.evaluate(() => armarRutaCon(["Kiosco Sin Datos", "Almacén Mitre"]));
 
     // En la tarjeta de la parada, en vez de "Sin dirección".
     const carrusel = page.locator("#proximaParadaRuta");

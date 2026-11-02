@@ -1,9 +1,8 @@
-// VendeFrío - Rutas como vista previa (T136), en un celular chico (360×640).
-// El mapa ocupa toda la pantalla con el camino por calles; arriba «Tu
-// ubicación → N paradas», Auto / Moto / Sin autopistas; hasta 2 recorridos
-// con sus minutos para elegir; abajo minutos, km y hora de terminar, Iniciar
-// y Paradas, y Optimizar, Elegir, Guardadas y Google Maps. El GPS y los
-// caminos son falsos.
+// VendeFrío - Rutas como vista previa (T136 y repaso de Rutas), en un celular
+// chico (360×640). El mapa ocupa toda la pantalla con el camino por calles;
+// arriba «Rutas» con Ayuda y Asistente, «Auto ▾» y «Desde vos ▾»; hasta 2
+// recorridos con sus minutos para elegir; abajo paradas, tiempo y km, la hora
+// de terminar, e Iniciar, Paradas y ⋯. El GPS y los caminos son falsos.
 const { test, expect, capturar } = require("./ayudas");
 
 test.use({ viewport: { width: 360, height: 640 } });
@@ -62,26 +61,28 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     // Pantalla entera: sin la barra de abajo de la app.
     await expect(page.locator("nav.bottom-nav")).toBeHidden();
-    await expect(pantalla.locator(".cabezaRutas")).toContainText("Tu ubicación");
-    await expect(page.locator("#detallePlanRutas")).toHaveText("Elegí los comercios y tocá Optimizar.");
+    await expect(pantalla.locator(".cabezaRutas h1")).toHaveText("Rutas");
+    await expect(page.locator("#textoVaciaRutas")).toHaveText("Todavía no armaste la ruta.");
 
-    // Elegir: se abren las paradas en «Comercios para esta ruta».
-    await pantalla.getByRole("button", { name: "Elegir" }).click();
-    await expect(page.locator(".tarjetaSeleccionRuta")).toHaveAttribute("open", "");
-    await page.locator("#limpiarSeleccionRuta").click();
-    await pantalla.getByRole("button", { name: "Volver al mapa" }).click();
-    await expect(page.locator("#destinoRutas")).toHaveText("Elegí los comercios de la ruta");
-    await pantalla.getByRole("button", { name: "Elegir" }).click();
-    await page.locator("#seleccionarTodosRuta").click();
-    await pantalla.getByRole("button", { name: "Volver al mapa" }).click();
-    await expect(page.locator("#destinoRutas")).toHaveText("3 paradas elegidas");
+    // Armar ruta > Elegir a mano: la lista para elegir; la X cierra sin cambiar.
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Cerrar sin cambiar nada" }).click();
+    await expect(elegir).toBeHidden();
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    // Con la lupa, solo los kioscos (la app trae comercios de ejemplo).
+    await elegir.getByRole("button", { name: "Buscar comercio" }).click();
+    await elegir.getByRole("searchbox").fill("kiosco");
+    await expect(elegir.locator(".filaElegirRuta")).toHaveCount(3);
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await expect(elegir.getByRole("button", { name: "Desmarcar todos" })).toBeVisible();
 
-    // Optimizar: arriba hasta dónde va, abajo cuánto tarda por calles.
-    await pantalla.getByRole("button", { name: "Optimizar" }).click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
-    await expect(page.locator("#destinoRutas")).toHaveText("3 paradas · última: Kiosco 3");
-    await expect(page.locator("#minutosPlanRutas")).toHaveText("13 min");
-    await expect(page.locator("#detallePlanRutas")).toHaveText(/^\(5,2 km\) · terminás \d\d:\d\d$/);
+    // Armar: se ordena solo; abajo cuánto tarda por calles.
+    await elegir.getByRole("button", { name: "Armar la ruta con 3" }).click();
+    await expect(page.locator("#numerosPlanRutas .numeroPlanRutas")).toHaveText(["3paradas", "13 minmanejando", "5,2 kmde camino"]);
+    await expect(page.locator("#detallePlanRutas")).toHaveText(/^Salís de donde estás · terminás \d\d:\d\d$/);
     // Dos recorridos con sus minutos; el elegido, más rápido, arriba.
     const rapida = pantalla.locator(".etiquetaCaminoPlan", { hasText: "Más rápida" });
     const sinAutopistas = pantalla.locator(".etiquetaCaminoPlan", { hasText: "Sin autopistas" });
@@ -100,7 +101,7 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
     }
     const hoja = cajas[3];
     expect(hoja.y + hoja.height).toBeLessThanOrEqual(640);
-    for (const nombre of ["Iniciar", "Paradas", "Optimizar", "Elegir", "Guardadas", "Google Maps"]) {
+    for (const nombre of ["Iniciar", "Paradas", "Más opciones de la ruta"]) {
         const boton = await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: nombre, exact: true }).boundingBox();
         expect(boton.y + boton.height).toBeLessThanOrEqual(640);
     }
@@ -110,21 +111,23 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
     // queda guardado para la navegación.
     await sinAutopistas.locator(".globoEtiquetaPlan").click();
     await expect(sinAutopistas).toHaveClass(/elegida/);
-    await expect(page.locator("#minutosPlanRutas")).toHaveText("16 min");
-    await expect(page.locator("#detallePlanRutas")).toHaveText(/^\(6,1 km\)/);
-    await expect(pantalla.getByRole("button", { name: "Sin autopistas", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#numerosPlanRutas")).toContainText("16 min");
+    await expect(page.locator("#numerosPlanRutas")).toContainText("6,1 km");
+    await expect(page.locator("#pillVehiculoRutas")).toHaveText(/Auto, sin autopistas/);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).sinAutopistas)).toBe(true);
-    // Y con el chip se vuelve al más rápido.
-    await pantalla.getByRole("button", { name: "Sin autopistas", exact: true }).click();
+    // Y con «Auto ▾» se vuelve al más rápido.
+    await page.locator("#pillVehiculoRutas").click();
+    await page.locator(".menuVehiculoRutas").getByRole("button", { name: "Sin autopistas: sí" }).click();
     await expect(rapida).toHaveClass(/elegida/);
-    await expect(page.locator("#minutosPlanRutas")).toHaveText("13 min");
+    await expect(page.locator("#numerosPlanRutas")).toContainText("13 min");
 
     // Auto o Moto: el mismo ajuste de Más > Cómo te movés.
-    await pantalla.getByRole("button", { name: "Moto", exact: true }).click();
-    await expect(pantalla.getByRole("button", { name: "Moto", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(pantalla.getByRole("button", { name: "Auto", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await page.locator("#pillVehiculoRutas").click();
+    await page.locator(".menuVehiculoRutas").getByRole("button", { name: "Moto" }).click();
+    await expect(page.locator("#pillVehiculoRutas")).toHaveText(/Moto/);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).vehiculo)).toBe("moto");
-    await pantalla.getByRole("button", { name: "Auto", exact: true }).click();
+    await page.locator("#pillVehiculoRutas").click();
+    await page.locator(".menuVehiculoRutas").getByRole("button", { name: "Auto", exact: true }).click();
 
     // Paradas: la lista con el orden, encima del mapa; se vuelve al mapa.
     await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: "Paradas" }).click();
@@ -132,12 +135,6 @@ test("planificar: vista previa con 2 recorridos, Iniciar y Paradas", async ({ pa
     await expect(page.locator(".paradaOrden").first()).toBeVisible();
     await pantalla.getByRole("button", { name: "Volver al mapa" }).click();
     await expect(page.locator(".hojaPlanRutas")).toBeVisible();
-
-    // Guardadas: se abren las paradas en «Rutas guardadas».
-    await pantalla.getByRole("button", { name: "Guardadas" }).click();
-    await expect(page.locator(".tarjetaRutasGuardadas")).toHaveAttribute("open", "");
-    await expect(page.locator("#nombreRutaGuardada")).toBeVisible();
-    await pantalla.getByRole("button", { name: "Volver al mapa" }).click();
 
     // Iniciar: arranca la navegación con las 3 paradas.
     await pantalla.getByRole("button", { name: "Iniciar" }).click();
@@ -157,11 +154,9 @@ test("planificar: carrusel de paradas", async ({ page }) => {
         window.saldosVendeFrio = { ...(window.saldosVendeFrio || {}), cuentas: () => [{ nombre: "Kiosco 1", total: 12000 }] };
         mostrarPantalla("rutas");
     });
-    const pantalla = page.locator("#pantallaRutas");
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    await pantalla.getByRole("button", { name: "Optimizar" }).click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
-    await expect(page.locator("#minutosPlanRutas")).toHaveText("13 min");
+    await page.evaluate(() => armarRutaCon(["Kiosco 1", "Kiosco 2", "Kiosco 3"]));
+    await expect(page.locator("#numerosPlanRutas")).toContainText("13 min");
 
     // Una tarjeta por parada; la próxima primero, con su hora y lo que lleva y cobra.
     const carrusel = page.locator("#proximaParadaRuta");
@@ -169,7 +164,7 @@ test("planificar: carrusel de paradas", async ({ page }) => {
     await expect(tarjetas).toHaveCount(3);
     await expect(tarjetas.first()).toHaveClass(/actual/);
     await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 1");
-    await expect(tarjetas.first().locator("small")).toHaveText(/^Calle 1 · \d\d:\d\d · lleva 4 u · cobrar \$ 12\.000$/);
+    await expect(tarjetas.first().locator("small")).toHaveText(/^Calle 1 · \d\d:\d\d · lleva 4 u · debe \$ 12\.000$/);
     await expect(page.locator('.pinRuta[title="Kiosco 1"]')).toHaveClass(/pinDestacado/);
     await capturar(page, "planificar-02-carrusel");
 
@@ -182,36 +177,27 @@ test("planificar: carrusel de paradas", async ({ page }) => {
         return Math.abs(centro.lat - (-34.604)) < 0.0005 && Math.abs(centro.lng - (-58.368)) < 0.0005;
     })).toBe(true);
 
-    // ⋯ de la tercera: Ir primero. Pasa adelante de la próxima.
-    await tarjetas.nth(2).getByRole("button", { name: "Opciones de Kiosco 3" }).click();
-    const opciones = page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" });
-    await expect(opciones.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
-    await expect(opciones.getByRole("button", { name: "Ir con Google Maps" })).toBeVisible();
-    await opciones.getByRole("button", { name: "Ir primero" }).click();
-    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 3");
-    await expect(page.locator(".paradaOrden").first()).toHaveAttribute("data-nombre", "Kiosco 3");
+    // ⋯ de la primera: el menú de la parada. Saltear la manda al final.
+    await tarjetas.first().getByRole("button", { name: "Opciones de Kiosco 1" }).click();
+    const menu = page.locator(".menuParadaRuta");
+    await expect(menu.getByRole("button", { name: "Entregar" })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Pasé, sin pedido" })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Ir", exact: true })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Ver la ficha" })).toBeVisible();
+    await capturar(page, "planificar-02b-menu-parada");
+    await menu.getByRole("button", { name: "Saltear (queda para después)" }).click();
+    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 1 de 3: Kiosco 2");
+    await expect(page.locator(".paradaOrden").last()).toHaveAttribute("data-nombre", "Kiosco 1");
 
-    // ⋯ de Kiosco 2: Sacar de la ruta. Recién reordenado, el carrusel se
+    // ⋯ de Kiosco 3: Sacar de la ruta. Recién reordenado, el carrusel se
     // redibuja y a veces el primer toque cae en la tarjeta vieja: se reintenta.
-    const opcionesKiosco2 = page.getByRole("dialog", { name: "Opciones de la parada Kiosco 2" });
     await expect(async () => {
-        await carrusel.getByRole("button", { name: "Opciones de Kiosco 2" }).click();
-        await expect(opcionesKiosco2).toBeVisible({ timeout: 2000 });
+        await carrusel.getByRole("button", { name: "Opciones de Kiosco 3" }).click();
+        await expect(page.locator(".menuParadaRuta")).toContainText("Kiosco 3", { timeout: 2000 });
     }).toPass({ timeout: 15000 });
-    await opcionesKiosco2.getByRole("button", { name: "Sacar de la ruta" }).click();
+    await page.locator(".menuParadaRuta").getByRole("button", { name: "Sacar de la ruta" }).click();
     await expect(tarjetas).toHaveCount(2);
-    await expect(page.locator("#destinoRutas")).toHaveText("2 paradas · última: Kiosco 1");
-
-    // ⋯ de la próxima: Ya pasé. La siguiente queda primera.
-    // Como arriba: si el carrusel se redibuja justo, el toque se reintenta.
-    const opcionesKiosco3 = page.getByRole("dialog", { name: "Opciones de la parada Kiosco 3" });
-    await expect(async () => {
-        await tarjetas.first().getByRole("button", { name: "Opciones de Kiosco 3" }).click();
-        await expect(opcionesKiosco3).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 15000 });
-    await opcionesKiosco3.getByRole("button", { name: "Ya pasé" }).click();
-    await expect(tarjetas).toHaveCount(1);
-    await expect(tarjetas.first()).toHaveAttribute("aria-label", "Parada 2 de 2: Kiosco 1");
+    await expect(page.locator("#numerosPlanRutas")).toContainText("2paradas");
 });
 
 test("planificar: lista de paradas como línea de tiempo", async ({ page }) => {
@@ -224,33 +210,25 @@ test("planificar: lista de paradas como línea de tiempo", async ({ page }) => {
     });
     const pantalla = page.locator("#pantallaRutas");
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
+    await page.evaluate(() => armarRutaCon(["Kiosco 1", "Kiosco 2", "Kiosco 3", "Almacén Sin Pin"]));
+    await expect(page.locator("#numerosPlanRutas")).toContainText("3paradas");
     await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: "Paradas" }).click();
     const panel = pantalla.locator(".panelParadasRutas");
     await expect(panel.getByRole("heading", { name: "Paradas de hoy" })).toBeVisible();
-    // Solo los 3 kioscos y el almacén (la app trae comercios de ejemplo).
-    await panel.locator(".filtrosParadas").getByRole("button", { name: "Ninguno" }).click();
-    await panel.getByRole("button", { name: "Buscar comercio", exact: true }).click();
-    for (const nombre of ["Kiosco 1", "Kiosco 2", "Kiosco 3", "Almacén Sin Pin"]) {
-        await page.locator(`#listaSeleccionRuta input[data-nombre="${nombre}"]`).check();
-    }
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
-    await panel.evaluate(caja => { caja.scrollTop = 0; });
     // Sin ubicación: no entra a la ruta, se le pone el pin desde acá.
     await expect(panel.locator(".sinUbicacionParadas")).toContainText("Sin ubicación (1)");
     await expect(panel.locator(".sinUbicacionParadas")).toContainText("Almacén Sin Pin");
 
-    // Optimizar orden: la línea de tiempo con la hora de cada parada.
-    await panel.getByRole("button", { name: "Optimizar orden" }).click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    // La línea de tiempo con la hora de cada parada.
     const numeros = panel.locator(".numeroParadas");
     await expect(numeros.nth(0)).toContainText("3");
     await expect(numeros.nth(1)).toContainText("5,2");
-    await expect(numeros.nth(2)).toContainText("0:13");
+    await expect(numeros.nth(2)).toContainText("13 min");
     await expect(numeros.nth(3)).toContainText("412k");
     const paradas = panel.locator(".paradaOrden");
     await expect(paradas).toHaveCount(3);
     await expect(paradas.locator(".horaParada").first()).toHaveText(/^\d\d:\d\d$/);
-    await expect(paradas.filter({ hasText: "Kiosco 2" })).toContainText("Cobrar $ 412.000");
+    await expect(paradas.filter({ hasText: "Kiosco 2" })).toContainText("Debe $ 412.000");
     await expect(paradas.first()).toHaveClass(/proxima/);
     // En la pantalla chica, «Listo, ver mapa» queda abajo de todo a la vista.
     const listo = await panel.getByRole("button", { name: "Listo, ver mapa" }).boundingBox();
@@ -263,23 +241,20 @@ test("planificar: lista de paradas como línea de tiempo", async ({ page }) => {
     await expect(paradas.nth(1)).toHaveAttribute("data-nombre", "Kiosco 3");
     await expect(panel.locator(".encabezadoParadas")).toContainText("Orden a tu gusto");
 
-    // Buscar: abre «Comercios para esta ruta» con el buscador listo.
-    await panel.getByRole("button", { name: "Buscar comercio", exact: true }).click();
-    await expect(page.getByLabel("Buscar comercio para la ruta")).toBeFocused();
-    await expect(page.locator(".tarjetaSeleccionRuta")).toHaveAttribute("open", "");
-    // Guardar ruta: abre «Rutas guardadas» con el nombre listo.
-    await panel.getByRole("button", { name: "Guardar ruta", exact: true }).first().click();
+    // El ⋯ de abajo: el mismo menú de la ruta (Guardar esta ruta).
+    await panel.getByRole("button", { name: "Más opciones de la ruta" }).click();
+    await page.locator(".menuRutaHoy").getByRole("button", { name: "Guardar esta ruta" }).click();
     await expect(page.locator("#nombreRutaGuardada")).toBeFocused();
+    await page.keyboard.press("Escape");
 
     // Poner pin: se cierra la lista, se toca el mapa y se guarda.
     await panel.getByRole("button", { name: "Poner pin a Almacén Sin Pin" }).click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
     await expect(panel).toBeHidden();
+    await expect(page.locator("#barraMoverPin")).toContainText("Tocá en el mapa dónde está Almacén Sin Pin");
     await page.locator("#mapaRuta").click({ position: { x: 40, y: 340 } });
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
-    await expect(page.locator("#barraMoverPin")).toContainText("Almacén Sin Pin");
+    await expect(page.locator("#barraMoverPin")).toContainText("Arrastrá el pin de Almacén Sin Pin");
     await page.locator("#guardarMoverPin").click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await expect(page.locator("#barraMoverPin")).toBeHidden();
     expect(await page.evaluate(() => comercioTieneGps(buscarComercioPorNombre("Almacén Sin Pin")))).toBe(true);
 
     // Listo, ver mapa: vuelve al mapa.
