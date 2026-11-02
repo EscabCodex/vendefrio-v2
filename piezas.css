@@ -1711,3 +1711,27 @@ html[data-tema="oscuro"] .sugerenciaAsistente{color:var(--acento);}
 }
 .campoAsistente .botonHablarAsistente.escuchando{background:var(--peligro);color:#fff;}
 .hojaAsistente .vozAltaAsistente{font-size:13px;margin-top:10px;}
+/* Un documento que armó el Asistente: la tarjeta en la charla y la hoja de
+   papel para ver y guardar en PDF (usa el mismo papel que el folleto). */
+.documentoAsistente{
+  display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:12px;
+  border:1px solid var(--borde);border-radius:14px;background:var(--superficie-2);color:var(--texto);
+  font:inherit;text-align:left;cursor:pointer;
+}
+.documentoAsistente > .pzIco{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:10px;background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));}
+html[data-tema="oscuro"] .documentoAsistente > .pzIco{background:var(--superficie);color:var(--acento);}
+.documentoAsistente span:last-child{display:grid;gap:2px;min-width:0;}
+.documentoAsistente b{font-size:15px;font-weight:750;}
+.documentoAsistente small{font-size:12.5px;color:var(--texto-sec);}
+.documentoVista{margin:4px 0 8px;border-radius:12px;overflow:auto;max-height:52vh;box-shadow:0 2px 14px rgba(0,0,0,.18);}
+.documentoHoja .documentoIntro{margin:12px 0 8px;font-size:14px;}
+.documentoTabla{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+.documentoTabla th{padding:6px 6px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.02em;background:#e6f1f9;color:#0f3f63;}
+.documentoTabla td{padding:6px 6px;border-bottom:1px solid #e3e8ed;vertical-align:top;}
+.documentoHoja .documentoPie{margin:12px 0 0;text-align:right;font-size:15px;}
+/* El papel siempre blanco, también en modo oscuro. */
+html .documentoHoja :is(table, thead, tbody, tr, td, footer, header){background:#fff !important;color:#16202a !important;box-shadow:none !important;}
+html .documentoHoja .documentoTabla th{background:#e6f1f9 !important;color:#0f3f63 !important;}
+html .documentoHoja > .folletoCab{border-radius:0 !important;padding:0 0 10px !important;margin:0 !important;}
+html .documentoHoja .folletoCab h1{font-size:22px !important;}
+html .documentoHoja > .folletoPie{color:#5a6672 !important;}

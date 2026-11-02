@@ -38,7 +38,8 @@ const ACCIONES_ASISTENTE = ["responder", "nuevoPedido", "ir", "visitado", "ficha
 const CON_COMERCIO = ["ir", "visitado", "ficha"];
 // T160: los pasos de una frase con varias cosas. Guardar un pedido o
 // imprimir lo confirma la persona en el celular antes de hacerlo.
-const ACCIONES_PASO = ["nuevoPedido", "anotarPedido", "imprimir", "primero", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
+// Tanda 2 (2026-11-02): también crea una lista de precios nueva.
+const ACCIONES_PASO = ["nuevoPedido", "anotarPedido", "imprimir", "primero", "crearLista", "ir", "visitado", "ficha", "pantalla", "proximaParada", "llegue"];
 const PASO_CON_COMERCIO = ["anotarPedido", "primero", "ir", "visitado", "ficha"];
 const MAXIMO_PASOS = 5;
 
@@ -92,6 +93,20 @@ const ESQUEMAS = {
                     additionalProperties: false
                 }
             },
+            // Tanda 2: un documento armado con los datos (resumen, lista de
+            // ventas de un comercio...), que la app muestra y guarda en PDF.
+            documento: {
+                type: "object",
+                properties: {
+                    titulo: { type: "string" },
+                    intro: { type: "string" },
+                    columnas: { type: "array", items: { type: "string" } },
+                    filas: { type: "array", items: { type: "array", items: { type: "string" } } },
+                    pie: { type: "string" }
+                },
+                required: ["titulo", "intro", "columnas", "filas", "pie"],
+                additionalProperties: false
+            },
             pasos: {
                 type: "array",
                 items: {
@@ -101,6 +116,8 @@ const ESQUEMAS = {
                         comercio: { type: "string" },
                         pantalla: { type: "string", enum: [...PANTALLAS, ""] },
                         lista: { type: "string" },
+                        nombre: { type: "string" },
+                        porcentaje: { type: "number" },
                         productos: {
                             type: "array",
                             items: {
@@ -115,12 +132,12 @@ const ESQUEMAS = {
                             }
                         }
                     },
-                    required: ["accion", "comercio", "pantalla", "lista", "productos"],
+                    required: ["accion", "comercio", "pantalla", "lista", "nombre", "porcentaje", "productos"],
                     additionalProperties: false
                 }
             }
         },
-        required: ["accion", "comercio", "pantalla", "respuesta", "destacado", "barras", "pasos"],
+        required: ["accion", "comercio", "pantalla", "respuesta", "destacado", "barras", "pasos", "documento"],
         additionalProperties: false
     }
 };
@@ -158,7 +175,10 @@ Varias cosas de una sola frase ("pasos"): si pide más de una cosa, o algo que n
 - imprimir: imprimir el ticket del pedido que se acaba de anotar en un paso anterior o, si no hay, del pedido que tiene abierto.
 - primero: cambiar el orden del recorrido para ir primero a "comercio" ("vamos a lo de Pepe primero").
 - nuevoPedido, ir, visitado, ficha, pantalla, proximaParada, llegue: como arriba.
-En cada paso, lo que no use va "" o []. Usá solo comercios, productos y listas que estén en las listas que manda la app; nunca los inventes. Elegir una calle para el camino ("agarrá por tal calle") todavía no se puede: usá responder y decilo.`
+- crearLista: crear una lista de precios nueva llamada "nombre" (corta, por ejemplo "Mayoristas"), con "porcentaje" sobre el precio general (10 = 10% más cara, -5 = 5% más barata, 0 = la carga a mano). No uses el nombre de una lista que ya existe.
+En cada paso, lo que no use va "", 0 o []. Usá solo comercios, productos y listas que estén en las listas que manda la app; nunca los inventes. Elegir una calle para el camino ("agarrá por tal calle") todavía no se puede: usá responder y decilo.
+Sos el centro de inteligencia de la app: pensá con criterio propio, como un socio que conoce el negocio. Si te piden algo que la app no tiene, buscale la vuelta con lo que podés hacer.
+Documentos ("documento"): si piden un resumen, un listado, un informe, una lista para imprimir, para entregar o "en PDF" (por ejemplo, la lista de ventas de un comercio para dársela), armalo con los datos en "documento" y usá "responder" con una frase corta en "respuesta" que diga qué armaste. "titulo": corto y claro; "intro": una o dos oraciones (para quién es, de qué fechas); "columnas": los títulos de la tabla (hasta 5, por ejemplo Fecha, Producto, Cantidad, Precio, Total); "filas": cada fila con un texto por columna (hasta 60 filas); "pie": el total o una nota final. Usá SOLO los datos que vienen en el mensaje; si no alcanzan, decilo en "respuesta" y dejá "documento" vacío. Si no piden un documento, "documento" va con todo vacío ("" y []).`
 };
 
 function appDeVercel() {
@@ -191,7 +211,7 @@ async function preguntarAClaude({ instrucciones, esquema, mensaje }) {
         throw error;
     }
     const Anthropic = require("@anthropic-ai/sdk");
-    const cliente = new Anthropic({ apiKey: clave, timeout: 12000, maxRetries: 1 });
+    const cliente = new Anthropic({ apiKey: clave, timeout: 25000, maxRetries: 0 });
     const respuesta = await cliente.messages.create({
         model: MODELO,
         max_tokens: 4096,
@@ -246,8 +266,22 @@ function limpiarAsistente(resultado, comercio, catalogo = {}) {
         respuesta: respuesta || (accion === "responder" ? "No te entendí. ¿Me lo decís de otra forma?" : ""),
         destacado: accion === "responder" ? texto(resultado?.destacado, 40) : "",
         barras: accion === "responder" ? barras : [],
-        pasos: limpiarPasos(resultado?.pasos, catalogo)
+        pasos: limpiarPasos(resultado?.pasos, catalogo),
+        documento: limpiarDocumento(resultado?.documento)
     };
+}
+
+// Tanda 2: el documento, cortito y sin nada raro (texto plano).
+function limpiarDocumento(documento) {
+    const titulo = texto(documento?.titulo, 80);
+    const columnas = (Array.isArray(documento?.columnas) ? documento.columnas : []).map(columna => texto(columna, 30)).filter(Boolean).slice(0, 6);
+    const filas = (Array.isArray(documento?.filas) ? documento.filas : [])
+        .filter(Array.isArray)
+        .map(fila => fila.slice(0, Math.max(1, columnas.length || 6)).map(celda => texto(celda, 80)))
+        .filter(fila => fila.some(Boolean))
+        .slice(0, 80);
+    if (!titulo || (!filas.length && !texto(documento?.intro))) return null;
+    return { titulo, intro: texto(documento?.intro, 400), columnas, filas, pie: texto(documento?.pie, 200) };
 }
 
 // T160: los pasos, solo con comercios, productos y listas que mandó la app.
@@ -271,7 +305,10 @@ function limpiarPasos(pasos, { comercios = [], productos = [], listas = [] }) {
             });
             if (!elegidos.length) return;
         }
-        limpios.push({ accion, comercio: accion === "nuevoPedido" || PASO_CON_COMERCIO.includes(accion) ? comercio : "", pantalla, lista, productos: elegidos });
+        const nombre = accion === "crearLista" ? texto(paso.nombre, 40) : "";
+        if (accion === "crearLista" && (!nombre || listas.includes(nombre))) return;
+        const porcentaje = accion === "crearLista" && Number.isFinite(Number(paso.porcentaje)) ? Math.max(-90, Math.min(300, Math.round(Number(paso.porcentaje) * 10) / 10)) : 0;
+        limpios.push({ accion, comercio: accion === "nuevoPedido" || PASO_CON_COMERCIO.includes(accion) ? comercio : "", pantalla, lista, nombre, porcentaje, productos: elegidos });
     });
     return limpios.slice(0, MAXIMO_PASOS);
 }

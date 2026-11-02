@@ -404,7 +404,9 @@
             pasos: pasosDeClaude(resultado.pasos),
             texto: String(resultado.respuesta || (orden ? "" : "No te entendí. ¿Me lo decís de otra forma?")),
             destacado: orden ? "" : String(resultado.destacado || ""),
-            barras: orden ? [] : (Array.isArray(resultado.barras) ? resultado.barras : [])
+            barras: orden ? [] : (Array.isArray(resultado.barras) ? resultado.barras : []),
+            // Tanda 2: un documento para ver y guardar en PDF.
+            documento: !orden && resultado.documento && resultado.documento.titulo ? resultado.documento : null
         };
     }
 
@@ -425,6 +427,10 @@
                 }).filter(Boolean);
                 if (!productos.length) return null;
                 return { accion: "anotarPedido", comercio, productos, lista: listas.includes(paso.lista) ? paso.lista : null };
+            }
+            if (paso.accion === "crearLista") {
+                const nombre = String(paso.nombre || "").trim().slice(0, 40);
+                return nombre && !listas.includes(nombre) ? { accion: "crearLista", nombre, porcentaje: Number(paso.porcentaje) || 0 } : null;
             }
             if (["nuevoPedido", "imprimir", "proximaParada", "llegue"].includes(paso.accion)) return comercio ? { accion: paso.accion, comercio } : { accion: paso.accion };
             return comercio && ["primero", "ir", "visitado", "ficha"].includes(paso.accion) ? { accion: paso.accion, comercio } : null;

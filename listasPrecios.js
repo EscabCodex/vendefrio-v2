@@ -632,6 +632,22 @@
         mostrarToast("Lista «" + nombre + "» creada: poné el % o cargá los precios");
     }
 
+    // Tanda 2: el Asistente crea una lista con un % sobre el general (o
+    // vacía, para cargarla a mano). Devuelve si la pudo crear.
+    function crearConRegla(nombre, porcentaje = 0) {
+        const limpio = String(nombre || "").trim().slice(0, 40);
+        if (!limpio || !puedeEditar() || listas().includes(limpio)) return false;
+        nuevas.add(limpio);
+        const pct = Number(porcentaje);
+        if (Number.isFinite(pct) && pct !== 0 && pct > -100) {
+            ponerRegla(limpio, { porcentaje: pct, redondeo: 10, sigue: true });
+            const productos = JSON.parse(JSON.stringify(obtenerProductos() || {}));
+            aplicarReglas(productos);
+            guardarProductos(productos);
+        }
+        return true;
+    }
+
     // ---------- Comercios que usan una lista ----------
     // Elegir varios al estilo Pedidos: filtros, «N elegidos», Marcar todos,
     // el círculo pasa a ser un tilde, y abajo «Guardar · N comercios».
@@ -987,6 +1003,6 @@
 
     window.listasPreciosVendeFrio = {
         listas, comerciosEn, abrir, abrirLista, abrirPantalla, cambiarLista, exportarPlanilla, abrirFolleto, nueva,
-        puedeCrear: puedeEditar, reglas, aplicarReglas, elegirComercios
+        puedeCrear: puedeEditar, reglas, aplicarReglas, elegirComercios, crearConRegla
     };
 }());

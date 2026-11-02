@@ -243,5 +243,5 @@ test("asistente: en todas las pantallas, con lo que estás viendo y varias cosas
     });
     expect(limpio.estado).toBe(200);
     // Don Pepe no estaba en la lista que mandó la app: ese pedido no va; el ticket sí.
-    expect(limpio.datos.resultado.pasos).toEqual([{ accion: "imprimir", comercio: "", pantalla: "", lista: "", productos: [] }]);
+    expect(limpio.datos.resultado.pasos).toEqual([{ accion: "imprimir", comercio: "", pantalla: "", lista: "", nombre: "", porcentaje: 0, productos: [] }]);
 });

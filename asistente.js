@@ -292,7 +292,9 @@
     }
 
     // ---------- Varias cosas de una sola frase (T160) ----------
-    const NECESITAN_SI = ["anotarPedido", "imprimir"];
+    const NECESITAN_SI = ["anotarPedido", "imprimir", "crearLista"];
+    // Pedidos para crear algo (un PDF, un resumen, una lista nueva).
+    const PARA_CREAR = /\b(pdf|resumen|informe|listado|documento|planilla|imprimible|haceme|hace(me)?lo|armame|arma|crea|crear|crealo|genera|generame|redacta|escribime|compara|compar[aá]me)\b/;
     // «… e imprimí el ticket», «y sacale el ticket».
     const IMPRIMIR = /[,.\s]*(?:\b(?:y|e)\s+)?(?:(?:despu[eé]s|luego)\s+)?\b(?:imprim[ií]\w*|sac[aá](?:le|me|lo)?|larg[aá](?:le|me)?)\s+(?:el\s+|un\s+|los\s+)?(?:ticket|comprobante|remito)s?\b/i;
     // «a precio especial», «con la lista Mayorista».
@@ -379,6 +381,7 @@
                 return "Imprimir el ticket" + (vista.pasoPedido ? " de ese pedido." : pedido ? " del pedido de " + pedido.comercio + "." : ".");
             }
             case "primero": return "Ir primero a " + nombre + ".";
+            case "crearLista": return "Crear la lista de precios «" + paso.nombre + "»" + (paso.porcentaje ? ", " + Math.abs(paso.porcentaje) + "% más " + (paso.porcentaje > 0 ? "cara" : "barata") + " que el general." : ", para cargarla a mano.");
             default: return contarOrden(paso);
         }
     }
@@ -461,7 +464,7 @@
 
     async function hacerPasos(pasos, vista) {
         const voz = window.vozVendeFrio;
-        const dichos = pasos.filter(paso => paso.accion !== "imprimir" && paso.accion !== "anotarPedido").map(paso => describir(paso, vista));
+        const dichos = pasos.filter(paso => !NECESITAN_SI.includes(paso.accion)).map(paso => describir(paso, vista));
         const resumen = dichos.join(" ");
         if (resumen) charla.push({ quien: "app", texto: resumen });
         hablar(resumen);
@@ -476,6 +479,11 @@
             } else if (paso.accion === "imprimir") {
                 const problema = await imprimir(idPedido || vista.pedidoId || ultimoPedidoGuardado());
                 if (problema && typeof mostrarToast === "function") mostrarToast(problema);
+            } else if (paso.accion === "crearLista") {
+                const listas = window.listasPreciosVendeFrio;
+                const hecha = listas?.crearConRegla?.(paso.nombre, paso.porcentaje);
+                if (typeof mostrarToast === "function") mostrarToast(hecha ? "Lista «" + paso.nombre + "» creada" : "No pude crear la lista «" + paso.nombre + "»");
+                if (hecha) listas.abrirLista?.(paso.nombre, listas.abrirPantalla);
             } else if (paso.accion === "primero") {
                 if (!window.navegacionVendeFrio?.irPrimero?.(paso.comercio.nombre)) voz?.ejecutarOrden?.({ accion: "ir", comercio: paso.comercio });
             } else {
@@ -501,7 +509,11 @@
         const texto = item.destacado && resto.length
             ? p.esc(antes) + `<strong>${p.esc(item.destacado)}</strong>` + p.esc(resto.join(item.destacado))
             : (item.destacado ? `<strong>${p.esc(item.destacado)}</strong>` : "") + p.esc(item.texto);
-        return `<div class="burbuja burbujaApp${item.plan ? " burbujaPlan" : ""}">${texto}${pasos}${avisos}${barras}${botones}</div>`;
+        const indice = charla.indexOf(item);
+        const documento = item.documento
+            ? `<button type="button" class="documentoAsistente" data-documento="${indice}">${p.ico("recibo", 22)}<span><b>${p.esc(item.documento.titulo)}</b><small>${item.documento.filas.length ? item.documento.filas.length + (item.documento.filas.length === 1 ? " renglón" : " renglones") + " · " : ""}Tocá para verlo y guardarlo en PDF</small></span></button>`
+            : "";
+        return `<div class="burbuja burbujaApp${item.plan ? " burbujaPlan" : ""}">${texto}${pasos}${avisos}${barras}${documento}${botones}</div>`;
     }
 
     function dibujar() {
@@ -549,17 +561,21 @@
         const voz = window.vozVendeFrio;
         const vista = contexto();
 
+        // Tanda 2: «haceme un PDF…», «armame un resumen…», «creá una lista…»
+        // los piensa Claude (crea cosas), no las órdenes rápidas del celular.
+        const paraCrear = Boolean(voz?.claudeDisponible?.()) && PARA_CREAR.test(dicho);
+
         // 1. Sus números, al toque.
-        const numeros = respuestaLocal(pedido);
+        const numeros = paraCrear ? null : respuestaLocal(pedido);
         if (numeros) return contestar(numeros);
 
         // 2. Varias cosas seguidas, un pedido con productos o el ticket (T160).
-        const local = planLocal(pedido, vista, Boolean(voz?.claudeDisponible?.()));
+        const local = paraCrear ? null : planLocal(pedido, vista, Boolean(voz?.claudeDisponible?.()));
         if (local) return proponer(local.pasos, local.avisos);
 
         // 3. Las órdenes ("¿cómo llego a…?" también es una orden).
         const comoHago = /^(como|que hago|para que|donde (se|esta|encuentro))\b/.test(dicho) && !/\bcomo (llego|voy|se llega)\b/.test(dicho);
-        if (!comoHago && voz?.interpretar) {
+        if (!comoHago && !paraCrear && voz?.interpretar) {
             const frase = [pedido, ...alternativas].find(opcion => {
                 const orden = voz.interpretar(opcion);
                 return orden && orden.accion !== "noEncontrado";
@@ -580,14 +596,14 @@
             esperando = true;
             dibujar();
             const abierta = hoja;
-            const resultado = await voz.preguntarAlAsistente(pedido, datosParaLaIA(vista), charla.slice(0, -1));
+            const resultado = await voz.preguntarAlAsistente(pedido, datosParaLaIA(vista, pedido), charla.slice(0, -1));
             esperando = false;
             // Si cerraron la charla mientras pensaba, no hace nada.
             if (!hoja || hoja !== abierta) return;
             const pasos = resultado?.pasos || [];
             if (pasos.length > 1 || pasos.some(paso => NECESITAN_SI.includes(paso.accion) || paso.accion === "primero")) return proponer(pasos);
             if (resultado?.orden) return hacer(resultado.orden);
-            if (resultado) return contestar({ texto: resultado.texto, destacado: resultado.destacado, barras: resultado.barras });
+            if (resultado) return contestar({ texto: resultado.texto, destacado: resultado.destacado, barras: resultado.barras, documento: resultado.documento });
             // Claude no contestó: sigue con lo que sabe el celular, y dice por qué.
             motivo = voz.porQueFallo?.() || "";
         } else if (enLaNube() && preferencias().asistenteClaude === false) {
@@ -603,11 +619,92 @@
         });
     }
 
-    function datosParaLaIA(vista = contexto()) {
+    // ---------- Documentos (tanda 2) ----------
+    // Lo que arma Claude (un resumen, la lista de ventas de un comercio) se
+    // ve como una hoja de papel y se guarda en PDF con la ventana de imprimir
+    // del celular, igual que el folleto de una lista de precios.
+    function htmlDocumento(documento) {
+        const nombre = String(window.distribuidoraVendeFrio?.nombreActual?.() || "").trim() || "VendeFrío";
+        const hoy = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+        const tabla = documento.filas.length
+            ? `<table class="documentoTabla">${documento.columnas.length ? `<thead><tr>${documento.columnas.map(columna => `<th>${p.esc(columna)}</th>`).join("")}</tr></thead>` : ""}
+                <tbody>${documento.filas.map(fila => `<tr>${fila.map(celda => `<td>${p.esc(celda)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+            : "";
+        return `<div class="folletoHoja documentoHoja">
+            <header class="folletoCab"><h1>${p.esc(documento.titulo)}</h1><p>${p.esc(nombre)} · ${p.esc(hoy)}</p></header>
+            ${documento.intro ? `<p class="documentoIntro">${p.esc(documento.intro)}</p>` : ""}
+            ${tabla}
+            ${documento.pie ? `<p class="documentoPie"><b>${p.esc(documento.pie)}</b></p>` : ""}
+            <footer class="folletoPie">Hecho con VendeFrío</footer>
+        </div>`;
+    }
+
+    function guardarDocumento(documento) {
+        let copia = document.getElementById("folletoImprimir");
+        if (!copia) {
+            copia = document.createElement("div");
+            copia.id = "folletoImprimir";
+            document.body.appendChild(copia);
+        }
+        copia.innerHTML = htmlDocumento(documento);
+        document.body.classList.add("imprimiendoFolleto");
+        const tituloViejo = document.title;
+        document.title = documento.titulo;
+        window.addEventListener("afterprint", () => {
+            document.body.classList.remove("imprimiendoFolleto");
+            document.title = tituloViejo;
+        }, { once: true });
+        setTimeout(() => window.print(), 60);
+    }
+
+    function verDocumento(documento) {
+        const texto = [documento.titulo, documento.intro, ...documento.filas.map(fila => fila.join(" · ")), documento.pie].filter(Boolean).join("\n");
+        p.hoja({
+            titulo: documento.titulo,
+            clase: "hojaDocumento",
+            etiqueta: documento.titulo,
+            html: `<div class="documentoVista">${htmlDocumento(documento)}</div>`,
+            botones: [
+                navigator.share ? { texto: "Compartir", icono: "whatsapp", clase: "pzBtnSec", cerrar: false,
+                    alTocar: () => navigator.share({ title: documento.titulo, text: texto }).catch(() => {}) } : null,
+                { texto: "Guardar en PDF o imprimir", icono: "impresora", clase: "pzBtnPri", cerrar: false, alTocar: () => guardarDocumento(documento) }
+            ].filter(Boolean)
+        });
+    }
+
+    // Los pedidos de un comercio, renglón por renglón, para que Claude pueda
+    // armar su lista de ventas (solo el que se nombra o el que está abierto).
+    function detalleDeComercio(nombre) {
+        if (!nombre) return "";
+        const desde = Date.now() - 92 * 24 * 60 * 60 * 1000;
+        const pedidos = pedidosQueCuentan()
+            .filter(pedido => normalizar(pedido.comercio) === normalizar(nombre) && (fechaDe(pedido)?.getTime?.() || 0) >= desde)
+            .sort((a, b) => (fechaDe(a)?.getTime?.() || 0) - (fechaDe(b)?.getTime?.() || 0))
+            .slice(-40);
+        if (!pedidos.length) return "## Pedidos de " + nombre + " (últimos 3 meses)\nNo tiene pedidos en los últimos 3 meses.";
+        const verPlata = vePlata();
+        const lineas = pedidos.map(pedido => {
+            const fecha = fechaDe(pedido)?.toLocaleDateString?.("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) || "";
+            const productos = (pedido.productos || []).map(linea => (Number(linea.cantidad) || 0) + " x " + linea.producto + (linea.marca ? " (" + linea.marca + ")" : "")
+                + (verPlata && Number(linea.precio) ? " a " + p.plata(linea.precio) : "")).join("; ");
+            const total = verPlata && typeof totalDelPedido === "function" ? " | Total " + p.plata(Number(totalDelPedido(pedido)?.total || 0)) : "";
+            return "- " + fecha + ": " + productos + total;
+        });
+        return "## Pedidos de " + nombre + " (últimos 3 meses, del más viejo al más nuevo)\n" + lineas.join("\n");
+    }
+
+    function datosParaLaIA(vista = contexto(), pedido = "") {
         const guia = "## Cómo se usa la app\n" + (window.ayudaVendeFrio?.guiaEnTexto?.() || "");
         const numeros = vePlata() && window.preguntaleVendeFrio?.resumen ? window.preguntaleVendeFrio.resumen() : "Quien pregunta no tiene permiso para ver la plata: no des montos.";
         const viendo = vista.lineas.length ? "## Lo que está viendo ahora\n" + vista.lineas.join("\n") + "\n\n" : "";
-        return viendo + numeros + "\n\n" + guia;
+        // El comercio que nombra (o el que tiene abierto), con sus pedidos.
+        const dicho = normalizar(pedido);
+        const nombrado = dicho ? (typeof obtenerComercios === "function" ? obtenerComercios() : [])
+            .filter(comercio => comercio?.nombre && dicho.includes(normalizar(comercio.nombre)))
+            .sort((a, b) => b.nombre.length - a.nombre.length)[0] : null;
+        const comercio = nombrado?.nombre || vista.comercio?.nombre || "";
+        const detalle = comercio ? detalleDeComercio(comercio) + "\n\n" : "";
+        return viendo + detalle + numeros + "\n\n" + guia;
     }
 
     function hacer(orden) {
@@ -733,6 +830,9 @@
                 porVoz = false;
                 responder(sugerencia.dataset.sugerencia);
             }
+            const doc = evento.target.closest("[data-documento]");
+            const item = doc ? charla[Number(doc.dataset.documento)] : null;
+            if (item?.documento) verDocumento(item.documento);
             const decision = evento.target.closest("[data-plan]");
             if (decision) {
                 callar();
