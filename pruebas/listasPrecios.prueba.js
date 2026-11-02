@@ -102,6 +102,14 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     await deLista.getByRole("button", { name: "Guardar · 1 comercio" }).click();
     await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("1 comercio");
     expect(await page.evaluate(() => buscarComercioPorNombre("Almacén Don Pepe").listaPrecios)).toBe("Almacenes");
+    // Antes de armar el pedido, la nube ya tiene que haber guardado la lista
+    // del comercio y los precios de Almacenes (si una bajada de la nube llega
+    // tarde y los pisa, se vuelven a poner, como en el resto de las pruebas).
+    await expect.poll(() => page.evaluate(() => {
+        if (buscarComercioPorNombre("Almacén Don Pepe")?.listaPrecios !== "Almacenes") actualizarComercioPorNombre("Almacén Don Pepe", { listaPrecios: "Almacenes" });
+        const helado = obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Helado 1 kg");
+        return [buscarComercioPorNombre("Almacén Don Pepe")?.listaPrecios, helado.precio, helado.precios.Almacenes];
+    })).toEqual(["Almacenes", 4500, 4100]);
 
     // Don Pepe usa "Almacenes"; en este pedido se elige "Súper".
     await irAPedidos(page);
