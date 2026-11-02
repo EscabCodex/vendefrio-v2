@@ -93,10 +93,13 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await capturar(page, "navegacion-02-hoja-abierta");
     await navegacion.getByRole("button", { name: "Ver más datos del comercio" }).click();
 
-    // Silenciar la voz.
-    await navegacion.getByRole("button", { name: "Silenciar la voz" }).click();
-    await expect(navegacion.getByRole("button", { name: "Prender la voz" })).toBeVisible();
-    await navegacion.getByRole("button", { name: "Prender la voz" }).click();
+    // Un solo ⋯ abajo a la derecha: silenciar la voz y prenderla.
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await expect(page.getByRole("menu", { name: "Navegación" }).getByRole("button")).toHaveText([/Sumar parada/, /Hablarle al asistente/, /Voz: prendida/, /Achicar la navegación/, /Terminar navegación/]);
+    await capturar(page, "navegacion-02a-menu");
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Voz: prendida" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Voz: apagada" }).click();
 
     // T132: al avanzar por Rivadavia, la línea se borra detrás y arranca donde estás.
     const largoDeLaLinea = () => page.evaluate(() => document.querySelector("#pantallaNavegacion path.lineaCamino").getTotalLength());
@@ -108,7 +111,8 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await capturar(page, "navegacion-02b-linea-recortada");
 
     // T170: minimizar, usar otra pantalla y volver con la burbuja, donde estaba.
-    await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Achicar la navegación" }).click();
     await expect(navegacion).toBeHidden();
     const burbuja = page.getByRole("button", { name: "Volver a la navegación" });
     await expect(burbuja).toBeVisible();
@@ -143,7 +147,8 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     await burbuja.click();
     await expect(navegacion).toBeVisible();
     // «Ir» al mismo comercio con la navegación minimizada también la trae, sin empezar de nuevo.
-    await navegacion.getByRole("button", { name: "Minimizar la navegación" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Achicar la navegación" }).click();
     await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
     await page.locator(".comercioCard", { hasText: "Kiosco La Esquina" }).locator("h3").click();
     await page.locator(".modalFichaComercio").getByRole("button", { name: "Más opciones" }).click();

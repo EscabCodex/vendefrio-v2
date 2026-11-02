@@ -120,8 +120,7 @@ test("manejando: maniobra grande, barra del día y tarjeta de la parada", async 
 
     // Velocímetro (8 m/s son 29 km/h), voz y salir.
     await expect(navegacion.locator(".velocimetroNavegacion strong")).toHaveText("29");
-    await expect(navegacion.getByRole("button", { name: "Silenciar la voz" })).toBeVisible();
-    await expect(navegacion.getByRole("button", { name: "Terminar navegación" })).toBeVisible();
+    await expect(navegacion.getByRole("button", { name: "Opciones de la navegación" })).toBeVisible();
 
     // En la pantalla chica nada tapa la maniobra y todo entra.
     const caja = async selector => navegacion.locator(selector).first().boundingBox();

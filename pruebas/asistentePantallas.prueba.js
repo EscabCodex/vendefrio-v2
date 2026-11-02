@@ -182,7 +182,8 @@ test("asistente: en todas las pantallas, con lo que estás viendo y varias cosas
     });
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
-    await navegacion.getByRole("button", { name: "Asistente" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Hablarle al asistente" }).click();
     await expect(ventana).toBeVisible();
     const primero = ventana.getByRole("button", { name: "Vamos a lo de Super Norte primero" });
     await expect(primero).toBeVisible();
@@ -195,7 +196,8 @@ test("asistente: en todas las pantallas, con lo que estás viendo y varias cosas
     // Una frase rara, dicha: Claude la lee como dos pasos y se confirma con
     // un «sí» dicho. El producto inventado no llega y la navegación sigue.
     await page.evaluate(() => { window.__bytesImpresos = []; window.__frasesVoz = ["dale, cargale lo de siempre a don pepe y sacale el ticket", "sí"]; });
-    await navegacion.getByRole("button", { name: "Asistente" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Hablarle al asistente" }).click();
     await expect(page.locator("#contenedorToasts")).toContainText("Ticket impreso", { timeout: 15000 });
     expect(preguntas.at(-1)).toContain("Está navegando hacia Super Norte");
     expect(preguntas.at(-1)).toContain("Después siguen: Kiosco La Esquina.");

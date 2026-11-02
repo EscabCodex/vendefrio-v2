@@ -23,7 +23,6 @@
     const DISTANCIA_LLEGADA = 35;     // m: "Llegaste"
     const DISTANCIA_LLEGANDO = 150;   // m: se agranda la hoja (T135)
     const DISTANCIA_FUERA = 35;       // m: te saliste del camino
-    const DISTANCIA_AVISO = 30;       // m: un aviso del equipo está en el camino (T139)
     const ESPERA_RECALCULO = 5000;    // ms entre dos cálculos del camino
     const ADELANTO_GPS = 1.5;         // s: el GPS llega tarde; se adelanta según la velocidad
 
@@ -53,7 +52,7 @@
     let desplazoHoja = 0;        // px: con la hoja abierta, tu posición va más arriba
     const pasosAnunciados = new Map();
     let proximaManiobra = -1;    // índice del paso que viene (para la voz)
-    let calleActual = "";        // por dónde vas, para los avisos del equipo (T139)
+    let calleActual = "";        // por dónde vas (el Asistente lo dice)
     let valhallaEnPausaHasta = 0; // T163: si Valhalla falló, se usa OSRM un rato
     let minimizada = false;      // T170: sigue andando debajo de la burbuja
     let encuadrarAlVolver = false; // T170: un camino nuevo mientras estaba minimizada
@@ -176,31 +175,6 @@
             }
         }
         return mejor.lejos === Infinity ? null : mejor;
-    }
-
-    // Qué tan cerca pasa una línea de un punto (m). Proyección plana.
-    function lejosDeLinea(punto, puntos) {
-        const cosLat = Math.cos(punto[0] * Math.PI / 180);
-        const metros = p => [p[0] * 111320, p[1] * 111320 * cosLat];
-        const P = metros(punto);
-        let menor = Infinity;
-        for (let i = 0; i < puntos.length - 1; i++) {
-            const A = metros(puntos[i]);
-            const B = metros(puntos[i + 1]);
-            const dx = B[0] - A[0];
-            const dy = B[1] - A[1];
-            const largo2 = dx * dx + dy * dy;
-            const t = largo2 ? Math.max(0, Math.min(1, ((P[0] - A[0]) * dx + (P[1] - A[1]) * dy) / largo2)) : 0;
-            menor = Math.min(menor, Math.hypot(P[0] - A[0] - t * dx, P[1] - A[1] - t * dy));
-        }
-        return menor;
-    }
-
-    // ¿Un aviso del equipo queda en lo que falta del camino? (T139)
-    function pasaCerca(lat, lng) {
-        if (!camino || camino.recto || camino.puntos.length < 2) return false;
-        const cerca = proyectarEntre([Number(lat), Number(lng)], ultimoRecorrido, Infinity);
-        return Boolean(cerca && cerca.lejos <= DISTANCIA_AVISO);
     }
 
     function rumboEntre(a, b) {
@@ -436,28 +410,10 @@
         return elegirCamino(await opcionesOsrm(desde, hasta));
     }
 
-    // Calle cortada o choque avisados por el equipo (T139): se piden otros
-    // recorridos y va el primero que no pasa por ahí.
-    function bloqueosEnCalle() {
-        return window.avisosCalleVendeFrio?.bloqueos?.() || [];
-    }
-
     function elegirCamino(opciones) {
         if (!opciones.length) throw new Error("Sin camino");
-        let elegida = opciones[0];
-        let desvio = null;
-        const bloqueos = bloqueosEnCalle();
-        if (bloqueos.length) {
-            const corta = opcion => bloqueos.find(aviso => lejosDeLinea([aviso.lat, aviso.lng], opcion.puntos) <= DISTANCIA_AVISO);
-            const enElCamino = corta(opciones[0]);
-            if (enElCamino) {
-                const libre = opciones.find(opcion => !corta(opcion));
-                if (libre) elegida = libre;
-                desvio = { aviso: enElCamino, otro: Boolean(libre), extra: libre ? libre.duracion - opciones[0].duracion : 0 };
-            }
-        }
+        const elegida = opciones[0];
         const armado = armarCamino(elegida.puntos, elegida.duracion, elegida.pasos, false);
-        armado.desvio = desvio;
         armado.servidor = elegida.servidor;
         return armado;
     }
@@ -470,9 +426,8 @@
         // «Sin autopistas» elegido en la vista previa de Rutas (T136); si el
         // servidor no lo acepta, va el camino de siempre.
         const sinAutopistas = preferencias().sinAutopistas === true && perfil === "routed-car";
-        const conOtros = bloqueosEnCalle().length ? "&alternatives=3" : "";
-        let respuesta = await fetch(url + conOtros + (sinAutopistas ? "&exclude=motorway" : ""));
-        if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url + conOtros);
+        let respuesta = await fetch(url + (sinAutopistas ? "&exclude=motorway" : ""));
+        if (!respuesta.ok && sinAutopistas) respuesta = await fetch(url);
         if (!respuesta.ok) throw new Error("Sin camino");
         const datos = await respuesta.json();
         const rutas = datos && Array.isArray(datos.routes)
@@ -584,7 +539,6 @@
         if (preferencias().sinAutopistas === true && (costo === "auto" || costo === "motorcycle")) {
             pedido.costing_options = { [costo]: { use_highways: 0 } };
         }
-        if (bloqueosEnCalle().length) pedido.alternates = 2;
         // Si tarda mucho, se corta y va el OSRM (la navegación no se queda esperando).
         const corte = typeof AbortController === "function" ? new AbortController() : null;
         const reloj = corte ? setTimeout(() => corte.abort(), ESPERA_VALHALLA) : 0;
@@ -593,7 +547,7 @@
                 corte ? { signal: corte.signal } : undefined);
             if (!respuesta.ok) throw new Error("Sin camino");
             const datos = await respuesta.json();
-            const viajes = [datos && datos.trip].concat((datos && Array.isArray(datos.alternates) ? datos.alternates : []).map(otro => otro && otro.trip));
+            const viajes = [datos && datos.trip];
             return viajes.filter(viaje => viaje && Array.isArray(viaje.legs) && viaje.legs.length).map(viaje => {
                 const puntos = [];
                 const pasos = [];
@@ -629,14 +583,8 @@
         pasosAnunciados.clear();
         dibujarCamino();
         actualizar(true);
-        if (camino.desvio) window.avisosCalleVendeFrio?.alDesviar?.(camino.desvio);
     }
 
-    // Un aviso nuevo del equipo cortó el camino (T139): se pide otro ya.
-    function recalcular() {
-        if (!abierta() || !posicion || calculando || llego) return;
-        calcularCamino();
-    }
 
     // -------------------------------------------------
     // Pantalla
@@ -672,9 +620,7 @@
             </div>
             <div class="velocimetroNavegacion" aria-hidden="true"><strong>0</strong><small>km/h</small></div>
             <div class="botonesNavegacion">
-                <button type="button" class="botonFlotanteNav minimizarNavegacion" aria-label="Minimizar la navegación">${window.icono("minimizar", 22)}</button>
-                <button type="button" class="botonFlotanteNav vozNavegacion" aria-label="Voz"></button>
-                <button type="button" class="botonFlotanteNav cerrarNavegacion" aria-label="Terminar navegación">${window.icono("cerrarX", 22)}</button>
+                <button type="button" class="botonFlotanteNav masNavegacion" aria-label="Opciones de la navegación">${window.icono("puntos", 26)}</button>
             </div>
             <button type="button" class="botonFlotanteNav centrarNavegacion oculto" aria-label="Centrar en mi posición">${window.icono("mira", 22)}</button>
             <div class="paradasNavegacion">
@@ -713,22 +659,9 @@
             </div>`;
         document.body.appendChild(pantalla);
 
-        // El Asistente también navegando ("llegué", "nuevo pedido para…"): el
-        // mismo de Inicio (T155), que se abre escuchando. T160: está siempre;
-        // sin reconocimiento de voz se le escribe.
-        if (window.asistenteVendeFrio) {
-            const microfono = document.createElement("button");
-            microfono.type = "button";
-            microfono.className = "botonFlotanteNav microfonoNavegacion";
-            microfono.setAttribute("aria-label", "Asistente");
-            microfono.innerHTML = window.icono(window.vozVendeFrio?.disponible ? "microfono" : "chispa", 22);
-            microfono.addEventListener("click", () => window.asistenteVendeFrio.abrir());
-            const botones = pantalla.querySelector(".botonesNavegacion");
-            botones.insertBefore(microfono, botones.querySelector(".cerrarNavegacion"));
-        }
-        // Voz y salir están flotando y, con la hoja abierta, arriba de la hoja.
-        pantalla.querySelectorAll(".cerrarNavegacion").forEach(boton => boton.addEventListener("click", () => cerrar()));
-        pantalla.querySelector(".minimizarNavegacion").addEventListener("click", minimizar);
+        // Un solo ⋯ abajo a la derecha (repaso de Rutas): Sumar parada,
+        // las paradas, el Asistente, la voz, achicar y terminar.
+        pantalla.querySelector(".masNavegacion").addEventListener("click", evento => abrirMenuNavegacion(evento.currentTarget));
         pantalla.querySelectorAll(".vozNavegacion").forEach(boton => boton.addEventListener("click", alternarVoz));
         pantalla.querySelector(".saltearNavegacion").addEventListener("click", saltearParada);
         pantalla.querySelector(".centrarNavegacion").addEventListener("click", () => {
@@ -1795,12 +1728,283 @@
         }
     }, true);
 
+    // -------------------------------------------------
+    // El ⋯ de la navegación y «Sumar parada» (repaso de Rutas, imágenes 7 y 8)
+    // -------------------------------------------------
+
+    function abrirMenuNavegacion(ancla) {
+        const p = window.piezas;
+        if (!p?.menu) return;
+        const prendida = conVoz();
+        p.menu(ancla, {
+            titulo: "Navegación",
+            clase: "menuNavegacion",
+            items: [
+                { icono: "mas", texto: "Sumar parada", principal: true, alTocar: abrirSumarParada },
+                paradas.length > 1 ? { icono: "lista", texto: "Ver todas las paradas", cantidad: paradas.length, alTocar: verParadas } : null,
+                window.asistenteVendeFrio ? { icono: "chispa", texto: "Hablarle al asistente", alTocar: () => window.asistenteVendeFrio.abrir() } : null,
+                { icono: prendida ? "volumen" : "volumenNo", texto: prendida ? "Voz: prendida" : "Voz: apagada", tono: prendida ? "" : "gris", alTocar: alternarVoz },
+                { icono: "minimizar", texto: "Achicar la navegación", alTocar: minimizar },
+                "-",
+                { icono: "cerrarX", texto: "Terminar navegación", peligro: true, alTocar: () => cerrar() }
+            ].filter(Boolean)
+        });
+    }
+
+    function verParadas() {
+        abrirHoja(true);
+        setTimeout(() => pantalla.querySelector(".hojaParadas")?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 250);
+    }
+
+    // Lo que suma pasar por un comercio: «de paso» en el mejor lugar de lo
+    // que falta (después de la parada de ahora) o «ahora», antes que ella.
+    function minutosDeMetros(metros) {
+        const velocidad = VELOCIDAD_SIN_RUTA[vehiculo()] || VELOCIDAD_SIN_RUTA.auto;
+        return Math.max(1, Math.round(Math.max(0, metros) * 1.3 / velocidad / 60));
+    }
+
+    function costoDePasoNavegando(comercio) {
+        const punto = destinoDe(comercio);
+        const lugar = parada => destinoDe(parada);
+        const actual = paradaActual();
+        const desde = posicion || (actual ? lugar(actual) : punto);
+        let mejor = null;
+        for (let indice = indiceParada + 1; indice <= paradas.length; indice += 1) {
+            const antes = indice === 0 ? desde : lugar(paradas[indice - 1]);
+            const despues = paradas[indice] ? lugar(paradas[indice]) : null;
+            const metros = distancia(antes, punto) + (despues ? distancia(punto, despues) - distancia(antes, despues) : 0);
+            if (!mejor || metros < mejor.metros) mejor = { posicion: indice, metros };
+        }
+        mejor = mejor || { posicion: paradas.length, metros: distancia(desde, punto) };
+        const ahora = actual ? distancia(desde, punto) + distancia(punto, lugar(actual)) - distancia(desde, lugar(actual)) : distancia(desde, punto);
+        return { posicion: mejor.posicion, minutos: minutosDeMetros(mejor.metros), minutosAhora: minutosDeMetros(ahora) };
+    }
+
+    function textoEntre(posicionNueva) {
+        if (posicionNueva >= paradas.length) return "al final";
+        return "entre la " + posicionNueva + " y la " + (posicionNueva + 1);
+    }
+
+    function sumarDePaso(comercio) {
+        const lugar = costoDePasoNavegando(comercio);
+        paradas.splice(lugar.posicion, 0, comercio);
+        window.rutasVendeFrio?.sumarParadaDePaso?.(comercio);
+        dibujarHoja();
+        return lugar;
+    }
+
+    function sumarAhora(comercio) {
+        window.rutasVendeFrio?.sumarParadaDePaso?.(comercio);
+        return irPrimero(comercio.nombre);
+    }
+
+    function comerciosParaSumar() {
+        const lista = typeof comerciosActivosParaLeer === "function" ? comerciosActivosParaLeer()
+            : (typeof obtenerComercios === "function" ? obtenerComercios() : []);
+        const quedan = new Set(paradas.slice(indiceParada).map(parada => parada.nombre));
+        return lista.filter(comercio => tieneGps(comercio) && !quedan.has(comercio.nombre))
+            .map(comercio => ({ comercio, ...costoDePasoNavegando(comercio) }))
+            .sort((a, b) => a.minutos - b.minutos || a.comercio.nombre.localeCompare(b.comercio.nombre, "es"));
+    }
+
+    const CERCA_DEL_CAMINO = 10; // min de más, como mucho, para «Cerca del camino»
+
+    function abrirSumarParada() {
+        const p = window.piezas;
+        if (!p?.hoja) return;
+        const datos = comerciosParaSumar();
+        let filtro = datos.some(dato => dato.minutos <= CERCA_DEL_CAMINO) ? "cerca" : "todos";
+        let eligiendo = false;
+        const elegidos = new Set();
+        const FILTROS = [["cerca", "Cerca del camino", dato => dato.minutos <= CERCA_DEL_CAMINO], ["todos", "Todos", () => true]];
+        const caja = p.hoja({
+            titulo: "Sumar parada",
+            sub: "Mantené apretado un comercio para elegir varios.",
+            clase: "hojaSumarParada",
+            html: `<div class="barraElegirRuta barraSumarParada" hidden>
+                    <button type="button" class="botonDejarDeElegir" data-sumar="dejar" aria-label="Dejar de elegir">${p.ico("cerrarX", 20)}</button>
+                    <strong class="cuantosSumarParada" aria-live="polite"></strong>
+                    <button type="button" class="botonMarcarTodosRuta" data-sumar="todos"></button>
+                </div>
+                <div class="filtrosEtapaPedidos filtrosSumarParada" role="group" aria-label="Filtrar comercios"></div>
+                <div class="listaSumarParada" role="group" aria-label="Comercios"></div>
+                <div class="pieElegirRuta pieSumarParada" hidden>
+                    <button type="button" class="pzBtn pzBtnPri" data-sumar="varios"></button>
+                    <button type="button" class="masPlanRutas" data-sumar="mas" aria-label="Más opciones">${p.ico("puntos", 24)}</button>
+                </div>`
+        });
+        if (!caja) return;
+        const buscador = document.createElement("input");
+        buscador.type = "search";
+        buscador.placeholder = "Buscar comercio";
+        buscador.autocomplete = "off";
+        const lupa = p.lupa(buscador, { etiqueta: "Buscar comercio" });
+        const fila = caja.querySelector(".filtrosSumarParada");
+        const lista = caja.querySelector(".listaSumarParada");
+        const visibles = () => {
+            const busqueda = String(buscador.value || "").trim().toLocaleLowerCase("es");
+            const pasa = FILTROS.find(([clave]) => clave === filtro)[2];
+            return datos.filter(dato => pasa(dato) && (!busqueda || (dato.comercio.nombre + " " + (dato.comercio.direccion || "")).toLocaleLowerCase("es").includes(busqueda)));
+        };
+        const dibujarFiltros = () => {
+            fila.innerHTML = FILTROS.map(([clave, texto, pasa]) => `<button type="button" class="filtroEtapa${clave === filtro ? " activo" : ""}" data-filtro="${clave}" aria-pressed="${clave === filtro}"><span>${texto}</span><span class="filtroEtapaCantidad">${datos.filter(pasa).length}</span></button>`).join("");
+            lupa.poner(fila);
+        };
+        const dibujarBarra = () => {
+            caja.querySelector(".barraSumarParada").hidden = !eligiendo;
+            caja.querySelector(".pieSumarParada").hidden = !eligiendo;
+            caja.classList.toggle("eligiendo", eligiendo);
+            if (!eligiendo) return;
+            const cuantos = elegidos.size;
+            caja.querySelector(".cuantosSumarParada").textContent = cuantos + (cuantos === 1 ? " elegido" : " elegidos");
+            const mostrados = visibles();
+            const todos = mostrados.length > 0 && mostrados.every(dato => elegidos.has(dato.comercio.nombre));
+            const marcar = caja.querySelector('[data-sumar="todos"]');
+            marcar.textContent = todos ? "Desmarcar todos" : "Marcar todos";
+            marcar.dataset.todos = todos ? "si" : "no";
+            const varios = caja.querySelector('[data-sumar="varios"]');
+            varios.innerHTML = p.ico("mas", 18) + " Sumar " + cuantos + " de paso";
+            varios.disabled = cuantos === 0;
+        };
+        const dibujarLista = () => {
+            const mostrados = visibles();
+            lista.innerHTML = mostrados.length ? mostrados.map(({ comercio, minutos }) => {
+                const nombre = p.esc(comercio.nombre);
+                const elegido = elegidos.has(comercio.nombre);
+                return `<button type="button" class="filaElegirRuta filaSumarParada${elegido ? " elegida" : ""}" data-nombre="${nombre}"${eligiendo ? ` role="checkbox" aria-checked="${elegido}"` : ""}>
+                    <span class="avatarElegirRuta ${p.colorIni(comercio.nombre)}"><span class="inicialesElegirRuta">${p.esc(p.iniciales(comercio.nombre))}</span><span class="tildeElegirRuta">${p.ico("check", 20)}</span></span>
+                    <span class="textoElegirRuta"><strong>${nombre}</strong><small>${p.esc(comercio.direccion || "Sin dirección")}</small></span>
+                    <span class="pzChip pzChipInfo sinPunto minutosSumarParada">+${minutos} min</span>
+                </button>`;
+            }).join("") : `<p class="vacioElegirRuta">${buscador.value ? "Ningún comercio coincide con la búsqueda." : "No hay comercios con ubicación para sumar."}</p>`;
+            dibujarBarra();
+        };
+        const empezarAElegir = nombre => {
+            eligiendo = true;
+            if (nombre) elegidos.add(nombre);
+            dibujarLista();
+            if (navigator.vibrate) navigator.vibrate(20);
+        };
+        dibujarFiltros();
+        dibujarLista();
+        buscador.addEventListener("input", dibujarLista);
+
+        // Mantener apretado: elegir varios (como en Pedidos).
+        let apretado = null;
+        let porApretar = false;
+        lista.addEventListener("pointerdown", evento => {
+            const filaTocada = evento.target.closest(".filaSumarParada");
+            if (!filaTocada || eligiendo) return;
+            const inicio = [evento.clientX, evento.clientY];
+            apretado = { timer: setTimeout(() => {
+                porApretar = true;
+                empezarAElegir(filaTocada.dataset.nombre);
+            }, 500), inicio };
+        });
+        const soltar = () => { if (apretado) clearTimeout(apretado.timer); apretado = null; };
+        lista.addEventListener("pointerup", soltar);
+        lista.addEventListener("pointercancel", soltar);
+        lista.addEventListener("pointermove", evento => {
+            if (apretado && Math.hypot(evento.clientX - apretado.inicio[0], evento.clientY - apretado.inicio[1]) > 10) soltar();
+        });
+        lista.addEventListener("contextmenu", evento => evento.preventDefault());
+
+        caja.addEventListener("click", evento => {
+            const filtroTocado = evento.target.closest("[data-filtro]");
+            if (filtroTocado) {
+                filtro = filtroTocado.dataset.filtro;
+                dibujarFiltros();
+                dibujarLista();
+                return;
+            }
+            const accion = evento.target.closest("[data-sumar]");
+            if (accion) {
+                const que = accion.dataset.sumar;
+                if (que === "dejar") {
+                    eligiendo = false;
+                    elegidos.clear();
+                    dibujarLista();
+                } else if (que === "todos") {
+                    const todos = accion.dataset.todos === "si";
+                    visibles().forEach(({ comercio }) => (todos ? elegidos.delete(comercio.nombre) : elegidos.add(comercio.nombre)));
+                    dibujarLista();
+                } else if (que === "varios" && elegidos.size) {
+                    const nombres = [...elegidos];
+                    p.cerrar();
+                    nombres.forEach(nombre => {
+                        const comercio = datos.find(dato => dato.comercio.nombre === nombre)?.comercio;
+                        if (comercio) sumarDePaso(comercio);
+                    });
+                    window.mostrarToast?.(nombres.length === 1 ? "Sumaste " + nombres[0] + " de paso" : "Sumaste " + nombres.length + " paradas de paso");
+                } else if (que === "mas") {
+                    p.menu(accion, {
+                        titulo: elegidos.size + (elegidos.size === 1 ? " elegido" : " elegidos"),
+                        items: [
+                            { icono: "cerrarX", tono: "gris", texto: "Desmarcar todos", desactivado: !elegidos.size, alTocar: () => { elegidos.clear(); dibujarLista(); } },
+                            { icono: "flechaIzquierda", tono: "gris", texto: "Dejar de elegir", alTocar: () => { eligiendo = false; elegidos.clear(); dibujarLista(); } }
+                        ]
+                    });
+                }
+                return;
+            }
+            const filaTocada = evento.target.closest(".filaSumarParada");
+            if (!filaTocada) return;
+            if (porApretar) {
+                porApretar = false;
+                return;
+            }
+            const nombre = filaTocada.dataset.nombre;
+            if (eligiendo) {
+                if (elegidos.has(nombre)) elegidos.delete(nombre);
+                else elegidos.add(nombre);
+                dibujarLista();
+                return;
+            }
+            const dato = datos.find(item => item.comercio.nombre === nombre);
+            if (dato) abrirCuandoVamos(dato);
+        });
+    }
+
+    // «¿Cuándo vamos a X?»: de paso (en el mejor lugar) o ahora.
+    function abrirCuandoVamos(dato) {
+        const p = window.piezas;
+        const { comercio, minutos, minutosAhora, posicion: lugar } = dato;
+        let elegida = "paso";
+        const caja = p.hoja({
+            titulo: "¿Cuándo vamos a " + comercio.nombre + "?",
+            clase: "hojaCuandoVamos",
+            etiqueta: "Cuándo vamos a " + comercio.nombre,
+            html: `<div class="opcionesCuandoVamos">
+                    <button type="button" class="opcionArmarRuta opcionCuandoVamos" data-cuando="paso" aria-pressed="true">
+                        <span class="icoArmarRuta" data-tono="ok">${p.ico("mapa", 22)}</span>
+                        <span class="textoArmarRuta"><strong>De paso</strong><small>+${minutos} min · ${p.esc(textoEntre(lugar))}</small></span>
+                    </button>
+                    <button type="button" class="opcionArmarRuta opcionCuandoVamos" data-cuando="ahora" aria-pressed="false">
+                        <span class="icoArmarRuta" data-tono="aviso">${p.ico("navegar", 22)}</span>
+                        <span class="textoArmarRuta"><strong>Ahora</strong><small>+${minutosAhora} min · antes que ${p.esc(paradaActual()?.nombre || "la de ahora")}</small></span>
+                    </button>
+                </div>`,
+            botones: [{ id: "sumarCuandoVamos", texto: "Sumar a la ruta", clase: "pzBtnPri", cerrar: true, alTocar: () => {
+                if (elegida === "ahora") sumarAhora(comercio);
+                else {
+                    const hecho = sumarDePaso(comercio);
+                    window.mostrarToast?.("Sumaste " + comercio.nombre + " " + textoEntre(hecho.posicion));
+                }
+            } }]
+        });
+        caja?.addEventListener("click", evento => {
+            const opcion = evento.target.closest("[data-cuando]");
+            if (!opcion) return;
+            elegida = opcion.dataset.cuando;
+            caja.querySelectorAll("[data-cuando]").forEach(boton => boton.setAttribute("aria-pressed", String(boton === opcion)));
+        });
+    }
+
     window.navegacionVendeFrio = {
         abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, pedidoEncima: () => pedidoEncima, cerrarPedidoEncima, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
         // El Asistente (T160): las paradas que faltan y cambiar el orden.
-        paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero,
-        // Para los avisos y los compañeros del equipo (T139, T140).
-        recalcular, pasaCerca, hablar,
-        posicion: () => posicion, calle: () => calleActual
+        paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero, sumarParada: abrirSumarParada,
+        // Para el Asistente: por dónde vas.
+        calle: () => calleActual
     };
 }());

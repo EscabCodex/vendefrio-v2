@@ -151,6 +151,7 @@ test("llegando: a 150 m se agranda la hoja con todo para la parada", async ({ pa
     await hoja.getByRole("button", { name: "Achicar la tarjeta" }).click();
     await expect(hoja).toBeHidden();
     await expect(navegacion).toBeVisible();
-    await navegacion.getByRole("button", { name: "Terminar navegación" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Terminar navegación" }).click();
     await expect(navegacion).toBeHidden();
 });

@@ -118,6 +118,7 @@ test("voz de la navegación: frases enteras, en fila y escritas", async ({ page 
     expect(await page.evaluate(() => window.__voz.cortes)).toBe(0);
 
     // Silenciar corta la frase y la borra de la tarjeta.
+    // (Con la hoja abierta al llegar, la voz está arriba de la hoja.)
     await navegacion.getByRole("button", { name: "Silenciar la voz" }).click();
     expect(await page.evaluate(() => window.__voz.cortes)).toBe(1);
     await expect(frase).toBeHidden();

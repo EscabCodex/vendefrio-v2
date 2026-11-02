@@ -225,7 +225,8 @@ test("ia: un solo asistente, el de Claude, en Inicio, el dictado y navegando", a
     await page.locator(".modalFichaComercio").getByRole("link", { name: "Ir", exact: true }).click();
     const navegacion = page.locator("#pantallaNavegacion");
     await expect(navegacion).toBeVisible();
-    await navegacion.getByRole("button", { name: "Asistente" }).click();
+    await navegacion.getByRole("button", { name: "Opciones de la navegación" }).click();
+    await page.locator(".menuNavegacion").getByRole("button", { name: "Hablarle al asistente" }).click();
     await expect(ventana).toBeVisible();
     await expect(ventana.locator(".burbujaApp:not(.burbujaPensando)").last()).toContainText("Canto mal, pero te ayudo");
     await expect(page.locator(".ventanaVoz")).toHaveCount(0);
