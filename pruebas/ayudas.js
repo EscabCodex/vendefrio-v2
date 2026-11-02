@@ -119,4 +119,15 @@ async function deslizar(page, texto) {
     await page.mouse.up();
 }
 
-module.exports = { test, expect: base.expect, capturar, deslizar, prepararPagina, CARPETA_CAPTURAS };
+// Modo personal (sin cuenta) como lo deja un celular que ya lo usaba: desde
+// 2026-11-02 la entrada no ofrece "Continuar sin iniciar sesión", pero quien
+// ya lo usaba sigue igual. Se usa después de page.goto("/").
+async function usarSinCuenta(page, rol = "vendedor") {
+    await page.evaluate(id => {
+        localStorage.setItem("vendefrio_inicio_sin_sesion", "1");
+        localStorage.setItem("vendefrio_modo_personal", JSON.stringify({ nombre: "Jere", roles: [id] }));
+    }, rol);
+    await page.reload();
+}
+
+module.exports = { test, expect: base.expect, capturar, deslizar, prepararPagina, usarSinCuenta, CARPETA_CAPTURAS };

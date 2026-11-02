@@ -2,11 +2,9 @@
 // (T150, T151): 200 comercios (el último, archivado) y 600 pedidos, en el
 // modo personal. Se cargan en el celular de prueba con page.evaluate.
 async function entrarSinCuenta(page) {
+    const { usarSinCuenta } = require("./ayudas");
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
 }
 
 function cargarDatosGrandes() {

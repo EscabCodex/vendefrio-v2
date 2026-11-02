@@ -4,7 +4,7 @@
 // parada con minutos y hora de llegada y la siguiente asomando; a los
 // costados, el velocímetro, la voz y salir. Tocar la tarjeta abre la hoja.
 // El GPS y el camino son falsos.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test.use({ viewport: { width: 360, height: 640 } });
 
@@ -58,10 +58,7 @@ async function abrirNavegacion(page, calleLarga) {
         return ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(camino(puntos[puntos.length - 1], calleLarga)) });
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(paradas => {
         paradas.forEach(parada => agregarComercio({ ...parada, telefono: "11 4444-0000", origenGps: "gps" }));

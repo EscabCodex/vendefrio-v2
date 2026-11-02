@@ -4,7 +4,7 @@
 // misma maniobra) se descarta. Lo que dice se ve escrito en la tarjeta de la
 // maniobra. La voz, el GPS y el camino son falsos: la prueba decide cuándo
 // termina cada frase y dónde está el celular.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 const COMERCIO = { lat: -34.6, lng: -58.4 };
 const SALIDA = { lat: -34.605, lng: -58.405 };
@@ -61,10 +61,7 @@ test("voz de la navegación: frases enteras, en fila y escritas", async ({ page 
     );
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(({ lat, lng }) => {
         agregarComercio({ nombre: "Kiosco La Esquina", direccion: "Belgrano 450", lat, lng, origenGps: "gps" });

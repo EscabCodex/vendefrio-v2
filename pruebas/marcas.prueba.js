@@ -1,14 +1,11 @@
 // VendeFrío - Repaso de Catálogo: el orden de las marcas se cambia en
 // Ajustes › Preferencias de trabajo (antes, flechitas en cada marca) y el
 // color de una marca se elige desde el ⋯ de su ficha.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test("marcas: orden en Ajustes y color desde la ficha de la marca", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         guardarProductos({});

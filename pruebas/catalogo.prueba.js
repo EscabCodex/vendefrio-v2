@@ -3,14 +3,11 @@
 // en tarjetas (tocar el producto para editarlo, opciones de la marca en una
 // hoja), "Editar precio o foto" en una hoja y "Pedido generado" y Nuevo
 // comercio con el estilo nuevo.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         guardarProductos({});

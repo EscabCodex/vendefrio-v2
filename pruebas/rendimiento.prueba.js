@@ -5,7 +5,7 @@
 // de Rutas y de la navegación, y si la pantalla se traba al mover el mapa,
 // bajar la lista o con cada posición del GPS. Falla si algo pasa su tope.
 // El GPS y el camino son falsos (sin internet).
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 // Sin grabar la prueba: la grabación copia la pantalla a cada rato y frena todo.
 test.use({ viewport: { width: 360, height: 640 }, trace: "off" });
@@ -94,10 +94,7 @@ test("rendimiento: Rutas y la navegación en un celular lento y chico", async ({
     await page.context().setGeolocation(SALIDA);
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // Un día cargado: 80 comercios con GPS y 600 pedidos (1 de cada 4 para entregar).

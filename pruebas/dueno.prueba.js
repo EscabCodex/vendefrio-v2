@@ -2,16 +2,13 @@
 // 1. Estadísticas contra el período anterior, "Visitas para vender" (antes "Se están
 //    enfriando") y el mapa de ventas dentro de Estadísticas (modo personal).
 // 2. Registro de cambios, metas del mes y resumen de la noche (nube).
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 const { registrarDistribuidora, cargarPedido, abrirMas } = require("./recorridos");
 
 test.describe("personal", () => {
     test("dueño: comparativas, clientes que se enfrían y mapa de ventas", async ({ page }) => {
         await page.goto("/");
-        await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-        await page.locator("#inicioNombrePersonal").fill("Jere");
-        await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-        await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+        await usarSinCuenta(page, "vendedor");
         await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
         await page.evaluate(() => {

@@ -2,14 +2,11 @@
 // 2026-11-01): períodos corridos con su cantidad, "Cómo vengo", "Qué hacer
 // hoy" (Visitas para vender y armar la ruta con ellos), "Qué se mueve" (quién deja más plata y qué
 // día se vende más) y "Para crecer" (tus clientes, comercios sin guardar).
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test("estadísticas: cómo vengo, qué hacer hoy, qué se mueve y para crecer", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // Pedidos de prueba de las últimas semanas, en tres comercios.

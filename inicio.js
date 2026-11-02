@@ -37,6 +37,9 @@
     ];
 
     let pantalla = null;
+    // Abierta desde la app sin cuenta (el aviso "Guardar" o Más > Cuenta):
+    // la flecha y el atrás del celular la cierran y se sigue como estaba.
+    let desdeLaApp = false;
     let quitarOyenteDistribuidora = null;
     let quitarOyenteRoles = null;
 
@@ -116,7 +119,8 @@
             etiqueta: "Guardar tus datos en la nube",
             alTocar: () => {
                 crear();
-                mostrarPaso("elegir");
+                desdeLaApp = true;
+                mostrarPaso("registrarse");
             }
         }, "arriba");
         // Inicio todavía no está armado: se prueba de nuevo enseguida.
@@ -280,6 +284,19 @@
         `;
     }
 
+    // Encabezado de las pantallas de ingreso (2026-11-02): flecha atrás y
+    // el título al lado, como el resto de la app.
+    function htmlEncabezado(titulo) {
+        return `
+            <div class="inicioEncabezado">
+                <button type="button" class="inicioAtras" data-inicio="volver" aria-label="Volver">
+                    ${icono("flechaIzquierda", 22)}
+                </button>
+                <h2>${titulo}</h2>
+            </div>
+        `;
+    }
+
     function crear() {
         if (pantalla) return pantalla;
 
@@ -309,25 +326,21 @@
                     <p class="inicioNota oculto" id="inicioAviso" role="alert"></p>
 
                     <button type="button" class="inicioBoton inicioGoogle${opcionGoogle() ? "" : " oculto"}" data-inicio="google">
-                        <span class="logoGoogle" aria-hidden="true"></span>Entrar con Google
+                        <span class="logoGoogle" aria-hidden="true"></span>Continuar con Google
                     </button>
-                    <button type="button" class="inicioBoton inicioPrincipal" data-inicio="distribuidora">
-                        Entrar con email
+                    <button type="button" class="inicioBoton inicioPrincipal" data-inicio="irRegistrarse">
+                        Crear cuenta gratis
                     </button>
-                    <div class="inicioSepara">o</div>
-                    <button type="button" class="inicioBoton inicioEjemplo" data-inicio="ejemplo">
-                        ${icono("chispa", 18)} Probar con datos de ejemplo
+                    <button type="button" class="inicioBoton inicioYaTengo" data-inicio="distribuidora">
+                        Ya tengo cuenta
                     </button>
-                    <p class="inicioEmpleado">¿Sos empleado?
+                    <p class="inicioEmpleado">¿Te invitó tu encargado?
                         <button type="button" class="inicioLink" data-inicio="empleado">Entrar con código</button>
                     </p>
-
-                    <button type="button" class="inicioSinSesion" data-inicio="sinSesion">
-                        Continuar sin iniciar sesión
-                    </button>
-                    <p class="inicioAclaracion">
-                        Sin cuenta, los datos quedan solo en este celular y no se comparten.
-                        Podés ingresar después desde Más &gt; Cuenta.
+                    <p class="inicioEmpleado">
+                        <button type="button" class="inicioLink inicioEjemplo" data-inicio="ejemplo">
+                            ${icono("chispa", 16)} Ver cómo funciona, sin cuenta
+                        </button>
                     </p>
                     <p class="inicioLegales">
                         <a href="presentacion.html" target="_blank" rel="noopener">Qué es VendeFrío</a> ·
@@ -360,7 +373,7 @@
                 </form>
 
                 <form data-paso="ingresar" class="inicioFormulario oculto" id="inicioFormIngresar" novalidate>
-                    <h2>Ingresar</h2>
+                    ${htmlEncabezado("Ingresar")}
                     <label>Email
                         <input type="email" id="inicioEmail" autocomplete="username"
                             inputmode="email" autocapitalize="off" spellcheck="false"
@@ -369,20 +382,28 @@
                     <label>Contraseña
                         ${htmlClave("inicioContrasena", "current-password", "Tu contraseña")}
                     </label>
+                    <button type="button" class="inicioLink inicioOlvide" data-inicio="olvideContrasena">¿Te olvidaste la contraseña?</button>
+                    <p class="inicioNota oculto" id="inicioAvisoClave" role="status"></p>
                     <p class="inicioError oculto" role="alert"></p>
                     <button type="submit" class="inicioPrincipal">Ingresar</button>
-                    <button type="button" class="inicioEnlace" data-inicio="irRegistrarse">
-                        ¿Es tu primera vez? <strong>Registrarse</strong>
+                    <div class="inicioSepara${opcionGoogle() ? "" : " oculto"}">o</div>
+                    <button type="button" class="inicioBoton inicioGoogle${opcionGoogle() ? "" : " oculto"}" data-inicio="google">
+                        <span class="logoGoogle" aria-hidden="true"></span>Continuar con Google
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
+                    <button type="button" class="inicioEnlace" data-inicio="irRegistrarse">
+                        ¿No tenés cuenta? <strong>Crear cuenta</strong>
+                    </button>
                 </form>
 
                 <form data-paso="registrarse" class="inicioFormulario oculto" id="inicioFormRegistrarse" novalidate>
-                    <h2>Registrarse</h2>
+                    ${htmlEncabezado("Crear cuenta")}
                     <p class="inicioAclaracion">
-                        Se crea tu cuenta y tu distribuidora en la nube, vacía.
-                        Hace falta internet.
+                        Gratis. Tu distribuidora arranca vacía y lista para cargar. Hace falta internet.
                     </p>
+                    <label>Tu nombre
+                        <input type="text" id="inicioRegistroDueno" autocomplete="name"
+                            maxlength="${largoNombreDueno()}" placeholder="Por ejemplo: Juan Pérez" required>
+                    </label>
                     <label>Nombre de tu distribuidora
                         <input type="text" id="inicioRegistroNombre" autocomplete="organization"
                             maxlength="${LARGO_MAXIMO_NOMBRE}" placeholder="Por ejemplo: Distribuidora Frío Sur" required>
@@ -392,24 +413,20 @@
                             inputmode="email" autocapitalize="off" spellcheck="false"
                             placeholder="tu@email.com" required>
                     </label>
-                    <label>Contraseña (al menos ${LARGO_MINIMO_CONTRASENA} caracteres)
-                        ${htmlClave("inicioRegistroContrasena", "new-password", "Elegí una contraseña")}
-                    </label>
-                    <label>Repetí la contraseña
-                        ${htmlClave("inicioRegistroRepetir", "new-password", "La misma contraseña")}
+                    <label>Contraseña
+                        ${htmlClave("inicioRegistroContrasena", "new-password", LARGO_MINIMO_CONTRASENA + " letras o números como mínimo")}
                     </label>
                     <p class="inicioError oculto" role="alert"></p>
-                    <button type="submit" class="inicioPrincipal">Crear cuenta y distribuidora</button>
+                    <button type="submit" class="inicioPrincipal">Crear cuenta</button>
                     <button type="button" class="inicioEnlace" data-inicio="irIngresar">
                         ¿Ya tenés cuenta? <strong>Ingresar</strong>
                     </button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="empleadoCodigo" class="inicioFormulario oculto" id="inicioFormEmpleado" novalidate>
-                    <h2>Entrar como empleado</h2>
+                    ${htmlEncabezado("Entrar con código")}
                     <p class="inicioAclaracion">
-                        Escribí el código que te dio tu encargado. Sirve una sola vez
+                        Escribí el código que te pasó tu encargado. Sirve una vez
                         y vence a las ${horasCodigo()} horas. Hace falta internet.
                     </p>
                     <label>Código
@@ -419,7 +436,6 @@
                     </label>
                     <p class="inicioError oculto" role="alert"></p>
                     <button type="submit" class="inicioPrincipal">Entrar</button>
-                    <button type="button" class="inicioVolver" data-inicio="volver">${icono("flechaIzquierda", 18)} Volver</button>
                 </form>
 
                 <form data-paso="empleadoDatos" class="inicioFormulario oculto" id="inicioFormDatosEmpleado" novalidate>
@@ -523,6 +539,8 @@
             paso.classList.toggle("oculto", paso.dataset.paso !== nombre);
         });
         pantalla.dataset.pasoActual = nombre;
+        // El atrás del celular vuelve un solo paso, a la entrada.
+        window.lugarVendeFrio?.revisar?.();
         // "Probar con datos de ejemplo" solo con el celular vacío (T85).
         pantalla.querySelector('[data-inicio="ejemplo"]')?.classList.toggle("oculto", !window.ejemploVendeFrio?.sePuede?.());
         pantalla.scrollTop = 0;
@@ -539,6 +557,7 @@
             quitarOyenteDistribuidora = null;
         }
 
+        desdeLaApp = false;
         if (pantalla) {
             pantalla.remove();
             pantalla = null;
@@ -870,11 +889,65 @@
         }
 
         if (abierta) return;
+        // Lo escribió al crear la cuenta: se guarda solo, sin otro paso.
+        const pendiente = nombreDuenoPendiente();
+        if (pendiente) {
+            guardarNombreDueno(pendiente, null);
+            return;
+        }
         // Otra pantalla de inicio en curso (por ejemplo, entrando a la nube).
         if (pantalla) return;
 
         crear();
         mostrarPaso("duenoDatos");
+    }
+
+    // El nombre que escribió en "Crear cuenta" espera a que exista la
+    // distribuidora. La app se recarga al entrar a la nube: por eso queda en
+    // sessionStorage (se borra solo al cerrar la pestaña).
+    const CLAVE_NOMBRE_DUENO_PENDIENTE = "vendefrio_nombre_dueno_pendiente";
+    let guardandoPendiente = false;
+
+    function nombreDuenoPendiente() {
+        try {
+            return sessionStorage.getItem(CLAVE_NOMBRE_DUENO_PENDIENTE) || "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function guardarNombreDuenoPendiente(nombre) {
+        try {
+            if (nombre) sessionStorage.setItem(CLAVE_NOMBRE_DUENO_PENDIENTE, nombre);
+            else sessionStorage.removeItem(CLAVE_NOMBRE_DUENO_PENDIENTE);
+        } catch (error) {
+            // Sin sessionStorage: se pide después, como antes.
+        }
+    }
+
+    function guardarNombreDueno(nombre, formulario) {
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (guardandoPendiente) return Promise.resolve();
+        guardandoPendiente = true;
+
+        return distribuidora.cambiarNombreDueno(nombre)
+            .then(guardado => {
+                guardarNombreDuenoPendiente(null);
+                // T157: cuenta nueva, al llegar a Inicio arranca el tutorial.
+                window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
+                cerrar();
+                mostrarToast("¡Hola, " + escapar(guardado) + "!");
+            })
+            .catch(error => {
+                if (formulario) throw error;
+                // No se pudo solo: se pide como antes.
+                guardarNombreDuenoPendiente(null);
+                if (!pantalla) {
+                    crear();
+                    mostrarPaso("duenoDatos");
+                }
+            })
+            .finally(() => { guardandoPendiente = false; });
     }
 
     function enviarDatosDueno(formulario, boton) {
@@ -893,13 +966,7 @@
         mostrarError(formulario, "");
         const liberar = ocupar(boton, "Guardando…");
 
-        distribuidora.cambiarNombreDueno(nombre)
-            .then(guardado => {
-                // T157: cuenta nueva, al llegar a Inicio arranca el tutorial.
-                window.tutorialVendeFrio?.marcarRecienEntrado("dueno");
-                cerrar();
-                mostrarToast("¡Hola, " + escapar(guardado) + "!");
-            })
+        guardarNombreDueno(nombre, formulario)
             .catch(error => {
                 liberar();
                 mostrarError(formulario, error.message);
@@ -974,6 +1041,7 @@
     // Desde Configuración > Cuenta, sin sesión.
     function abrirEmpleado() {
         crear();
+        desdeLaApp = true;
         mostrarPaso("empleadoCodigo");
         document.getElementById("inicioCodigo")?.focus();
     }
@@ -988,6 +1056,7 @@
 
         if (accion === "distribuidora") {
             mostrarPaso("ingresar");
+            document.getElementById("inicioEmail")?.focus();
             return;
         }
 
@@ -1026,15 +1095,29 @@
             return;
         }
 
-        if (accion === "sinSesion") {
-            // Abierta desde el cartel: ya tiene nombre, sigue como estaba.
-            if (usaModoPersonal() && datosPersonales()) {
-                cerrar();
+        if (accion === "olvideContrasena") {
+            const formulario = document.getElementById("inicioFormIngresar");
+            const aviso = document.getElementById("inicioAvisoClave");
+            const email = (document.getElementById("inicioEmail")?.value || "").trim();
+            mostrarError(formulario, "");
+            aviso?.classList.add("oculto");
+            if (!email) {
+                mostrarError(formulario, "Escribí tu email arriba y tocá de nuevo «¿Te olvidaste la contraseña?».");
+                document.getElementById("inicioEmail")?.focus();
                 return;
             }
-
-            pedirDatosPersonales(false);
-            document.getElementById("inicioNombrePersonal")?.focus();
+            const liberar = ocupar(boton, "Enviando…");
+            window.cuentaVendeFrio.restablecerContrasena(email)
+                .then(() => {
+                    liberar();
+                    if (!aviso) return;
+                    aviso.textContent = "Te mandamos un email a " + email + " para elegir una contraseña nueva. Mirá también en Spam.";
+                    aviso.classList.remove("oculto");
+                })
+                .catch(error => {
+                    liberar();
+                    mostrarError(formulario, error.message);
+                });
             return;
         }
 
@@ -1051,6 +1134,7 @@
 
         if (accion === "irRegistrarse") {
             mostrarPaso("registrarse");
+            document.getElementById("inicioRegistroDueno")?.focus();
             return;
         }
 
@@ -1060,7 +1144,7 @@
         }
 
         if (accion === "volver") {
-            mostrarPaso("elegir");
+            atras();
             return;
         }
 
@@ -1191,18 +1275,23 @@
         }
 
         if (formulario.id === "inicioFormRegistrarse") {
+            const dueno = (document.getElementById("inicioRegistroDueno")?.value || "").trim();
             const nombre = (document.getElementById("inicioRegistroNombre")?.value || "").trim();
             const email = document.getElementById("inicioRegistroEmail")?.value || "";
             const contrasena = document.getElementById("inicioRegistroContrasena")?.value || "";
-            const repetir = document.getElementById("inicioRegistroRepetir")?.value || "";
+
+            if (!dueno) {
+                mostrarError(formulario, "Escribí tu nombre.");
+                return;
+            }
 
             if (!nombre) {
                 mostrarError(formulario, "Escribí el nombre de tu distribuidora.");
                 return;
             }
 
-            if (!email.trim() || !contrasena || !repetir) {
-                mostrarError(formulario, "Completá el email y las dos contraseñas.");
+            if (!email.trim() || !contrasena) {
+                mostrarError(formulario, "Completá el email y la contraseña.");
                 return;
             }
 
@@ -1211,16 +1300,12 @@
                 return;
             }
 
-            if (contrasena !== repetir) {
-                mostrarError(formulario, "Las dos contraseñas no coinciden.");
-                return;
-            }
-
             mostrarError(formulario, "");
             const liberar = ocupar(boton, "Creando tu cuenta…");
 
             // La distribuidora se crea con este nombre apenas existe la cuenta.
             window.distribuidoraVendeFrio?.prepararNombre(nombre);
+            guardarNombreDuenoPendiente(dueno);
             registrando = true;
 
             cuenta.registrarse(email, contrasena)
@@ -1231,6 +1316,7 @@
                 .catch(error => {
                     registrando = false;
                     window.distribuidoraVendeFrio?.prepararNombre(null);
+                    guardarNombreDuenoPendiente(null);
                     liberar();
                     mostrarError(formulario, error.message);
                 });
@@ -1284,7 +1370,23 @@
         });
     }
 
+    // Pantallas de ingreso que vuelven a la entrada con el atrás del celular.
+    const PASOS_CON_ATRAS = ["ingresar", "registrarse", "empleadoCodigo"];
+
+    function pasoConAtras() {
+        return Boolean(pantalla && PASOS_CON_ATRAS.includes(pantalla.dataset.pasoActual));
+    }
+
+    function atras() {
+        if (!pasoConAtras()) return false;
+        if (desdeLaApp && usaModoPersonal()) cerrar();
+        else mostrarPaso("elegir");
+        return true;
+    }
+
     window.inicioVendeFrio = {
+        pasoConAtras,
+        atras,
         tieneDatosPropios: celularTieneDatosPropios,
         ofrecerSubirDatos,
         entrarConCuenta,

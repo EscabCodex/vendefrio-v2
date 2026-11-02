@@ -2,7 +2,7 @@
 // celular chico (360×640). Al comercio que le falta la dirección (o el
 // teléfono) se le agrega ahí mismo, con la hoja "Datos del comercio", sin
 // salir de Rutas ni de la navegación. El GPS y los caminos son falsos.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test.use({ viewport: { width: 360, height: 640 } });
 
@@ -24,10 +24,7 @@ async function prepararRutas(page) {
         });
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         agregarComercio({ nombre: "Kiosco Sin Datos", lat: -34.602, lng: -58.374 });

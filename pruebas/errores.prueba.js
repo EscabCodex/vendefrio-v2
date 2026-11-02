@@ -20,7 +20,7 @@ function contraste(selector) {
 
 test("errores: datos de ejemplo completos y textos que se leen sobre el color principal", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Probar con datos de ejemplo" }).click();
+    await page.getByRole("button", { name: "Ver cómo funciona, sin cuenta" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // "Cargar un pedido" (también el de Próxima parada, T178) y los botones
@@ -61,7 +61,7 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
 test("errores: en un celular chico los botones de arriba no se salen de la pantalla", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Probar con datos de ejemplo" }).click();
+    await page.getByRole("button", { name: "Ver cómo funciona, sin cuenta" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     await abrirAjustes(page);

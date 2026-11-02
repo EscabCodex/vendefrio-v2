@@ -118,17 +118,14 @@ async function prepararNotificaciones(pagina) {
 
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
-    await page.getByRole("button", { name: "Entrar con email" }).click();
-    await page.getByRole("button", { name: /Registrarse/ }).click();
+    await page.getByRole("button", { name: "Crear cuenta gratis" }).click();
+    await page.locator("#inicioRegistroDueno").fill("Jere");
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`notif-${testInfo.project.name}-${Date.now()}@prueba.com`);
     await page.locator("#inicioRegistroContrasena").fill("clave-de-prueba");
-    await page.locator("#inicioRegistroRepetir").fill("clave-de-prueba");
-    await page.getByRole("button", { name: "Crear cuenta y distribuidora" }).click();
-    await expect(page.locator("#inicioNombreDueno")).toBeVisible({ timeout: 20000 });
-    await page.locator("#inicioNombreDueno").fill("Jere");
-    await page.locator("#inicioFormDatosDueno").getByRole("button", { name: "Guardar y entrar" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.locator("#inicioFormRegistrarse").getByRole("button", { name: "Crear cuenta", exact: true }).click();
+    // "Tu nombre" va en el mismo formulario: no hay otro paso.
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden({ timeout: 20000 });
 
     const guardado = await page.evaluate(() =>
         agregarComercio({ nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "" }) &&

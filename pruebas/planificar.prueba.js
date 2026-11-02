@@ -3,7 +3,7 @@
 // arriba «Rutas» con Ayuda y Asistente, «Auto ▾» y «Desde vos ▾»; hasta 2
 // recorridos con sus minutos para elegir; abajo paradas, tiempo y km, la hora
 // de terminar, e Iniciar, Paradas y ⋯. El GPS y los caminos son falsos.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test.use({ viewport: { width: 360, height: 640 } });
 
@@ -40,10 +40,7 @@ async function prepararRutas(page, pedidos = []) {
         });
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         [1, 2, 3].forEach(numero => agregarComercio({

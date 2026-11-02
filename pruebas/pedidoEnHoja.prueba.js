@@ -2,14 +2,11 @@
 // como hoja encima del Catálogo; al bajarla queda la barrita "Pedido nuevo ·
 // Ver pedido" en todas las pantallas (menos Más) y cada "+" suma uno. Si se
 // empieza un pedido para un comercio con otro a medio hacer, se pregunta.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test("pedido en hoja desde el Catálogo y barrita del pedido a medio hacer", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         guardarProductos({});

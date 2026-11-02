@@ -1,16 +1,22 @@
-// VendeFrío - Recorrido principal en el modo personal ("Continuar sin
-// iniciar sesión"): los datos quedan solo en el celular.
+// VendeFrío - Recorrido principal en el modo personal (sin cuenta): los
+// datos quedan solo en el celular. Lo siguen usando los celulares que ya
+// lo habían elegido.
 const { test, expect, capturar } = require("./ayudas");
 
 test("modo personal: entrar, cargar un pedido y verlo en Historial", async ({ page }) => {
     await page.goto("/");
 
-    // Pantalla de inicio.
-    await expect(page.getByRole("button", { name: "Continuar sin iniciar sesión" })).toBeVisible();
+    // Pantalla de inicio: desde 2026-11-02 ya no ofrece "Continuar sin
+    // iniciar sesión" (crear cuenta, ingresar, código o ejemplo).
+    await expect(page.getByRole("button", { name: "Crear cuenta gratis" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continuar sin iniciar sesión" })).toHaveCount(0);
     await capturar(page, "personal-01-pantalla-de-inicio");
 
-    // "Usar sin cuenta": nombre y roles.
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    // Un celular que ya usaba la app sin cuenta, de antes de pedir el
+    // nombre, sigue en ese modo: se le pide nombre y roles una sola vez.
+    await page.evaluate(() => localStorage.setItem("vendefrio_inicio_sin_sesion", "1"));
+    await page.reload();
+    await expect(page.locator("#inicioFormPersonal")).toBeVisible();
     await page.locator("#inicioNombrePersonal").fill("Jere");
     await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
     await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();

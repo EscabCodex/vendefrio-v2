@@ -29,17 +29,14 @@ async function esperarFocoSobre(page, selector) {
 // Cuenta y distribuidora nuevas, sin cargar nada.
 async function registrarVacia(page, testInfo) {
     await page.goto("/");
-    await page.getByRole("button", { name: "Entrar con email" }).click();
-    await page.getByRole("button", { name: /Registrarse/ }).click();
+    await page.getByRole("button", { name: "Crear cuenta gratis" }).click();
+    await page.locator("#inicioRegistroDueno").fill("Jere");
     await page.locator("#inicioRegistroNombre").fill("Pastas Prueba");
     await page.locator("#inicioRegistroEmail").fill(`tutorial-${testInfo.project.name}-${Date.now()}@prueba.com`);
     await page.locator("#inicioRegistroContrasena").fill("clave-de-prueba");
-    await page.locator("#inicioRegistroRepetir").fill("clave-de-prueba");
-    await page.getByRole("button", { name: "Crear cuenta y distribuidora" }).click();
-    await expect(page.locator("#inicioNombreDueno")).toBeVisible({ timeout: 20000 });
-    await page.locator("#inicioNombreDueno").fill("Jere");
-    await page.locator("#inicioFormDatosDueno").getByRole("button", { name: "Guardar y entrar" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.locator("#inicioFormRegistrarse").getByRole("button", { name: "Crear cuenta", exact: true }).click();
+    // "Tu nombre" va en el mismo formulario: no hay otro paso.
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden({ timeout: 20000 });
 }
 
 test("tutorial: lo básico de verdad al crear la cuenta y uno chico por pantalla", async ({ page }, testInfo) => {

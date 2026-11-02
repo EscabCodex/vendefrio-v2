@@ -1,7 +1,7 @@
 // VendeFrío - Ventanas que suben desde abajo y se cierran deslizándolas
 // hacia abajo (T169, opción A que eligió el dueño), y el aviso "Tus datos no
 // están protegidos" como tarjeta arriba de Inicio (opción B).
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 // Arrastra con el dedo (eventos táctiles de verdad) desde la rayita de arriba
 // de la hoja hacia abajo.
@@ -21,10 +21,7 @@ async function arrastrarHacia(page, hoja, distancia) {
 
 test("hojas: suben desde abajo, se cierran deslizando y el aviso sin cuenta va en Inicio", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // Sin cuenta: tarjeta arriba de Inicio, ya no el cartel flotante.
@@ -34,11 +31,9 @@ test("hojas: suben desde abajo, se cierran deslizando y el aviso sin cuenta va e
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "hojas-01-aviso-sin-cuenta");
     await aviso.getByRole("button", { name: "Guardar tus datos en la nube" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeVisible();
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    const formulario = page.locator("#inicioFormPersonal");
-    await page.waitForTimeout(300);
-    if (await formulario.isVisible()) await formulario.getByRole("button", { name: "Guardar y entrar" }).click();
+    // "Guardar" abre directo Crear cuenta; la flecha vuelve a la app sin cuenta.
+    await expect(page.locator("#inicioFormRegistrarse")).toBeVisible();
+    await page.locator("#inicioFormRegistrarse").getByRole("button", { name: "Volver" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // "¿Seguro?": ventana del medio con el tacho, encima de todo. Tocar

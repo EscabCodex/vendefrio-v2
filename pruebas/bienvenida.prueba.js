@@ -7,13 +7,16 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
     await page.goto("/");
     const bienvenida = page.locator("#pantallaInicioSesion");
     await expect(bienvenida.getByText("Tus pedidos, del comercio al camión.")).toBeVisible();
-    await expect(bienvenida.getByRole("button", { name: "Entrar con email" })).toBeVisible();
+    // Entrada simple (2026-11-02): crear cuenta o ingresar, sin "Continuar sin iniciar sesión".
+    await expect(bienvenida.getByRole("button", { name: "Crear cuenta gratis" })).toBeVisible();
+    await expect(bienvenida.getByRole("button", { name: "Ya tengo cuenta" })).toBeVisible();
+    await expect(bienvenida.getByRole("button", { name: "Continuar sin iniciar sesión" })).toHaveCount(0);
     await expect(bienvenida.getByRole("button", { name: "Entrar con código" })).toBeVisible();
     // Google queda armado pero apagado hasta M17.
-    await expect(bienvenida.getByRole("button", { name: "Entrar con Google" })).toBeHidden();
+    await expect(bienvenida.getByRole("button", { name: "Continuar con Google" })).toBeHidden();
     await capturar(page, "bienvenida-01-inicio");
 
-    await bienvenida.getByRole("button", { name: "Probar con datos de ejemplo" }).click();
+    await bienvenida.getByRole("button", { name: "Ver cómo funciona, sin cuenta" }).click();
     await expect(bienvenida).toBeHidden();
     const aviso = page.locator("#avisoDatosEjemplo");
     await expect(aviso).toContainText("Estás probando con datos de ejemplo");

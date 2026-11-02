@@ -3,7 +3,7 @@
 // hasta 9 paradas, recibe la ruta en dos partes. Con el repaso de Rutas
 // (2026-11-02): «Armar ruta» y elegir a mano, el ⋯ de la ruta, los pines,
 // salir del depósito y volver, y guardar la ruta.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 // «Armar ruta» > «Elegir comercios a mano» > Marcar todos > Armar la ruta con N.
 async function armarConTodos(page, cuantos) {
@@ -20,10 +20,7 @@ test("rutas: más de 9 paradas y Google Maps en partes", async ({ page }) => {
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     // 12 comercios en fila hacia el este, cargados desordenados.
@@ -81,10 +78,7 @@ test("rutas: reoptimizar con un pedido nuevo no saltea la parada", async ({ page
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         [1, 2, 3].forEach(numero => agregarComercio({
@@ -123,10 +117,7 @@ test("rutas: pines marcados, depósito, guardar la ruta y filtros de paradas", a
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => {
         [1, 2, 3, 4].forEach(numero => agregarComercio({
@@ -227,10 +218,7 @@ test("rutas: horarios de las paradas y completar los datos", async ({ page }) =>
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     await page.evaluate(() => {
@@ -295,10 +283,7 @@ test("rutas: horarios de las paradas y completar los datos", async ({ page }) =>
 
 test("rutas: el depósito también desde Más > Cuenta", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await page.locator('[data-config-seccion="cuenta"]').click();

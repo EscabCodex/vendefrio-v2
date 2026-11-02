@@ -4,7 +4,7 @@
 // hay para entregar y cobrar, Llamar, WhatsApp, Ya llego y Cargar pedido,
 // «Deslizá para marcar Llegué», Saltear parada y Salir. Tu posición se sigue
 // viendo arriba de la hoja. El GPS y el camino son falsos.
-const { test, expect, capturar, deslizar } = require("./ayudas");
+const { test, expect, capturar, deslizar, usarSinCuenta } = require("./ayudas");
 
 test.use({ viewport: { width: 360, height: 640 } });
 
@@ -59,10 +59,7 @@ test("llegando: a 150 m se agranda la hoja con todo para la parada", async ({ pa
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(paradas => {
         paradas.forEach(parada => agregarComercio({ ...parada, telefono: "11 4444-0000", origenGps: "gps" }));

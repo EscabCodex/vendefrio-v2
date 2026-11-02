@@ -303,6 +303,7 @@
     }
 
     function enLaBase() {
+        if (window.inicioVendeFrio?.pasoConAtras?.()) return false;
         if (tutorialAbierto() || capaDeArriba() || navegando()) return false;
         const seccion = pantallaVisible();
         return !seccion || seccion.id === "pantallaMenu" || seccion.id === "pantallaInicioSesion";
@@ -431,6 +432,8 @@
             window.tutorialVendeFrio.cerrar();
             return;
         }
+        // Ingresar, Crear cuenta o Código: vuelve a la entrada.
+        if (window.inicioVendeFrio?.atras?.()) return;
         const capa = capaDeArriba();
         if (capa) {
             cerrarCapa(capa);
@@ -577,5 +580,5 @@
         pedirRevisar();
     });
 
-    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras, atrasDelCelular, frenaElAtras, cerrarCapas };
+    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras, atrasDelCelular, revisar: pedirRevisar, frenaElAtras, cerrarCapas };
 }());

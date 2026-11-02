@@ -1,14 +1,11 @@
 // VendeFrío - Que se sienta como app propia y no como página de Chrome:
 // mantener apretado no selecciona texto ni abre el menú del navegador, y
 // donde se escribe se puede seguir copiando y pegando.
-const { test, expect } = require("./ayudas");
+const { test, expect, usarSinCuenta } = require("./ayudas");
 
 test("app propia: sin menú de Chrome al mantener apretado, salvo donde se escribe", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
     const resultado = await page.evaluate(() => {

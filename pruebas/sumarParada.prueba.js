@@ -2,7 +2,7 @@
 // tocar un comercio pregunta «¿Cuándo vamos?» (de paso o ahora) y, manteniendo
 // apretado, se eligen varios y se suman de paso. El GPS es falso y el camino,
 // sin internet, va en línea recta.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 const SALIDA = { latitude: -34.605, longitude: -58.405 };
 const COMERCIOS = [
@@ -19,10 +19,7 @@ test("sumar parada: de paso, ahora y varios manteniendo apretado", async ({ page
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation(SALIDA);
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(comercios => comercios.forEach((comercio, i) =>
         agregarComercio({ ...comercio, direccion: "Calle " + (i + 1), origenGps: "gps" })), COMERCIOS);
@@ -98,10 +95,7 @@ test("reloj del comercio: arranca al llegar y guarda el promedio en la ficha", a
         navigator.geolocation.clearWatch = () => {};
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(comercios => comercios.slice(0, 2).forEach((comercio, i) =>
         agregarComercio({ ...comercio, direccion: "Calle " + (i + 1), origenGps: "gps" })), COMERCIOS);
@@ -133,10 +127,7 @@ test("cierre de ruta: al terminar la última parada y desde el ⋯", async ({ pa
     await page.context().grantPermissions(["geolocation"]);
     await page.context().setGeolocation(SALIDA);
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "repartidor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(comercios => comercios.slice(0, 2).forEach((comercio, i) => {
         agregarComercio({ ...comercio, direccion: "Calle " + (i + 1), origenGps: "gps" });
