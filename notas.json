@@ -2,6 +2,22 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 274,
+      "fecha": "2026-11-02",
+      "tipo": "nuevo",
+      "icono": "impresora",
+      "titulo": "Folleto de precios por el Asistente",
+      "texto": "Pedile «una lista de precios para el almacén de Jorge» y te arma el folleto listo para imprimir o guardar en PDF."
+    },
+    {
+      "version": 274,
+      "fecha": "2026-11-02",
+      "tipo": "mejor",
+      "icono": "chispa",
+      "titulo": "El Asistente se las rebusca",
+      "texto": "Conoce tus precios y entiende cómo lo digas. Si algo no se puede, te avisa y te ofrece lo más parecido."
+    },
+    {
       "version": 273,
       "fecha": "2026-11-02",
       "tipo": "mejor",
