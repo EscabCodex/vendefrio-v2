@@ -121,9 +121,11 @@
         const esSubpantalla = enSeccion || SUBPANTALLAS.includes(pantalla.id) || pantalla.dataset.volverA === "propio";
         const sinCasita = !esSubpantalla;
         if (casita.hidden !== sinCasita) casita.hidden = sinCasita;
-        // El Asistente queda arriba solo en Más (en Inicio tiene el suyo).
+        // El Asistente (la chispa) va arriba a la derecha, al lado del "?", en
+        // las pantallas principales (Inicio tiene el suyo); las subpantallas
+        // llevan solo el "?" para que entren la casita y el título.
         const asistente = barra.querySelector(".botonAsistentePantalla");
-        const conAsistente = pantalla.id === "pantallaConfiguracion" && !enSeccion;
+        const conAsistente = !esSubpantalla;
         if (asistente && asistente.hidden !== !conAsistente) asistente.hidden = !conAsistente;
         const marca = conAsistente ? "si" : "no";
         if (pantalla.dataset.conAsistente !== marca) pantalla.dataset.conAsistente = marca;

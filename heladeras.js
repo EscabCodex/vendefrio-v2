@@ -67,7 +67,7 @@
     function abrir(nombre) {
         comercioActual = nombre;
         const seccion = p.pantalla("pantallaHeladera", {
-            titulo: "Exhibición", sub: nombre, volverA: "menu",
+            titulo: "Exhibición · " + nombre, volverA: "menu",
             accion: { icono: "camara", nombre: "Sacar foto de la heladera", alTocar: () => nueva() }
         });
         if (!seccion.dataset.listo) {

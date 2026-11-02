@@ -881,8 +881,7 @@
 
     function abrirFolleto(nombre) {
         const seccion = p.pantalla("pantallaFolleto", {
-            titulo: "Folleto",
-            sub: nombre,
+            titulo: "Folleto · " + nombre,
             volverA: () => abrirPantalla()
         });
         p.mostrar(seccion);
@@ -924,7 +923,7 @@
                 <span></span>
                 ${sinLista ? `<div class="lpChips"><span class="lpChip lpChipAviso">${p.ico("tienda", 15)} ${plural(sinLista, "comercio sin lista", "comercios sin lista")}</span>${editar ? `<button type="button" class="lpChip lpChipAgregar" id="elegirListaSinLista">${p.ico("mas", 15)} Elegir su lista</button>` : ""}</div>` : ""}
             </div>` : "";
-        seccionMas.querySelector("main").innerHTML = `<p class="lpNota">Cada comercio paga con su lista. Si un producto no tiene precio en la lista, va el general.</p>
+        seccionMas.querySelector("main").innerHTML = `
             <div id="filasListasPrecios">${tarjetas || `<div class="pzTarjeta"><div class="pzVacio">Todavía no hay listas. Tocá «Lista nueva» (por ejemplo, Kioscos o Supermercados).</div></div>`}</div>
             ${general}
             ${editar ? `<div class="pzBotonesFijos"><button type="button" class="pzBtn pzBtnPri" id="crearListaPrecios">${p.ico("mas", 18)}Lista nueva</button></div>` : ""}`;

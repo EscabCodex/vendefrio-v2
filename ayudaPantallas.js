@@ -96,7 +96,8 @@
             "Cada lista tiene un precio distinto para cada producto (por ejemplo, Supermercados, Almacenes y Kioscos).",
             "Tocá una lista para cargar sus precios, o «Lista nueva» para crear otra.",
             "Con los tres puntitos le cambiás el nombre o la borrás.",
-            "En la ficha de cada comercio elegís qué lista usa. Al armar un pedido podés usar otra."] },
+            "En la ficha de cada comercio elegís qué lista usa. Al armar un pedido podés usar otra.",
+            "Si un producto no tiene precio en la lista del comercio, va el precio general."] },
         pantallaPreciosLista: { titulo: "Precios por lista", pasos: [
             "Cada lista puede tener un precio distinto para este producto.",
             "Escribí el precio de cada lista.",

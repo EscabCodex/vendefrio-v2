@@ -38,11 +38,13 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     const acentoDespues = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--acento").trim());
     expect(acentoDespues).not.toBe(acentoAntes);
 
-    // El tamaño del texto agranda la pantalla de verdad.
-    const altoAntes = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
+    // El tamaño del texto agranda la pantalla de verdad (se mira una fila: el
+    // título de arriba se achica solo para entrar al lado de la flecha).
+    const letraDe = () => detalle.locator(".ajFila").first().evaluate(el => el.getBoundingClientRect().height);
+    const altoAntes = await letraDe();
     await detalle.locator(".ajSegmento label", { hasText: "Muy grande" }).click();
     expect(await raiz(page, "texto")).toBe("enorme");
-    const altoDespues = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
+    const altoDespues = await letraDe();
     expect(altoDespues).toBeGreaterThan(altoAntes * 1.15);
 
     // El espaciado separa más las filas.

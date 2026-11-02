@@ -1647,10 +1647,10 @@ html[data-tema] body .pzLupaPastilla input.pzLupaInput{background:transparent !i
 /* ---------- Tanda 1: encabezados (pedido del dueño, 2026-11-02) ----------
    Pantallas principales: flecha y título. Subpantallas: flecha, casita y
    título. A la derecha, un solo botón "?" más chico, centrado con la flecha.
-   El Asistente queda arriba solo en Inicio y en Más, y la campanita solo en
-   Inicio y en la lista de Más. */
+   La chispa del Asistente va a su derecha, del mismo tamaño, en las
+   pantallas principales; la campanita, solo en Inicio y en la lista de Más. */
 html body > section > header .botonAyudaPantalla,
-html #pantallaRutas .cabezaRutas .botonAyudaPantalla{
+html #pantallaRutas .cabezaRutas :is(.botonAyudaPantalla, .asistenteRutas){
   width:36px !important;height:36px !important;min-height:36px;margin-bottom:0 !important;
   align-self:center;font-size:17px;font-weight:800;
 }
@@ -1664,3 +1664,20 @@ html #pantallaConfiguracion[data-en-seccion="si"] .configHeader > .botonAyudaPan
 /* En la lista de Más, el "?" queda centrado con la campanita y el Asistente. */
 html #pantallaConfiguracion[data-en-seccion="no"] .configHeader > .botonAyudaPantalla{align-self:flex-start;margin-top:-2px !important;}
 html #pantallaConfiguracion[data-en-seccion="si"] .configHeader > .botonAyudaPantalla{margin-top:-4px !important;}
+/* La chispa del Asistente: 36 px, sin nombre abajo, centrada con la flecha
+   (la flecha mide 44 y arranca a 12 px: su centro queda a 34). */
+html body .barraVolver.barraVolver > .botonAsistentePantalla{
+  width:36px !important;height:36px !important;min-height:36px !important;margin-bottom:0 !important;
+  margin-top:calc(16px + env(safe-area-inset-top, 0px)) !important;
+  background:var(--acento-bg);border:0;box-shadow:none;
+}
+html[data-tema="oscuro"] body .barraVolver.barraVolver > .botonAsistentePantalla{background:var(--superficie-2);}
+html .barraVolver > .botonAsistentePantalla::after{display:none !important;}
+html.volverDespegado .barraVolver > .botonAsistentePantalla{box-shadow:var(--sombra-flotante), var(--sombra);}
+html body > section[data-con-asistente="si"] > header{padding-right:calc(max(16px, env(safe-area-inset-right, 0px)) + 44px) !important;}
+html #pantallaRutas .cabezaRutas .asistenteRutas{order:10;}
+/* Sin renglón de explicación debajo del título en ninguna pantalla ni
+   sección de Más (pedido del dueño, 2026-11-02): todas iguales, y el "?" ya
+   dice para qué sirve cada una. */
+html body > section > header > div > p,
+html #configDetalle > .configDescripcion{display:none !important;}
