@@ -1,5 +1,5 @@
 // VendeFrío - Ideas para la 1.0, tanda 5 "Para el dueño" (T79 a T83).
-// 1. Estadísticas contra el período anterior, "Llamalos" (antes "Se están
+// 1. Estadísticas contra el período anterior, "Visitas para vender" (antes "Se están
 //    enfriando") y el mapa de ventas dentro de Estadísticas (modo personal).
 // 2. Registro de cambios, metas del mes y resumen de la noche (nube).
 const { test, expect, capturar } = require("./ayudas");
@@ -45,10 +45,11 @@ test.describe("personal", () => {
         await expect(resumen.locator(".statsNumeros > div").first().locator(".statsDelta")).toHaveText("+1");
         await expect(resumen.locator(".statsVendido .statsCambio")).toBeVisible();
 
-        // Llamalos: Despensa Mary pedía cada semana y dejó de pedir.
-        const llamar = pantalla.locator(".statsLlamar");
-        await expect(llamar).toContainText("Despensa Mary");
-        await expect(llamar).toContainText("No pide hace 16 días · pedía cada semana");
+        // Visitas para vender: Despensa Mary pedía cada semana y dejó de pedir.
+        const llamar = pantalla.locator(".statsVisitasVender");
+        const mary = llamar.locator(".statsFila", { hasText: "Despensa Mary" });
+        await expect(mary.locator('[data-tipo="falta"]')).toHaveText("No compra hace 16 días");
+        await expect(mary).toContainText("Pedía cada semana");
         await expect(llamar.getByRole("link", { name: "WhatsApp a Despensa Mary" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491144442222\?text=/);
         await page.evaluate(() => window.scrollTo(0, 0));
         await capturar(page, "dueno-01-estadisticas");

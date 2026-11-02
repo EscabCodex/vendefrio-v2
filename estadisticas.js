@@ -260,8 +260,9 @@
         return lista;
     }
 
-    // Lo de cada fila: tocar el nombre abre la ficha, el teléfono que falta se
-    // agrega ahí mismo y "+ Pedido" empieza un pedido para ese comercio.
+    // Lo de cada fila: tocar el nombre abre la ficha, el teléfono o la
+    // dirección que faltan se agregan ahí mismo y "+ Pedido" empieza un
+    // pedido para ese comercio.
     function conectarFilas(card) {
         const tocable = window.piezas?.tocable;
         card.querySelectorAll("[data-ficha]").forEach(fila => {
@@ -272,6 +273,8 @@
             if (tel) { evento.stopPropagation(); window.abrirDatosComercio(tel.dataset.agregarTel, "telefono", () => window.estadisticasVendeFrio.redibujar()); return; }
             const pedido = evento.target.closest("[data-pedido-para]");
             if (pedido) { evento.stopPropagation(); if (typeof irAPedidoRapido === "function") irAPedidoRapido(pedido.dataset.pedidoPara); return; }
+            const dir = evento.target.closest("[data-agregar-dir]");
+            if (dir) { evento.stopPropagation(); window.abrirDatosComercio?.(dir.dataset.agregarDir, "direccion", () => window.estadisticasVendeFrio.redibujar()); return; }
             const crear = evento.target.closest("[data-crear-comercio]");
             if (crear) { evento.stopPropagation(); crearComercio(crear.dataset.crearComercio); return; }
             if (evento.target.closest(".statsWhatsapp")) evento.stopPropagation();
@@ -333,44 +336,18 @@
     }
 
     // ---------- 2. Qué hacer hoy ----------
-    // Llamalos: los que dejaron de pedir (pedían seguido) y los que compran
-    // un 20% menos que en el período anterior.
-    function crearLlamar(completo) {
-        const atrasados = perfilesDe(completo).filter(perfil => perfil.atrasado && perfil.nombre !== "Sin comercio")
-            .sort((a, b) => (b.diasDesdeUltimo / b.promedioDias) - (a.diasDesdeUltimo / a.promedioDias));
-        const nombresAtrasados = new Set(atrasados.map(perfil => perfil.nombre));
-        const ahora = porComercio(pedidosDelPeriodo());
-        const antes = porComercio(pedidosDelAnterior());
-        const caen = Object.keys(antes)
-            .filter(nombre => nombre !== "Sin comercio" && !nombresAtrasados.has(nombre) && antes[nombre] > 0 && (ahora[nombre] || 0) < antes[nombre] * 0.8)
-            .map(nombre => ({ nombre, ahora: ahora[nombre] || 0, antes: antes[nombre] }))
-            .sort((a, b) => (a.ahora / a.antes) - (b.ahora / b.antes));
-        const card = tarjeta("telefono", "rojo", "Llamalos", "Dejaron de pedir o compran menos", "statsLlamar");
-        const filas = [
-            ...atrasados.map(perfil => `<div class="statsFila" data-ficha="${esc(perfil.nombre)}">
-                <span class="statsAvatar" data-tono="atrasado">${esc(iniciales(perfil.nombre))}</span>
-                <div class="statsFilaTexto"><strong>${esc(perfil.nombre)}</strong><small class="statsTextoRojo">No pide hace ${plural(perfil.diasDesdeUltimo, "día", "días")} · pedía ${cadaCuanto(perfil.promedioDias)}</small></div>
-                ${botonWhatsapp(perfil.nombre, saludo())}
-            </div>`),
-            ...caen.map(item => `<div class="statsFila" data-ficha="${esc(item.nombre)}">
-                <span class="statsAvatar" data-tono="semana">${esc(iniciales(item.nombre))}</span>
-                <div class="statsFilaTexto"><strong>${esc(item.nombre)}</strong><small class="statsTextoNaranja">Compra ${Math.round((1 - item.ahora / item.antes) * 100)}% menos · ${valorTexto(item.ahora)} contra ${valorTexto(item.antes)}</small></div>
-                ${botonWhatsapp(item.nombre, saludo())}
-            </div>`)
-        ];
-        if (!filas.length) {
-            card.insertAdjacentHTML("beforeend", `<div class="statsVacio statsTodoBien">${ico("check", 20)}<span>Nadie dejó de pedir ni compra menos.</span></div>`);
-            return card;
-        }
-        listaCorta(card, filas, 4);
-        conectarFilas(card);
-        return card;
-    }
+    // Visitas para vender (repaso 2026-11-02): una sola lista de comercios
+    // guardados para ir a ofrecer, del más importante al menos. Junta a los
+    // que dejaron de pedir, los que compran un 20% menos, a los que les toca
+    // hoy, lo que llevan casi todos y ellos no, y los que nunca compraron.
+    const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const clave = nombre => String(nombre || "").trim().toLocaleLowerCase("es");
+    const sinTildes = texto => clave(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // Ofreceles: un producto que llevan al menos 3 comercios (y un cuarto de
-    // los que compran) que este comercio nunca llevó. Uno por comercio.
-    function crearOfrecer(completo) {
-        const ofertas = recordar(completo, "ofrecer", () => {
+    // Un producto que llevan al menos 3 comercios (y un cuarto de los que
+    // compran) que este comercio nunca llevó. Uno por comercio.
+    function productosParaOfrecer(completo) {
+        return recordar(completo, "ofrecer", () => {
             const desde = Date.now() - 90 * DIA;
             const recientes = completo.filter(p => { const f = fechaPedido(p); return f && f.getTime() >= desde; });
             const activos = [...new Set(recientes.map(p => p.comercio).filter(nombre => nombre && nombre !== "Sin comercio"))];
@@ -387,24 +364,83 @@
                 .map(([producto, comercios]) => ({ producto, cuantos: activos.filter(c => comercios.has(c)).length }))
                 .filter(item => item.cuantos >= 3 && item.cuantos / Math.max(activos.length, 1) >= 0.25)
                 .sort((a, b) => b.cuantos - a.cuantos);
-            const lista = [];
+            const ofertas = new Map();
             activos.forEach(comercio => {
                 const elegido = populares.find(item => !lleva.get(comercio)?.has(item.producto));
-                if (elegido) lista.push({ comercio, ...elegido });
+                if (elegido) ofertas.set(clave(comercio), elegido.producto);
             });
-            return { lista: lista.sort((a, b) => b.cuantos - a.cuantos), activos: activos.length };
+            return ofertas;
         });
-        const card = tarjeta("chispa", "verde", "Ofreceles", "Lo que llevan casi todos y ellos no", "statsOfrecer");
-        if (!ofertas.lista.length) {
-            card.insertAdjacentHTML("beforeend", vacio("Cuando tengas más pedidos, acá vas a ver qué ofrecerle a cada comercio."));
+    }
+
+    function visitasParaVender(completo) {
+        const guardados = (typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [])
+            .filter(comercio => comercio && comercio.nombre && comercio.archivado !== true);
+        const filas = new Map(guardados.map(comercio => [clave(comercio.nombre), { comercio, chips: [], peso: 0, tono: "" }]));
+        const fila = nombre => filas.get(clave(nombre));
+        perfilesDe(completo).forEach(perfil => {
+            const item = perfil.atrasado && fila(perfil.nombre);
+            if (!item) return;
+            item.chips.push(["falta", "No compra hace " + plural(perfil.diasDesdeUltimo, "día", "días")], ["", "Pedía " + cadaCuanto(perfil.promedioDias)]);
+            item.peso += 40 + Math.min(perfil.diasDesdeUltimo / Math.max(perfil.promedioDias, 1), 10);
+            item.tono = "atrasado";
+        });
+        const ahora = porComercio(pedidosDelPeriodo());
+        const antes = porComercio(pedidosDelAnterior());
+        Object.keys(antes).forEach(nombre => {
+            const item = fila(nombre);
+            if (!item || item.tono || !(antes[nombre] > 0) || (ahora[nombre] || 0) >= antes[nombre] * 0.8) return;
+            item.chips.push(["menos", "Compra " + Math.round((1 - (ahora[nombre] || 0) / antes[nombre]) * 100) + "% menos"]);
+            item.peso += 30 + (1 - (ahora[nombre] || 0) / antes[nombre]);
+            item.tono = "semana";
+        });
+        const hoy = DIAS_SEMANA[new Date().getDay()];
+        filas.forEach(item => {
+            if (sinTildes(item.comercio.diaVisita) !== sinTildes(hoy)) return;
+            item.chips.unshift(["hoy", "Le toca los " + hoy.toLocaleLowerCase("es")]);
+            item.peso += 25;
+        });
+        productosParaOfrecer(completo).forEach((producto, nombre) => {
+            const item = filas.get(nombre);
+            if (!item) return;
+            item.chips.push(["ofrece", "Ofrecele " + producto]);
+            item.peso += 10;
+        });
+        const conPedido = new Set(completo.map(pedido => clave(pedido.comercio)));
+        filas.forEach((item, nombre) => {
+            if (conPedido.has(nombre)) return;
+            item.chips.push(["nunca", "Nunca te compró"]);
+            item.peso += 5;
+        });
+        return [...filas.values()].filter(item => item.peso > 0).sort((a, b) => b.peso - a.peso);
+    }
+
+    function crearVisitas(completo) {
+        const lista = visitasParaVender(completo);
+        const card = tarjeta("ubicacion", "azul", "Visitas para vender", "Para ir a ofrecer hoy, del más importante al menos", "statsVisitasVender");
+        if (!lista.length) {
+            card.insertAdjacentHTML("beforeend", `<div class="statsVacio statsTodoBien">${ico("check", 20)}<span>Todos te compran como siempre.</span></div>`);
             return card;
         }
-        const filas = ofertas.lista.map(item => `<div class="statsFila" data-ficha="${esc(item.comercio)}">
-            <span class="statsAvatar">${esc(iniciales(item.comercio))}</span>
-            <div class="statsFilaTexto"><strong>${esc(item.comercio)}</strong><small>No lleva <b>${esc(item.producto)}</b> · lo llevan ${item.cuantos} de ${ofertas.activos}</small></div>
-            <button type="button" class="statsPildora" data-pedido-para="${esc(item.comercio)}" aria-label="Pedido para ${esc(item.comercio)}">${ico("mas", 14)} Pedido</button>
-        </div>`);
-        listaCorta(card, filas, 3);
+        const filas = lista.map(({ comercio, chips, tono }) => {
+            const nombre = comercio.nombre;
+            const pildoras = chips.slice(0, 2).map(([tipo, texto]) => `<span class="statsChipVisita"${tipo ? ` data-tipo="${tipo}"` : ""}>${tipo && tipo !== "ofrece" ? "<i></i>" : ""}${esc(texto)}</span>`).join("")
+                + (comercio.direccion ? "" : `<button type="button" class="statsChipVisita" data-tipo="agregar" data-agregar-dir="${esc(nombre)}">${ico("mas", 12)} Agregar dirección</button>`);
+            return `<div class="statsFila statsFilaVisita" data-ficha="${esc(nombre)}">
+                <span class="statsAvatar"${tono ? ` data-tono="${tono}"` : ""}>${esc(iniciales(nombre))}</span>
+                <div class="statsFilaTexto"><strong>${esc(nombre)}</strong>${comercio.direccion ? `<small>${esc(comercio.direccion)}</small>` : ""}<div class="statsChipsVisita">${pildoras}</div></div>
+                ${botonWhatsapp(nombre, saludo())}
+            </div>`;
+        });
+        listaCorta(card, filas, 4);
+        const armar = document.createElement("button");
+        armar.type = "button";
+        armar.className = "statsArmarRuta";
+        armar.innerHTML = `${ico("ubicacion", 20)} Armar la ruta con ${numero(lista.length)}`;
+        armar.addEventListener("click", () => {
+            if (typeof window.armarRutaConComercios === "function") window.armarRutaConComercios(lista.map(item => item.comercio.nombre));
+        });
+        card.appendChild(armar);
         conectarFilas(card);
         return card;
     }
@@ -706,9 +742,8 @@
                 });
                 return null;
             },
-            () => seccion("Qué hacer hoy", "A quién llamar y qué ofrecer"),
-            () => crearLlamar(completo),
-            () => crearOfrecer(completo),
+            () => seccion("Qué hacer hoy", "A quién ir a ver y qué ofrecerle"),
+            () => crearVisitas(completo),
             () => { otras.forEach(card => destino.appendChild(card)); return null; },
             () => seccion("Qué se mueve", "Qué sube, qué baja y cuándo se vende"),
             () => crearRanking(),

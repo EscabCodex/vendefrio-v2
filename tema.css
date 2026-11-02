@@ -2940,7 +2940,7 @@ html[data-tema="oscuro"] .modalBotones .botonAsistenteFicha{color:var(--acento);
 
 /* ---- Estadísticas para estudiar el mercado (repaso de diseño, 2026-11-01):
    períodos como los filtros de Pedidos, cuatro partes con su título,
-   Llamalos, Ofreceles, quién deja más plata, qué día se vende más, tus
+   visitas para vender, quién deja más plata, qué día se vende más, tus
    clientes y el mapa de ventas adentro. */
 html .selectorPeriodoEstadisticas.filaPeriodosStats{display:flex;gap:8px;overflow-x:auto;margin:2px -16px 6px;padding:2px 16px 6px;border-radius:0;background:transparent;scrollbar-width:none;}
 html .selectorPeriodoEstadisticas.filaPeriodosStats::-webkit-scrollbar{display:none;}
@@ -2954,7 +2954,6 @@ html[data-tema="oscuro"] .selectorPeriodoEstadisticas.filaPeriodosStats .filtroE
 .statsTextoRojo{color:var(--peligro) !important;font-weight:600;}
 .statsTextoNaranja{color:var(--pendiente) !important;font-weight:600;}
 .statsTextoVerde{color:var(--visitado) !important;font-weight:600;}
-.statsFilaTexto > small b{font-weight:800;color:var(--texto);font-size:inherit;}
 .statsWhatsapp{flex-shrink:0;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--visitado-bg);color:var(--visitado);}
 .statsAgregarTel,.statsPildora{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 12px;border-radius:var(--radio-pildora);font-size:13px;font-weight:700;cursor:pointer;}
 .statsAgregarTel{border:1.5px dashed var(--acento);background:transparent;color:var(--acento-oscuro);}
@@ -3010,6 +3009,26 @@ html[data-tema="oscuro"] .statsResumen .statsCambio[data-tono="baja"]{background
 html .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa{flex:0 0 auto;background:var(--superficie);color:var(--texto);border:1px solid var(--borde);}
 html .selectorPeriodoEstadisticas.filaPeriodosStats .filtroEtapa.activo{background:var(--acento);color:var(--acento-txt);border-color:var(--acento);box-shadow:none;}
 .statsLista > [hidden]{display:none !important;}
+/* Visitas para vender (2026-11-02): chips de por qué ir y "Armar la ruta". */
+.statsFilaVisita{align-items:flex-start;}
+.statsFilaVisita .statsWhatsapp,.statsFilaVisita .statsAgregarTel{align-self:center;}
+.statsChipsVisita{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.statsChipVisita{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:2px 9px;border:0;border-radius:var(--radio-pildora);font-size:12px;font-weight:700;line-height:1.2;background:var(--superficie-2);color:var(--texto-sec);}
+.statsChipVisita i{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.statsChipVisita[data-tipo="hoy"]{background:var(--visitado-bg);color:var(--visitado);}
+.statsChipVisita[data-tipo="falta"]{background:var(--peligro-bg);color:var(--peligro);}
+.statsChipVisita[data-tipo="menos"]{background:var(--pendiente-bg);color:var(--pendiente);}
+.statsChipVisita[data-tipo="ofrece"]{background:var(--acento-bg);color:var(--acento-oscuro);}
+.statsChipVisita[data-tipo="nunca"]{background:color-mix(in srgb,#8b5cf6 15%,transparent);color:#7c3aed;}
+.statsChipVisita[data-tipo="agregar"]{background:transparent;border:1.5px dashed var(--acento);color:var(--acento-oscuro);cursor:pointer;}
+html[data-tema="oscuro"] .statsChipVisita{color:var(--texto-sec) !important;}
+html[data-tema="oscuro"] .statsChipVisita[data-tipo="hoy"]{color:var(--visitado) !important;}
+html[data-tema="oscuro"] .statsChipVisita[data-tipo="falta"]{color:var(--peligro) !important;}
+html[data-tema="oscuro"] .statsChipVisita[data-tipo="menos"]{color:var(--pendiente) !important;}
+html[data-tema="oscuro"] .statsChipVisita[data-tipo="ofrece"],html[data-tema="oscuro"] .statsChipVisita[data-tipo="agregar"]{color:var(--acento) !important;}
+html[data-tema="oscuro"] .statsChipVisita[data-tipo="nunca"]{color:#a78bfa !important;}
+.statsArmarRuta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;margin-top:12px;border:0;border-radius:var(--radio-pildora);background:var(--acento);color:var(--acento-txt);font-size:16px;font-weight:800;cursor:pointer;}
+html[data-tema="oscuro"] .statsArmarRuta{color:var(--acento-txt) !important;}
 .statsMiniMapa{isolation:isolate;z-index:0;}
 html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoRojo{color:var(--peligro) !important;}
 html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoNaranja{color:var(--pendiente) !important;}

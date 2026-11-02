@@ -61,7 +61,7 @@ test("bienvenida: probar con datos de ejemplo y empezar de cero", async ({ page 
 
     // Las estadísticas ya muestran algo.
     await page.evaluate(() => window.abrirEstadisticas());
-    await expect(page.locator(".statsLlamar")).toContainText("Despensa Mary");
+    await expect(page.locator(".statsVisitasVender")).toContainText("Despensa Mary");
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
 
     // Algo propio queda al empezar de cero.

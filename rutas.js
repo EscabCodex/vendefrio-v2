@@ -2957,3 +2957,17 @@ document.addEventListener("click", event => {
         abrirGoogleMaps();
     }
 });
+
+// Estadísticas > "Visitas para vender" (2026-11-02): abre Rutas con esos
+// comercios elegidos y arma el orden más corto desde donde estás.
+window.armarRutaConComercios = function (nombres) {
+    const lista = (Array.isArray(nombres) ? nombres : []).filter(Boolean);
+    if (!lista.length) return;
+    seleccionRutaInicializada = true;
+    comerciosSeleccionadosRuta = new Set(lista);
+    rutaOrdenada = [];
+    distanciasRuta = [];
+    if (typeof mostrarPantalla === "function") mostrarPantalla("rutas");
+    else inicializarSeleccionRuta();
+    optimizarRuta();
+};

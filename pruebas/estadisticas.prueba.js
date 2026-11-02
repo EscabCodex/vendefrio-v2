@@ -1,6 +1,6 @@
 // VendeFrío - Estadísticas para estudiar el mercado (repaso de diseño,
 // 2026-11-01): períodos corridos con su cantidad, "Cómo vengo", "Qué hacer
-// hoy" (Llamalos y Ofreceles), "Qué se mueve" (quién deja más plata y qué
+// hoy" (Visitas para vender y armar la ruta con ellos), "Qué se mueve" (quién deja más plata y qué
 // día se vende más) y "Para crecer" (tus clientes, comercios sin guardar).
 const { test, expect, capturar } = require("./ayudas");
 
@@ -69,26 +69,31 @@ test("estadísticas: cómo vengo, qué hacer hoy, qué se mueve y para crecer", 
     await expect(resumen).toContainText("Últimos 30 días");
     await expect(resumen).toContainText("vendido");
     await expect(resumen.locator(".statsNumeros > div").first()).toContainText("9");
-    for (const titulo of ["Llamalos", "Ofreceles", "Quién te deja más plata", "Qué día se vende más", "Tus clientes"]) {
+    for (const titulo of ["Visitas para vender", "Quién te deja más plata", "Qué día se vende más", "Tus clientes"]) {
         const tarjeta = pantalla.locator(".statsTarjeta", { has: page.getByRole("heading", { name: titulo }) });
         await expect(tarjeta.locator(".statsCabeza .ajIcono svg")).toBeVisible();
     }
     // Lo que se sacó.
-    for (const titulo of ["Esta semana", "Pedido habitual", "Mes por mes", "Pedidos por día", "Se están enfriando"]) {
+    for (const titulo of ["Esta semana", "Pedido habitual", "Mes por mes", "Pedidos por día", "Se están enfriando", "Llamalos", "Ofreceles"]) {
         await expect(pantalla.getByRole("heading", { name: titulo })).toHaveCount(0);
     }
     await capturar(page, "estadisticas-01-como-vengo");
 
-    // Qué hacer hoy: Bar Aurora compra menos que antes (sin teléfono: en vez
-    // de WhatsApp, "+ Tel."); a Bar Aurora le ofrece Helado 1 kg.
-    const llamar = pantalla.locator(".statsLlamar");
-    await expect(llamar.locator(".statsFila", { hasText: "Bar Aurora" })).toBeVisible();
-    await expect(llamar.locator(".statsFila", { hasText: "Bar Aurora" }).locator(".statsAgregarTel")).toBeVisible();
-    const ofrecer = pantalla.locator(".statsOfrecer");
-    await expect(ofrecer.locator(".statsFila", { hasText: "Bar Aurora" })).toContainText("No lleva Helado 1 kg");
-    await llamar.evaluate(caja => window.scrollTo(0, caja.getBoundingClientRect().top + window.scrollY - 140));
+    // Qué hacer hoy: Visitas para vender. Bar Aurora compra menos que antes
+    // (sin teléfono: en vez de WhatsApp, "+ Tel.") y le ofrece Helado 1 kg;
+    // Despensa Sin Pedidos nunca compró. Los no guardados no van.
+    const visitas = pantalla.locator(".statsVisitasVender");
+    const aurora = visitas.locator(".statsFila", { hasText: "Bar Aurora" });
+    await expect(aurora).toContainText("Mitre 10");
+    await expect(aurora.locator('[data-tipo="menos"]')).toHaveText("Compra 33% menos");
+    await expect(aurora.locator('[data-tipo="ofrece"]')).toHaveText("Ofrecele Helado 1 kg");
+    await expect(aurora.locator(".statsAgregarTel")).toBeVisible();
+    await expect(visitas.locator(".statsFila", { hasText: "Despensa Sin Pedidos" }).locator('[data-tipo="nunca"]')).toHaveText("Nunca te compró");
+    await expect(visitas).not.toContainText("Kiosco Nuevo");
+    const armar = visitas.getByRole("button", { name: /^Armar la ruta con \d+$/ });
+    await expect(armar).toBeVisible();
+    await visitas.evaluate(caja => window.scrollTo(0, caja.getBoundingClientRect().top + window.scrollY - 140));
     await capturar(page, "estadisticas-02-que-hacer-hoy");
-
     // Qué se mueve: por plata, Kiosco Luna primero; pestañas de productos y marcas.
     const ranking = pantalla.locator(".statsRanking");
     await expect(ranking.locator(".statsListaRanking:visible .statsFilaRanking").first()).toContainText("Kiosco Luna");
@@ -114,6 +119,19 @@ test("estadísticas: cómo vengo, qué hacer hoy, qué se mueve y para crecer", 
     await expect(hoja.locator("#modalNombre")).toHaveValue("Kiosco Nuevo");
     await page.keyboard.press("Escape");
     await expect(hoja).toBeHidden();
+
+    // "Armar la ruta con N" abre Rutas con esos comercios elegidos (sin
+    // ubicaciones, avisa que faltan) y atrás vuelve a Estadísticas.
+    const cuantos = Number((await armar.textContent()).match(/\d+/)[0]);
+    await armar.click();
+    await expect(page.locator("#pantallaRutas")).toBeVisible();
+    const elegidos = await page.evaluate(() => [...comerciosSeleccionadosRuta]);
+    expect(elegidos).toHaveLength(cuantos);
+    expect(elegidos).toEqual(expect.arrayContaining(["Bar Aurora", "Despensa Sin Pedidos"]));
+    await expect(page.locator("#modalAviso")).toContainText("Faltan ubicaciones");
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    await expect(page.locator("#modalAviso")).toBeHidden();
+    await page.evaluate(() => window.abrirEstadisticas());
 
     // Con "Hoy" queda solo el pedido de hoy.
     await pantalla.locator('[data-periodo="hoy"]').click();
