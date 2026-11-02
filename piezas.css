@@ -784,8 +784,6 @@ input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable 
 .tono5{--tono:var(--tono5);--tono-punto:#7C8B9E;}
 
 /* ---------- Productos: chips con el punto de la marca ---------- */
-.chipMarca.conTono::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--tono-punto);flex-shrink:0;}
-.chipMarca.conTono{gap:7px;}
 #avisoSinPrecio{cursor:pointer;}
 #avisoSinPrecio .avisoSinPrecioVer{flex-shrink:0;font-weight:750;font-size:14.5px;color:var(--pz-pri-fuerte);}
 
