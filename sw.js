@@ -1,7 +1,7 @@
 // =====================================================
 // VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v259";
+const CACHE_NAME = "vendefrio-v260";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -122,19 +122,36 @@ function esCuadraditoDeMapa(request) {
   return url.hostname === "tile.openstreetmap.org";
 }
 
-async function cuadraditoDeMapa(request) {
+// El cuadradito se devuelve apenas llega: guardarlo y recortar la cache van
+// después, sin hacer esperar al mapa (antes cada cuadradito nuevo esperaba
+// a que se escribiera y a que se contaran los 600 guardados, y al mover o
+// agrandar el mapa en un celular barato los cuadraditos llegaban tarde).
+let cuadraditosSinRecortar = 0;
+
+async function guardarCuadradito(request, respuesta) {
+  try {
+    const cache = await caches.open(CACHE_MAPAS);
+    await cache.put(request, respuesta);
+    cuadraditosSinRecortar += 1;
+    if (cuadraditosSinRecortar < 40) return;
+    cuadraditosSinRecortar = 0;
+    const claves = await cache.keys();
+    if (claves.length > MAXIMO_MAPAS) {
+      await Promise.all(claves.slice(0, claves.length - MAXIMO_MAPAS).map(clave => cache.delete(clave)));
+    }
+  } catch (error) {
+    // Sin lugar para guardar: el mapa se ve igual.
+  }
+}
+
+async function cuadraditoDeMapa(event) {
+  const request = event.request;
   const cache = await caches.open(CACHE_MAPAS);
   const guardado = await cache.match(request);
   if (guardado) return guardado;
 
   const respuesta = await fetch(request);
-  if (respuesta && respuesta.ok) {
-    await cache.put(request, respuesta.clone());
-    const claves = await cache.keys();
-    if (claves.length > MAXIMO_MAPAS) {
-      await Promise.all(claves.slice(0, claves.length - MAXIMO_MAPAS).map(clave => cache.delete(clave)));
-    }
-  }
+  if (respuesta && respuesta.ok) event.waitUntil(guardarCuadradito(request, respuesta.clone()));
   return respuesta;
 }
 
@@ -294,7 +311,7 @@ self.addEventListener("fetch", event => {
     return;
   }
   if (esCuadraditoDeMapa(event.request)) {
-    event.respondWith(cuadraditoDeMapa(event.request));
+    event.respondWith(cuadraditoDeMapa(event));
     return;
   }
   if (!esSolicitudGETMismaApp(event.request)) return;

@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 260,
+      "fecha": "2026-11-02",
+      "tipo": "mejor",
+      "icono": "mapa",
+      "titulo": "El mapa se mueve más suave",
+      "texto": "Al mover o agrandar el mapa, las calles aparecen más rápido y no se traba en celulares baratos."
+    },
+    {
       "version": 259,
       "fecha": "2026-11-02",
       "tipo": "nuevo",

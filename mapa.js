@@ -18,6 +18,9 @@
         return L.tileLayer(URL_MAPAS, {
             maxZoom: 19,
             crossOrigin: "anonymous",
+            // Mientras se agranda con dos dedos no pide cuadraditos nuevos:
+            // los pide al soltar (en un celular barato se trababa).
+            updateWhenZooming: false,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
         });
     }
