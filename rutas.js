@@ -1162,7 +1162,7 @@ function abrirElegirComercios(estado = {}) {
                 pendiente ? `<span class="pzChip pzChipAviso">Pendiente</span>` : ""
             ].join("");
             return `<div class="filaElegirRuta${elegido ? " elegida" : ""}" role="checkbox" tabindex="0" aria-checked="${elegido}" data-nombre="${nombre}">
-                <span class="avatarElegirRuta" style="background:${p.colorIni(comercio.nombre)}"><span class="inicialesElegirRuta">${p.esc(p.iniciales(comercio.nombre))}</span><span class="tildeElegirRuta">${p.ico("check", 20)}</span></span>
+                <span class="avatarElegirRuta ${p.colorIni(comercio.nombre)}"><span class="inicialesElegirRuta">${p.esc(p.iniciales(comercio.nombre))}</span><span class="tildeElegirRuta">${p.ico("check", 20)}</span></span>
                 <span class="textoElegirRuta"><strong>${nombre}</strong><small>${detalle}${comercioTieneGps(comercio) ? "" : ` · <span class="sinUbicacionElegir">sin ubicación en el mapa</span>`}</small></span>
                 ${chips}
             </div>`;
@@ -1647,6 +1647,7 @@ function mostrarRutaEnLista() {
     const lista = document.createElement("ol");
     lista.className = "listaParadas" + (ordenable ? "" : " filtrada");
     const proxima = indiceProximaParada();
+    const llegadas = llegadasRuta();
     const horas = horasDeLlegadaRuta();
     const p = window.piezas;
     mostradas.forEach(({ comercio, indice, carga, saldo, hecha }) => {
@@ -1656,6 +1657,10 @@ function mostrarRutaEnLista() {
         const chips = [];
         if (carga.pedidos.length) chips.push(`<span class="pzChip pzChipAcento sinPunto">${window.icono("paquete", 13)} Lleva ${carga.unidades} u${carga.total && verPlata ? " · " + p.plata(carga.total) : ""}</span>`);
         if (saldo > 0) chips.push(`<span class="pzChip pzChipAviso sinPunto chipCobrarParada">Debe ${p.plata(saldo)}</span>`);
+        if (!hecha) {
+            const horario = chipHorarioParada(comercio, llegadas[indice]);
+            if (horario) chips.push(horario);
+        }
         fila.innerHTML = `<span class="horaParada">${horas[indice]}</span>
             <span class="lineaParada" aria-hidden="true"><span class="numeroParada">${hecha ? window.icono("check", 14) : indice + 1}</span></span>
             <div class="cajaParada">
@@ -1898,15 +1903,163 @@ function dibujarProximaParada() {
 
 // Hora de llegada a cada parada: con el camino por calles si llegó, si no
 // con la cuenta aproximada, más lo que suele tardar en las anteriores.
-function horasDeLlegadaRuta() {
+function llegadasRuta() {
     const tramos = recorridoElegidoPlan()?.tramos;
     const porCalles = tramos && tramos.length >= rutaOrdenada.length;
     let segundos = 0;
     return rutaOrdenada.map((comercio, indice) => {
         if (indice > 0) segundos += minutosEnParada(rutaOrdenada[indice - 1]) * 60;
         segundos += porCalles ? tramos[indice] : minutosAproximados(distanciasRuta[indice]) * 60;
-        const hora = new Date(Date.now() + segundos * 1000);
-        return String(hora.getHours()).padStart(2, "0") + ":" + String(hora.getMinutes()).padStart(2, "0");
+        return new Date(Date.now() + segundos * 1000);
+    });
+}
+
+function horasDeLlegadaRuta() {
+    return llegadasRuta().map(hora => String(hora.getHours()).padStart(2, "0") + ":" + String(hora.getMinutes()).padStart(2, "0"));
+}
+
+// -------------------------------------------------
+// Horarios (repaso de Rutas, imagen 5): si a la hora que llegás el comercio
+// está abierto, cierra pronto o ya cerró; sin horario, «+ Agregar horario».
+// -------------------------------------------------
+
+function textoMinutosDelDia(minutos) {
+    return String(Math.floor(minutos / 60)).padStart(2, "0") + ":" + String(minutos % 60).padStart(2, "0");
+}
+
+function horarioDeParada(comercio, llegada) {
+    const texto = String(comercio?.horario || "").trim();
+    if (!texto) return { tipo: "falta" };
+    const leido = window.datosComercioVendeFrio?.leerHorario?.(texto);
+    if (!leido) return { tipo: "otro" };
+    if (!leido.dias[(llegada.getDay() + 6) % 7]) return { tipo: "cerrado", texto: "Hoy no abre", cierre: -1 };
+    const minuto = llegada.getHours() * 60 + llegada.getMinutes();
+    const turnos = [leido.manana, leido.tarde].filter(turno => turno.prendido).sort((a, b) => a.desde - b.desde);
+    const adentro = turnos.find(turno => minuto >= turno.desde && minuto < turno.hasta);
+    if (adentro) {
+        const falta = adentro.hasta - minuto;
+        return falta <= 30
+            ? { tipo: "cierra", texto: "Cierra " + textoMinutosDelDia(adentro.hasta), cierre: adentro.hasta }
+            : { tipo: "abierto", texto: "Abierto hasta " + textoMinutosDelDia(adentro.hasta), cierre: adentro.hasta };
+    }
+    const despues = turnos.find(turno => turno.desde > minuto);
+    if (despues) return { tipo: "abre", texto: "Abre " + textoMinutosDelDia(despues.desde), cierre: despues.hasta };
+    return { tipo: "cerrado", texto: "Cerró " + textoMinutosDelDia(turnos[turnos.length - 1].hasta), cierre: turnos[turnos.length - 1].hasta };
+}
+
+function chipHorarioParada(comercio, llegada) {
+    const estado = horarioDeParada(comercio, llegada);
+    if (estado.tipo === "falta") return textoAgregarDato(comercio.nombre, "horario", "Agregar horario");
+    if (estado.tipo === "otro") return "";
+    const clase = { abierto: "pzChipOk", cierra: "pzChipAviso", abre: "pzChipInfo", cerrado: "pzChipPeligro" }[estado.tipo];
+    return `<span class="pzChip ${clase} chipHorarioParada">${window.piezas.esc(estado.texto)}</span>`;
+}
+
+// Las paradas que faltan y llegás cuando ya cerró (o hoy no abre).
+function paradasQueCierranAntes() {
+    const llegadas = llegadasRuta();
+    return rutaOrdenada.map((comercio, indice) => ({ comercio, estado: horarioDeParada(comercio, llegadas[indice]) }))
+        .filter(({ comercio, estado }) => estado.tipo === "cerrado" && !paradaHecha(comercio));
+}
+
+// «Ordenar»: primero las que cierran más temprano (de las que hoy abren),
+// las demás quedan en el orden que estaban.
+function ordenarPorHorarioRuta() {
+    const llegadas = llegadasRuta();
+    const conCierre = [];
+    const resto = [];
+    rutaOrdenada.forEach((comercio, indice) => {
+        const estado = horarioDeParada(comercio, llegadas[indice]);
+        if (!paradaHecha(comercio) && estado.cierre > 0 && ["cerrado", "cierra"].includes(estado.tipo)) conCierre.push({ comercio, cierre: estado.cierre });
+        else resto.push(comercio);
+    });
+    if (!conCierre.length) return;
+    conCierre.sort((a, b) => a.cierre - b.cierre);
+    const hechas = resto.filter(paradaHecha);
+    rutaOrdenada = [...hechas, ...conCierre.map(dato => dato.comercio), ...resto.filter(comercio => !paradaHecha(comercio))];
+    rutaReordenadaAMano = true;
+    recalcularDistanciasRuta();
+    pedirCaminoPlan();
+    mostrarRutaEnLista();
+    refrescarPines();
+    const quedan = paradasQueCierranAntes().length;
+    mostrarToast(quedan ? "Primero los que cierran antes. Igual " + quedan + (quedan === 1 ? " no llega" : " no llegan") + " a tiempo." : "Listo: primero los que cierran antes.");
+}
+
+// -------------------------------------------------
+// «Completar los datos» (imagen 5): horario y, si la ruta guardada tiene día,
+// el día de visita de cada comercio.
+// -------------------------------------------------
+
+const DIA_VISITA_RUTA = { domingo: "Domingo", lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado" };
+
+function diaVisitaDeLaRuta() {
+    return DIA_VISITA_RUTA[claveDiaRuta(rutaGuardadaActual?.dia)] || "";
+}
+
+function faltanDatosRuta() {
+    const dia = diaVisitaDeLaRuta();
+    return rutaOrdenada.map(parada => buscarComercioPorNombre(parada.nombre) || parada).map(comercio => ({
+        comercio,
+        horario: !String(comercio.horario || "").trim(),
+        dia: Boolean(dia) && !String(comercio.diaVisita || "").trim()
+    })).filter(dato => dato.horario || dato.dia);
+}
+
+function dibujarFaltanDatosRuta() {
+    const fila = document.getElementById("faltanDatosRutas");
+    if (!fila) return;
+    const cuantos = rutaOrdenada.length ? faltanDatosRuta().length : 0;
+    fila.hidden = cuantos === 0;
+    if (cuantos) fila.querySelector(".textoAvisoPlan").textContent = "Faltan datos de " + cuantos + (cuantos === 1 ? " comercio" : " comercios");
+}
+
+function dibujarCierranAntesRuta() {
+    const aviso = document.getElementById("cierranAntesRutas");
+    if (!aviso) return;
+    const cuantos = rutaOrdenada.length ? paradasQueCierranAntes().length : 0;
+    aviso.hidden = cuantos === 0;
+    if (cuantos) aviso.querySelector(".textoAvisoPlan").textContent = cuantos === 1 ? "1 cierra antes de que llegues" : cuantos + " cierran antes de que llegues";
+}
+
+function abrirCompletarDatosRuta() {
+    const p = window.piezas;
+    if (!p?.hoja) return;
+    const dia = diaVisitaDeLaRuta();
+    const filas = () => faltanDatosRuta().map(({ comercio, horario, dia: sinDia }) => `<div class="filaCompletarRuta" data-nombre="${p.esc(comercio.nombre)}">
+            <span class="avatarCompletarRuta ${p.colorIni(comercio.nombre)}">${p.esc(p.iniciales(comercio.nombre))}</span>
+            <strong>${p.esc(comercio.nombre)}</strong>
+            <span class="botonesCompletarRuta">
+                ${horario ? `<button type="button" class="pzBtn pzBtnSec" data-completar="horario">${window.icono("mas", 14)} Agregar horario</button>` : ""}
+                ${sinDia ? `<button type="button" class="pzBtn pzBtnSec" data-completar="dia">${window.icono("calendario", 14)} Guardar los ${p.esc(NOMBRES_DIAS_RUTA[claveDiaRuta(dia)] || dia)}</button>` : ""}
+            </span>
+        </div>`).join("");
+    const caja = p.hoja({
+        titulo: "Completar los datos",
+        sub: dia ? "Para avisarte si cierran y para saber qué comercios van los " + (NOMBRES_DIAS_RUTA[claveDiaRuta(dia)] || dia) + "." : "Para avisarte si un comercio cierra antes de que llegues.",
+        clase: "hojaCompletarRuta",
+        html: `<div class="listaCompletarRuta">${filas()}</div>`,
+        botones: [{ id: "listoCompletarRuta", texto: "Listo", clase: "pzBtnPri", cerrar: true }]
+    });
+    if (!caja) return;
+    const redibujar = () => {
+        const lista = caja.querySelector(".listaCompletarRuta");
+        if (!lista) return;
+        lista.innerHTML = filas() || `<p class="vacioParadas">${window.icono("check", 16)} Ya están todos los datos.</p>`;
+        mostrarRutaEnLista();
+    };
+    caja.addEventListener("click", evento => {
+        const boton = evento.target.closest("[data-completar]");
+        if (!boton) return;
+        const nombre = boton.closest(".filaCompletarRuta")?.dataset.nombre;
+        if (!nombre) return;
+        if (boton.dataset.completar === "dia") {
+            actualizarComercioPorNombre(nombre, { diaVisita: dia });
+            rutaOrdenada = rutaOrdenada.map(parada => parada.nombre === nombre ? (buscarComercioPorNombre(nombre) || parada) : parada);
+            redibujar();
+        } else {
+            agregarDatoEnRuta(nombre, "horario", () => abrirCompletarDatosRuta());
+        }
     });
 }
 
@@ -2067,6 +2220,8 @@ function prepararVistaPreviaRutas() {
     clic("btnNavegarRuta", iniciarNavegacionRuta);
     clic("btnParadasRutas", () => abrirPanelParadas());
     clic("btnMasRutas", abrirMenuRuta);
+    clic("cierranAntesRutas", ordenarPorHorarioRuta);
+    clic("faltanDatosRutas", abrirCompletarDatosRuta);
     clic("btnMasParadas", abrirMenuRuta);
     clic("btnCerrarParadas", cerrarPanelParadas);
     clic("btnListoParadas", cerrarPanelParadas);
@@ -2342,6 +2497,8 @@ function dibujarResumenPlan() {
         if (parrafo && parrafo.textContent !== texto) parrafo.textContent = texto;
         return;
     }
+    dibujarCierranAntesRuta();
+    dibujarFaltanDatosRuta();
     const cuenta = cuentaRuta();
     const numeros = document.getElementById("numerosPlanRutas");
     if (numeros) {

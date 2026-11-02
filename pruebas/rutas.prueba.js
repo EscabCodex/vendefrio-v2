@@ -220,3 +220,67 @@ test("rutas: pines marcados, depósito, guardar la ruta y filtros de paradas", a
     await page.evaluate(() => window.rutasVendeFrio.atras());
     await expect(pantalla).not.toHaveClass(/conParadasAbiertas/);
 });
+
+test("rutas: horarios de las paradas y completar los datos", async ({ page }) => {
+    // Lunes 10:00, para que los horarios den siempre lo mismo.
+    await page.clock.setFixedTime(new Date("2026-11-02T10:00:00-03:00"));
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.600, longitude: -58.380 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    await page.locator("#inicioNombrePersonal").fill("Jere");
+    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
+    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+
+    await page.evaluate(() => {
+        [
+            { nombre: "Almacén Uno", horario: "Todos los días · 8 a 20", diaVisita: "Lunes", minutosEnComercio: 30 },
+            { nombre: "Bar Dos", minutosEnComercio: 30 },
+            { nombre: "Kiosco Tres", horario: "Lun a vie · 8 a 10:30" },
+            { nombre: "Despensa Cuatro", horario: "Sáb · 9 a 13" }
+        ].forEach(({ nombre, ...datos }, i) => {
+            agregarComercio({ nombre, direccion: "Calle " + (i + 1), lat: -34.600, lng: -58.380 + (i + 1) * 0.003 });
+            actualizarComercioPorNombre(nombre, datos);
+        });
+    });
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
+    await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
+    const nombres = ["Almacén Uno", "Bar Dos", "Kiosco Tres", "Despensa Cuatro"];
+    await page.evaluate(nombres => armarRutaCon(nombres, { guardada: { id: "r1", nombre: "Zona Este", dia: "lunes", comercios: nombres } }), nombres);
+    const paradas = page.locator(".paradaOrden");
+    await expect(paradas).toHaveCount(4);
+    expect(await paradas.evaluateAll(lista => lista.map(parada => parada.dataset.nombre))).toEqual(nombres);
+
+    // Kiosco Tres cierra 10:30 y llegás pasadas las 11; Despensa Cuatro hoy no abre.
+    const cierran = page.locator("#cierranAntesRutas");
+    await expect(cierran).toHaveText("2 cierran antes de que lleguesOrdenar");
+    // Bar Dos sin horario y tres sin el día de la ruta (lunes).
+    await expect(page.locator("#faltanDatosRutas")).toHaveText("Faltan datos de 3 comerciosCompletar");
+    await capturar(page, "rutas-04-horarios");
+
+    await page.locator("#btnParadasRutas").click();
+    await expect(paradas.nth(0).locator(".chipHorarioParada")).toHaveText("Abierto hasta 20:00");
+    await expect(paradas.nth(1).locator("[data-agregar-dato='horario']")).toContainText("Agregar horario");
+    await expect(paradas.nth(2).locator(".chipHorarioParada")).toHaveText(/^Cerró 10:30$/);
+    await expect(paradas.nth(3).locator(".chipHorarioParada")).toHaveText("Hoy no abre");
+    await capturar(page, "rutas-05-paradas-con-horario");
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
+
+    // «Ordenar»: primero el que cierra antes; el que hoy no abre sigue avisado.
+    await cierran.click();
+    await expect(paradas.first()).toHaveAttribute("data-nombre", "Kiosco Tres");
+    await expect(cierran).toHaveText("1 cierra antes de que lleguesOrdenar");
+
+    // «Completar»: guardar el lunes de uno y el horario de otro desde ahí.
+    await page.locator("#faltanDatosRutas").click();
+    const completar = page.getByRole("dialog", { name: "Completar los datos" });
+    await expect(completar.locator(".filaCompletarRuta")).toHaveCount(3);
+    await capturar(page, "rutas-06-completar-datos");
+    await completar.locator(".filaCompletarRuta", { hasText: "Kiosco Tres" }).getByRole("button", { name: "Guardar los lunes" }).click();
+    await expect(completar.locator(".filaCompletarRuta")).toHaveCount(2);
+    expect(await page.evaluate(() => buscarComercioPorNombre("Kiosco Tres").diaVisita)).toBe("Lunes");
+    await completar.locator(".filaCompletarRuta", { hasText: "Bar Dos" }).getByRole("button", { name: "Agregar horario" }).click();
+    await expect(page.locator(".datosHorario")).toBeVisible();
+});

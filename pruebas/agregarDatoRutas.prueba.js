@@ -49,9 +49,9 @@ test("rutas: agregar la dirección que falta sin salir de Rutas", async ({ page 
     // En la lista de Paradas, igual.
     await pantalla.locator(".hojaPlanRutas").getByRole("button", { name: "Paradas" }).click();
     const fila = page.locator(".paradaOrden", { hasText: "Kiosco Sin Datos" });
-    await expect(fila.locator(".agregarDatoRuta")).toHaveText("Agregar dirección");
+    await expect(fila.locator(".agregarDatoRuta[data-agregar-dato='direccion']")).toHaveText("Agregar dirección");
     await capturar(page, "agregarDato-02-paradas");
-    await fila.locator(".agregarDatoRuta").click();
+    await fila.locator(".agregarDatoRuta[data-agregar-dato='direccion']").click();
     const datos = page.getByRole("dialog", { name: "Datos del comercio" });
     await expect(datos).toBeVisible();
     await expect(datos.locator("#modalDireccion")).toBeFocused();
@@ -62,7 +62,7 @@ test("rutas: agregar la dirección que falta sin salir de Rutas", async ({ page 
     // Sigue en Rutas, con la dirección nueva en la parada.
     await expect(pantalla).toBeVisible();
     await expect(fila).toContainText("Belgrano 45");
-    await expect(fila.locator(".agregarDatoRuta")).toHaveCount(0);
+    await expect(fila.locator(".agregarDatoRuta[data-agregar-dato='direccion']")).toHaveCount(0);
 });
 
 test("navegación: agregar dirección y teléfono sin salir de la navegación", async ({ page }) => {

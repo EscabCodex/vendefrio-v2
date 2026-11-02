@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 264,
+      "fecha": "2026-11-02",
+      "tipo": "nuevo",
+      "icono": "alarma",
+      "titulo": "Rutas con horarios",
+      "texto": "Cada parada dice si está abierta cuando llegás. Te avisa si alguno cierra antes y te deja completar datos."
+    },
+    {
       "version": 263,
       "fecha": "2026-11-02",
       "tipo": "nuevo",

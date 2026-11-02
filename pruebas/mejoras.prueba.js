@@ -260,7 +260,9 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     // La ruta más corta empieza por Despensa Mary, aunque Kiosco Luna esté más cerca.
     await expect(paradas.first()).toHaveAttribute("data-nombre", "Despensa Mary");
     await expect(paradas.first()).toContainText("min");
-    await expect(paradas.first().locator(".llevaParada")).toHaveCount(0);
+    // Sin pedido no lleva nada; sin horario, «+ Agregar horario».
+    await expect(paradas.first().locator(".llevaParada .pzChip")).toHaveCount(0);
+    await expect(paradas.first().locator("[data-agregar-dato='horario']")).toHaveText("Agregar horario");
     await expect(paradas.filter({ hasText: "Kiosco Luna" })).toContainText("Lleva 3 u · $ 9.800");
     // La próxima es la primera tarjeta del carrusel; en su ⋯, Hacer pedido
     // y Pasé, sin pedido (repaso de Rutas).
