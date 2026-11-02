@@ -356,63 +356,21 @@
   </button>
 </nav>
 
-<div id="modalAviso" class="modal modalHoja oculto">
-  <div class="modalContenido">
-    <h2 id="tituloAviso">Aviso</h2>
-    <p id="mensajeAviso" style="margin: 15px 0; color: #374151;"></p>
-
-    <div class="modalBotones">
-      <button id="cerrarAviso" class="btnModalConfirmar" style="width: 100%;">
-        Entendido
-      </button>
+<!-- Marca y producto: hoja de piezas, con la manija y sin "Cancelar"
+     (se cierra arrastrando, tocando afuera o con el atrás). Las clases
+     pzFondo y pzHoja se ponen solo mientras está abierta. -->
+<div id="modalProducto" class="oculto">
+  <div class="hojaProducto" role="dialog" aria-modal="true" aria-labelledby="modalProductoTitulo">
+    <div class="pzAsa"></div>
+    <h2 id="modalProductoTitulo" class="pzHojaTit">Producto</h2>
+    <p id="modalProductoSub" class="pzHojaSub" hidden></p>
+    <div class="pzHojaCuerpo">
+      <label id="labelMarca" class="pzCampo"><span>Marca</span><select id="productoMarca"></select></label>
+      <label class="pzCampo"><span>Nombre</span><input id="productoNombre" type="text" placeholder="Por ejemplo, Helado 1 kg"></label>
+      <label id="labelPrecio" class="pzCampo"><span>Precio</span><input id="productoPrecio" type="number" inputmode="decimal" placeholder="0"></label>
     </div>
-  </div>
-</div>
-
-<div id="modalConfirmacion" class="modal modalHoja oculto">
-  <div class="modalContenido">
-    <h2 id="tituloConfirmacion">Confirmar</h2>
-
-    <p id="mensajeConfirmacion">
-      ¿Estás seguro de realizar esta acción?
-    </p>
-
-    <div class="modalBotones">
-      <button id="cancelarConfirmacion" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="aceptarConfirmacion" class="btnModalPeligro">
-        Aceptar
-      </button>
-    </div>
-  </div>
-</div>
-
-<div id="modalProducto" class="modal modalHoja oculto">
-  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="modalProductoTitulo">
-    <h2 id="modalProductoTitulo">Producto</h2>
-
-    <label id="labelMarca" for="productoMarca">Marca</label>
-    <select id="productoMarca"></select>
-
-    <label for="productoNombre">Nombre</label>
-    <input id="productoNombre" type="text" placeholder="Por ejemplo, Helado 1 kg">
-
-    <label id="labelPrecio" for="productoPrecio">Precio</label>
-    <input id="productoPrecio" type="number" inputmode="decimal" placeholder="0">
-
-    <div class="modalBotones">
-      <button id="cancelarProducto" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="guardarProducto" class="btnModalConfirmar">
-        Guardar
-      </button>
-    </div>
-
-    <button id="archivarDesdeModal" class="botonArchivarModal oculto" type="button"><i data-ico="archivo" data-ico-tam="18"></i>Archivar producto</button>
+    <button id="guardarProducto" class="pzBtn pzBtnPri" type="button"><i data-ico="check" data-ico-tam="18"></i>Guardar</button>
+    <button id="archivarDesdeModal" class="pzBtn pzBtnSec oculto" type="button"><i data-ico="archivo" data-ico-tam="18"></i>Archivar producto</button>
   </div>
 </div>
 

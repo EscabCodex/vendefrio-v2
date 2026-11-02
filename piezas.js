@@ -216,6 +216,53 @@
         return caja;
     }
 
+    // Ventana del medio que se abre ENCIMA de lo que haya abierto (un aviso
+    // o un "¿Seguro?" sobre una hoja) sin cerrarlo: modal() deja una sola
+    // abierta a la vez. Cada botón la cierra, salvo que alTocar devuelva false.
+    function ventanaEncima({ icono = "alerta", color = "aviso", titulo = "", texto = "", botones = [], id = "", alCerrarFuera } = {}) {
+        const fondo = document.createElement("div");
+        fondo.className = "pzFondo pzFondoCentro";
+        const caja = document.createElement("div");
+        caja.className = "pzModal";
+        if (id) caja.id = id;
+        caja.setAttribute("role", "alertdialog");
+        caja.setAttribute("aria-modal", "true");
+        caja.setAttribute("aria-label", titulo);
+        caja.innerHTML = `<div class="pzIconoGrande pzIcono${color[0].toUpperCase() + color.slice(1)}">${ico(icono, 28)}</div>
+            <h3>${esc(titulo)}</h3>${texto ? `<p>${esc(texto)}</p>` : ""}`;
+        let cerrada = false;
+        const cerrarEsta = () => {
+            if (cerrada) return;
+            cerrada = true;
+            fondo.classList.remove("visible");
+            setTimeout(() => fondo.remove(), 200);
+        };
+        const contenedor = botones.length === 2 ? document.createElement("div") : null;
+        if (contenedor) contenedor.className = "pzBotones";
+        botones.forEach(datos => {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "pzBtn " + (datos.clase || "pzBtnPri");
+            boton.innerHTML = (datos.icono ? ico(datos.icono, 18) : "") + esc(datos.texto);
+            if (datos.id) boton.id = datos.id;
+            boton.addEventListener("click", async () => {
+                const seguir = typeof datos.alTocar === "function" ? (await datos.alTocar(caja, boton)) !== false : true;
+                if (seguir) cerrarEsta();
+            });
+            (contenedor || caja).appendChild(boton);
+        });
+        if (contenedor) caja.appendChild(contenedor);
+        fondo.addEventListener("click", evento => {
+            if (evento.target !== fondo) return;
+            if (typeof alCerrarFuera === "function") alCerrarFuera();
+            cerrarEsta();
+        });
+        fondo.appendChild(caja);
+        document.body.appendChild(fondo);
+        requestAnimationFrame(() => fondo.classList.add("visible"));
+        return caja;
+    }
+
     // Pregunta y devuelve una promesa con true (sí) o false (no).
     function preguntar({ icono, color, titulo, texto, si = "Sí", no = "Cancelar", claseSi = "pzBtnPri", html = "" }) {
         return new Promise(resolver => {
@@ -858,7 +905,7 @@
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer, tocable, menu, lupa,
+        hoja, modal, ventanaEncima, preguntar, cerrar, deshacer, tocable, menu, lupa,
         avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

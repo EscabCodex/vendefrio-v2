@@ -13,14 +13,7 @@ const filtrosEstadoComercios = document.getElementById("filtrosEstadoComercios")
 const cantidadComercios = document.getElementById("cantidadComercios");
 const botonAgregar = document.getElementById("agregarComercio");
 
-const modalConfirmacion = document.getElementById("modalConfirmacion");
-const tituloConfirmacion = document.getElementById("tituloConfirmacion");
-const mensajeConfirmacion = document.getElementById("mensajeConfirmacion");
-const cancelarConfirmacion = document.getElementById("cancelarConfirmacion");
-const aceptarConfirmacion = document.getElementById("aceptarConfirmacion");
-
 let comercioSeleccionado = null;
-let accionConfirmada = null;
 let comercioMostradoIndividual = "";
 
 // Es la misma lista que la de Nuevo pedido (#listaComercios): se arma ahí,
@@ -588,8 +581,8 @@ if (listaComerciosAdmin) {
 
         if (elemento.classList.contains("eliminarBtn")) {
             abrirConfirmacion(
-                "Eliminar para siempre",
-                "Se borra \"" + nombre + "\". Sus pedidos viejos quedan en el historial. ¿Seguro?",
+                "¿Eliminar «" + nombre + "» para siempre?",
+                "Sus pedidos viejos quedan en Terminados.",
                 () => {
                     const comercio = buscarComercioPorNombre(nombre);
                     if (comercio) eliminarComercioPorId(comercio.id);
@@ -602,39 +595,26 @@ if (listaComerciosAdmin) {
     });
 }
 
+// "¿Seguro?" en una ventana del medio, encima de lo que esté abierto. Para
+// eliminar o borrar lleva el tacho rojo y el botón dice "Eliminar"/"Borrar".
 function abrirConfirmacion(titulo, mensaje, accion) {
-    tituloConfirmacion.textContent = titulo;
-    mensajeConfirmacion.textContent = mensaje;
-    accionConfirmada = accion;
-    modalConfirmacion.classList.remove("oculto");
-}
-
-function cerrarConfirmacion() {
-    modalConfirmacion.classList.add("oculto");
-    accionConfirmada = null;
-}
-
-if (cancelarConfirmacion) cancelarConfirmacion.onclick = cerrarConfirmacion;
-
-if (aceptarConfirmacion) {
-    aceptarConfirmacion.onclick = () => {
-        const accion = accionConfirmada;
-        cerrarConfirmacion();
-        if (accion) accion();
-    };
-}
-
-if (modalConfirmacion) {
-    modalConfirmacion.addEventListener("click", event => {
-        if (event.target === modalConfirmacion) cerrarConfirmacion();
+    const borra = /^¿?(Eliminar|Borrar)/.exec(String(titulo || ""));
+    const si = borra ? borra[1] : "Aceptar";
+    if (!window.piezas?.ventanaEncima) {
+        if (window.confirm(titulo + "\n" + mensaje) && accion) accion();
+        return;
+    }
+    window.piezas.ventanaEncima({
+        id: "modalConfirmacion",
+        icono: borra ? "tacho" : "alerta",
+        color: borra ? "peligro" : "aviso",
+        titulo, texto: mensaje,
+        botones: [
+            { texto: "Cancelar", clase: "pzBtnGris", id: "cancelarConfirmacion" },
+            { texto: si, clase: "pzBtnPeligro", id: "aceptarConfirmacion", alTocar: () => { if (accion) accion(); } }
+        ]
     });
 }
-
-document.addEventListener("keydown", event => {
-    if (event.key !== "Escape") return;
-    cerrarConfirmacion();
-    if (typeof cerrarModalProducto === "function") cerrarModalProducto();
-});
 
 actualizarDatalist();
 renderizarComercios();

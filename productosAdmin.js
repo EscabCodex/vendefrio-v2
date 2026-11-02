@@ -14,7 +14,6 @@ const productoMarca = document.getElementById("productoMarca");
 const productoNombre = document.getElementById("productoNombre");
 const productoPrecio = document.getElementById("productoPrecio");
 const guardarProducto = document.getElementById("guardarProducto");
-const cancelarProducto = document.getElementById("cancelarProducto");
 const labelMarca = document.getElementById("labelMarca");
 const labelPrecio = document.getElementById("labelPrecio");
 
@@ -303,7 +302,23 @@ if (buscarProducto) {
 }
 
 function mostrarCampo(elemento, mostrar) {
-    if (elemento) elemento.style.display = mostrar ? "block" : "none";
+    if (elemento) elemento.style.display = mostrar ? "" : "none";
+}
+
+// La hoja de marca y producto (como las de piezas.js): sube desde abajo, con
+// el fondo difuminado. Debajo del título, de qué marca es (al editar).
+function mostrarHojaProducto(sub = "") {
+    if (!modalProducto) return;
+    const subtitulo = document.getElementById("modalProductoSub");
+    if (subtitulo) {
+        subtitulo.textContent = sub;
+        subtitulo.hidden = !sub;
+    }
+    clearTimeout(mostrarHojaProducto.cierre);
+    modalProducto.classList.add("pzFondo");
+    modalProducto.firstElementChild.classList.add("pzHoja");
+    modalProducto.classList.remove("oculto");
+    requestAnimationFrame(() => modalProducto.classList.add("visible"));
 }
 
 function abrirModalNuevaMarca() {
@@ -319,11 +334,11 @@ function abrirModalNuevaMarca() {
     productoNombre.value = "";
     productoPrecio.value = "";
     mostrarArchivarEnModal(false);
-    modalProducto.classList.remove("oculto");
+    mostrarHojaProducto();
 }
 
 function confirmarEliminarMarca(marca) {
-    abrirConfirmacion("Eliminar marca", `\u00bfEliminar "${marca}"?`, () => {
+    abrirConfirmacion(`\u00bfEliminar la marca \u00ab${marca}\u00bb?`, "Se borra con todos sus productos.", () => {
         eliminarMarca(marca);
         if (marcaDeLaFicha === marca) cerrarFichaMarca();
         renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
@@ -674,7 +689,7 @@ function abrirModalNuevoProducto(marcaElegida) {
     cargarSelectMarcas();
     if (typeof marcaElegida === "string" && marcas.includes(marcaElegida)) productoMarca.value = marcaElegida;
     mostrarArchivarEnModal(false);
-    modalProducto.classList.remove("oculto");
+    mostrarHojaProducto();
 }
 
 function abrirModalEditarMarca(nombre) {
@@ -689,7 +704,7 @@ function abrirModalEditarMarca(nombre) {
     mostrarCampo(productoPrecio, false);
     productoNombre.value = nombre;
     mostrarArchivarEnModal(false);
-    modalProducto.classList.remove("oculto");
+    mostrarHojaProducto();
 }
 
 function abrirModalEditarProducto(id) {
@@ -709,7 +724,7 @@ function abrirModalEditarProducto(id) {
     productoNombre.value = producto.nombre;
     productoPrecio.value = producto.precio;
     mostrarArchivarEnModal(true);
-    modalProducto.classList.remove("oculto");
+    mostrarHojaProducto(encontrado.marca);
 }
 
 // Al editar un producto, "Archivar producto" va abajo de la ventana (T166).
@@ -727,12 +742,17 @@ if (botonArchivarDesdeModal) {
 }
 
 function cerrarModalProducto() {
-    if (modalProducto) modalProducto.classList.add("oculto");
+    if (!modalProducto || modalProducto.classList.contains("oculto")) return;
+    modalProducto.classList.remove("visible");
+    mostrarHojaProducto.cierre = setTimeout(() => {
+        modalProducto.classList.add("oculto");
+        modalProducto.classList.remove("pzFondo");
+        modalProducto.firstElementChild.classList.remove("pzHoja");
+    }, 200);
 }
 
 if (botonAgregarMarca) botonAgregarMarca.onclick = abrirModalNuevaMarca;
 if (botonAgregarProducto) botonAgregarProducto.onclick = abrirModalNuevoProducto;
-if (cancelarProducto) cancelarProducto.onclick = cerrarModalProducto;
 
 if (modalProducto) {
     modalProducto.addEventListener("click", event => {

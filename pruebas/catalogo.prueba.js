@@ -92,7 +92,16 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await friosur.getByRole("button", { name: "Agregar producto a Frío Sur" }).click();
     await expect(page.locator("#productoMarca")).toHaveValue("Frío Sur");
     await expect(page.locator("#archivarDesdeModal")).toBeHidden();
-    await page.locator("#cancelarProducto").click();
+    // Sin nombre: el aviso sale encima y la hoja sigue abierta debajo.
+    await page.locator("#guardarProducto").click();
+    await expect(page.locator("#modalAviso")).toContainText("Falta el nombre");
+    await expect(page.locator("#modalProducto")).toBeVisible();
+    await page.locator("#cerrarAviso").click();
+    await expect(page.locator("#modalAviso")).toBeHidden();
+    await expect(page.locator("#modalProducto")).toBeVisible();
+    // Es una hoja con manija: se cierra tocando afuera (ya no hay "Cancelar").
+    await page.locator("#modalProducto").click({ position: { x: 20, y: 20 } });
+    await expect(page.locator("#modalProducto")).toBeHidden();
 
     // El nombre abre la ficha de la marca: sus números y sus productos.
     await page.getByRole("button", { name: "Ficha de Pastas Doña Rosa" }).click();

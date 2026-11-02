@@ -41,32 +41,32 @@ test("hojas: suben desde abajo, se cierran deslizando y el aviso sin cuenta va e
     if (await formulario.isVisible()) await formulario.getByRole("button", { name: "Guardar y entrar" }).click();
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
-    // "¿Seguro?": sube desde abajo, pegada al borde de la pantalla.
-    await page.evaluate(() => abrirConfirmacion("Eliminar comercio", "¿Seguro que querés eliminar «Kiosco Luna»?", () => {}));
+    // "¿Seguro?": ventana del medio con el tacho, encima de todo. Tocar
+    // afuera la cierra sin hacer nada.
+    await page.evaluate(() => { window.__borrado = false; abrirConfirmacion("¿Eliminar «Kiosco Luna» para siempre?", "Sus pedidos viejos quedan en Terminados.", () => { window.__borrado = true; }); });
     const confirmar = page.locator("#modalConfirmacion");
-    const hojaConfirmar = confirmar.locator(".modalContenido");
     await expect(confirmar).toBeVisible();
-    await expect(confirmar).toHaveClass(/modalHoja/);
-    const caja = await hojaConfirmar.boundingBox();
-    expect(Math.round(caja.y + caja.height)).toBeGreaterThanOrEqual(843);
+    await expect(confirmar.getByRole("button", { name: "Eliminar" })).toBeVisible();
+    const caja = await confirmar.boundingBox();
+    expect(caja.y).toBeGreaterThan(150);
+    expect(caja.y + caja.height).toBeLessThan(700);
     await capturar(page, "hojas-02-seguro");
-
-    // Un arrastre cortito no la cierra; uno largo sí.
-    await arrastrarHacia(page, hojaConfirmar, 40);
-    await page.waitForTimeout(400);
-    await expect(confirmar).toBeVisible();
-    await arrastrarHacia(page, hojaConfirmar, 260);
+    await page.mouse.click(20, 20);
     await expect(confirmar).toBeHidden();
+    expect(await page.evaluate(() => window.__borrado)).toBe(false);
+    await page.evaluate(() => abrirConfirmacion("¿Eliminar «Kiosco Luna» para siempre?", "", () => { window.__borrado = true; }));
+    await confirmar.getByRole("button", { name: "Eliminar" }).click();
+    await expect(confirmar).toBeHidden();
+    expect(await page.evaluate(() => window.__borrado)).toBe(true);
 
-    // Un aviso también, y se puede volver a abrir bien puesto.
+    // Un aviso también va al medio y un aviso nuevo reemplaza al anterior.
     await page.evaluate(() => mostrarAviso("No se guardaron los datos", "Revisá la señal y probá de nuevo."));
     const avisoVentana = page.locator("#modalAviso");
     await expect(avisoVentana).toBeVisible();
-    await arrastrarHacia(page, avisoVentana.locator(".modalContenido"), 260);
-    await expect(avisoVentana).toBeHidden();
     await page.evaluate(() => mostrarAviso("Otra vez", "Se vuelve a abrir en su lugar."));
-    await expect(avisoVentana.locator(".modalContenido")).toHaveCSS("transform", "none");
-    await page.locator("#modalAviso").getByRole("button").first().click();
+    await expect(avisoVentana).toHaveCount(1);
+    await expect(avisoVentana).toContainText("Otra vez");
+    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
     await expect(avisoVentana).toBeHidden();
 
     // Las hojas nuevas (Catálogo > tres puntitos > Editar datos) también.

@@ -747,46 +747,18 @@ function mostrarToast(mensaje, tipo) {
 }
 window.mostrarToast = mostrarToast;
 
+// Aviso en una ventana del medio, encima de lo que esté abierto (no cierra
+// la hoja de debajo). Un aviso nuevo reemplaza al anterior.
 function mostrarAviso(titulo, mensaje) {
-    let modalAviso = document.getElementById("modalAviso");
-
-    if (!modalAviso) {
-        modalAviso = document.createElement("div");
-        modalAviso.id = "modalAviso";
-        modalAviso.className = "modal modalHoja oculto";
-        modalAviso.innerHTML = `
-            <div class="modalContenido">
-                <h2 id="tituloAviso"></h2>
-                <p id="mensajeAviso"></p>
-                <div class="modalBotones">
-                    <button id="cerrarAviso" class="btnModalConfirmar" type="button">
-                        Entendido
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modalAviso);
-
-        const cerrarAviso = () => {
-            modalAviso.classList.add("oculto");
-        };
-
-        document.getElementById("cerrarAviso").addEventListener(
-            "click",
-            cerrarAviso
-        );
-
-        modalAviso.addEventListener("click", event => {
-            if (event.target === modalAviso) {
-                cerrarAviso();
-            }
-        });
+    document.getElementById("modalAviso")?.closest(".pzFondo")?.remove();
+    if (!window.piezas?.ventanaEncima) {
+        mostrarToast(titulo + ". " + mensaje);
+        return;
     }
-
-    document.getElementById("tituloAviso").textContent = titulo;
-    document.getElementById("mensajeAviso").textContent = mensaje;
-    modalAviso.classList.remove("oculto");
+    window.piezas.ventanaEncima({
+        id: "modalAviso", icono: "alerta", color: "aviso", titulo, texto: mensaje,
+        botones: [{ texto: "Entendido", clase: "pzBtnPri", id: "cerrarAviso" }]
+    });
 }
 
 function colorMarca(indice) {
@@ -2347,28 +2319,7 @@ function prepararControlesRespaldo() {
     const botonExportar = document.getElementById("exportarRespaldo");
     const botonImportar = document.getElementById("importarRespaldo");
     const archivoRespaldo = document.getElementById("archivoRespaldo");
-    const modalAviso = document.getElementById("modalAviso");
-    const cerrarAviso = document.getElementById("cerrarAviso");
-
     crearControlCombinarRespaldo(botonImportar);
-
-    if (cerrarAviso && !cerrarAviso.dataset.configurado) {
-        cerrarAviso.addEventListener("click", () => {
-            if (modalAviso) modalAviso.classList.add("oculto");
-        });
-
-        cerrarAviso.dataset.configurado = "true";
-    }
-
-    if (modalAviso && !modalAviso.dataset.configurado) {
-        modalAviso.addEventListener("click", event => {
-            if (event.target === modalAviso) {
-                modalAviso.classList.add("oculto");
-            }
-        });
-
-        modalAviso.dataset.configurado = "true";
-    }
 
     if (botonExportar) {
         botonExportar.addEventListener("click", exportarRespaldo);

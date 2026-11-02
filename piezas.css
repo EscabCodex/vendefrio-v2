@@ -866,11 +866,11 @@ html[data-tema] .modal.modalHoja .modalBotones button{
 }
 html[data-tema] .modal.modalHoja .btnModalCancelar{background:var(--superficie-2);color:var(--texto);}
 html[data-tema] .modal.modalHoja .btnModalConfirmar{background:var(--acento);color:var(--acento-txt);}
-.botonArchivarModal{
-  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:8px;
-  border:0;background:transparent;color:var(--peligro);font:inherit;font-size:14.5px;font-weight:650;cursor:pointer;
-}
-.botonArchivarModal.oculto{display:none;}
+/* Marca y producto (productosAdmin.js) en una hoja de piezas; el aviso y el
+   "¿Seguro?" van al medio, por encima de todo lo abierto. */
+#modalProducto.oculto,#archivarDesdeModal.oculto{display:none !important;}
+.pzFondo:has(> #modalAviso),.pzFondo:has(> #modalConfirmacion){z-index:10080;}
+#modalAviso p{white-space:pre-line;max-height:45vh;overflow-y:auto;}
 
 /* "Pedido generado" */
 #modalPedido .cabezaPedidoGenerado{display:flex;align-items:center;gap:12px;margin:6px 4px 14px;}
@@ -1008,7 +1008,7 @@ html[data-tema] #listaVistaPedidos .marcadorFechaHistorial:first-child{margin-to
 html[data-tema] .modal.modalHoja:not(.oculto) .modalContenido{animation:subirHoja .22s ease-out;}
 html[data-tema] .modal.modalHoja .modalContenido > p{text-align:left;}
 html[data-tema] .modal.modalHoja .modalBotones:has(> :nth-child(3)){grid-template-columns:1fr;}
-html[data-tema] #modalAviso.modalHoja,html[data-tema] #modalConfirmacion.modalHoja,html[data-tema] .modal.modalHoja.waConfirmar{z-index:10070 !important;}
+html[data-tema] .modal.modalHoja.waConfirmar{z-index:10070 !important;}
 /* Mientras se arrastra la hoja, sin transición; al soltar, vuelve suave. */
 .hojaArrastrando{transition:none !important;animation:none !important;}
 .hojaSoltando{transition:transform .2s ease-out !important;}

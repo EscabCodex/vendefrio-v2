@@ -729,13 +729,6 @@ html[data-tema="oscuro"] .toast{
   box-sizing:border-box;
 }
 
-#mensajeConfirmacion{
-  font-size:15px;
-  color:var(--texto-sec);
-  text-align:center;
-  line-height:1.5;
-}
-
 #modalPedido .modalContenido p{
   margin-top:8px;
   font-size:15px;
@@ -954,23 +947,8 @@ body > nav.bottom-nav {
 }
 .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 
-.modalContenido #mensajeAviso{
-  white-space:pre-line;
-  text-align:left;
-  line-height:1.55;
-  max-height:45vh;
-  overflow-y:auto;
-}
-
 #listaRutaOrdenada{
   counter-reset: parada;
-}
-
-/* =====================================================
-   MODAL DE AVISOS POR ENCIMA DE OTROS MODALES
-===================================================== */
-#modalAviso {
-  z-index: 4000 !important;
 }
 
 /* =====================================================
