@@ -1875,6 +1875,20 @@
     }
 
     // Modo personal (T16d): nombre y roles de quien usa la app sin cuenta.
+    // Repaso de Rutas: el depósito, para salir o volver ahí. Se guarda en
+    // este celular (Rutas, «Desde vos ▾»); tocarlo abre Rutas con su hoja.
+    function htmlDeposito() {
+        let deposito = null;
+        try {
+            deposito = (JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}").lugares || {}).deposito || null;
+        } catch (error) {
+            deposito = null;
+        }
+        const tiene = deposito && Number.isFinite(Number(deposito.lat)) && deposito.lat !== "" && deposito.lat !== null;
+        const texto = tiene ? (String(deposito.direccion || "").trim() || "Marcado en el mapa") : "+ Agregar dirección del depósito";
+        return filaAccion("tienda", "azul", "Depósito", escaparTexto(texto), 'data-accion="depositoRutas"');
+    }
+
     function htmlModoPersonal() {
         const inicio = window.inicioVendeFrio;
         const datos = inicio?.usaModoPersonal?.() ? inicio.datosPersonales() : null;
@@ -1892,6 +1906,7 @@
             <button type="button" data-accion="cambiarDatosPersonales">
                 Cambiar mi nombre y mis roles
             </button>
+            ${grupo("Para tus rutas", htmlDeposito())}
         `;
     }
 
@@ -1934,6 +1949,7 @@
                     <h3 class="ajGrupoTitulo">Tu distribuidora</h3>
                     <div class="ajTarjeta">
                         ${htmlNombreDistribuidora()}
+                        ${htmlDeposito()}
                         ${htmlDatosTicket()}
                         ${htmlCobroTransferencia()}
                         ${htmlDistribuidora()}
@@ -2392,6 +2408,12 @@
 
         // Salir lleva siempre a la pantalla de inicio (T16c). Como el
         // empleado, el dueño no sale con cambios sin subir.
+        if (accion === "depositoRutas") {
+            if (typeof mostrarPantalla === "function") mostrarPantalla("rutas");
+            setTimeout(() => window.rutasVendeFrio?.abrirLugar?.("deposito"), 250);
+            return;
+        }
+
         if (accion === "salirCuenta") {
             const boton = event.target.closest("[data-accion]");
             const nube = window.nubeVendeFrio;

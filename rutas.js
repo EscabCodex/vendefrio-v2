@@ -2467,6 +2467,11 @@ window.rutasVendeFrio = {
         refrescarPines();
         return lugar;
     },
+    // Más > Cuenta > Depósito: la misma hoja de «Desde vos ▾».
+    abrirLugar(clave) {
+        if (!LUGARES_RUTAS[clave]) return;
+        abrirHojaLugarRutas(clave, cambioLugaresRutas);
+    },
     // La navegación terminó la última parada de una ruta empezada acá.
     alTerminarRecorrido() {
         if (leerJsonRutas(CLAVE_RUTA_EN_CURSO, null)) abrirCierreRuta();

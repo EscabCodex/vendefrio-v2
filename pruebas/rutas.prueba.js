@@ -284,3 +284,29 @@ test("rutas: horarios de las paradas y completar los datos", async ({ page }) =>
     await completar.locator(".filaCompletarRuta", { hasText: "Bar Dos" }).getByRole("button", { name: "Agregar horario" }).click();
     await expect(page.locator(".datosHorario")).toBeVisible();
 });
+
+test("rutas: el depósito también desde Más > Cuenta", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    await page.locator("#inicioNombrePersonal").fill("Jere");
+    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
+    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator('[data-config-seccion="cuenta"]').click();
+    const fila = page.getByRole("button", { name: "Depósito" });
+    await expect(fila).toContainText("+ Agregar dirección del depósito");
+    await fila.click();
+    await expect(page.locator("#pantallaRutas")).toBeVisible();
+    const hoja = page.getByRole("dialog", { name: "Dónde está el depósito" });
+    await expect(hoja).toBeVisible();
+    await hoja.locator("#direccionLugarRutas").fill("Av. Rivadavia 1234");
+    await hoja.getByRole("button", { name: "Marcarlo en el mapa" }).click();
+    await expect(page.locator("#barraMoverPin")).toContainText("Tocá en el mapa");
+    const mapa = await page.locator("#mapaRuta").boundingBox();
+    await page.mouse.click(mapa.x + mapa.width / 2, mapa.y + mapa.height / 2);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}").lugares?.deposito?.direccion)).toBe("Av. Rivadavia 1234");
+    await page.evaluate(() => mostrarPantalla("mas"));
+    await page.locator('[data-config-seccion="cuenta"]').click();
+    await expect(page.getByRole("button", { name: "Depósito" })).toContainText("Av. Rivadavia 1234");
+});
