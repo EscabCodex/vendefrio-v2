@@ -1108,6 +1108,7 @@ document.getElementById("cerrarCargaPedido")?.addEventListener("click", () => mo
 document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", event => {
         event.preventDefault();
+        window.lugarVendeFrio?.cerrarCapas?.();
         // El + abre el menú "Crear" (nuevoPedido.js).
         if (btn.dataset.accion === "crear") {
             if (window.nuevoPedidoVendeFrio?.abrirMenuCrear) window.nuevoPedidoVendeFrio.abrirMenuCrear();

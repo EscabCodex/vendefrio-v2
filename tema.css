@@ -119,8 +119,7 @@ html .card,
 html .configGrupo,
 html .tarjetaSeguimiento,
 html .tarjetaComercio,
-html .tarjetaProducto,
-html .tarjetaHistorial{
+html .tarjetaProducto{
   background:var(--superficie);
   color:var(--texto);
   border:var(--borde-tarjeta);
@@ -141,8 +140,7 @@ html .card h2{font-size:17px;font-weight:700;}
 
 /* ---------- Botones ---------- */
 
-html .btnAccion,
-html .menuBtn{
+html .btnAccion{
   min-height:46px;
   border-radius:var(--radio-pildora);
   border:0;
@@ -155,8 +153,6 @@ html .btnAccion.ver,
 html .btnAccion.secundario,
 html .btnAccion.editar{background:var(--acento-bg);color:var(--acento-oscuro);}
 html .btnAccion.eliminar{background:var(--peligro-bg);color:var(--peligro);}
-
-html .menuBtn{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);border:var(--borde-tarjeta);}
 
 /* ---------- Campos ---------- */
 
@@ -249,8 +245,6 @@ html .toast{border-radius:var(--radio-pildora);}
 /* La barra ahora termina 80px arriba del borde (antes 64px). */
 
 html .indicadorNube{bottom:calc(88px + env(safe-area-inset-bottom));}
-html .cartelModoPersonal{left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));bottom:calc(88px + env(safe-area-inset-bottom));border-radius:16px;}
-html.conCartelPersonal .botonNuevoPedido{bottom:calc(108px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
 html .editarPedido .modalBotones,
 html .entregaPedido .modalBotones,
 html .cobroPedido .modalBotones,
@@ -647,7 +641,6 @@ html.enCargaPedido body{padding-bottom:0;}
 html.enCargaPedido .indicadorNube{display:none;}
 html #pantallaPedido main.container{padding-bottom:calc(120px + env(safe-area-inset-bottom)) !important;}
 html #pantallaPedido[data-vista="pedidos"] main.container{padding-bottom:calc(170px + env(safe-area-inset-bottom)) !important;}
-html.conCartelPersonal.enCargaPedido .cartelModoPersonal{bottom:calc(96px + env(safe-area-inset-bottom));}
 
 .botonCerrarCarga,
 html .botonVolverPedidos{
@@ -770,7 +763,6 @@ html .fichaPedido .modalBotones .btnModalSecundario{border-radius:var(--radio-pi
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);
   background:var(--superficie);box-shadow:var(--sombra);
 }
-.numeroFichaPedido{margin:0;font-size:13px;font-weight:700;color:var(--texto-ter);letter-spacing:.02em;}
 html .fichaPedido .tarjetaFichaPedido h2{margin:0;font-size:22px;font-weight:800;text-align:left;}
 .direccionFichaPedido{margin:0;font-size:14px;color:var(--texto-sec);}
 html .tarjetaFichaPedido .etiquetasFichaPedido{justify-content:flex-start;margin:6px 0 2px;}
@@ -796,11 +788,6 @@ html .tarjetaFichaPedido .etiquetasFichaPedido{justify-content:flex-start;margin
 .pasoLinea[data-paso="actual"] strong{color:var(--texto);}
 .pasoLinea small{font-size:11px;color:var(--texto-ter);}
 
-html .datosFichaPedido{
-  padding:12px 16px;border:var(--borde-tarjeta);border-radius:var(--radius-lg);
-  background:var(--superficie);box-shadow:var(--sombra);gap:8px;
-}
-html .datoFichaPedido{font-size:14px;}
 html .seccionFichaPedido>h3{font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--texto-ter);}
 html .observacionesFichaPedido{
   margin:0;padding:12px 14px;border-radius:16px;
@@ -810,13 +797,6 @@ html .observacionesFichaPedido{
 html .accionesFichaPedido{gap:10px;}
 html .accionesFichaPedido .pasoSiguientePedido{min-height:54px;font-size:16px;border-radius:var(--radio-pildora);box-shadow:var(--sombra-acento);}
 html .pistaChecklist{text-align:center;font-size:13px;color:var(--texto-sec);}
-.botonMenuFicha{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  min-height:46px;border:var(--borde-tarjeta);border-radius:var(--radio-pildora);
-  background:var(--superficie);color:var(--texto);font-size:15px;font-weight:700;cursor:pointer;
-  box-shadow:var(--sombra);
-}
-.botonMenuFicha[aria-expanded="true"]{background:var(--superficie-2);}
 .menuFichaPedido{
   display:grid;overflow:hidden;
   border:var(--borde-tarjeta);border-radius:var(--radius-lg);
@@ -864,7 +844,6 @@ html .tarjetaSeguimiento .avatar{width:44px;height:44px;border-radius:14px;font-
 html .filaSeguimientoArriba{align-items:center;}
 html .filaSeguimientoArriba h3{font-size:15px;font-weight:700;}
 html .infoSeguimiento .subtitulo{color:var(--texto-sec);}
-html .infoSeguimiento .autorSeguimiento{color:var(--texto-ter);font-size:11.5px;}
 html .infoSeguimiento .badge{margin-top:6px;margin-right:4px;border-radius:var(--radio-pildora);font-size:11.5px;}
 html .seguimientoVacio{text-align:center;padding:28px 18px;}
 html .seguimientoVacio h3{font-size:16px;margin-bottom:4px;}
@@ -876,8 +855,6 @@ html .verMasSeguimiento{width:100%;border-radius:var(--radio-pildora);}
 }
 html .tarjetaSeguimiento.filaCambio{animation:tarjetaCambio 2.4s ease-out;}
 
-/* Mientras se carga un pedido, el cartel del modo personal no tapa el pie. */
-html.enCargaPedido .cartelModoPersonal{display:none !important;}
 html .clientePedidoCabecera label{margin:0;}
 
 /* ---------- Catálogo unido con Productos y marcas (T36) ---------- */
@@ -943,11 +920,9 @@ html .tarjetaMarca{border:var(--borde-tarjeta);box-shadow:var(--sombra);border-r
 html .cabeceraMarca{background:var(--superficie);color:var(--texto);padding:14px 14px 10px;border-bottom:1px solid var(--borde);}
 html .cabeceraMarca h2{display:flex;align-items:center;gap:8px;font-size:16px;color:var(--texto);}
 html .cabeceraMarca h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--acento);flex-shrink:0;}
-html .accionesMarca .btnIcono{background:var(--superficie-2);color:var(--texto-sec);border:0;border-radius:50%;}
 html .filaProducto,
 html[data-tema] .filaProducto{border-bottom:1px solid var(--borde);background:transparent;}
 html .filaProducto small{color:var(--texto-sec);}
-html .filaProducto .filaBotones .btnIcono{border-radius:50%;}
 html[data-tema] #pantallaCatalogo input.buscadorCatalogo{
   padding-left:44px !important;
   background:var(--superficie) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238392A6' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7.5'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center / 20px 20px !important;
@@ -970,7 +945,6 @@ html .filaTituloComercio h3{margin:0;font-size:15px;font-weight:700;min-width:0;
 html .estadoComercio{font-size:11.5px;padding:3px 9px;}
 html #pantallaComercios .datosComercioGrid{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:4px;}
 html #pantallaComercios .datoComercio{font-size:12.5px;color:var(--texto-sec);}
-html #pantallaComercios .datoVisita,
 html #pantallaComercios .datoTelefono{display:none;}
 
 /* Ficha del comercio: hoja que sube desde abajo. */
@@ -990,37 +964,11 @@ html .fichaComercioNueva .fichaEncabezado{align-items:flex-start;gap:14px;margin
 html .fichaComercioNueva .fichaAvatar{width:56px;height:56px;border-radius:18px;color:#fff;font-size:18px;}
 html .fichaComercioNueva .fichaTitulo{display:grid;gap:4px;justify-items:start;min-width:0;}
 html .fichaComercioNueva h2{font-size:21px;font-weight:800;line-height:1.15;}
-html .fichaComercioNueva .fichaDireccion{margin:0;color:var(--texto-sec);font-size:13.5px;}
-html .fichaComercioNueva .fichaEstado{margin-top:2px;}
-
-html .fichaAccesos{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-bottom:14px;}
-html .fichaAcceso{
-  display:grid;justify-items:center;gap:6px;padding:0;margin:0;min-height:0;
-  border:0;background:transparent;color:var(--texto);text-decoration:none;cursor:pointer;
-  font:inherit;box-shadow:none;
-}
-html .fichaAccesoIcono{
-  display:grid;place-items:center;width:52px;height:52px;border-radius:18px;
-  background:var(--acento-bg);color:var(--acento-oscuro);
-}
-html[data-tema="oscuro"] .fichaAccesoIcono{color:var(--acento);}
-html .fichaAccesoPrincipal .fichaAccesoIcono{background:var(--acento);color:var(--acento-txt);box-shadow:var(--sombra-acento);}
-html .fichaAcceso small{font-size:12px;font-weight:600;color:var(--texto-sec);}
 
 html .fichaNumeros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
 html .fichaNumeros div{display:grid;gap:2px;padding:12px 10px;border-radius:16px;background:var(--superficie-2);text-align:center;}
 html .fichaNumeros strong{font-size:16px;font-weight:800;overflow-wrap:anywhere;}
 html .fichaNumeros small{font-size:11.5px;color:var(--texto-sec);}
-
-html .fichaUbicacion{
-  display:grid;grid-template-columns:36px 1fr;align-items:center;gap:4px 10px;
-  padding:12px;margin-bottom:12px;border-radius:16px;background:var(--superficie-2);
-}
-html .fichaUbicacionIcono{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--info-bg);color:var(--info);}
-html .fichaUbicacion div{display:grid;gap:1px;}
-html .fichaUbicacion strong{font-size:14px;}
-html .fichaUbicacion small{font-size:12px;color:var(--texto-sec);}
-html .fichaUbicacion .botonGpsComercio{grid-column:1/-1;margin-top:8px;width:100%;border-radius:var(--radio-pildora);justify-content:center;gap:6px;}
 
 html .modalFichaComercio .fichaComercioNueva .fichaProductos{
   padding:12px;margin:0;border-radius:16px;
@@ -1032,14 +980,6 @@ html .fichaComercioNueva .fichaProductoNombre{color:var(--texto);font-size:13px;
 html .fichaComercioNueva .fichaProductoPorcentaje{color:var(--texto-sec);font-size:12px;font-weight:600;}
 html .fichaProductoBarra{grid-column:1/-1;height:6px;border-radius:99px;background:var(--borde);overflow:hidden;}
 html .fichaProductoBarra i{display:block;height:100%;border-radius:inherit;background:var(--acento);}
-
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones{
-  grid-template-columns:1fr 1fr;gap:8px;
-  background:var(--superficie) !important;
-}
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton{border-radius:var(--radio-pildora);border:0;background:var(--superficie-2);color:var(--texto);font-size:13px;}
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.ver{background:var(--visitado-bg);color:var(--visitado);}
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaBoton.eliminar{background:var(--peligro-bg);color:var(--peligro);}
 
 /* ---------- Rutas, Estadísticas, Cierre, Empleados y Avisos (T38) ---------- */
 
@@ -1059,8 +999,7 @@ html .tarjetaMapaRuta .btnAccion{border-radius:var(--radio-pildora);}
 /* Secciones de "Más": botones píldora. */
 html .configDetalle button.configCuentaIngresar,
 html .configDetalle .btnAccion,
-html .modalAvisos button,
-html .contenidoAvisos button{border-radius:var(--radio-pildora) !important;}
+html .modalAvisos button{border-radius:var(--radio-pildora) !important;}
 html .tarjetaMapaRuta > div:has(#btnOptimizarRuta){display:grid !important;grid-template-columns:1fr 1fr;gap:8px !important;}
 /* T129: en la hoja de partes de Google Maps, "Cancelar" sin fondo para que no se confunda con una parte. */
 .hojaPartesGoogleMaps > .pzBtn:last-child{background:transparent;color:var(--texto-sec);}
@@ -1073,8 +1012,7 @@ html .modalBotones button{border-radius:var(--radio-pildora) !important;}
 /* ---------- Navegación propia (Etapa 5, T41 y T42) ---------- */
 
 html.enNavegacion nav.bottom-nav,
-html.enNavegacion .indicadorNube,
-html.enNavegacion .cartelModoPersonal{display:none !important;}
+html.enNavegacion .indicadorNube{display:none !important;}
 html.enNavegacion body{overflow:hidden;}
 .pantallaNavegacion{position:fixed;inset:0;z-index:1500;background:var(--fondo);overflow:hidden;}
 .pantallaNavegacion.oculto{display:none;}
@@ -1357,7 +1295,6 @@ html[data-tema="oscuro"] .botonVozInicio{color:var(--acento);}
 .ventanaDictado.escuchando .botonDictar{animation:latidoVoz 1.2s ease-in-out infinite;}
 @keyframes latidoVoz{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--acento) 55%, transparent);}50%{box-shadow:0 0 0 16px color-mix(in srgb, var(--acento) 0%, transparent);}}
 
-.filaAccionesRapidasPedido{display:flex;gap:8px;flex-wrap:wrap;}
 .contenidoDictado{display:grid;gap:10px;}
 .contenidoDictado h2{margin:0;font-size:19px;}
 .filaDictado{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;}
@@ -1809,19 +1746,6 @@ html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 10px;}
 html body > nav.bottom-nav .nav-item{min-width:0;}
 html[data-mas-barra="no"] body > nav.bottom-nav .nav-mas{display:none;}
 
-/* Rutas: tarjetas desplegables (T51). */
-html .tarjetaDesplegable > summary{list-style:none;cursor:pointer;margin-bottom:0;}
-html .tarjetaDesplegable > summary::-webkit-details-marker{display:none;}
-
-html .tarjetaDesplegable > summary::after{
-  content:"";margin:0 6px 0 auto;width:9px;height:9px;flex-shrink:0;
-  border-right:2px solid var(--texto-ter);border-bottom:2px solid var(--texto-ter);
-  transform:rotate(45deg) translateY(-3px);transition:transform .2s ease;
-}
-html .tarjetaDesplegable[open] > summary{margin-bottom:12px;}
-html .tarjetaDesplegable[open] > summary::after{transform:rotate(-135deg) translateY(-3px);}
-html .tarjetaDesplegable .ayudaDesplegable{margin:0 0 4px;color:var(--texto-sec);font-size:13px;}
-
 html body > nav.bottom-nav .nav-item{font-size:10.5px;letter-spacing:-.01em;}
 html body > nav.bottom-nav .nav-item .nav-icon{padding:3px 8px;}
 /* Repasada: con la letra grande del celular la barra queda angosta y
@@ -2044,9 +1968,6 @@ html .pantallaWhatsapp label.waFilaLlave{margin:0;}
 .statsDelta[data-tono="sube"]{color:var(--visitado);background:var(--visitado-bg);}
 .statsDelta[data-tono="baja"]{color:var(--peligro);background:var(--peligro-bg);}
 .statsVendido .statsCambio{margin-top:6px;min-width:0;}
-/* Modo personal: el cartel de abajo no tapa lo último de cada pantalla. */
-html.conCartelPersonal:not(.enCargaPedido) body{padding-bottom:calc(112px + var(--alto-cartel-personal) + env(safe-area-inset-bottom)) !important;}
-
 /* Avisos según lo que hacés (T121). */
 html .tareasAvisos{padding:14px;margin-bottom:12px;}
 .tituloTareasAvisos{margin:0 0 10px;font-size:15.5px;font-weight:700;color:var(--texto);}
@@ -2082,15 +2003,8 @@ html[data-tema="oscuro"] .billeteCobro[aria-pressed="true"]{background:var(--sup
 html[data-tema="oscuro"] .motivoFaltante[aria-pressed="true"]{background:var(--superficie-2);}
 
 /* Elegir varios con un solo botón grande (T110). */
-.filaTandaPedidos{flex:1 1 100%;display:grid;grid-template-columns:1fr 56px;gap:8px;}
-.filaTandaPedidos.oculto{display:none;}
-.filaTandaPedidos .botonMoverTanda.oculto{display:none;}
-.filaTandaPedidos:has(.botonMoverTanda.oculto){grid-template-columns:56px;justify-content:end;}
-.botonMoverTanda,.botonMasTanda{min-height:48px;border-radius:14px;justify-content:center;gap:6px;font-size:15px;font-weight:750;box-shadow:0 6px 18px rgba(0,0,0,.18);}
-.botonMoverTanda{background:var(--acento-bg) !important;color:var(--acento-oscuro) !important;}
+.botonMasTanda{min-height:48px;border-radius:14px;justify-content:center;gap:6px;font-size:15px;font-weight:750;box-shadow:0 6px 18px rgba(0,0,0,.18);}
 .botonMasTanda{padding:0 !important;background:var(--superficie) !important;color:var(--texto) !important;}
-html[data-tema="oscuro"] .botonMoverTanda{background:var(--superficie-2) !important;color:var(--texto) !important;}
-.motivoPeligroTanda{color:var(--peligro) !important;}
 
 /* Ronda de WhatsApp con el botón abajo, a mano del pulgar (T119). */
 .waPieRonda{
@@ -2168,7 +2082,6 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 .resultadoContado.sobran{background:var(--pendiente-bg);color:var(--pendiente);}
 .cerrarYMandar{width:100%;margin:12px 0;}
 
-
 /* T161: Más > Listas de precios y la lista de cada pedido */
 [data-color="listasPrecios"]{background:var(--acento-bg) !important;color:var(--pz-pri-fuerte) !important;}
 .pzComercioElegido .listaDelPedido{display:grid;grid-template-columns:16px minmax(0,1fr) 16px;align-items:center;justify-items:start;gap:10px;width:100%;min-height:44px;margin:0;padding:8px 16px;border:0;border-top:1px solid var(--borde);border-radius:0;background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;}
@@ -2242,8 +2155,6 @@ html[data-tema="oscuro"] .numeroParada{color:var(--acento);}
 .barraMoverPin > div{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;}
 .barraMoverPin .pzBtn{min-height:44px;}
 
-.pzOpcion.pzOpcionPeligro,.pzOpcion.pzOpcionPeligro .pzIco{color:var(--peligro);}
-
 .barraMoverPin.oculto{display:none;}
 
 /* T124: Nuevo pedido "Quiere" o "Tiene", y el cartelito en Pedidos */
@@ -2281,8 +2192,7 @@ html[data-tema="oscuro"] .pasoFichaNumero{color:var(--acento-txt) !important;}
    Sombras cortas y nada de desenfoque sobre el mapa (T141). La lista de
    paradas y lo demás de antes se abre encima con «Paradas». */
 html:has(#pantallaRutas:not(.oculto)) nav.bottom-nav,
-html:has(#pantallaRutas:not(.oculto)) .indicadorNube,
-html:has(#pantallaRutas:not(.oculto)) .cartelModoPersonal{display:none !important;}
+html:has(#pantallaRutas:not(.oculto)) .indicadorNube{display:none !important;}
 html:has(#pantallaRutas:not(.oculto)) body{overflow:hidden;}
 #pantallaRutas{min-height:100vh;}
 #pantallaRutas > header,

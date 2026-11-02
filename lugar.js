@@ -413,6 +413,19 @@
         capa.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
     }
 
+    // La barra de abajo queda por encima de las fichas: si se toca con una
+    // ficha u hoja abierta, se cierran antes de cambiar de sección (si no,
+    // la ficha quedaba flotando sobre la otra sección).
+    function cerrarCapas() {
+        // Un toque puede cerrar solo el menú ⋯ de la ficha: se repite unas
+        // pocas veces, sin quedar dando vueltas si algo no se cierra.
+        for (let vuelta = 0; vuelta < 6; vuelta++) {
+            const capa = capaDeArriba();
+            if (!capa) return;
+            cerrarCapa(capa);
+        }
+    }
+
     function unPasoAtras() {
         if (tutorialAbierto()) {
             window.tutorialVendeFrio.cerrar();
@@ -564,5 +577,5 @@
         pedirRevisar();
     });
 
-    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras, atrasDelCelular, frenaElAtras };
+    window.lugarVendeFrio = { anotar, olvidar, lugarActual, atras: unPasoAtras, atrasDelCelular, frenaElAtras, cerrarCapas };
 }());

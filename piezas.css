@@ -55,8 +55,6 @@ html[data-tema="oscuro"] .pzBtnSec{background:var(--superficie-2);color:var(--te
 .pzBtnLinea{background:transparent;color:var(--peligro);}
 .pzBtnBloque{display:flex;width:100%;}
 .pzBtnChico{min-height:38px;padding:0 14px;font-size:14px;}
-.pzBtnMedio{min-height:42px;font-size:14.5px;}
-.pzBtnCuadrado{width:50px;padding:0;}
 .pzBotones{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
 /* ---------- Avisos (banners) ---------- */
@@ -139,8 +137,6 @@ button.pzFila{cursor:pointer;}
 .pzNota > .pzIco{color:var(--pendiente);margin-top:1px;}
 .pzNotaInfo{background:var(--info-bg);}
 .pzNotaInfo > .pzIco{color:var(--info);}
-.pzNotaOk{background:var(--visitado-bg);}
-.pzNotaOk > .pzIco{color:var(--visitado);}
 
 /* ---------- Títulos de bloque ---------- */
 .pzBloqueCab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:20px 2px 10px;}
@@ -273,10 +269,6 @@ html[data-tema="oscuro"] .pzFiltro[aria-pressed="true"]{background:var(--acento)
 .pzFilaLarga .pzFilaTxt strong{white-space:normal;}
 
 /* ---------- Tanda 2: visitas, pedido sugerido, ofertas, ficha ---------- */
-html .fichaAccesoWa .fichaAccesoIcono{background:var(--pz-wa-bg);color:var(--pz-wa);}
-html .fichaAccesoSinPedido .fichaAccesoIcono{background:var(--pendiente-bg);color:var(--pendiente);}
-html[data-tema="oscuro"] .fichaAccesoWa .fichaAccesoIcono{color:var(--pz-wa);}
-html[data-tema="oscuro"] .fichaAccesoSinPedido .fichaAccesoIcono{color:var(--pendiente);}
 .statsSubtitulo{margin:12px 2px 2px;font-size:12.5px;font-weight:700;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.04em;}
 .pzEnlace{border:0;background:none;padding:6px 2px;color:var(--pz-pri-fuerte);font:inherit;font-size:15px;font-weight:700;cursor:pointer;flex-shrink:0;}
 html[data-tema="oscuro"] .pzEnlace{color:var(--acento);}
@@ -290,15 +282,7 @@ html[data-tema="oscuro"] .pzEnlace{color:var(--acento);}
 html[data-tema="oscuro"] .pzBloqueCab small{color:var(--acento);}
 .pzBloqueCab .pzEtiqueta{margin:0;}
 .sugerenciasPedido .pzBloqueCab{margin-top:16px;}
-.pzEstrella{
-  display:grid;place-items:center;width:34px;height:34px;margin:0 -4px 0 -6px;padding:0;flex-shrink:0;
-  border:0;border-radius:50%;background:none;color:var(--texto-ter);cursor:pointer;min-height:0;box-shadow:none;
-}
-.pzEstrella.activa{color:#E0A100;}
-.pzEstrella.activa svg{fill:#F5C542;}
-.pzProdSugerido{min-height:68px;}
-.pzProdSugerido .pzFilaTxt strong{white-space:normal;}
-.pzProdSugerido .pzChip,.precioPedido .pzChip{align-self:flex-start;margin-top:4px;}
+.precioPedido .pzChip{align-self:flex-start;margin-top:4px;}
 #pantallaPedido .controlesEspejo .cantidadEspejo{width:34px;text-align:center;font-size:17px;font-weight:800;}
 #pantallaPedido .controlesEspejo[data-cantidad="0"] .cantidadEspejo{display:none;}
 .pzTachado{color:var(--texto-ter);font-weight:500;}
@@ -326,8 +310,6 @@ html[data-tema="oscuro"] .fichaDatoAgregar .fichaDatoIco{color:var(--acento);}
 .fichaDato .pzFilaTxt strong{white-space:normal;font-size:15.5px;font-weight:700;}
 .fichaDatoAgregar .pzFilaTxt strong{white-space:normal;font-size:14.5px;color:var(--pz-pri-fuerte);}
 html[data-tema="oscuro"] .fichaDatoAgregar .pzFilaTxt strong{color:var(--acento);}
-.fichaDebe:empty{display:none;}
-html .fichaAcceso small{white-space:nowrap;}
 
 /* ---------- Tanda 3: entrega, devoluciones, reparto ---------- */
 .pzFotoVista img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;}
@@ -495,9 +477,7 @@ body > section.pzPantalla > header .logo:empty{display:none;}
 .estadoImportar.aviso{color:var(--pendiente);}
 .estadoImportar.info{color:var(--info);}
 .estadoImportar.igual{color:var(--texto-ter);font-weight:600;}
-html.conCartelPersonal .pzBotonesFijos{bottom:calc(64px + var(--alto-cartel-personal) + env(safe-area-inset-bottom));}
 #pantallaImportar > main{padding-bottom:calc(150px + env(safe-area-inset-bottom)) !important;}
-html.conCartelPersonal :is(#pantallaImportar, #pantallaPreciosLista, #pantallaRecibo) > main{padding-bottom:calc(194px + env(safe-area-inset-bottom)) !important;}
 .pzProductoCab{align-items:center;padding:12px;gap:4px;min-height:0;}
 .pzProductoFoto{width:84px;aspect-ratio:1;border-radius:var(--radius-md);overflow:hidden;}
 .pzProductoFoto .pzIco{color:#fff;}
@@ -541,7 +521,6 @@ html.conEscaner,html.conEscaner body{overflow:hidden;}
 .manualEscanear .pzBtn{min-height:46px;padding:0 16px;}
 .pzEscanear.sinCamara .marcoEscanear{opacity:.35;}
 .pzEscanear.sinCamara .laserEscanear{animation:none;}
-.botonEscanearPedido{flex:0 0 auto;}
 /* ---------- Stock simple (T90) ---------- */
 .stockCatalogo{display:flex;align-items:baseline;gap:6px;margin-top:2px;}
 .stockNumero{font-size:14px;font-weight:750;}
@@ -670,12 +649,6 @@ html #pantallaPedido .marca[data-plegable="1"] .tituloMarca{cursor:pointer;align
 .marca[data-plegable="1"]:not(.cerrada) .flechaMarca{transform:rotate(180deg);}
 .marca.cerrada{margin-bottom:2px !important;}
 html[data-precios="no"] #pantallaPedido .precioPedidoBoton{display:none;}
-/* Etapa 8: ficha del comercio con un solo botón "Más opciones". */
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones{grid-template-columns:1fr;}
-html .modalFichaComercio .fichaComercioNueva .fichaAcciones .fichaMasOpciones{min-height:48px!important;font-size:15px;font-weight:700;}
-.pzOpcion.fichaOpcion svg{color:var(--texto-sec);flex-shrink:0;}
-.pzOpcion.fichaOpcionPeligro,.pzOpcion.fichaOpcionPeligro svg{color:var(--peligro);}
-.fichaOpcionSeparador{border:0;border-top:1px solid var(--borde);margin:6px 0;width:100%;}
 /* Etapa 8: Pedidos con tres pestañas y "Otros" (mismo tamaño que antes). */
 .filtroEtapaOtros svg{flex-shrink:0;}
 .pzOpcion .filtroEtapaCantidad{margin-left:auto;}
@@ -727,13 +700,8 @@ body > section:has(> .pzCabAccion) > header{padding-right:calc(72px + env(safe-a
    la pantalla. Ahora el título se achica a lo que queda y, si una palabra no
    entra, piezas.js lo pasa a su propio renglón, debajo de los botones (T152). */
 body > section > header > div:has(> h1){min-width:0;}
-body > section > header.cabeceraDosFilas{flex-wrap:wrap;row-gap:6px;}
-body > section > header.cabeceraDosFilas > div:has(> h1){order:20;flex:0 0 calc(100% + 108px);margin-left:-108px;}
-body > section[data-botones-volver="1"] > header.cabeceraDosFilas > div:has(> h1){flex-basis:calc(100% + 56px);margin-left:-56px;}
-body > section:not([data-botones-volver]) > header.cabeceraDosFilas > div:has(> h1){flex-basis:100%;margin-left:0;}
-}
 .hojaAyuda .pasosAyuda{margin:4px 14px 14px 0;padding-left:44px;display:grid;gap:12px;font-size:18px;line-height:1.4;color:var(--texto);}
-.hojaAyuda .pzBtn{width:100%;margin-top:8px;}
+.hojaAyuda .pzBtn{width:calc(100% - 12px);margin-top:8px;}
 
 /* ---------- Etapa 8: nombres debajo de los íconos de arriba (opcional) ---------- */
 html[data-nombres-arriba="si"] .conNombre{position:relative;margin-bottom:14px;}
@@ -782,7 +750,6 @@ input,textarea,select,[contenteditable],[contenteditable] *,.copiable,.copiable 
 
 /* ---------- Productos: chips con el punto de la marca ---------- */
 #avisoSinPrecio{cursor:pointer;}
-#avisoSinPrecio .avisoSinPrecioVer{flex-shrink:0;font-weight:750;font-size:14.5px;color:var(--pz-pri-fuerte);}
 
 /* ---------- Productos: cuadros ---------- */
 html[data-tema] .grillaCatalogo:not(.vistaLista){gap:12px;}
@@ -844,11 +811,6 @@ html[data-tema] .tarjetaArchivados .inicialesMarca{background:var(--superficie-2
 html[data-tema] .cabeceraMarca h2{display:block;margin:0;font-size:16.5px;font-weight:750;line-height:1.2;color:var(--texto);overflow-wrap:anywhere;}
 html[data-tema] .cabeceraMarca h2::before{display:none;}
 .cabeceraMarca .textosMarca small{font-size:13px;color:var(--texto-sec);}
-html[data-tema] .accionesMarca{display:flex;gap:6px;flex-shrink:0;}
-html[data-tema] .accionesMarca .btnIcono{
-  width:38px;height:38px;min-height:0;padding:0;display:grid;place-items:center;
-  border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto-sec);
-}
 html[data-tema] .cuerpoMarca{padding:0;margin:0;}
 html[data-tema] .filaProducto{
   display:flex;align-items:center;gap:10px;width:100%;min-height:58px;margin:0;padding:8px 12px 8px 14px;
@@ -875,7 +837,6 @@ html[data-tema] .filaArchivado .eliminarProducto{
   width:38px;height:38px;min-height:0;padding:0;display:grid;place-items:center;flex-shrink:0;
   border:0;border-radius:50%;background:var(--peligro-bg);color:var(--peligro);
 }
-.pzMotivo.opcionPeligro{color:var(--peligro);}
 
 /* ---------- Ventanas viejas como hoja que sube desde abajo ----------
    Producto y marca, comercio y "Pedido generado": mismo aspecto que las
@@ -1548,7 +1509,6 @@ html .barraTandaPedidos .botonDejarDeElegir{display:grid;place-items:center;flex
 html .barraTandaPedidos .botonMarcarTodos{flex:0 0 auto;width:auto;min-height:40px;margin:0;padding:0 16px;border:0;border-radius:999px;background:var(--acento-bg);color:var(--acento-oscuro);box-shadow:none;font-weight:800;font-size:14px;}
 html[data-tema="oscuro"] .barraTandaPedidos .botonMarcarTodos{background:var(--superficie-2);color:var(--acento);}
 html .tarjetaSeguimiento .avatar{position:relative;}
-.tarjetaSeguimiento .casillaTanda{display:none;}
 .tarjetaSeguimiento .tildeAvatar{display:none;}
 .tarjetaSeguimiento.eligiendoTanda .avatar::after{content:"";position:absolute;inset:-3px;border-radius:inherit;border:2px dashed var(--borde-fuerte);}
 .tarjetaSeguimiento.elegidaTanda .avatar::after{display:none;}

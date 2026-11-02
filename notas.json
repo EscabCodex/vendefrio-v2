@@ -2,6 +2,22 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 269,
+      "fecha": "2026-11-02",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "Se ven los números de la Ayuda",
+      "texto": "En «¿Qué hago acá?» los pasos 1, 2 y 3 quedaban cortados en el borde. Ya se leen enteros."
+    },
+    {
+      "version": 269,
+      "fecha": "2026-11-02",
+      "tipo": "arreglado",
+      "icono": "check",
+      "titulo": "La ficha se cierra al cambiar de sección",
+      "texto": "Con la ficha de un pedido abierta, tocar otra sección abajo la cierra. Antes quedaba flotando."
+    },
+    {
       "version": 268,
       "fecha": "2026-11-02",
       "tipo": "mejor",

@@ -96,15 +96,6 @@ function diasDesdeFechaGuardada(texto) {
     return Math.max(0, Math.round((hoy - fecha) / 86400000));
 }
 
-function crearBotonComercio(clase, texto, nombre) {
-    const boton = document.createElement("button");
-    boton.type = "button";
-    boton.className = "btnAccion " + clase;
-    boton.dataset.nombre = nombre;
-    boton.innerHTML = texto;
-    return boton;
-}
-
 function extraerCoordenadasDeMaps(enlace) {
     const texto = String(enlace || "").trim();
     if (!texto) return null;
