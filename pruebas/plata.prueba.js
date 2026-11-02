@@ -217,7 +217,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     for (const [nombre, precio] of [["Mayorista", "4200"], ["Minorista", "4650"]]) {
         if (nombre !== "Mayorista") await listas.getByRole("button", { name: "Lista nueva" }).click();
         const nueva = page.getByRole("dialog", { name: "Lista nueva" });
-        await nueva.locator("#nombreListaNueva").fill(nombre);
+        await nueva.locator("#nombreListaPrecios").fill(nombre);
         await nueva.getByRole("button", { name: "Crear lista" }).click();
         await listas.getByRole("spinbutton", { name: "Precio " + nombre }).fill(precio);
     }

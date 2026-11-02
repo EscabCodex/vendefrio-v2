@@ -1177,6 +1177,10 @@ function productosParaLeer() {
 function guardarProductos(productos) {
     const datos = productos && typeof productos === "object" ? productos : {};
     asignarIdsProductos(datos);
+    // Las listas que siguen al general recalculan sus precios (listasPrecios.js).
+    if (window.listasPreciosVendeFrio?.aplicarReglas) {
+        try { window.listasPreciosVendeFrio.aplicarReglas(datos); } catch (error) { console.warn("No se aplicaron las reglas de las listas.", error); }
+    }
     return guardarColeccion("productos", datos);
 }
 

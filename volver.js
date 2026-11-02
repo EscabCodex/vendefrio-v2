@@ -13,7 +13,7 @@
     const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
     const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
-    const SIN_CASITA = ["pantallaEstadisticas"];
+    const SIN_CASITA = ["pantallaEstadisticas", "pantallaListasPrecios", "pantallaTodaLista", "pantallaPreciosLista"];
 
     function preferencia(campo) {
         try {

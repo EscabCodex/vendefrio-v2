@@ -2276,27 +2276,11 @@ html[data-tema="oscuro"] .botonWaACobrar{background:rgba(37,211,102,.16);color:#
 .resultadoContado.sobran{background:var(--pendiente-bg);color:var(--pendiente);}
 .cerrarYMandar{width:100%;margin:12px 0;}
 
-/* T115: Toda una lista de precios en una pantalla */
-.botonTodaLista{border:0;background:none;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;}
-.enlaceTodaLista{color:var(--acento-oscuro);font-weight:650;}
-.ajusteTodaLista{display:grid;gap:10px;}
-.ajusteTodaLista > strong{font-size:16px;font-weight:750;}
-.ajusteTodaLista > small{font-size:13px;color:var(--texto-sec);margin-top:-6px;}
-.filaAjusteLista{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;}
-.filaAjusteLista .pzCampo{margin:0;}
-.filaAjusteLista .pzBtn{width:auto;min-height:48px;padding:0 16px;}
-.redondeoLista button{flex:1;min-height:38px;font-size:12.5px;padding:0 4px;}
-.filaTodaLista{min-height:62px;}
-.filaTodaLista .bajaLista{color:var(--visitado);}
-.filaTodaLista .subeLista{color:var(--pendiente);}
 
 /* T161: Más > Listas de precios y la lista de cada pedido */
 [data-color="listasPrecios"]{background:var(--acento-bg) !important;color:var(--pz-pri-fuerte) !important;}
-.filaListaMas{min-height:66px;}
-.opcionesListaPrecios{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto-sec);cursor:pointer;}
 .pzComercioElegido .listaDelPedido{display:grid;grid-template-columns:16px minmax(0,1fr) 16px;align-items:center;justify-items:start;gap:10px;width:100%;min-height:44px;margin:0;padding:8px 16px;border:0;border-top:1px solid var(--borde);border-radius:0;background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;text-align:left;cursor:pointer;}
 .pzComercioElegido .listaDelPedido span{width:100%;text-align:left;}
-.chipsListas{flex-wrap:wrap;overflow:visible;}
 .listaDelPedido b{color:var(--texto);font-weight:700;}
 .listaDelPedido.otraLista,.listaDelPedido.otraLista b{color:var(--pz-pri-fuerte);}
 .opcionListaPedido small{color:var(--texto-ter);font-size:12.5px;margin-left:4px;}
@@ -3033,3 +3017,77 @@ html[data-tema="oscuro"] .statsArmarRuta{color:var(--acento-txt) !important;}
 html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoRojo{color:var(--peligro) !important;}
 html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoNaranja{color:var(--pendiente) !important;}
 html[data-tema="oscuro"] .statsFilaTexto > small.statsTextoVerde{color:var(--visitado) !important;}
+
+/* Repaso de Listas de precios (2026-11-02): tarjetas con su regla y sus
+   comercios, la regla arriba de la lista, productos por marca y la hoja de
+   los comercios que la usan (elegir varios, como Pedidos). */
+.lpNota{margin:0 2px;font-size:13px;line-height:1.35;color:var(--texto-sec);}
+#filasListasPrecios{display:grid;gap:10px;}
+.lpCard{display:grid;grid-template-columns:44px minmax(0,1fr) 40px;gap:8px 12px;align-items:center;padding:14px;border-radius:var(--radius-md);background:var(--superficie);box-shadow:var(--sombra);}
+.lpCard > .pzIni{width:44px;height:44px;border-radius:14px;}
+.lpCard .lpIniGris{background:var(--superficie-2);color:var(--texto-sec);}
+.lpCardTxt{display:block;min-width:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}
+.lpCardTxt strong{display:block;font-size:16px;font-weight:750;color:var(--texto);}
+.lpCardTxt small{display:block;margin-top:2px;font-size:13px;color:var(--texto-sec);}
+.lpCardTxt small b{color:var(--pz-pri-fuerte);font-weight:750;}
+.lpMas{width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);cursor:pointer;}
+.lpChips{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px;}
+.lpChip{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 11px;border:0;border-radius:var(--radio-pildora);background:var(--superficie-2);color:var(--texto);font:inherit;font-size:13px;font-weight:650;cursor:pointer;}
+.lpChip svg{color:var(--texto-sec);}
+.lpChipQuieto{cursor:default;}
+.lpChipAgregar{background:transparent;border:1.5px dashed var(--borde-fuerte);color:var(--pz-pri-fuerte);}
+.lpChipAgregar svg{color:var(--pz-pri-fuerte);}
+.lpChipAviso{background:var(--pendiente-bg);color:var(--pendiente);cursor:default;}
+.lpChipAviso svg{color:var(--pendiente);}
+.lpTit{margin:6px 4px -4px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--texto-sec);}
+.lpTag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--radio-pildora);background:var(--visitado-bg);color:var(--visitado);font-size:11.5px;font-weight:700;}
+.lpTagMano{background:var(--info-bg);color:var(--info);}
+.lpRegla{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--radius-md);background:var(--superficie);box-shadow:var(--sombra);}
+.lpReglaPct{min-width:64px;font-size:25px;font-weight:800;color:var(--pz-pri-fuerte);}
+.lpReglaTxt{flex:1;min-width:0;font-size:13px;line-height:1.35;color:var(--texto-sec);}
+.lpReglaTxt strong{display:block;font-size:15px;color:var(--texto);}
+.lpBtnChico{min-height:40px;padding:0 14px;border:0;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--pz-pri-fuerte);font:inherit;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.lpFiltros{margin-bottom:-4px;}
+.lpMarca{margin:6px 4px -4px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--texto-sec);}
+#filasTodaLista{display:grid;gap:12px;}
+.lpLista{overflow:hidden;border-radius:var(--radius-md);background:var(--superficie);box-shadow:var(--sombra);}
+.lpFila{display:flex;align-items:center;gap:10px;min-height:62px;padding:8px 12px;border-top:1px solid var(--borde);}
+.lpFila:first-child{border-top:0;}
+.lpFilaTxt{flex:1;min-width:0;}
+.lpFilaTxt strong{display:block;font-size:15px;color:var(--texto);}
+.lpFilaTxt small{font-size:12.5px;color:var(--texto-sec);}
+.pzPrecioLista.lpPrecioMano input{border-color:var(--info);}
+/* Hojas: cabeza con ícono, título, una línea y la X */
+.lpHCab{display:flex;align-items:center;gap:12px;margin:0 0 12px;}
+.lpHIco{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--info-bg);color:var(--info);}
+.lpHCab > div{flex:1;min-width:0;}
+.lpHCab strong{display:block;font-size:18px;color:var(--texto);}
+.lpHCab small{font-size:13px;color:var(--texto-sec);}
+.lpHX{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);cursor:pointer;}
+.lpEt{margin:4px 2px 6px;font-size:13px;font-weight:650;color:var(--texto-sec);}
+.lpCampoPct{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.lpCampoPct > button{width:48px;height:48px;flex-shrink:0;display:grid;place-items:center;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);cursor:pointer;}
+.lpPctValor{flex:1;display:flex;align-items:center;justify-content:center;height:56px;margin:0;border:1.5px solid var(--borde-fuerte);border-radius:14px;font-size:28px;font-weight:800;color:var(--texto);}
+.lpPctValor input{width:76px;min-height:0 !important;margin:0;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;color:inherit;font:inherit;text-align:center;}
+.lpPctValor input:focus{outline:none;}
+.lpSeg{display:flex;gap:2px;margin-bottom:14px;padding:4px;border-radius:var(--radio-pildora);background:var(--superficie-2);}
+.lpSeg button{flex:1;min-height:38px;border:0;border-radius:var(--radio-pildora);background:none;color:var(--texto-sec);font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;}
+.lpSeg button[aria-pressed="true"]{background:var(--superficie);color:var(--texto);box-shadow:var(--sombra);}
+.lpEjemplo{padding:10px 12px;border-radius:14px;background:var(--superficie-2);font-size:13.5px;line-height:1.6;color:var(--texto-sec);}
+.lpEjemplo b{color:var(--texto);}
+.lpCheck{display:flex;gap:10px;align-items:flex-start;margin:12px 2px 4px;font-size:14px;font-weight:650;color:var(--texto);cursor:pointer;}
+.lpCheck input{width:22px;height:22px;flex-shrink:0;margin:0;accent-color:var(--acento);}
+.lpCheck small{display:block;font-size:12.5px;font-weight:400;color:var(--texto-sec);}
+.lpSel{display:flex;align-items:center;gap:10px;margin:2px 0 4px;}
+.lpSel b{flex:1;font-size:16px;color:var(--texto);}
+.lpPill{min-height:34px;padding:0 14px;border:1.5px solid var(--borde-fuerte);border-radius:var(--radio-pildora);background:transparent;color:var(--texto);font:inherit;font-size:13px;font-weight:650;cursor:pointer;}
+.lpComs{display:grid;}
+.lpCom{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:8px 2px;border:0;border-top:1px solid var(--borde);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;}
+.lpComIni{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:2px dashed var(--borde-fuerte);border-radius:50%;background:var(--superficie-2);color:var(--texto-sec);font-size:14px;font-weight:700;}
+.lpComIni.si{border:0;background:var(--acento);color:var(--acento-txt);}
+.lpComTxt{flex:1;min-width:0;}
+.lpComTxt strong{display:block;font-size:15px;color:var(--texto);}
+.lpComTxt small{font-size:12.5px;color:var(--texto-sec);}
+.lpComTxt small.otra{color:var(--pendiente);}
+.lpMenu .menuFlotanteCaja{min-width:252px;}
+html[data-tema="oscuro"] .lpPctValor input{background:none !important;}

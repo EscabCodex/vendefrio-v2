@@ -1,6 +1,7 @@
 // VendeFrío - Más > Listas de precios (T161), con los emuladores de Firebase.
-// 1. Crear listas (rápida y con nombre), cargar sus precios con "% sobre el
-//    general" y redondeo, cambiarle el nombre y borrarla.
+// 1. Crear listas, ponerles "% sobre el general" y redondeo (la lista sigue
+//    al general y los precios a mano quedan fijos), elegir sus comercios,
+//    cambiarle el nombre y borrarla.
 // 2. Al armar el pedido se elige otra lista y el pedido guarda esos precios.
 const { test, expect, capturar } = require("./ayudas");
 const { registrarDistribuidora, irAPedidos, elegirComercio, abrirMas } = require("./recorridos");
@@ -18,16 +19,43 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     await expect(pantalla).toContainText("Todavía no hay listas");
     await capturar(page, "listas-01-vacia");
 
-    // "Almacenes" con el botón rápido: −10% del general, redondeado a $ 100.
-    await pantalla.locator('[data-sugerida="Almacenes"]').click();
+    // "Almacenes": −10% del general, redondeado a $ 100, siguiendo al general.
+    await pantalla.locator("#crearListaPrecios").click();
+    const primera = page.getByRole("dialog", { name: "Lista nueva" });
+    await primera.locator("#nombreListaPrecios").fill("Almacenes");
+    await primera.getByRole("button", { name: "Crear lista" }).click();
     const toda = page.locator("#pantallaTodaLista");
     await expect(toda).toBeVisible();
-    await toda.locator("#porcentajeLista").fill("-10");
-    await toda.locator('[data-redondeo="100"]').click();
-    await toda.locator("#aplicarPorcentajeLista").click();
+    await toda.locator("#cambiarRegla").click();
+    const regla = page.getByRole("dialog", { name: "Precios de Almacenes" });
+    await regla.locator("#porcentajeLista").fill("-10");
+    await regla.locator('[data-redondeo="100"]').click();
+    await expect(regla.locator("#ejemploRegla")).toContainText("$ 4.500 → $ 4.100");
+    await capturar(page, "listas-01b-regla");
+    await regla.getByRole("button", { name: /Aplicar a/ }).click();
     await expect(toda.getByRole("spinbutton", { name: "Precio Helado 1 kg en Almacenes" })).toHaveValue("4100");
+    await expect(toda.locator(".lpRegla")).toContainText("Si subís el general, sube sola.");
+    // Uno a mano: queda fijo aunque la lista suba.
+    await toda.getByRole("spinbutton", { name: "Precio Palito bombón en Almacenes" }).fill("750");
+    await expect(toda.locator('[data-filtro-lista="mano"]')).toContainText("1");
     await toda.locator("#guardarTodaLista").click();
     await expect(pantalla).toBeVisible();
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("−10% sobre el general · redondeo a $ 100");
+
+    // Sube el general del Helado: Almacenes sube sola; el Palito a mano, no.
+    expect(await page.evaluate(() => {
+        const helado = obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Helado 1 kg");
+        const palito = () => obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Palito bombón");
+        actualizarProductoPorId(helado.id, { precio: 5000 });
+        actualizarProductoPorId(palito().id, { precio: 900 });
+        const despues = obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Helado 1 kg");
+        return [despues.precios.Almacenes, palito().precios.Almacenes];
+    })).toEqual([4500, 750]);
+    await page.evaluate(() => {
+        const helado = obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Helado 1 kg");
+        actualizarProductoPorId(helado.id, { precio: 4500 });
+    });
+    await page.evaluate(() => window.listasPreciosVendeFrio.abrirPantalla());
 
     // "Supermercados" con «Lista nueva» y un precio a mano.
     await pantalla.locator("#crearListaPrecios").click();
@@ -39,6 +67,7 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     await toda.locator("#guardarTodaLista").click();
     await expect(pantalla).toBeVisible();
     await expect(pantalla.locator(".filaListaMas")).toHaveCount(2);
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Supermercados" })).toContainText("Precios a mano");
 
     // Cambiarle el nombre: los precios y los comercios la siguen.
     // (La primera bajada de la nube puede pisar lo recién agregado: se insiste.)
@@ -49,19 +78,32 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     })).toBe("Supermercados");
     await page.evaluate(() => window.listasPreciosVendeFrio.abrirPantalla());
     await pantalla.getByRole("button", { name: "Opciones de Supermercados" }).click();
-    await page.getByRole("dialog", { name: "Opciones de Supermercados" }).getByRole("button", { name: "Cambiar el nombre" }).click();
+    await page.getByRole("menu", { name: "Supermercados" }).getByRole("button", { name: "Cambiar el nombre" }).click();
     const nombre = page.getByRole("dialog", { name: "Cambiar el nombre" });
     await nombre.locator("#nombreListaPrecios").fill("Súper");
     await nombre.getByRole("button", { name: "Guardar nombre" }).click();
-    await expect(pantalla.locator(".filaListaMas", { hasText: "Súper" })).toContainText("1 producto con precio · 1 comercio");
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Súper" })).toContainText("1 comercio");
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Súper" })).toContainText("1 producto");
     expect(await page.evaluate(() => {
         const helado = obtenerProductos()["Frío Sur"].find(producto => producto.nombre === "Helado 1 kg");
         return [helado.precios["Súper"], helado.precios.Supermercados, buscarComercioPorNombre("Kiosco La Esquina").listaPrecios];
     })).toEqual([3900, undefined, "Súper"]);
     await capturar(page, "listas-02-listas");
 
+    // Comercios que usan "Almacenes": se eligen varios de una vez.
+    await pantalla.getByRole("button", { name: "Opciones de Almacenes" }).click();
+    await page.getByRole("menu", { name: "Almacenes" }).getByRole("button", { name: /Comercios que la usan/ }).click();
+    const deLista = page.getByRole("dialog", { name: "Comercios con Almacenes" });
+    await expect(deLista.locator("#elegidosLista")).toHaveText("0 elegidos");
+    await deLista.locator('[data-comercio-lista="Almacén Don Pepe"]').click();
+    await expect(deLista.locator('[data-comercio-lista="Almacén Don Pepe"]')).toHaveAttribute("aria-checked", "true");
+    await expect(deLista.getByRole("button", { name: "Guardar · 1 comercio" })).toBeVisible();
+    await capturar(page, "listas-02b-comercios");
+    await deLista.getByRole("button", { name: "Guardar · 1 comercio" }).click();
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("1 comercio");
+    expect(await page.evaluate(() => buscarComercioPorNombre("Almacén Don Pepe").listaPrecios)).toBe("Almacenes");
+
     // Don Pepe usa "Almacenes"; en este pedido se elige "Súper".
-    await page.evaluate(() => actualizarComercioPorNombre("Almacén Don Pepe", { listaPrecios: "Almacenes" }));
     await irAPedidos(page);
     await page.locator(".bottom-nav .nav-nuevo").click();
     await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
@@ -107,7 +149,7 @@ test("listas de precios: crear, renombrar, borrar y elegir al armar el pedido", 
     // Borrar "Súper": el kiosco vuelve a la General.
     await page.evaluate(() => window.listasPreciosVendeFrio.abrirPantalla());
     await pantalla.getByRole("button", { name: "Opciones de Súper" }).click();
-    await page.getByRole("dialog", { name: "Opciones de Súper" }).getByRole("button", { name: "Borrar la lista" }).click();
+    await page.getByRole("menu", { name: "Súper" }).getByRole("button", { name: "Borrar la lista" }).click();
     const confirmar = page.getByRole("alertdialog", { name: "¿Borrar la lista «Súper»?" });
     await expect(confirmar).toContainText("El comercio que la usa vuelve a los precios generales");
     await confirmar.getByRole("button", { name: "Borrar" }).click();
@@ -136,19 +178,24 @@ test("listas de precios: exportar a planilla y folleto para imprimir", async ({ 
     await abrirMas(page);
     await page.locator('.masAcceso[data-mas="listasPrecios"]').click();
     const pantalla = page.locator("#pantallaListasPrecios");
-    await pantalla.locator('[data-sugerida="Almacenes"]').click();
+    await pantalla.locator("#crearListaPrecios").click();
+    const nueva = page.getByRole("dialog", { name: "Lista nueva" });
+    await nueva.locator("#nombreListaPrecios").fill("Almacenes");
+    await nueva.getByRole("button", { name: "Crear lista" }).click();
     const toda = page.locator("#pantallaTodaLista");
-    await toda.locator("#porcentajeLista").fill("-10");
-    await toda.locator('[data-redondeo="100"]').click();
-    await toda.locator("#aplicarPorcentajeLista").click();
+    await toda.locator("#cambiarRegla").click();
+    const regla = page.getByRole("dialog", { name: "Precios de Almacenes" });
+    await regla.locator("#porcentajeLista").fill("-10");
+    await regla.locator('[data-redondeo="100"]').click();
+    await regla.getByRole("button", { name: /Aplicar a/ }).click();
     await expect(toda.getByRole("spinbutton", { name: "Precio Tapas de pascualina en Almacenes" })).toHaveValue("1700");
     await toda.locator("#guardarTodaLista").click();
     await expect(pantalla).toBeVisible();
-    await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("4 productos con precio");
+    await expect(pantalla.locator(".filaListaMas", { hasText: "Almacenes" })).toContainText("4 productos");
 
     // Planilla: marca, producto, precio de la lista y el general.
     await pantalla.getByRole("button", { name: "Opciones de Almacenes" }).click();
-    const opciones = page.getByRole("dialog", { name: "Opciones de Almacenes" });
+    const opciones = page.getByRole("menu", { name: "Almacenes" });
     const descarga = page.waitForEvent("download");
     await opciones.getByRole("button", { name: "Exportar a planilla" }).click();
     const archivo = await descarga;
@@ -163,7 +210,7 @@ test("listas de precios: exportar a planilla y folleto para imprimir", async ({ 
 
     // Folleto: datos de la distribuidora y los precios por marca.
     await pantalla.getByRole("button", { name: "Opciones de Almacenes" }).click();
-    await page.getByRole("dialog", { name: "Opciones de Almacenes" }).getByRole("button", { name: "Folleto para imprimir" }).click();
+    await page.getByRole("menu", { name: "Almacenes" }).getByRole("button", { name: "Folleto para imprimir" }).click();
     const folleto = page.locator("#pantallaFolleto");
     await expect(folleto).toBeVisible();
     const hoja = folleto.locator(".folletoHoja");

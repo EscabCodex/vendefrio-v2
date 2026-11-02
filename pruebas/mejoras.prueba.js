@@ -203,9 +203,11 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
 
     // Toda la lista de precios: −10% redondeado a $ 100.
     await page.evaluate(() => window.listasPreciosVendeFrio.abrirLista("Mayorista"));
-    await page.locator("#porcentajeLista").fill("-10");
-    await page.locator('[data-redondeo="100"]').click();
-    await page.locator("#aplicarPorcentajeLista").click();
+    await page.locator("#cambiarRegla").click();
+    const regla = page.getByRole("dialog", { name: "Precios de Mayorista" });
+    await regla.locator("#porcentajeLista").fill("-10");
+    await regla.locator('[data-redondeo="100"]').click();
+    await regla.getByRole("button", { name: /Aplicar a/ }).click();
     await expect(page.getByRole("spinbutton", { name: "Precio Helado 1 kg en Mayorista" })).toHaveValue("4100");
     await capturar(page, "mejoras-10-toda-la-lista");
     await page.locator("#guardarTodaLista").click();
