@@ -27,6 +27,7 @@
     const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
     let hoja = null;
+    let vistaAbierta = null;
     let charla = [];
     let esperando = false;
     let escuchando = false;
@@ -236,7 +237,7 @@
     // { pantalla, comercio, pedidoId, siguiente, lineas }: se arma al
     // preguntar, con lo que hay en pantalla (nada se guarda).
     function contexto() {
-        const vista = { pantalla: "", comercio: null, pedidoId: "", siguiente: null, lineas: [] };
+        const vista = { pantalla: "", titulo: "", ficha: "", comercio: null, pedidoId: "", siguiente: null, lineas: [] };
         const navegacion = window.navegacionVendeFrio;
         if (navegacion?.abierta?.()) {
             const parada = navegacion.paradaActual?.() || null;
@@ -253,6 +254,7 @@
             if (seccion) {
                 vista.pantalla = seccion.id.replace(/^pantalla/, "").toLowerCase();
                 const titulo = (seccion.querySelector(":scope > header h1, .configHeader h1")?.textContent || "").trim();
+                vista.titulo = titulo;
                 const cliente = document.getElementById("cliente");
                 if (seccion.id === "pantallaPedido" && seVe(cliente)) {
                     const unidades = Number(document.getElementById("totalUnidadesPedido")?.textContent) || 0;
@@ -274,6 +276,7 @@
         const pedido = seVe(document.getElementById("modalFichaPedido")) ? pedidoPorId(idPedido) : null;
         if (pedido) {
             vista.pedidoId = String(pedido.id);
+            vista.ficha = "pedido";
             vista.comercio = comercioLlamado(pedido.comercio) || vista.comercio;
             const productos = (Array.isArray(pedido.productos) ? pedido.productos : []).map(item => (Number(item.cantidad) || 0) + " " + item.producto).join(", ");
             vista.lineas.push("Tiene abierto el pedido de " + pedido.comercio + (productos ? ": " + productos : "") + ".");
@@ -282,6 +285,7 @@
         if (fichaComercio && seVe(fichaComercio.closest(".modalFichaComercio"))) {
             const nombre = fichaComercio.textContent.trim();
             vista.comercio = comercioLlamado(nombre) || vista.comercio;
+            vista.ficha = "comercio";
             vista.lineas.push("Tiene abierta la ficha del comercio " + nombre + ".");
         }
         return vista;
@@ -504,9 +508,11 @@
         if (!hoja || !hoja.isConnected) return;
         const lugar = hoja.querySelector(".charla");
         lugar.innerHTML = (charla.length ? charla.map(htmlBurbuja).join("")
-            : `<div class="burbuja burbujaApp">Hola. Decime qué necesitás: cargo pedidos, te digo cómo vas y te explico cómo se usa la app.</div>`)
+            : `<div class="burbuja burbujaApp">${p.esc(saludo(vistaAbierta || contexto()))}</div>`)
             + (esperando ? `<div class="burbuja burbujaApp burbujaPensando" aria-label="Pensando"><span></span><span></span><span></span></div>` : "");
         lugar.scrollTop = lugar.scrollHeight;
+        // Las preguntas para tocar se ven hasta que empieza la charla.
+        hoja.querySelector(".sugerencias")?.classList.toggle("oculto", charla.length > 0);
         const estado = hoja.querySelector(".estadoAsistente");
         estado.textContent = escuchando ? "Te escucho…" : "";
         hoja.querySelector(".botonHablarAsistente")?.classList.toggle("escuchando", escuchando);
@@ -635,33 +641,81 @@
         });
     }
 
-    // Las sugerencias cambian con lo que estás viendo (T160).
-    function sugerenciasPara(vista) {
-        const propias = [];
-        if (vista.pantalla === "navegacion") {
-            propias.push("Llegué");
-            if (vista.siguiente) propias.push("Vamos a lo de " + vista.siguiente.nombre + " primero");
+    // Tanda 2 (pedido del dueño, 2026-11-02): el Asistente se enfoca en la
+    // pantalla desde donde lo abriste. Dice dónde estás, de qué te puede
+    // hablar y trae 3 o 4 preguntas o pedidos para tocar y mandar.
+    const ENFOQUE = {
+        menu: { nombre: "Inicio", tema: "tu día", sugerencias: ["¿Cuánto vendí hoy?", "¿A quién me falta visitar hoy?", "¿Quién me debe?", "Haceme un resumen de la semana"] },
+        pedido: { nombre: "Pedidos", tema: "tus pedidos", sugerencias: ["¿Qué pedidos me faltan armar?", "¿Cuántas unidades tengo que cargar hoy?", "¿Cuánto vendí hoy?", "Haceme un resumen de los pedidos de hoy"] },
+        nuevoPedido: { nombre: "Nuevo pedido", tema: "este pedido", sugerencias: ["¿Qué me conviene ofrecerle?", "¿Cómo cambio el precio de un producto?"] },
+        historial: { nombre: "Pedidos", tema: "tus pedidos", sugerencias: ["¿Cuánto vendí esta semana?", "¿Qué pedidos me faltan armar?", "Haceme un resumen de la semana"] },
+        comercios: { nombre: "Comercios", tema: "tus comercios", sugerencias: ["¿A quién me falta visitar hoy?", "¿Quién no me compra hace más de 2 semanas?", "¿Quién me compra más?", "¿Quién me debe?"] },
+        catalogo: { nombre: "Catálogo", tema: "tus productos y precios", sugerencias: ["¿Qué es lo que más se vende?", "¿Qué productos tienen poco stock?", "¿Qué producto no se vende hace un mes?"] },
+        productos: { nombre: "Catálogo", tema: "tus productos y precios", sugerencias: ["¿Qué es lo que más se vende?", "¿Qué productos tienen poco stock?", "¿Qué producto no se vende hace un mes?"] },
+        rutas: { nombre: "Rutas", tema: "tu ruta de hoy", sugerencias: ["¿A quién me falta visitar hoy?", "¿Cuántas paradas me quedan?", "¿A dónde voy ahora?", "¿Cómo armo la ruta de hoy?"] },
+        estadisticas: { nombre: "Estadísticas", tema: "tus ventas y tus números", sugerencias: ["Compará las ventas de este mes con el mes anterior", "¿Qué producto creció más este mes?", "¿Qué comercios me compran menos que antes?", "Haceme un resumen de ventas del mes"] },
+        mapaventas: { nombre: "Mapa de ventas", tema: "tus ventas por zona", sugerencias: ["¿Qué zona me compra más?", "¿Qué comercios me compran menos que antes?"] },
+        acobrar: { nombre: "A cobrar", tema: "lo que te deben", sugerencias: ["¿Quién me debe más?", "¿Quién me debe hace más tiempo?", "¿Cómo registro un cobro?"] },
+        cierre: { nombre: "Cierre del día", tema: "la caja del día", sugerencias: ["¿Cuánto cobré hoy?", "¿Cuánto tendría que tener en efectivo?", "¿Cuánto vendí hoy?"] },
+        listasprecios: { nombre: "Listas de precios", tema: "tus listas de precios", sugerencias: ["¿Qué comercios no tienen lista?", "¿Cómo armo una lista nueva?", "¿Cómo subo todos los precios un 10%?"] },
+        whatsapp: { nombre: "WhatsApp", tema: "tus mensajes a los comercios", sugerencias: ["Escribime un mensaje para ofrecer un producto nuevo", "¿A quién le mando la ronda de pedidos?"] },
+        configuracion: { nombre: "Más", tema: "cómo se usa la app", sugerencias: ["¿Cómo sumo un empleado?", "¿Cómo guardo un respaldo?", "¿Cómo conecto la impresora?"] },
+        navegacion: { nombre: "la navegación", tema: "tu recorrido", sugerencias: ["Llegué", "¿Cuántas paradas me quedan?"] }
+    };
+
+    function enfoqueDe(vista) {
+        if (vista.ficha === "pedido") {
+            const nombre = vista.comercio?.nombre || "este pedido";
+            return { donde: "Estás en el pedido de " + nombre, tema: "este pedido", sugerencias: ["Imprimí el ticket", "¿Cuánto me debe " + nombre + "?", "¿Qué suele pedir " + nombre + "?"] };
         }
-        if (vista.pedidoId) propias.push("Imprimí el ticket");
-        else if (vista.comercio && vista.pantalla !== "navegacion") propias.push("Nuevo pedido para " + vista.comercio.nombre);
-        return [...propias, ...SUGERENCIAS.filter(texto => !(vista.pantalla === "navegacion" && /cobro/.test(texto)))].slice(0, 4);
+        if (vista.ficha === "comercio" && vista.comercio) {
+            const nombre = vista.comercio.nombre;
+            return { donde: "Estás en la ficha de " + nombre, tema: nombre, sugerencias: ["Nuevo pedido para " + nombre, "¿Qué suele pedir " + nombre + "?", "¿Cuánto me compró " + nombre + " este mes?", "¿Qué le conviene ofrecer a " + nombre + "?"] };
+        }
+        const propio = ENFOQUE[vista.pantalla];
+        if (!propio) {
+            const nombre = vista.titulo || "esta pantalla";
+            return { donde: "Estás en " + nombre, tema: "esta pantalla", sugerencias: SUGERENCIAS.slice(0, 3) };
+        }
+        const sugerencias = [...propio.sugerencias];
+        if (vista.pantalla === "navegacion" && vista.siguiente) sugerencias.splice(1, 0, "Vamos a lo de " + vista.siguiente.nombre + " primero");
+        if (vista.pantalla === "nuevoPedido" && vista.comercio) sugerencias.unshift("¿Qué suele pedir " + vista.comercio.nombre + "?");
+        return { donde: vista.pantalla === "navegacion" ? "Estás navegando" : "Estás en " + propio.nombre, tema: propio.tema, sugerencias };
     }
 
-    function abrir({ escuchar = true } = {}) {
+    function sugerenciasPara(vista) {
+        return enfoqueDe(vista).sugerencias.slice(0, 4);
+    }
+
+    function saludo(vista) {
+        const nombre = String(p.persona?.()?.nombre || "").trim().split(/\s+/)[0];
+        return "Hola" + (nombre ? ", " + nombre : "") + ". Preguntame lo que quieras de " + enfoqueDe(vista).tema + ", o pedime que haga algo por vos.";
+    }
+
+    // El micrófono se prende solo si lo tocás (pedido del dueño); la
+    // navegación lo abre escuchando porque estás manejando.
+    function abrir({ escuchar = false } = {}) {
         escuchando = false;
         esperando = false;
         plan = null;
-        const sugerencias = sugerenciasPara(contexto());
+        charla = [];
+        const vista = contexto();
+        vistaAbierta = vista;
+        const enfoque = enfoqueDe(vista);
+        const sugerencias = sugerenciasPara(vista);
         hoja = p.hoja({
             titulo: "Asistente",
             clase: "hojaAsistente",
-            html: `<div class="charla" aria-live="polite"></div>
+            html: `<p class="dondeAsistente">${p.ico("ubicacion", 15)} ${p.esc(enfoque.donde)}</p>
+                <div class="charla" aria-live="polite"></div>
                 <p class="estadoAsistente" role="status"></p>
-                <div class="sugerencias">${sugerencias.map(texto => `<button type="button" class="pzFiltro" data-sugerencia="${p.esc(texto)}">${p.esc(texto)}</button>`).join("")}</div>
+                <div class="sugerencias" aria-label="Preguntas para tocar">${sugerencias.map(texto => `<button type="button" class="sugerenciaAsistente" data-sugerencia="${p.esc(texto)}">${p.esc(texto)}</button>`).join("")}</div>
                 <form class="entradaAsistente">
-                    <input type="text" id="textoAsistente" placeholder="Hablá o escribí…" aria-label="Hablale o escribile al Asistente" autocomplete="off" maxlength="500">
-                    ${window.vozVendeFrio?.disponible ? `<button type="button" class="botonRedondo botonHablarAsistente" aria-label="Hablar">${p.ico("microfono", 20)}</button>` : ""}
-                    <button type="submit" class="botonRedondo" aria-label="Enviar">${p.ico("flechaDerecha", 20)}</button>
+                    <div class="campoAsistente">
+                        <input type="text" id="textoAsistente" placeholder="Escribile al Asistente…" aria-label="Hablale o escribile al Asistente" autocomplete="off" maxlength="500">
+                        ${window.vozVendeFrio?.disponible ? `<button type="button" class="botonHablarAsistente" aria-label="Hablar">${p.ico("microfono", 20)}</button>` : ""}
+                    </div>
+                    <button type="submit" class="botonRedondo botonEnviarAsistente" aria-label="Enviar">${p.ico("flechaDerecha", 20)}</button>
                 </form>
                 <label class="vozAltaAsistente"><input type="checkbox" id="vozAltaAsistente" ${hablaEnVozAlta() ? "checked" : ""}> Contestar en voz alta</label>`
         });

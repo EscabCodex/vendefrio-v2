@@ -1681,3 +1681,33 @@ html #pantallaRutas .cabezaRutas .asistenteRutas{order:10;}
    dice para qué sirve cada una. */
 html body > section > header > div > p,
 html #configDetalle > .configDescripcion{display:none !important;}
+
+/* ---------- Tanda 2: el Asistente como un chat (pedido del dueño, 2026-11-02) ----------
+   Dice dónde estás, saluda según la pantalla y trae preguntas para tocar
+   (se mandan con un toque, como las respuestas sugeridas de Claude). El
+   micrófono va dentro del campo y se prende solo al tocarlo. */
+.dondeAsistente{
+  display:inline-flex;align-self:flex-start;width:fit-content;max-width:100%;align-items:center;gap:6px;margin:2px 0 12px;padding:5px 12px 5px 10px;
+  border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--acento-oscuro, var(--acento));
+  font-size:13.5px;font-weight:700;line-height:1.2;
+}
+html[data-tema="oscuro"] .dondeAsistente{background:var(--superficie-2);color:var(--acento);}
+.dondeAsistente .pzIco{display:inline-grid;}
+.hojaAsistente .sugerencias{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin:2px 0 4px;}
+.hojaAsistente .sugerencias.oculto{display:none;}
+.sugerenciaAsistente{
+  max-width:88%;min-height:40px;padding:9px 14px;border:1.5px solid var(--acento);border-radius:18px 18px 6px 18px;
+  background:transparent;color:var(--acento-oscuro, var(--acento));font:inherit;font-size:14.5px;font-weight:650;line-height:1.3;text-align:right;cursor:pointer;
+}
+html[data-tema="oscuro"] .sugerenciaAsistente{color:var(--acento);}
+.sugerenciaAsistente:active{background:var(--acento-bg);}
+.hojaAsistente .entradaAsistente{margin-top:14px;}
+.campoAsistente{position:relative;flex:1;min-width:0;display:flex;}
+.campoAsistente input{flex:1;min-width:0;min-height:48px;padding:0 52px 0 16px;border:1px solid var(--borde);border-radius:var(--radio-pildora);background:var(--superficie);color:var(--texto);font:inherit;font-size:16px;box-shadow:var(--sombra);}
+.campoAsistente .botonHablarAsistente{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;
+  background:transparent;color:var(--texto-sec);box-shadow:none;cursor:pointer;
+}
+.campoAsistente .botonHablarAsistente.escuchando{background:var(--peligro);color:#fff;}
+.hojaAsistente .vozAltaAsistente{font-size:13px;margin-top:10px;}

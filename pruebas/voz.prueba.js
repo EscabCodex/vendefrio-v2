@@ -84,6 +84,9 @@ test("voz: comandos desde Inicio y pedido dictado o pegado", async ({ page }, te
     await page.evaluate(() => { window.__fraseVoz = "cantame una canción"; });
     await asistente.click();
     const ventana = page.getByRole("dialog", { name: "Asistente" });
+    // No escucha sola (tanda 2): el micrófono se prende al tocarlo.
+    await expect(ventana.locator(".botonHablarAsistente")).not.toHaveClass(/escuchando/);
+    await ventana.getByRole("button", { name: "Hablar" }).click();
     await expect(ventana.locator(".burbujaApp").last()).toContainText("No entendí");
     await capturar(page, "voz-01-te-escucho");
 

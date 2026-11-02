@@ -1802,7 +1802,7 @@
             items: [
                 { icono: "mas", texto: "Sumar parada", principal: true, alTocar: abrirSumarParada },
                 paradas.length > 1 ? { icono: "lista", texto: "Ver todas las paradas", cantidad: paradas.length, alTocar: verParadas } : null,
-                window.asistenteVendeFrio ? { icono: "chispa", texto: "Hablarle al asistente", alTocar: () => window.asistenteVendeFrio.abrir() } : null,
+                window.asistenteVendeFrio ? { icono: "chispa", texto: "Hablarle al asistente", alTocar: () => window.asistenteVendeFrio.abrir({ escuchar: true }) } : null,
                 { icono: prendida ? "volumen" : "volumenNo", texto: prendida ? "Voz: prendida" : "Voz: apagada", tono: prendida ? "" : "gris", alTocar: alternarVoz },
                 { icono: "minimizar", texto: "Achicar la navegación", alTocar: minimizar },
                 "-",

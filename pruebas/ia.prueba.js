@@ -158,6 +158,8 @@ test("ia: un solo asistente, el de Claude, en Inicio, el dictado y navegando", a
     await page.evaluate(() => { window.__fraseVoz = "¿Cuánto vendí hoy?"; });
     await page.locator("#pantallaMenu header").getByRole("button", { name: "Asistente" }).click();
     const ventana = page.getByRole("dialog", { name: "Asistente" });
+    // No escucha sola (tanda 2): el micrófono se prende al tocarlo.
+    await ventana.getByRole("button", { name: "Hablar" }).click();
     await expect(ventana.locator(".burbujaApp").last()).toContainText("Vendiste");
     const campo = ventana.getByRole("textbox", { name: "Hablale o escribile al Asistente" });
 
