@@ -145,7 +145,10 @@ test("asistente: chat por pantalla que arma un PDF y crea una lista de precios",
     await ventana.getByRole("button", { name: "Enviar" }).click();
     const folleto = page.locator("#pantallaFolleto");
     await expect(folleto).toBeVisible();
-    await expect(folleto.locator(".folletoTitulo")).toContainText("Lista de precios · Mayoristas");
+    // Para un cliente no dice en qué lista está (pedido del dueño).
+    await expect(folleto.locator(".folletoTitulo strong")).toHaveText("Lista de precios");
+    await expect(folleto).not.toContainText("Mayoristas");
+    await expect(folleto.locator(".folletoMarcas")).toContainText("$ 2.880");
     await expect(folleto.locator(".folletoTitulo")).toContainText("Para Almacén Don Pepe");
     await expect(folleto.locator(".folletoMarcas")).toContainText("Ravioles de ricota");
     await expect(folleto.getByRole("button", { name: "Imprimir o guardar en PDF" })).toBeVisible();

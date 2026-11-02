@@ -869,7 +869,7 @@
                 <h1>${p.esc(nombreDistribuidora())}</h1>
                 ${contacto ? `<p>${contacto}</p>` : ""}
             </div>
-            <div class="folletoTitulo"><strong>${nombre ? "Lista de precios · " + p.esc(nombre) : "Lista de precios"}</strong><span>${para ? "Para " + p.esc(para) + " · " : ""}Precios al ${hoyTexto()}</span></div>
+            <div class="folletoTitulo"><strong>${nombre && !para ? "Lista de precios · " + p.esc(nombre) : "Lista de precios"}</strong><span>${para ? "Para " + p.esc(para) + " · " : ""}Precios al ${hoyTexto()}</span></div>
             <div class="folletoMarcas">${marcas || `<p class="folletoVacio">Todavía no hay productos en el catálogo.</p>`}</div>
             <div class="folletoPie">Precios sujetos a cambio sin previo aviso.</div>
         </article>`;
@@ -899,7 +899,7 @@
     // «para» pone a quién se lo entregan.
     function abrirFolleto(nombre = "", { para = "" } = {}) {
         const seccion = p.pantalla("pantallaFolleto", {
-            titulo: "Folleto · " + (nombre || para || "Precios generales"),
+            titulo: "Folleto · " + (para || nombre || "Precios generales"),
             volverA: () => abrirPantalla()
         });
         p.mostrar(seccion);

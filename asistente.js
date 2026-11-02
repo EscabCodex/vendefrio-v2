@@ -382,7 +382,7 @@
             }
             case "primero": return "Ir primero a " + nombre + ".";
             case "crearLista": return "Crear la lista de precios «" + paso.nombre + "»" + (paso.porcentaje ? ", " + Math.abs(paso.porcentaje) + "% más " + (paso.porcentaje > 0 ? "cara" : "barata") + " que el general." : ", para cargarla a mano.");
-            case "folleto": return "Te armo el folleto de precios" + (nombre ? " para " + nombre : "") + (listaDelFolleto(paso) ? " (lista " + listaDelFolleto(paso) + ")" : "") + ". Tocá «Imprimir o guardar en PDF».";
+            case "folleto": return "Te armo el folleto de precios" + (nombre ? " para " + nombre : "") + (!nombre && listaDelFolleto(paso) ? " (lista " + listaDelFolleto(paso) + ")" : "") + ". Tocá «Imprimir o guardar en PDF».";
             default: return contarOrden(paso);
         }
     }
