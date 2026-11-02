@@ -3008,3 +3008,9 @@ html[data-tema="oscuro"] .lpPctValor input{background:none !important;}
 .relojComercioNav{position:absolute;z-index:1100;left:max(14px, env(safe-area-inset-left));top:calc(var(--bajoCartel, calc(186px + env(safe-area-inset-top))) + 30px);display:flex;align-items:center;gap:6px;max-width:calc(100% - 28px);padding:6px 12px;border-radius:999px;background:var(--superficie);color:var(--texto);font-size:13px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2);}
 .relojComercioNav[hidden]{display:none;}
 .relojComercioNav span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Cierre de ruta. */
+.numerosCierreRuta{grid-template-columns:repeat(2, minmax(0, 1fr));}
+.tituloCierreRuta{margin:14px 2px 6px;font-size:15px;font-weight:850;}
+.aprendidoCierreRuta{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px;}
+.aprendidoCierreRuta li{display:flex;align-items:center;gap:8px;}
+.sinPasarCierreRuta{display:flex;align-items:center;gap:6px;margin:10px 2px 0;font-size:13.5px;color:var(--pendiente);}

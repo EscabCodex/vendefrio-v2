@@ -1364,6 +1364,7 @@
         }
         hablar(despedida);
         cerrar({ despedida: true });
+        window.rutasVendeFrio?.alTerminarRecorrido?.();
     }
 
     // Saltear parada (T135): pasa a la que sigue sin marcar la visita. En

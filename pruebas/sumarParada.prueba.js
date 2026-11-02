@@ -126,3 +126,52 @@ test("reloj del comercio: arranca al llegar y guarda el promedio en la ficha", a
     await page.evaluate(() => window.abrirFichaComercio("Almacén Uno"));
     await expect(page.locator(".fichaTiempo")).toContainText("Tiempo promedio en este comercio12 min");
 });
+
+test("cierre de ruta: al terminar la última parada y desde el ⋯", async ({ page }) => {
+    await page.route("https://routing.openstreetmap.de/**", ruta => ruta.abort());
+    await page.route("https://valhalla1.openstreetmap.de/**", ruta => ruta.abort());
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation(SALIDA);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
+    await page.locator("#inicioNombrePersonal").fill("Jere");
+    await page.locator("#inicioRolesPersonales").getByText("Repartidor").click();
+    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.evaluate(comercios => comercios.slice(0, 2).forEach((comercio, i) => {
+        agregarComercio({ ...comercio, direccion: "Calle " + (i + 1), origenGps: "gps" });
+        if (i === 0) actualizarComercioPorNombre(comercio.nombre, { minutosEnComercio: 12, tiemposEnComercio: [10, 14] });
+    }), COMERCIOS);
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
+    await page.evaluate(() => armarRutaCon(["Almacén Uno", "Bar Dos"]));
+    await expect(page.locator(".paradaOrden")).toHaveCount(2);
+
+    // Iniciar y marcar las dos llegadas: al terminar, el cierre.
+    await page.locator("#btnNavegarRuta").click();
+    await expect(page.locator("#pantallaNavegacion")).toBeVisible();
+    await page.evaluate(() => window.navegacionVendeFrio.siguiente());
+    await page.evaluate(() => window.navegacionVendeFrio.siguiente());
+    const cierre = page.getByRole("dialog", { name: "Cierre de ruta" });
+    await expect(cierre).toBeVisible();
+    await expect(cierre.locator(".numeroPlanRutas").first()).toHaveText("2 de 2paradas");
+    await expect(cierre.locator(".numeroPlanRutas").nth(1)).toContainText("tardaste · la app decía");
+    await expect(cierre.locator(".aprendidoCierreRuta")).toHaveText("En Almacén Uno tardás unos 12 min");
+    await capturar(page, "sumarParada-06-cierre");
+    await cierre.getByRole("button", { name: "Listo" }).click();
+    await expect(cierre).toBeHidden();
+    const guardado = await page.evaluate(() => ({
+        hechas: JSON.parse(localStorage.getItem("vendefrio_rutasHechas") || "[]"),
+        enCurso: localStorage.getItem("vendefrio_rutaEnCurso")
+    }));
+    expect(guardado.hechas).toHaveLength(1);
+    expect(guardado.hechas[0]).toMatchObject({ paradas: 2, hechas: 2 });
+    expect(guardado.enCurso).toBeNull();
+
+    // También desde el ⋯ de la ruta.
+    await page.evaluate(() => mostrarPantalla("rutas"));
+    await page.locator("#btnMasRutas").click();
+    await page.locator(".menuRutaHoy").getByRole("button", { name: "Cerrar la ruta" }).click();
+    await expect(cierre).toBeVisible();
+    await expect(cierre.locator(".numeroPlanRutas").nth(1)).toContainText("sin navegar");
+});

@@ -89,7 +89,9 @@ function iniciarNavegacionRuta() {
     const nombres = rutaOrdenada.map(parada => parada.nombre);
     if (!window.navegacionVendeFrio?.abrir?.(nombres)) {
         mostrarAviso("No se pudo navegar", "Las paradas necesitan su ubicación GPS. Si elegiste Google Maps en Más, usá «Abrir en Google Maps» del ⋯.");
+        return;
     }
+    empezarRutaEnCurso();
 }
 
 // -------------------------------------------------
@@ -1333,6 +1335,7 @@ function abrirMenuRuta(ancla) {
             rutas ? { icono: "historial", texto: "Rutas guardadas", cantidad: rutas, alTocar: abrirRutasGuardadas } : null,
             { icono: "mapa", texto: "Abrir en Google Maps", alTocar: abrirGoogleMaps },
             imprimir ? { icono: "impresora", texto: "Imprimir hoja de reparto", alTocar: imprimirHojaReparto } : null,
+            { icono: "bandera", texto: "Cerrar la ruta", alTocar: abrirCierreRuta },
             "-",
             { icono: "tacho", texto: "Vaciar la ruta", peligro: true, alTocar: vaciarRuta }
         ]
@@ -2289,6 +2292,164 @@ function cerrarPanelParadas() {
 
 // El atrás del celular en Rutas (regla 2): primero suelta el pin que se
 // mueve o el lugar que se marca, después cierra Paradas.
+// -------------------------------------------------
+// Cierre de ruta (repaso de Rutas, imagen 7): al terminar la última parada o
+// con ⋯ «Cerrar la ruta». Paradas hechas, lo que tardaste contra lo que
+// decía la app, lo vendido y lo cobrado, lo aprendido de cada comercio, y
+// compartirlo o imprimirlo. Cada cierre queda guardado en este celular.
+// -------------------------------------------------
+const CLAVE_RUTA_EN_CURSO = "vendefrio_rutaEnCurso";
+const CLAVE_RUTAS_HECHAS = "vendefrio_rutasHechas";
+
+function leerJsonRutas(clave, valor) {
+    try {
+        const dato = JSON.parse(localStorage.getItem(clave) || "null");
+        return dato === null ? valor : dato;
+    } catch (error) {
+        return valor;
+    }
+}
+
+function guardarJsonRutas(clave, dato) {
+    try {
+        if (dato === null) localStorage.removeItem(clave);
+        else localStorage.setItem(clave, JSON.stringify(dato));
+    } catch (error) {
+        // Sin lugar: el cierre igual se ve.
+    }
+}
+
+function empezarRutaEnCurso() {
+    const nombres = rutaOrdenada.map(parada => parada.nombre);
+    const actual = leerJsonRutas(CLAVE_RUTA_EN_CURSO, null);
+    const hoy = new Date().toDateString();
+    if (actual && new Date(actual.desde).toDateString() === hoy && actual.paradas.join("\n") === nombres.join("\n")) return;
+    const cuenta = cuentaRuta();
+    guardarJsonRutas(CLAVE_RUTA_EN_CURSO, {
+        desde: Date.now(),
+        paradas: nombres,
+        planSegundos: Math.round(cuenta.segundos),
+        planMetros: Math.round(cuenta.metros),
+        nombre: rutaGuardadaActual?.nombre || ""
+    });
+}
+
+function datosCierreRuta() {
+    const enCurso = leerJsonRutas(CLAVE_RUTA_EN_CURSO, null);
+    const nombres = rutaOrdenada.length ? rutaOrdenada.map(parada => parada.nombre) : (enCurso?.paradas || []);
+    const desde = Number(enCurso?.desde) || 0;
+    const clave = nombre => String(nombre || "").trim().toLocaleLowerCase("es");
+    const enLaRuta = new Set(nombres.map(clave));
+    const comercios = nombres.map(nombre => buscarComercioPorNombre(nombre) || { nombre });
+    const visitado = comercio => paradaHecha(comercio) || (typeof visitadoHoy === "function" && visitadoHoy(comercio));
+    const hechas = comercios.filter(visitado);
+    const inicioDia = new Date();
+    inicioDia.setHours(0, 0, 0, 0);
+    const desdeVentas = desde || inicioDia.getTime();
+    const pedidos = (typeof obtenerHistorial === "function" ? obtenerHistorial() : [])
+        .filter(pedido => pedido && pedido.eliminado !== true && enLaRuta.has(clave(pedido.comercio)) && Number(pedido.timestamp) >= desdeVentas);
+    const vendido = pedidos.reduce((total, pedido) => total + (typeof totalDelPedido === "function" ? totalDelPedido(pedido).total : 0), 0);
+    let cobrado = null;
+    let fiado = null;
+    if (window.cierreVendeFrio?.disponible?.()) {
+        const dia = window.cierreVendeFrio.calcular(inicioDia.getTime());
+        cobrado = dia.cobros.filter(item => enLaRuta.has(clave(item.comercio)) && Number(item.cobro?.horaCelular) >= desdeVentas)
+            .reduce((total, item) => total + (Number(item.cobro?.monto) || 0), 0);
+        fiado = dia.entregados.filter(item => enLaRuta.has(clave(item.comercio)) && !item.cobro)
+            .reduce((total, item) => total + (Number(item.total) || 0), 0);
+    }
+    const aprendido = comercios.filter(comercio => Number(comercio.minutosEnComercio) > 0)
+        .map(comercio => ({ nombre: comercio.nombre, minutos: Number(comercio.minutosEnComercio) }));
+    return {
+        nombre: enCurso?.nombre || rutaGuardadaActual?.nombre || "",
+        desde,
+        hasta: Date.now(),
+        paradas: nombres.length,
+        hechas: hechas.length,
+        sinPasar: comercios.filter(comercio => !visitado(comercio)).map(comercio => comercio.nombre),
+        planSegundos: Number(enCurso?.planSegundos) || Math.round(cuentaRuta().segundos),
+        realSegundos: desde ? Math.round((Date.now() - desde) / 1000) : 0,
+        pedidos: pedidos.length,
+        vendido,
+        cobrado,
+        fiado,
+        aprendido
+    };
+}
+
+function textoCierreRuta(datos) {
+    const p = window.piezas;
+    const lineas = [
+        "*Cierre de ruta" + (datos.nombre ? " · " + datos.nombre : "") + "*",
+        "Paradas: " + datos.hechas + " de " + datos.paradas,
+        datos.desde ? "Tardé " + textoDuracionRuta(datos.realSegundos) + " (la app decía " + textoDuracionRuta(datos.planSegundos) + ")" : "",
+        "Pedidos: " + datos.pedidos + " · " + p.plata(datos.vendido),
+        datos.cobrado === null ? "" : "Cobrado: " + p.plata(datos.cobrado),
+        datos.fiado ? "Quedó a cobrar: " + p.plata(datos.fiado) : "",
+        datos.sinPasar.length ? "Sin pasar: " + datos.sinPasar.join(", ") : ""
+    ];
+    return lineas.filter(Boolean).join("\n");
+}
+
+function abrirCierreRuta() {
+    const p = window.piezas;
+    if (!p?.hoja) return;
+    const datos = datosCierreRuta();
+    const verPlata = !window.verPlataVendeFrio || window.verPlataVendeFrio.puedoVer();
+    const numeros = [
+        [datos.hechas + " de " + datos.paradas, "paradas"],
+        [datos.desde ? textoDuracionRuta(datos.realSegundos) : "—", datos.desde ? "tardaste · la app decía " + textoDuracionRuta(datos.planSegundos) : "sin navegar"],
+        verPlata ? [p.plata(datos.vendido), datos.pedidos + (datos.pedidos === 1 ? " pedido" : " pedidos")] : [String(datos.pedidos), "pedidos"],
+        verPlata && datos.cobrado !== null ? [p.plata(datos.cobrado), "cobrado" + (datos.fiado ? " · " + p.plata(datos.fiado) + " a cobrar" : "")] : null
+    ].filter(Boolean);
+    const aprendido = datos.aprendido.length ? `<h3 class="tituloCierreRuta">Lo que aprendí</h3>
+        <ul class="aprendidoCierreRuta">${datos.aprendido.map(item => `<li>${window.icono("reloj", 15)}<span>En <b>${p.esc(item.nombre)}</b> tardás unos ${item.minutos} min</span></li>`).join("")}</ul>` : "";
+    const sinPasar = datos.sinPasar.length ? `<p class="sinPasarCierreRuta">${window.icono("alerta", 15)} Sin pasar: ${p.esc(datos.sinPasar.join(", "))}</p>` : "";
+    const imprimir = window.impresionVendeFrio?.disponible?.() && window.impresionVendeFrio?.imprimirLineas;
+    p.hoja({
+        titulo: "Cierre de ruta",
+        sub: (datos.nombre ? datos.nombre + " · " : "") + new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }),
+        clase: "hojaCierreRuta",
+        html: `<div class="numerosPlanRutas numerosCierreRuta">${numeros.map(([valor, nombre]) => `<div class="numeroPlanRutas"><strong>${p.esc(valor)}</strong><small>${p.esc(nombre)}</small></div>`).join("")}</div>
+            ${sinPasar}${aprendido}`,
+        botones: [
+            { id: "compartirCierreRuta", texto: "Compartir", icono: "compartir", clase: "pzBtnSec", cerrar: false, alTocar: () => compartirCierreRuta(datos) },
+            imprimir ? { id: "imprimirCierreRuta", texto: "Imprimir", icono: "impresora", clase: "pzBtnSec", cerrar: false, alTocar: () => imprimirCierreRuta(datos) } : null,
+            { id: "listoCierreRuta", texto: "Listo", clase: "pzBtnPri", cerrar: true, alTocar: () => guardarCierreRuta(datos) }
+        ].filter(Boolean)
+    });
+}
+
+function compartirCierreRuta(datos) {
+    const texto = textoCierreRuta(datos);
+    if (navigator.share) {
+        navigator.share({ text: texto }).catch(() => {});
+        return;
+    }
+    window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
+}
+
+function imprimirCierreRuta(datos) {
+    const lineas = [{ tipo: "titulo", texto: "CIERRE DE RUTA" }];
+    if (datos.nombre) lineas.push({ tipo: "centro", texto: datos.nombre });
+    lineas.push({ tipo: "centro", texto: new Date().toLocaleDateString("es-AR") }, { tipo: "separador" });
+    textoCierreRuta(datos).split("\n").slice(1).forEach(texto => lineas.push({ tipo: "texto", texto }));
+    window.impresionVendeFrio.imprimirLineas(lineas, { titulo: "Cierre de ruta" });
+}
+
+// Queda en este celular (las últimas 60): lo planeado contra lo real.
+function guardarCierreRuta(datos) {
+    const hechas = leerJsonRutas(CLAVE_RUTAS_HECHAS, []);
+    const lista = Array.isArray(hechas) ? hechas : [];
+    lista.push({
+        fecha: new Date().toLocaleDateString("es-AR"), nombre: datos.nombre, desde: datos.desde, hasta: datos.hasta,
+        paradas: datos.paradas, hechas: datos.hechas, planSegundos: datos.planSegundos, realSegundos: datos.realSegundos,
+        pedidos: datos.pedidos, vendido: datos.vendido, cobrado: datos.cobrado
+    });
+    guardarJsonRutas(CLAVE_RUTAS_HECHAS, lista.slice(-60));
+    guardarJsonRutas(CLAVE_RUTA_EN_CURSO, null);
+}
+
 window.rutasVendeFrio = {
     atras() {
         const pantalla = document.getElementById("pantallaRutas");
@@ -2300,7 +2461,16 @@ window.rutasVendeFrio = {
         return cerrarPanelParadas();
     },
     costoDePaso,
-    sumarParadaDePaso
+    sumarParadaDePaso(comercio) {
+        const lugar = sumarParadaDePaso(comercio);
+        mostrarRutaEnLista();
+        refrescarPines();
+        return lugar;
+    },
+    // La navegación terminó la última parada de una ruta empezada acá.
+    alTerminarRecorrido() {
+        if (leerJsonRutas(CLAVE_RUTA_EN_CURSO, null)) abrirCierreRuta();
+    }
 };
 
 function dibujarChipsRutas() {
