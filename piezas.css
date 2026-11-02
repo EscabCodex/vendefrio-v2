@@ -1686,3 +1686,5 @@ html .noExisteComercio .pzBtn{width:100%;margin:0 0 8px;}
 .hojaElegirComercio:has(.noExisteComercio) .nuevoComercioElegir{display:none;}
 html #pantallaPedido footer.piePedido #generar{white-space:nowrap;padding:0 18px;}
 html #pantallaPedido footer.piePedido .piePedidoResumen{min-width:0;}
+/* La lupa dentro de una hoja: el texto sin la caja de los campos (modo oscuro). */
+html[data-tema] body .pzLupaPastilla input.pzLupaInput{background:transparent !important;border:0 !important;box-shadow:none !important;}

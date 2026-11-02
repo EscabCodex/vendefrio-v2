@@ -113,6 +113,8 @@ test("nuevo pedido: elegir comercio, comercio nuevo y precios para siempre", asy
     await expect(page.locator("#cliente")).toHaveValue("Almacén Coco");
     await expect(tarjeta).toContainText("Este comercio no existe");
     await expect(tarjeta).toContainText("No está en tus comercios");
+    // Con otro comercio vuelve el precio del catálogo.
+    await expect(page.locator("#totalPlataPedido")).toHaveText("$ 4.500");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "nuevoPedido-05-tarjeta-sin-guardar");
     await tarjeta.getByRole("button", { name: "Crear «Almacén Coco»" }).click();

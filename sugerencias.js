@@ -298,7 +298,15 @@
     // Al salir del campo, "change" llega en medio del toque: si se redibuja
     // ya, la pantalla se mueve y el toque cae en otro lado (por ejemplo, en
     // vez de abrir una marca). Se espera lo mismo que en "blur".
-    input.addEventListener("change", () => { usado = ""; setTimeout(dibujar, 150); });
+    // Al cambiar de comercio también se rehacen los precios y el total (su
+    // lista o sus precios guardados pueden ser otros).
+    input.addEventListener("change", () => {
+        usado = "";
+        setTimeout(() => {
+            if (typeof window.actualizarResumenPedido === "function") window.actualizarResumenPedido();
+            else dibujar();
+        }, 150);
+    });
     input.addEventListener("input", () => { usado = ""; dibujar(); });
 
     // Cada vez que cambia el pedido (cantidades, comercio, borrador) se redibuja.
