@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 273,
+      "fecha": "2026-11-02",
+      "tipo": "mejor",
+      "icono": "check",
+      "titulo": "Entrar a la app es más simple",
+      "texto": "Crear cuenta gratis o Ya tengo cuenta, cada una en su pantalla. Tu nombre va al crear la cuenta."
+    },
+    {
       "version": 272,
       "fecha": "2026-11-02",
       "tipo": "nuevo",
