@@ -827,7 +827,7 @@
             productos: (productos[marca] || []).filter(producto => producto && producto.archivado !== true).map(producto => {
                 const general = Number(producto.precio) || 0;
                 const deLista = Number(producto.precios && producto.precios[nombre]) || 0;
-                return { nombre: String(producto.nombre || ""), general, precio: deLista > 0 ? deLista : general };
+                return { nombre: String(producto.nombre || "") + (producto.contenido ? " (" + producto.contenido + ")" : ""), general, precio: deLista > 0 ? deLista : general };
             })
         })).filter(grupo => grupo.productos.length);
     }

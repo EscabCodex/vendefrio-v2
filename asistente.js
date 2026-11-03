@@ -715,7 +715,7 @@
             if (!producto || producto.archivado === true || lineas.length >= 150) return;
             const listas = Object.entries(producto.precios || {}).filter(([, precio]) => Number(precio) > 0)
                 .map(([lista, precio]) => lista + " " + p.plata(precio));
-            lineas.push("- " + marca + " | " + producto.nombre + " | " + (Number(producto.precio) ? p.plata(producto.precio) : "sin precio") + (listas.length ? " | " + listas.join(", ") : ""));
+            lineas.push("- " + marca + " | " + producto.nombre + (producto.contenido ? " (" + producto.contenido + ")" : "") + " | " + (Number(producto.precio) ? p.plata(producto.precio) : "sin precio") + (listas.length ? " | " + listas.join(", ") : ""));
         }));
         return lineas.length ? "## Catálogo con precios (marca | producto | precio general | listas)\n" + lineas.join("\n") + "\n\n" : "";
     }

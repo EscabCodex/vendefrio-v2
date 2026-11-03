@@ -1735,3 +1735,8 @@ html .documentoHoja .documentoTabla th{background:#e6f1f9 !important;color:#0f3f
 html .documentoHoja > .folletoCab{border-radius:0 !important;padding:0 0 10px !important;margin:0 !important;}
 html .documentoHoja .folletoCab h1{font-size:22px !important;}
 html .documentoHoja > .folletoPie{color:#5a6672 !important;}
+/* Tanda 3: modo foto del Catálogo, limpio para mostrarle al cliente. */
+#pantallaCatalogo .grillaCatalogo.modoFoto .btnCatalogoEditar,
+#pantallaCatalogo .grillaCatalogo.modoFoto .btnCatalogoPedido,
+#pantallaCatalogo .grillaCatalogo.modoFoto .agregarFotoCatalogo{display:none;}
+#pantallaCatalogo .grillaCatalogo.modoFoto .pieItemCatalogo{min-height:0;padding-bottom:10px;}

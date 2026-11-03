@@ -13,6 +13,14 @@
 // =====================================================
 
 (function () {
+    // Tanda 3: el gramaje o las unidades del producto (de la ficha) van en el ticket.
+    function contenidoDeProducto(marca, nombre) {
+        try {
+            const lista = (typeof productosParaLeer === "function" ? productosParaLeer() : {})[marca] || [];
+            const encontrado = lista.find(producto => producto && producto.nombre === nombre);
+            return String(encontrado && encontrado.contenido || "").trim();
+        } catch (error) { return ""; }
+    }
     // Impresora guardada en este celular: { id, nombre }.
     const CLAVE_IMPRESORA = "vendefrio_impresora";
 
@@ -349,8 +357,9 @@
                 grupo = { marca, items: [] };
                 marcas.push(grupo);
             }
+            const contenido = contenidoDeProducto(marca, item.producto);
             grupo.items.push({
-                nombre: String(item.producto || "Sin producto"),
+                nombre: String(item.producto || "Sin producto") + (contenido ? " (" + contenido + ")" : ""),
                 cantidad,
                 pedida: linea.pedida,
                 precio,

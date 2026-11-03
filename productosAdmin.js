@@ -303,6 +303,14 @@ if (buscarProducto) {
 
 function mostrarCampo(elemento, mostrar) {
     if (elemento) elemento.style.display = mostrar ? "" : "none";
+    // El gramaje o las unidades van con el precio: solo en los productos.
+    if (elemento === labelPrecio) mostrarCampo(document.getElementById("labelContenido"), mostrar);
+}
+function campoContenido(valor) {
+    const campo = document.getElementById("productoContenido");
+    if (!campo) return "";
+    if (valor !== undefined) campo.value = valor;
+    return campo.value.trim().slice(0, 30);
 }
 
 // La hoja de marca y producto (como las de piezas.js): sube desde abajo, con
@@ -686,6 +694,7 @@ function abrirModalNuevoProducto(marcaElegida) {
     mostrarCampo(productoPrecio, true);
     productoNombre.value = "";
     productoPrecio.value = "";
+    campoContenido("");
     cargarSelectMarcas();
     if (typeof marcaElegida === "string" && marcas.includes(marcaElegida)) productoMarca.value = marcaElegida;
     mostrarArchivarEnModal(false);
@@ -723,6 +732,7 @@ function abrirModalEditarProducto(id) {
     mostrarCampo(productoPrecio, true);
     productoNombre.value = producto.nombre;
     productoPrecio.value = producto.precio;
+    campoContenido(producto.contenido || "");
     mostrarArchivarEnModal(true);
     mostrarHojaProducto(encontrado.marca);
 }
@@ -789,7 +799,7 @@ if (guardarProducto) {
         if (modo === "nuevoProducto") {
             guardado = agregarProductoConId(
                 productoMarca.value,
-                { nombre, precio }
+                { nombre, precio, ...(campoContenido() ? { contenido: campoContenido() } : {}) }
             );
 
             if (!guardado) {
@@ -828,7 +838,7 @@ if (guardarProducto) {
         if (modo === "editarProducto") {
             guardado = actualizarProductoPorId(
                 idProductoActual,
-                { nombre, precio }
+                { nombre, precio, contenido: campoContenido() }
             );
 
             if (!guardado) {
@@ -844,6 +854,8 @@ if (guardarProducto) {
         cerrarModalProducto();
         renderizarProductosAdmin(buscarProducto ? buscarProducto.value : "");
         if (typeof renderizarPedido === "function") renderizarPedido();
+        // Si se agregó desde Catálogo, que aparezca ahí mismo.
+        if (typeof window.renderizarCatalogo === "function") window.renderizarCatalogo();
         refrescarFichaMarca(modo === "editarMarca" ? nombre : "");
     };
 }
