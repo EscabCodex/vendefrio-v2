@@ -64,14 +64,15 @@ test("hojas: suben desde abajo, se cierran deslizando y el aviso sin cuenta va e
     await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
     await expect(avisoVentana).toBeHidden();
 
-    // Las hojas nuevas (Catálogo > tres puntitos > Editar datos) también.
+    // Las hojas nuevas (Catálogo > ficha del producto > Precio) también.
     await page.evaluate(() => {
         agregarMarca("Frío Sur");
         agregarProducto("Frío Sur", { nombre: "Helado 1 kg", precio: 4500 });
     });
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
     await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-    await page.getByRole("button", { name: "Editar datos" }).click();
+    await page.getByRole("button", { name: "Ver la ficha" }).click();
+    await page.getByRole("button", { name: "Cambiar precio" }).click();
     const opciones = page.locator(".pzHoja");
     await expect(opciones).toBeVisible();
     await arrastrarHacia(page, opciones, 260);

@@ -41,19 +41,22 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     await expect(catalogo.locator(".itemCatalogo")).toHaveCount(5);
 
     // Editar precio o foto: hoja nueva, con el "$" adelante.
-    // El ⋯ abre el menú flotante, con "Editar datos" resaltado arriba.
+    // El ⋯ abre el menú flotante, con "Ver la ficha" resaltado arriba.
     await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
     const menu = page.getByRole("menu", { name: "Helado 1 kg" });
-    await expect(menu.locator(".menuFlotanteItem").first()).toHaveText("Editar datos");
+    await expect(menu.locator(".menuFlotanteItem").first()).toHaveText("Ver la ficha");
     await expect(menu.getByRole("button", { name: "Agregar al pedido" })).toHaveCount(0);
     await capturar(page, "catalogo-01b-menu-producto");
-    await menu.getByRole("button", { name: "Editar datos" }).click();
-    const hoja = page.getByRole("dialog", { name: "Editar producto" });
-    await expect(hoja.getByText("Poner foto")).toBeVisible();
-    await hoja.locator(".precioCatalogoEdicion").fill("4800");
+    await menu.getByRole("button", { name: "Ver la ficha" }).click();
+    const fichaProducto = page.getByRole("dialog", { name: "Helado 1 kg" });
+    await expect(fichaProducto.getByText("+ Agregar foto")).toBeVisible();
+    await fichaProducto.getByRole("button", { name: "Cambiar precio" }).click();
+    const hoja = page.getByRole("dialog", { name: "Precio" });
+    await hoja.locator(".datoProductoEntrada").fill("4800");
     await capturar(page, "catalogo-02-editar-precio-o-foto");
-    await hoja.locator(".guardarEdicionCatalogo").click();
+    await hoja.locator(".guardarDatoProducto").click();
     await expect(hoja).toBeHidden();
+    await fichaProducto.getByRole("button", { name: "Cerrar ficha" }).click();
     await expect(tarjeta("Helado 1 kg").locator("b")).toHaveText("$ 4.800");
 
     // Editar marcas: tarjetas cerradas con las iniciales y la flechita.

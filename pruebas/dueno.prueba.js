@@ -80,9 +80,11 @@ test.describe("nube", () => {
         // Cambios: un precio (desde el catálogo), un producto archivado y un tope.
         await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
         await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-        await page.getByRole("button", { name: "Editar datos" }).click();
-        await page.locator(".precioCatalogoEdicion").fill("4800");
-        await page.locator(".guardarEdicionCatalogo").click();
+        await page.getByRole("button", { name: "Ver la ficha" }).click();
+        await page.getByRole("button", { name: "Cambiar precio" }).click();
+        await page.locator(".datoProductoEntrada").fill("4800");
+        await page.locator(".guardarDatoProducto").click();
+        await page.getByRole("button", { name: "Cerrar ficha" }).click();
         await page.evaluate(() => {
             const palito = Object.values(obtenerProductos()).flat().find(producto => producto.nombre === "Palito bombón");
             archivarProductoPorId(palito.id, true);

@@ -2,6 +2,22 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 275,
+      "fecha": "2026-11-04",
+      "tipo": "nuevo",
+      "icono": "paquete",
+      "titulo": "Ficha de cada producto",
+      "texto": "Tocá un producto: ves cuánto vendiste, quién compra más y cambiás nombre, precio y cómo viene."
+    },
+    {
+      "version": 275,
+      "fecha": "2026-11-04",
+      "tipo": "mejora",
+      "icono": "bolsa",
+      "titulo": "Catálogo en filas y modo foto",
+      "texto": "El Catálogo arranca en filas. Los cuadritos muestran fotos limpias para enseñarle al cliente."
+    },
+    {
       "version": 274,
       "fecha": "2026-11-02",
       "tipo": "nuevo",

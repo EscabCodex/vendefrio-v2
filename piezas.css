@@ -1740,3 +1740,24 @@ html .documentoHoja > .folletoPie{color:#5a6672 !important;}
 #pantallaCatalogo .grillaCatalogo.modoFoto .btnCatalogoPedido,
 #pantallaCatalogo .grillaCatalogo.modoFoto .agregarFotoCatalogo{display:none;}
 #pantallaCatalogo .grillaCatalogo.modoFoto .pieItemCatalogo{min-height:0;padding-bottom:10px;}
+/* Tanda 3: ficha del producto (misma ficha que la del comercio). */
+html .grillaCatalogo:not(.modoFoto) .itemCatalogo{cursor:pointer;}
+html .modalFichaProducto .fichaAvatarProducto{display:grid;place-items:center;color:#fff;background:var(--tono,var(--tono0));overflow:hidden;}
+html .modalFichaProducto .fichaAvatarProducto img{width:100%;height:100%;object-fit:cover;}
+html .modalFichaProducto .fichaTitulo small{display:block;color:var(--texto-sec);font-size:14px;font-weight:600;}
+html .modalFichaProducto .fichaComoVieneAbierta{background:var(--superficie-2);border-radius:14px;}
+html .modalFichaProducto .comoVieneLinea{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:14px;color:var(--texto-sec);}
+html .modalFichaProducto .comoVieneLinea select{height:34px;padding:0 8px;border-radius:10px;border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font:inherit;font-weight:700;}
+html .modalFichaProducto .comoVienePasos{display:inline-flex;align-items:center;border:1px solid var(--borde);border-radius:10px;overflow:hidden;background:var(--superficie);}
+html .modalFichaProducto .comoVienePasos button{width:32px;height:34px;border:0;background:transparent;color:var(--texto);font-size:18px;font-weight:700;}
+html .modalFichaProducto .comoVieneCantidad{min-width:36px;text-align:center;color:var(--texto);}
+html .modalFichaProducto .comoVieneRapidos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+html .modalFichaProducto .comoVieneRapido{height:30px;min-width:40px;padding:0 10px;border-radius:999px;border:1px solid var(--borde);background:var(--superficie);color:var(--texto);font-size:13.5px;font-weight:700;}
+html .modalFichaProducto .comoVieneRapido[aria-pressed="true"]{background:var(--pz-pri,var(--acento-oscuro));border-color:transparent;color:#fff;}
+html[data-tema="oscuro"] .modalFichaProducto .comoVieneRapido[aria-pressed="true"]{background:var(--acento);color:#111;}
+html .modalFichaProducto .quienCompraFila{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:15px;}
+html .modalFichaProducto .quienCompraNombre{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+html .modalFichaProducto .quienCompraNumero{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--superficie);font-size:12.5px;font-weight:800;}
+html .modalFichaProducto .quienCompraVacio{margin:6px 2px;color:var(--texto-sec);font-size:14px;}
+html .modalFichaProducto .fichaQuienCompra{margin-bottom:60px;}
+html .modalFichaProducto .comoVieneLinea select{width:auto !important;min-width:0 !important;height:34px !important;min-height:0 !important;padding:0 28px 0 10px !important;font-size:14px !important;}

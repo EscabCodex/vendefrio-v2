@@ -38,15 +38,32 @@ test("catálogo: filas por defecto, modo foto y gramaje", async ({ page }) => {
     await capturar(page, "catalogo-filas-02-modo-foto");
     await catalogo.getByRole("button", { name: "Ver en filas" }).click();
 
-    // La ficha guarda el gramaje.
-    await page.getByRole("button", { name: "Opciones de Cucurucho" }).click();
-    await page.getByRole("menu", { name: "Cucurucho" }).getByRole("button", { name: "Editar datos" }).click();
-    const hoja = page.getByRole("dialog", { name: "Editar producto" });
-    await hoja.locator(".contenidoCatalogoEdicion").fill("24 unidades");
+    // La ficha del producto: números, filas para cambiar cada dato y
+    // "Cómo viene" que se abre ahí mismo y se guarda solo.
+    await page.evaluate(() => {
+        const pedido = (comercio, cantidad) => ({ comercio, timestamp: Date.now(), productos: [{ marca: "Frío Sur", producto: "Cucurucho", cantidad, precio: 1200 }] });
+        guardarHistorial(obtenerHistorial().concat([pedido("Almacén Don Pepe", 36), pedido("Kiosco La Esquina", 24)]));
+    });
+    await tarjeta("Cucurucho").locator("strong").click();
+    const ficha = page.getByRole("dialog", { name: "Cucurucho" });
+    await expect(ficha.locator(".fichaNumeros")).toContainText("60vendidos este mes");
+    await expect(ficha.locator(".quienCompraFila").first()).toHaveText(/Almacén Don Pepe\s*36 u\./);
+    await ficha.getByRole("button", { name: "Agregar cómo viene" }).click();
+    const abierta = ficha.locator(".fichaComoVieneAbierta");
+    await abierta.locator(".comoVieneRapido", { hasText: "24" }).click();
+    await expect(abierta.locator(".comoVieneCantidad")).toHaveText("24");
+    await abierta.getByRole("button", { name: "Más" }).click();
+    await expect(abierta.locator(".comoVieneCantidad")).toHaveText("25");
+    await abierta.getByRole("button", { name: "Menos" }).click();
     await capturar(page, "catalogo-filas-03-ficha");
-    await hoja.locator(".guardarEdicionCatalogo").click();
-    await expect(hoja).toBeHidden();
-    await expect(tarjeta("Cucurucho").locator("small")).toHaveText("Frío Sur · 24 unidades");
+    await ficha.locator(".fichaNumeros").click();
+    await expect(ficha.getByRole("button", { name: "Cambiar cómo viene" })).toContainText("Caja de 24 unidades");
+    await ficha.getByRole("button", { name: "Cambiar nombre" }).click();
+    await page.getByRole("dialog", { name: "Nombre" }).locator(".datoProductoEntrada").fill("Cucurucho grande");
+    await page.locator(".guardarDatoProducto").click();
+    await expect(page.getByRole("dialog", { name: "Cucurucho grande" })).toBeVisible();
+    await page.getByRole("button", { name: "Cerrar ficha" }).click();
+    await expect(tarjeta("Cucurucho grande").locator("small")).toHaveText("Frío Sur · Caja de 24 unidades");
 
     // Nuevo producto con gramaje.
     await catalogo.getByRole("button", { name: "+ Agregar producto" }).click();
