@@ -1830,22 +1830,22 @@ html[data-tema="oscuro"] .filaBarraMarca.resaltada{background:#2A323C;}
 html body #pantallaComercios .datosComercioGrid .datoHorario{white-space:normal;overflow:visible;align-items:flex-start;}
 /* ¿Qué hacemos con este pedido? (en "Pedido generado" y en Rutas) */
 .queHacerPedido{margin-top:16px;padding-top:14px;border-top:1px solid var(--borde);}
-.queHacerTit{margin:0 0 10px;font-size:15px;font-weight:700;color:var(--texto);}
-.queHacerOpciones{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.queHacerOpcion{
+.qhpTit{margin:0 0 10px;font-size:15px;font-weight:700;color:var(--texto);}
+.qhpOpciones{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.qhpOpcion{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:74px;padding:10px 6px;
   border:1.5px solid var(--borde);border-radius:18px;background:var(--superficie);color:var(--texto);
   font:inherit;text-align:center;cursor:pointer;
 }
-html[data-tema] .queHacerOpcion strong{font-size:14.5px;font-weight:700;line-height:1.15;color:inherit;}
-html[data-tema] .queHacerOpcion small{font-size:12px;color:var(--texto-sec);}
-.queHacerOpcion .pzIco{color:var(--acento);}
+html[data-tema] .qhpOpcion strong{font-size:14.5px;font-weight:700;line-height:1.15;color:inherit;}
+html[data-tema] .qhpOpcion small{font-size:12px;color:var(--texto-sec);}
+.qhpOpcion .pzIco{color:var(--acento);}
 /* Entregar ahora: grande, abajo de todo, a todo el ancho. */
-.queHacerOpcion.queHacer-entregar{
+.qhpOpcion.qhp-entregar{
   order:3;grid-column:1 / -1;flex-direction:row;gap:10px;min-height:58px;
   border:0;border-radius:var(--radio-pildora,999px);background:var(--acento);color:var(--acento-txt,#fff);
 }
-html[data-tema] .queHacerOpcion.queHacer-entregar :is(.pzIco,strong,small){color:var(--acento-txt,#fff) !important;}
-html[data-tema] .queHacerOpcion.queHacer-entregar strong{font-size:16px;}
-.queHacerOpcion.queHacer-entregar small{opacity:.8;}
-.queHacerOpcion:active{transform:scale(.97);}
+html[data-tema] .qhpOpcion.qhp-entregar :is(.pzIco,strong,small){color:var(--acento-txt,#fff) !important;}
+html[data-tema] .qhpOpcion.qhp-entregar strong{font-size:16px;}
+.qhpOpcion.qhp-entregar small{opacity:.8;}
+.qhpOpcion:active{transform:scale(.97);}

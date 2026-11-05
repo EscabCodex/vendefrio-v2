@@ -5195,8 +5195,8 @@
             { clave: "reparto", icono: "camion", texto: "A repartir", sub: "Pasa a En reparto", ve: estadoActualDelPedido(pedido) !== "enReparto" },
             { clave: "dejar", icono: "reloj", texto: "Dejarlo cargado", sub: "Para después", ve: true }
         ].filter(opcion => opcion.ve);
-        caja.innerHTML = `<h3 class="queHacerTit">¿Qué hacemos con este pedido?</h3>
-            <div class="queHacerOpciones">${opciones.map(opcion => `<button type="button" class="queHacerOpcion queHacer-${opcion.clave}" data-que="${opcion.clave}">
+        caja.innerHTML = `<h3 class="qhpTit">¿Qué hacemos con este pedido?</h3>
+            <div class="qhpOpciones">${opciones.map(opcion => `<button type="button" class="qhpOpcion qhp-${opcion.clave}" data-que="${opcion.clave}">
                 ${p.ico(opcion.icono, 22)}<strong>${p.esc(opcion.texto)}</strong>${opcion.sinSub ? "" : `<small>${p.esc(opcion.sub)}</small>`}
             </button>`).join("")}</div>`;
         let hojaPropia = null;
