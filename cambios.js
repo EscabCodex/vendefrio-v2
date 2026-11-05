@@ -205,7 +205,7 @@
 
     function abrir() {
         const seccion = p.pantalla("pantallaCambios", {
-            titulo: "Registro de cambios",
+            titulo: "¿Quién cambió qué?",
             sub: "Solo lo ves vos · no se puede borrar",
             icono: "historial",
             volverA: "mas"
@@ -247,7 +247,7 @@
 
     extras.escuchar("cambios", dibujar);
     (window.accesosMasExtras = window.accesosMasExtras || []).push({
-        destino: "cambios", icono: "historial", texto: "Registro de cambios",
+        destino: "cambios", icono: "historial", texto: "¿Quién cambió qué?",
         mostrar: () => typeof usaNubeReal === "function" && usaNubeReal() && p.esDueno(),
         abrir
     });

@@ -93,17 +93,9 @@
     // Al abrir la app: si este celular ya usaba una versión anterior y no vio
     // estas novedades, se muestran una vez. En un celular nuevo, no.
     function revisar() {
-        const vista = leerVista();
-        if (vista === VERSION) return;
-        if (!vista && !hayDatosDeAntes()) {
-            marcarVista();
-            return;
-        }
-        setTimeout(() => {
-            const inicioSesion = document.getElementById("pantallaInicioSesion");
-            if (inicioSesion && !inicioSesion.classList.contains("oculto")) return;
-            abrir();
-        }, 1200);
+        // Las notas nuevas (notasDeCambios.js) avisan de cada versión: esta
+        // ventana vieja ya no se abre sola, para no mostrar dos a la vez.
+        if (leerVista() !== VERSION) marcarVista();
     }
 
     // Más > Seguridad y ayuda: botón "Ver novedades".

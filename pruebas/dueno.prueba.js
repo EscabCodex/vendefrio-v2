@@ -93,7 +93,7 @@ test.describe("nube", () => {
 
         // Más > Registro de cambios.
         await abrirMas(page);
-        await page.locator("#masAccesos").getByRole("button", { name: /Registro de cambios/ }).click();
+        await page.locator("#masAccesos").getByRole("button", { name: /¿Quién cambió qué?/ }).click();
         const registro = page.locator("#pantallaCambios");
         await expect(registro).toBeVisible();
         await expect(registro.locator(".grupoCambios h2").first()).toHaveText("Hoy");

@@ -1056,7 +1056,7 @@ html[data-tema] .ventanaNotas .notasBanda h2{margin:4px 0 0;font-size:22px;font-
    deslizan de costado (sin flechas, pedido del dueño): el desplazamiento con imán lo hace el navegador, así
    anda fluido en celulares baratos. Título y botones siempre a la vista. */
 .ventanaNotas .notasBanda,.ventanaNotas .notasPie,.ventanaNotas .notasPaginas{flex:none;}
-.ventanaNotas .notasLista{display:flex;align-items:flex-start;transition:height .2s ease-out;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior:contain;scrollbar-width:none;}
+.ventanaNotas .notasLista{touch-action:pan-x pan-y;display:flex;align-items:flex-start;transition:height .2s ease-out;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior:contain;scrollbar-width:none;}
 .ventanaNotas .notasLista::-webkit-scrollbar{display:none;}
 .ventanaNotas .notasPagina{flex:0 0 100%;min-width:0;max-height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overscroll-behavior:contain;}
 .ventanaNotas .notasPaginas[hidden]{display:none;}
