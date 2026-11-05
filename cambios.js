@@ -226,7 +226,7 @@
             if (grupo && grupo.dia === dia) grupo.cambios.push(cambio);
             else grupos.push({ dia, cambios: [cambio] });
         });
-        const filtros = TIPOS.map(tipo => `<button type="button" class="pzFiltro" data-tipo="${tipo.clave}" aria-pressed="${tipo.clave === filtro}">${tipo.texto}</button>`).join("");
+        const filtros = TIPOS.map(tipo => `<button type="button" class="pzFiltro" data-tipo="${tipo.clave}" aria-pressed="${tipo.clave === filtro}">${tipo.texto} <b>${tipo.clave === "todo" ? todos.length : todos.filter(cambio => cambio.tipo === tipo.clave).length}</b></button>`).join("");
         const cuerpo = grupos.length
             ? grupos.map(grupo => `<section class="pzBloque grupoCambios">
                     <div class="pzBloqueCab"><h2>${p.esc(grupo.dia)}</h2></div>

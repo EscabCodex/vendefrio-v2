@@ -2,6 +2,15 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 285,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "Registro de cambios más ordenado",
+      "texto": "Los 5 filtros entran en una sola fila y cada uno muestra cuántos cambios tiene."
+    },
+    {
+      "version": 282,
       "version": 284,
       "fecha": "2026-11-05",
       "tipo": "mejor",

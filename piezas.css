@@ -430,7 +430,8 @@ body > section.pzPantalla > header .logo:empty{display:none;}
 #avisoListas small{font-size:14.5px;color:var(--texto);line-height:1.4;}
 .pzBotonesFijos > .pzBtn{width:100%;}
 /* ---------- Registro de cambios (T82) ---------- */
-#pantallaCambios .pzFiltros{flex-wrap:wrap;}
+#pantallaCambios .pzFiltros{gap:3px;}
+#pantallaCambios .pzFiltro{padding:0 5px;gap:3px;font-size:12px;flex:1 1 auto;justify-content:center;min-width:0;}
 .grupoCambios .pzBloqueCab{margin-top:10px;}
 .filaCambio{align-items:flex-start;padding-top:14px;padding-bottom:14px;}
 .horaCambio{flex-shrink:0;width:46px;padding-top:2px;font-size:14px;font-weight:650;color:var(--texto-sec);font-variant-numeric:tabular-nums;}
