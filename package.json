@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",
+    "@vercel/speed-insights": "^2.0.0",
     "firebase-admin": "^13.10.0",
     "servor": "^4.0.2"
   },
