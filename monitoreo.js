@@ -12,7 +12,7 @@
 (function () {
     // La "dirección" del proyecto de Sentry (DSN). No es una clave secreta:
     // Sentry la pensó para ir dentro de la app. Vacía = Sentry apagado.
-    const SENTRY_DSN = "";
+    const SENTRY_DSN = "https://31a7aa57340513f0b0f029e1d6a3bce3@o4512376976703488.ingest.us.sentry.io/4512376991776768";
     const SENTRY_VERSION = "8.55.0";
     const MAXIMO_AVISOS = 15; // por apertura, para no gastar el plan gratis
 
