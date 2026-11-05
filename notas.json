@@ -10,12 +10,20 @@
       "texto": "En la app de Android, la notificación dice por dónde ir, la parada y tiene Cargar pedido y Sin pedido."
     },
     {
-      "version": 292,
+      "version": 293,
       "fecha": "2026-11-05",
       "tipo": "nuevo",
       "icono": "campana",
       "titulo": "App de Android: avisos y reparto",
       "texto": "En la app de Android, cada aviso llega como notificación y la del reparto dice en qué parada estás."
+    },
+    {
+      "version": 292,
+      "fecha": "2026-11-05",
+      "tipo": "nuevo",
+      "icono": "camion",
+      "titulo": "¿Qué hacemos con este pedido?",
+      "texto": "En la ruta, al guardar un pedido elegís: entregarlo ya, pasarlo a En reparto o dejarlo."
     },
     {
       "version": 291,

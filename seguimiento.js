@@ -5178,6 +5178,13 @@
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
     window.seguimientoVendeFrio = {
+        // "¿Qué hacemos con este pedido?" (Rutas): entrega todo y pregunta el cobro.
+        entregarYCobrar(id) {
+            const pedido = enLaNube() ? buscarPedido(String(id || "")) : null;
+            if (!pedido) return false;
+            entregarSinCambios(String(id), estadoActualDelPedido(pedido));
+            return true;
+        },
         redibujarFicha: () => dibujarFicha(),
         pedidoAbierto: () => idFichaAbierta,
         // Dónde está la sección (lugar.js la vuelve a abrir igual si

@@ -18,6 +18,7 @@ const ARCHIVOS = [
   "./estadisticas.js",
   "./catalogo.js",
   "./pedidoEnHoja.js",
+  "./queHacemosPedido.js",
   "./pedidos.js",
   "./comerciosAdmin.js",
   "./comercioFicha.js",

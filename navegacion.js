@@ -1574,6 +1574,7 @@
     let fondoPedido = null;
 
     function abrirPedidoEncima(nombre) {
+        window.queHacemosPedido?.marcar(nombre);
         const seccion = document.getElementById("pantallaPedido");
         if (!seccion || typeof abrirPedidoNuevoParaComercio !== "function") {
             minimizar();
@@ -2099,10 +2100,30 @@
     }
 
     window.navegacionVendeFrio = {
-        abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, pedidoEncima: () => pedidoEncima, cerrarPedidoEncima, cargarPedido: abrirPedidoEncima, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
+        abrir, cerrar, abierta, indicacion, minimizar, restaurar, minimizada: () => minimizada, pedidoEncima: () => pedidoEncima, cerrarPedidoEncima, siguiente: marcarLlegada, saltear: saltearParada, paradaActual,
         // El Asistente (T160): las paradas que faltan y cambiar el orden.
         paradasQueSiguen: () => paradas.slice(indiceParada + 1), irPrimero, sumarParada: abrirSumarParada,
         // Para el Asistente: por dónde vas.
-        calle: () => calleActual
+        calle: () => calleActual,
+        // La notificación de navegación (Capacitor): "Parada 3 de 8" y sus
+        // dos botones, Cargar pedido y Sin pedido.
+        notificacion() {
+            const parada = paradaActual();
+            return parada ? { nombre: parada.nombre, numero: indiceParada + 1, total: paradas.length } : null;
+        },
+        cargarPedido() {
+            const parada = paradaActual();
+            if (!parada) return false;
+            if (minimizada) restaurar();
+            abrirPedidoEncima(parada.nombre);
+            return true;
+        },
+        sinPedido() {
+            const parada = paradaActual();
+            if (!parada) return false;
+            window.visitasVendeFrio?.registrar?.(parada.nombre, "");
+            pasarALaQueSigue(paradas.length > 1 ? "Terminaste el recorrido" : "");
+            return true;
+        }
     };
 }());

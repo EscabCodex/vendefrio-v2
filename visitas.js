@@ -140,5 +140,11 @@
     (window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || []).push(tarjetaEstadisticas);
     window.extrasVendeFrio.escuchar("visitas", () => window.estadisticasVendeFrio?.redibujar());
 
-    window.visitasVendeFrio = { MOTIVOS, abrir, visitas, visitasDelComercio, textoMotivo };
+    // Sin elegir motivo (el botón "Sin pedido" de la notificación de navegación).
+    function registrar(nombreComercio, texto) {
+        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreComercio) : null;
+        return Boolean(comercio) && guardar(comercio, "otro", texto || "Sin pedido (desde la notificación)");
+    }
+
+    window.visitasVendeFrio = { MOTIVOS, abrir, registrar, visitas, visitasDelComercio, textoMotivo };
 }());

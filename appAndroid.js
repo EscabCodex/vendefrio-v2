@@ -235,7 +235,7 @@
         if (accion === "sinPedido" && nombre) {
             // Visitado sin pedido: con la navegación abierta pasa a la que
             // sigue; si no, queda marcado y la notificación sigue con la próxima.
-            if (navegacion?.abierta?.()) navegacion.siguiente?.();
+            if (navegacion?.abierta?.()) (navegacion.sinPedido || navegacion.siguiente)?.();
             else if (typeof window.marcarVisitaManual === "function") window.marcarVisitaManual(nombre);
             return;
         }

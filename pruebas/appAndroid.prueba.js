@@ -116,7 +116,7 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
     // "Sin pedido" desde la notificación pasa a la parada que sigue.
     const siguiente = await page.evaluate(() => {
         let pasadas = 0;
-        window.navegacionVendeFrio = { abierta: () => true, minimizada: () => false, siguiente: () => { pasadas++; }, paradaActual: () => ({ nombre: "Almacén Don Pepe" }) };
+        window.navegacionVendeFrio = { abierta: () => true, minimizada: () => false, sinPedido: () => { pasadas++; }, paradaActual: () => ({ nombre: "Almacén Don Pepe" }) };
         window.__botonNavegacion({ accion: "sinPedido" });
         return pasadas;
     });

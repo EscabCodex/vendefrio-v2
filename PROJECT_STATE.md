@@ -1079,6 +1079,8 @@ El dueño revisó lo que Claude decidió solo en las Etapas 5 y 6 (M12). Le gust
 
 Una línea por sesión: fecha, quién trabajó, qué cambió, qué quedó pendiente.
 
+- 2026-11-05 — Claude Code (hilo Rutas): hoja «¿Qué hacemos con este pedido?» (queHacemosPedido.js) al guardar un pedido desde la navegación o el carrusel de Rutas: Entregar ahora (con cobro), Pasarlo a En reparto o Dejarlo cargado. navegacionVendeFrio.notificacion/cargarPedido/sinPedido para la notificación de Capacitor. Caché v292.
+
 - 2026-10-22 — Claude Code: T158 y T156 (Bloque Q), directo a `desarrollo`. Apariencia con vista previa, tonos de día y de noche, 10 colores más uno a elección, forma de los botones, estilo de las tarjetas, tamaño de los íconos y fondo de Inicio; "Qué se ve en Inicio" con una llave por tarjeta ("Suelen pedir los…" arranca apagada). Prueba nueva `apariencia.prueba.js`. Falta que el dueño lo pruebe en M24.
 
 - 2026-10-19 — Claude Code: T125 a T128 (pedido del dueño). Elegir varios y mover en todas las pestañas de Pedidos, parada de Rutas tildada sola al cargar su pedido, navegación por calles de auto, más rápida y con aviso según la velocidad, y voz sin cortes. Además T125b, con el sí del dueño: eliminar en cualquier paso (regla nueva en `firestore.rules`, publicarla con M21).

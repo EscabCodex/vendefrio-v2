@@ -2214,6 +2214,7 @@ function abrirOpcionesParadaRuta(nombre, ancla) {
             { icono: carga.pedidos.length ? "check" : "documento", texto: carga.pedidos.length ? "Entregar" : "Hacer pedido", principal: true, alTocar: () => {
                 const actual = cargaParaParada(nombre);
                 if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
+                window.queHacemosPedido?.marcar(nombre);
                 if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
             } },
             window.visitasVendeFrio?.abrir ? { icono: "chevDerecha", texto: "Pasé, sin pedido", alTocar: () => window.visitasVendeFrio.abrir(nombre, pasar) } : null,
