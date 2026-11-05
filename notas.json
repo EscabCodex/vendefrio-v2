@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 293,
+      "fecha": "2026-11-05",
+      "tipo": "nuevo",
+      "icono": "navegar",
+      "titulo": "Navegación en la notificación",
+      "texto": "En la app de Android, la notificación dice por dónde ir, la parada y tiene Cargar pedido y Sin pedido."
+    },
+    {
       "version": 292,
       "fecha": "2026-11-05",
       "tipo": "nuevo",

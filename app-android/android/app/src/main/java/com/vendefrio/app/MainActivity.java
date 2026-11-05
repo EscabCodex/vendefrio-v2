@@ -46,6 +46,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NotificacionReparto.class);
         super.onCreate(savedInstanceState);
 
         elegirFoto = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), resultado -> {
@@ -111,6 +112,13 @@ public class MainActivity extends BridgeActivity {
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().postDelayed(this::pedirUbicacionLaPrimeraVez, 1500);
         }
+    }
+
+    // Los botones de la notificación de la navegación que abren la app.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null) NotificacionReparto.avisar(intent.getStringExtra(NotificacionReparto.EXTRA));
     }
 
     private boolean tieneUbicacion() {

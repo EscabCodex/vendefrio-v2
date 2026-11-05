@@ -23,6 +23,11 @@ function capacitorDePrueba() {
                 removeAllDeliveredNotifications: () => anotar("limpiar", true),
                 getDeliveredNotifications: () => Promise.resolve({ notifications: [] })
             },
+            NotificacionReparto: {
+                mostrar: o => anotar("navegacion", o),
+                quitar: () => anotar("quitarNavegacion", true),
+                addListener: (evento, fn) => { window.__botonNavegacion = fn; return Promise.resolve({ remove() {} }); }
+            },
             BackgroundGeolocation: {
                 addWatcher: (opciones, fn) => { window.__moverGps = fn; return anotar("gps", opciones).then(() => "vigia-1"); },
                 removeWatcher: o => anotar("sinGps", o)
@@ -73,7 +78,7 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
     expect(despues.find(p => p.nombre === "gps").valor).toMatchObject({ backgroundTitle: "Repartiendo", requestPermissions: true });
     expect(despues.find(p => p.nombre === "sinGps").valor).toEqual({ id: "vigia-1" });
 
-    // Reparto: la notificación fija dice por qué parada vas, con Cargar pedido e Ir.
+    // Reparto: la notificación fija dice por qué parada vas, con Cargar pedido y Sin pedido.
     const parada = await page.evaluate(async () => {
         window.__pedidosCapacitor.length = 0;
         await window.appAndroidVendeFrio.reparto({ hechas: 2, total: 8, destino: { nombre: "Almacén Don Pepe", direccion: "Av. Mitre 1234", lat: -34.6, lng: -58.4 }, lat: -34.6, lng: -58.4054 });
@@ -87,7 +92,51 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
     expect(mandadas[0].valor.notifications[0]).toMatchObject({ id: 28351, title: "Parada 3 de 8 · Almacén Don Pepe", body: "Av. Mitre 1234 · 490 m", ongoing: true, actionTypeId: "parada", channelId: "reparto" });
     expect(parada.find(p => p.nombre === "cancelar").valor).toEqual({ notifications: [{ id: 28351 }] });
     const tiposParada = acciones.find(t => t.id === "parada").actions.map(a => a.title);
-    expect(tiposParada).toEqual(["Cargar pedido", "Ir"]);
+    expect(tiposParada).toEqual(["Cargar pedido", "Sin pedido"]);
+
+    // Navegación en la notificación: indicación, parada, llegada y barra por
+    // paradas hechas. Mientras navega, la del reparto no la pisa.
+    const navegacion = await page.evaluate(async () => {
+        window.__pedidosCapacitor.length = 0;
+        const app = window.appAndroidVendeFrio;
+        const datos = { distancia: "200 m", texto: "Doblá a la derecha por Av. Mitre", tipo: "turn", grados: 90, parada: 3, total: 8, comercio: "Almacén Don Pepe", llegada: "08:51" };
+        await app.navegacion(datos);
+        await app.navegacion(datos);
+        await app.reparto({ hechas: 2, total: 8, destino: { nombre: "Otro" }, lat: -34.6, lng: -58.4 });
+        await app.navegacion(null);
+        return window.__pedidosCapacitor;
+    });
+    const mostradas = navegacion.filter(p => p.nombre === "navegacion");
+    expect(mostradas).toHaveLength(1);
+    expect(mostradas[0].valor).toMatchObject({ titulo: "200 m · Doblá a la derecha", texto: "por Av. Mitre", detalle: "Parada 3 de 8 · Almacén Don Pepe · llegás 08:51", hechas: 2, total: 8, flecha: "giro", grados: 90, botones: true, sinPedido: true });
+    expect(mostradas[0].valor.color).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(navegacion.some(p => p.nombre === "notificar")).toBe(false);
+    expect(navegacion.some(p => p.nombre === "quitarNavegacion")).toBe(true);
+
+    // "Sin pedido" desde la notificación pasa a la parada que sigue.
+    const siguiente = await page.evaluate(() => {
+        let pasadas = 0;
+        window.navegacionVendeFrio = { abierta: () => true, minimizada: () => false, siguiente: () => { pasadas++; }, paradaActual: () => ({ nombre: "Almacén Don Pepe" }) };
+        window.__botonNavegacion({ accion: "sinPedido" });
+        return pasadas;
+    });
+    expect(siguiente).toBe(1);
+
+    // "Estoy repartiendo": el día de un vistazo, sin datos de la ruta.
+    const resumen = await page.evaluate(async () => {
+        window.__pedidosCapacitor.length = 0;
+        window.appAndroidVendeFrio.repartiendo(true, Date.now() - 75 * 60000);
+        await new Promise(r => setTimeout(r, 50));
+        const lista = window.__pedidosCapacitor.filter(p => p.nombre === "navegacion").map(p => p.valor);
+        window.appAndroidVendeFrio.repartiendo(false);
+        await new Promise(r => setTimeout(r, 50));
+        return { lista, quitada: window.__pedidosCapacitor.some(p => p.nombre === "quitarNavegacion") };
+    });
+    expect(resumen.lista.length).toBeGreaterThan(0);
+    expect(resumen.lista[0]).toMatchObject({ flecha: "ninguna", total: 0, sinPedido: false });
+    expect(resumen.lista[0].detalle).toContain("(1 h 15 min)");
+    expect(resumen.lista[0].titulo).not.toContain("Parada");
+    expect(resumen.quitada).toBe(true);
 });
 
 test("app de Android: en Chrome no hace nada", async ({ page }) => {
