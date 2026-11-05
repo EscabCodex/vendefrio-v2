@@ -1780,3 +1780,5 @@ html .calDia.hoy{box-shadow:inset 0 0 0 2px var(--acento);}
 html .calDia.elegido{background:var(--acento);color:var(--acento-txt);font-weight:800;}
 html .calDia:disabled{opacity:.3;}
 html .modal.menuFlotante.menuElegir{z-index:10100 !important;}
+/* En las listas para elegir, la X tapaba opciones: se cierra tocando afuera o con el atrás. */
+html .menuElegir .menuFlotanteX{display:none;}
