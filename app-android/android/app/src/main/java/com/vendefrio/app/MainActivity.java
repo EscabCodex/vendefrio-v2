@@ -8,6 +8,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.app.AlertDialog;
+import android.location.LocationManager;
+import android.provider.Settings;
+import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
@@ -36,9 +40,13 @@ public class MainActivity extends BridgeActivity {
     private ActivityResultLauncher<Intent> elegirFoto;
     private ActivityResultLauncher<String> permisoCamara;
     private ActivityResultLauncher<String[]> permisosInicio;
+    private ActivityResultLauncher<String[]> permisosUbicacion;
+    private GeolocationPermissions.Callback esperandoUbicacion;
+    private String origenUbicacion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NotificacionReparto.class);
         super.onCreate(savedInstanceState);
 
         elegirFoto = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), resultado -> {
@@ -69,6 +77,17 @@ public class MainActivity extends BridgeActivity {
 
         permisosInicio = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), r -> {});
 
+        permisosUbicacion = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), r -> {
+            GeolocationPermissions.Callback devolver = esperandoUbicacion;
+            String origen = origenUbicacion;
+            esperandoUbicacion = null;
+            if (devolver == null) return;
+            boolean concedido = tieneUbicacion();
+            devolver.invoke(origen, concedido, false);
+            if (concedido) avisarSiElGpsEstaApagado();
+            else ofrecerAjustesSiNoPregunta();
+        });
+
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().setWebChromeClient(new ClienteVendeFrio());
         }
@@ -89,7 +108,61 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
-        pedirUbicacionLaPrimeraVez();
+        // Se pide un ratito después, cuando ya se ve la app y no la pantalla de inicio.
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().postDelayed(this::pedirUbicacionLaPrimeraVez, 1500);
+        }
+    }
+
+    // Los botones de la notificación de la navegación que abren la app.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null) NotificacionReparto.avisar(intent.getStringExtra(NotificacionReparto.EXTRA));
+    }
+
+    private boolean tieneUbicacion() {
+        return tiene(Manifest.permission.ACCESS_FINE_LOCATION) || tiene(Manifest.permission.ACCESS_COARSE_LOCATION);
+    }
+
+    private boolean gpsPrendido() {
+        try {
+            LocationManager lugar = (LocationManager) getSystemService(LOCATION_SERVICE);
+            return lugar == null || lugar.isProviderEnabled(LocationManager.GPS_PROVIDER) || lugar.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch (Exception error) {
+            return true;
+        }
+    }
+
+    // Si la ubicación del celular está apagada, se ofrece prenderla.
+    private void avisarSiElGpsEstaApagado() {
+        if (gpsPrendido() || isFinishing()) return;
+        new AlertDialog.Builder(this)
+            .setTitle("La ubicación está apagada")
+            .setMessage("Prendela para que VendeFrío sepa dónde estás.")
+            .setPositiveButton("Prender", (d, w) -> abrir(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)))
+            .setNegativeButton("Ahora no", null)
+            .show();
+    }
+
+    // Si Android ya no muestra la pregunta (dijo que no dos veces), se ofrece ir a Ajustes.
+    private void ofrecerAjustesSiNoPregunta() {
+        if (isFinishing()) return;
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) return;
+        new AlertDialog.Builder(this)
+            .setTitle("Falta el permiso de ubicación")
+            .setMessage("Para ver dónde estás, en Ajustes tocá Permisos › Ubicación › Permitir.")
+            .setPositiveButton("Ir a Ajustes", (d, w) -> abrir(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))))
+            .setNegativeButton("Ahora no", null)
+            .show();
+    }
+
+    private void abrir(Intent intent) {
+        try {
+            startActivity(intent);
+        } catch (Exception error) {
+            // nada
+        }
     }
 
     // La primera vez que se abre la app pide la ubicación (Rutas, Cerca,
@@ -99,7 +172,10 @@ public class MainActivity extends BridgeActivity {
         SharedPreferences preferencias = getSharedPreferences("vendefrio_app", MODE_PRIVATE);
         if (preferencias.getBoolean("ubicacionPedida", false)) return;
         preferencias.edit().putBoolean("ubicacionPedida", true).apply();
-        if (tiene(Manifest.permission.ACCESS_FINE_LOCATION)) return;
+        if (tieneUbicacion()) {
+            avisarSiElGpsEstaApagado();
+            return;
+        }
         permisosInicio.launch(new String[] { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION });
     }
 
@@ -152,6 +228,21 @@ public class MainActivity extends BridgeActivity {
     private class ClienteVendeFrio extends BridgeWebChromeClient {
         ClienteVendeFrio() {
             super(getBridge());
+        }
+
+        // La web pide la ubicación: se pregunta con el cartel de Android y,
+        // si el GPS está apagado o Android ya no pregunta, se ofrece arreglarlo.
+        @Override
+        public void onGeolocationPermissionsShowPrompt(String origen, GeolocationPermissions.Callback callback) {
+            if (tieneUbicacion()) {
+                callback.invoke(origen, true, false);
+                avisarSiElGpsEstaApagado();
+                return;
+            }
+            if (esperandoUbicacion != null) esperandoUbicacion.invoke(origenUbicacion, false, false);
+            esperandoUbicacion = callback;
+            origenUbicacion = origen;
+            permisosUbicacion.launch(new String[] { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION });
         }
 
         @Override

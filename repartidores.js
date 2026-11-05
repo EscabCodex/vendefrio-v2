@@ -78,6 +78,8 @@
         if (destino && Number.isFinite(Number(destino.lat)) && destino.lat !== "" && window.pruebaEntregaVendeFrio &&
             window.pruebaEntregaVendeFrio.distanciaMetros(lat, lng, Number(destino.lat), Number(destino.lng)) <= 80) paso = "entregando";
         ultimaEscritura = { hora: Date.now(), lat, lng };
+        // App de Android: la notificación de reparto dice por qué parada vas.
+        window.appAndroidVendeFrio?.reparto?.({ hechas: reparto.hechas, total: reparto.total, destino, lat, lng });
         extras.guardar("ubicaciones", {
             nombre: String(yo.nombre || "").slice(0, 60),
             lat, lng,
@@ -92,7 +94,16 @@
     }
 
     function vigilar() {
-        if (vigilancia !== null || !navigator.geolocation) return;
+        if (vigilancia !== null) return;
+        // App de Android: GPS que sigue con la pantalla apagada (appAndroid.js).
+        const app = window.appAndroidVendeFrio;
+        if (app && app.vigilarUbicacion) {
+            vigilancia = { app: app.vigilarUbicacion(escribir, error => console.warn("No se pudo leer la ubicación para compartir.", error)) };
+            // Al volver a abrir la app con el switch prendido, vuelve el resumen.
+            try { app.repartiendo?.(true, (p.lsLeer(CLAVE, null) || {}).desde); } catch (error) { console.warn(error); }
+            return;
+        }
+        if (!navigator.geolocation) return;
         vigilancia = navigator.geolocation.watchPosition(escribir, error => {
             console.warn("No se pudo leer la ubicación para compartir.", error);
         }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
@@ -113,8 +124,10 @@
     }
 
     function apagar(solo) {
-        if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
+        if (vigilancia && typeof vigilancia === "object") window.appAndroidVendeFrio?.dejarDeVigilar?.(vigilancia.app);
+        else if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
+        window.appAndroidVendeFrio?.reparto?.(null);
         try { window.appAndroidVendeFrio?.repartiendo?.(false); } catch (error) { console.warn(error); }
         const estaba = compartiendo();
         try { localStorage.removeItem(CLAVE); } catch (error) { /* sin espacio */ }

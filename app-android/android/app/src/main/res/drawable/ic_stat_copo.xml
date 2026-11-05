@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copo blanco de VendeFrío para la barra de notificaciones (Android lo pinta) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group>
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="40" android:strokeLineCap="round"
+            android:pathData="M256,90L256,422M112,173L400,339M400,173L112,339M256,90L216,137M256,90L296,137M256,422L216,375M256,422L296,375M112,173L172,180M112,173L128,231M400,339L340,332M400,339L384,281M400,173L340,180M400,173L384,231M112,339L172,332M112,339L128,281"/>
+    </group>
+</vector>

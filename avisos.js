@@ -518,6 +518,8 @@
                 !aviso.leido && recibe(aviso.tipo) && Math.abs(Date.now() - (Number(aviso.horaCelular) || 0)) < AVISO_RECIENTE
             );
             if (paraMostrar.length) mostrarEmergente(paraMostrar);
+            // App de Android en segundo plano: también como notificación del celular.
+            if (paraMostrar.length) window.appAndroidVendeFrio?.avisosNuevos?.(paraMostrar, datosDelTipo, nombrePersona);
         }
 
         avisarCambio();

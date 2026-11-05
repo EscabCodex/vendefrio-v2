@@ -1131,6 +1131,7 @@
         const restante = camino.distancia ? falta / camino.distancia : 0;
         const segundos = camino.duracion * restante;
         minutosQueFaltan = segundos / 60;
+        llegadaParaApp = horaDeLlegada(segundos);
 
         ponerTexto(pantalla.querySelector(".tiempoNavegacion"), llego ? "Llegaste" : textoMinutos(segundos));
         ponerTexto(pantalla.querySelector(".detalleTiempo"), llego
@@ -1247,8 +1248,11 @@
             icono.innerHTML = flecha;
             icono.dataset.flecha = flecha;
         }
-        ponerTexto(pantalla.querySelector(".distanciaManiobra"), textos ? textos.distancia : paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros));
-        ponerTexto(pantalla.querySelector(".textoManiobra"), textos ? textos.texto : indicacion(paso, comercio ? comercio.nombre : ""));
+        const distanciaTexto = textos ? textos.distancia : paso.maniobra.tipo === "arrive" && llego ? "" : textoDistancia(metros);
+        const texto = textos ? textos.texto : indicacion(paso, comercio ? comercio.nombre : "");
+        ponerTexto(pantalla.querySelector(".distanciaManiobra"), distanciaTexto);
+        ponerTexto(pantalla.querySelector(".textoManiobra"), texto);
+        avisarApp(paso, distanciaTexto, texto);
     }
 
     // -------------------------------------------------
@@ -1316,7 +1320,37 @@
             sinGps();
             return;
         }
+        // En la app de Android, el GPS de Android: sigue con la pantalla
+        // apagada o la navegación minimizada, y al volver no hay que esperar
+        // la primera posición de nuevo.
+        const app = window.appAndroidVendeFrio;
+        if (app && app.vigilarUbicacion) {
+            const clave = app.vigilarUbicacion(alMoverse, sinGps, { titulo: "Navegando", texto: "Buscando el camino…", cadaMetros: 0 });
+            if (clave !== null) {
+                vigilancia = { app: clave };
+                return;
+            }
+        }
         vigilancia = navigator.geolocation.watchPosition(alMoverse, sinGps, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+    }
+
+    // La notificación de la app de Android sigue la navegación: indicación,
+    // parada, hora de llegada y la barra de paradas hechas.
+    let llegadaParaApp = "";
+    function avisarApp(paso, distanciaTexto, texto) {
+        const app = window.appAndroidVendeFrio;
+        if (!app || !app.navegacion || !pantalla) return;
+        const comercio = paradaActual();
+        app.navegacion({
+            distancia: distanciaTexto || "",
+            texto: texto || "",
+            tipo: paso && paso.maniobra ? paso.maniobra.tipo : "",
+            grados: paso && paso.maniobra ? (GIROS[paso.maniobra.lado] ?? 0) : 0,
+            parada: indiceParada + 1,
+            total: paradas.length,
+            comercio: comercio ? comercio.nombre : "",
+            llegada: llego ? "" : llegadaParaApp
+        });
     }
 
     // -------------------------------------------------
@@ -1342,6 +1376,7 @@
         pantalla.querySelector(".distanciaManiobra").textContent = "";
         pantalla.querySelector(".tiempoNavegacion").textContent = "…";
         pantalla.querySelector(".detalleTiempo").textContent = "Buscando tu ubicación";
+        avisarApp(null, "", "Buscando el camino…");
         if (posicion) calcularCamino();
         else mapa.setView(destinoDe(comercio), 16);
     }
@@ -1457,8 +1492,11 @@
     function cerrar(opciones) {
         if (!pantalla) return;
         cerrarPedidoEncima();
-        if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
+        if (vigilancia && vigilancia.app !== undefined) window.appAndroidVendeFrio?.dejarDeVigilar?.(vigilancia.app);
+        else if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
+        llegadaParaApp = "";
+        window.appAndroidVendeFrio?.navegacion?.(null);
         if (opciones && opciones.despedida === true) {
             filaDeFrases.splice(0, filaDeFrases.length - 1);
         } else {

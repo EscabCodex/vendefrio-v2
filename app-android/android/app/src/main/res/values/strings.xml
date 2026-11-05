@@ -4,4 +4,6 @@
     <string name="title_activity_main">VendeFrío</string>
     <string name="package_name">com.vendefrio.app</string>
     <string name="custom_url_scheme">com.vendefrio.app</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_copo</string>
+    <string name="capacitor_background_geolocation_notification_color">#0B8A82</string>
 </resources>
