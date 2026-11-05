@@ -95,7 +95,7 @@ test("nube rápida: un pedido viejo se cobra sin señal y no se pierde", async (
     await irAInicio(page);
     await expect(page.locator("#avisoSinSubir")).toContainText("1 cambio sin subir", { timeout: 30000 });
     // El cobro de hoy (de un pedido viejo) cuenta en «Cobrado hoy».
-    await expect(page.locator('.kpiHoy[data-kpi="cobradoHoy"]')).toContainText("9.800");
+    await expect(page.locator("#dashVendidoHoy")).toContainText("9.800");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "nubeRapida-01-cobro-viejo-sin-subir");
     expect((await refPedidos.doc("ped_viejoPrueba").get()).data().cobro).toBeFalsy();

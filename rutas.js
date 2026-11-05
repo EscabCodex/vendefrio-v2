@@ -2400,6 +2400,8 @@ function empezarRutaEnCurso() {
         planMetros: Math.round(cuenta.metros),
         nombre: rutaGuardadaActual?.nombre || ""
     });
+    // Iniciar ruta prende "Estoy repartiendo" (Inicio).
+    window.repartidoresVendeFrio?.activar?.(true);
 }
 
 function datosCierreRuta() {
@@ -2516,6 +2518,10 @@ function guardarCierreRuta(datos) {
     });
     guardarJsonRutas(CLAVE_RUTAS_HECHAS, lista.slice(-60));
     guardarJsonRutas(CLAVE_RUTA_EN_CURSO, null);
+    if (window.repartidoresVendeFrio?.compartiendo?.()) {
+        window.piezas.preguntar({ icono: "camion", titulo: "¿Dejás de repartir?", texto: "Se apaga «Estoy repartiendo» y se deja de compartir tu ubicación.", si: "Sí, apagar", no: "Sigo repartiendo" })
+            .then(si => { if (si) window.repartidoresVendeFrio.apagar(false); });
+    }
 }
 
 window.rutasVendeFrio = {
