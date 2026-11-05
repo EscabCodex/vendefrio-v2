@@ -26,6 +26,8 @@ test("al guardar: entregar ahora o pasarlo a En reparto", async ({ page }, testI
     const queHacer = generado.locator(".queHacerPedido");
     await expect(queHacer).toContainText("¿Qué hacemos con este pedido?");
     await expect(queHacer.locator(".qhpOpcion")).toHaveCount(3);
+    await expect(generado.getByRole("button", { name: "Imprimir ticket" })).toBeVisible();
+    await expect(generado.getByRole("button", { name: "Volver a editar" })).toBeVisible();
     await queHacer.scrollIntoViewIfNeeded();
     await capturar(page, "que-hacer-pedido");
     await queHacer.getByRole("button", { name: /A repartir/ }).click();

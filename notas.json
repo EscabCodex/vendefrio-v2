@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 296,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "lapiz",
+      "titulo": "«Pedido generado» más ordenado",
+      "texto": "Lápiz y X arriba, Imprimir siempre a mano y tres cuadros iguales para elegir qué hacer."
+    },
+    {
       "version": 295,
       "fecha": "2026-11-05",
       "tipo": "mejor",

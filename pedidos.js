@@ -1362,16 +1362,14 @@ function mostrarImprimirPedidoGenerado(id) {
     if (!boton) return;
 
     const pedido = id ? pedidoParaLeer(id) : null;
-    const puede = Boolean(pedido && window.impresionVendeFrio?.puedeImprimir?.(pedido));
-    boton.classList.toggle("oculto", !puede);
-    if (puede && window.icono && !boton.querySelector("svg")) {
-        boton.insertAdjacentHTML("afterbegin", window.icono("impresora", 20));
-    }
+    // Imprimir queda siempre a la vista: si no hay impresora, avisa al tocarlo.
     // Volver a editar: corrige el pedido recién guardado (en la nube).
     const editar = document.getElementById("editarPedidoGenerado");
     const puedeEditar = Boolean(pedido && window.nubeVendeFrio?.puedeEditarElPedido?.(pedido));
     editar?.classList.toggle("oculto", !puedeEditar);
 }
+
+modalPedido?.querySelector(".cerrarPedidoGenerado")?.addEventListener("click", () => modalPedido.classList.add("oculto"));
 
 document.getElementById("editarPedidoGenerado")?.addEventListener("click", () => {
     if (!idUltimoPedidoGenerado) return;
@@ -1381,7 +1379,8 @@ document.getElementById("editarPedidoGenerado")?.addEventListener("click", () =>
 
 document.getElementById("imprimirPedidoGenerado")?.addEventListener("click", () => {
     if (!idUltimoPedidoGenerado) return;
-    window.impresionVendeFrio?.elegirCopias?.(idUltimoPedidoGenerado);
+    if (window.impresionVendeFrio?.elegirCopias?.(idUltimoPedidoGenerado)) return;
+    mostrarAviso("No se puede imprimir desde acá", "Para imprimir hace falta la nube y un celular con Bluetooth (Chrome en Android). Prendé el Bluetooth y probá de nuevo.");
 });
 
 // -----------------------------------------------------

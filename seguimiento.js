@@ -5191,7 +5191,7 @@
         const caja = document.createElement("div");
         caja.className = "queHacerPedido";
         const opciones = [
-            { clave: "entregar", icono: "check", texto: "Entregar ahora", sub: "· y cobrar", ve: puedeEntregar(pedido), sinSub: true },
+            { clave: "entregar", icono: "check", texto: "Entregar ahora", sub: "Y cobrar", ve: puedeEntregar(pedido) },
             { clave: "reparto", icono: "camion", texto: "A repartir", sub: "Pasa a En reparto", ve: estadoActualDelPedido(pedido) !== "enReparto" },
             { clave: "dejar", icono: "reloj", texto: "Dejarlo cargado", sub: "Para después", ve: true }
         ].filter(opcion => opcion.ve);
