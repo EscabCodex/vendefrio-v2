@@ -85,7 +85,9 @@
 
     function calcular(inicio) {
         const nube = window.nubeVendeFrio;
-        const pedidos = obtenerHistorial().filter(pedido =>
+        // La lista compartida, sin copiarla: acá solo se lee (sin copiar
+        // miles de pedidos en cada cambio).
+        const pedidos = historialParaLeer().filter(pedido =>
             pedido && pedido.eliminado !== true && pedido.estados && typeof pedido.estados === "object"
         );
 
@@ -264,7 +266,9 @@
             } else if (boton.id === "descargarPlanillaCierre") {
                 // Planilla del día (T47): los pedidos cargados ese día.
                 const fin = diaElegido + DIA;
-                const pedidos = obtenerHistorial().filter(pedido => {
+                // La lista compartida, sin copiarla: acá solo se lee (sin copiar
+        // miles de pedidos en cada cambio).
+        const pedidos = historialParaLeer().filter(pedido => {
                     if (!pedido || pedido.eliminado === true) return false;
                     const hora = Number(pedido.timestamp) || 0;
                     return hora >= diaElegido && hora < fin;

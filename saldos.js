@@ -92,9 +92,12 @@
 
     function calcularCuentas() {
         const grupos = {};
-        const comercios = typeof obtenerComercios === "function" ? obtenerComercios() : [];
-        obtenerHistorial().forEach(pedido => {
-            if (!nube().cobroPendiente(pedido)) return;
+        // Se lee la lista compartida (sin copiar miles de pedidos en cada
+        // cambio) y se copian solo los que deben, como antes.
+        const comercios = typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [];
+        historialParaLeer().forEach(pedidoGuardado => {
+            if (!pedidoGuardado || typeof pedidoGuardado !== "object" || !nube().cobroPendiente(pedidoGuardado)) return;
+            const pedido = clonarDatos(pedidoGuardado);
             const falta = Math.max(0, nube().montoACobrar(pedido));
             const nombre = String(pedido.comercio || "Sin comercio");
             const clave = normal(nombre);
@@ -104,7 +107,8 @@
         });
         return Object.values(grupos).map(grupo => {
             grupo.pedidos.sort((a, b) => horaEntrega(a) - horaEntrega(b));
-            grupo.comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre, comercios) : null;
+            const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre, comercios) : null;
+            grupo.comercio = comercio ? clonarDatos(comercio) : null;
             grupo.tope = Number(grupo.comercio && grupo.comercio.topeDeuda) || 0;
             grupo.pasoTope = grupo.tope > 0 && grupo.total > grupo.tope;
             grupo.desde = horaEntrega(grupo.pedidos[0]);
