@@ -84,6 +84,8 @@
         if (destino && Number.isFinite(Number(destino.lat)) && destino.lat !== "" && window.pruebaEntregaVendeFrio &&
             window.pruebaEntregaVendeFrio.distanciaMetros(lat, lng, Number(destino.lat), Number(destino.lng)) <= 80) paso = "entregando";
         ultimaEscritura = { hora: Date.now(), lat, lng };
+        // App de Android: la notificación de reparto dice por qué parada vas.
+        window.appAndroidVendeFrio?.reparto?.({ hechas: reparto.hechas, total: reparto.total, destino, lat, lng });
         extras.guardar("ubicaciones", {
             nombre: String(yo.nombre || "").slice(0, 60),
             lat, lng,
@@ -126,6 +128,7 @@
         if (vigilancia && typeof vigilancia === "object") window.appAndroidVendeFrio?.dejarDeVigilar?.(vigilancia.app);
         else if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
+        window.appAndroidVendeFrio?.reparto?.(null);
         const estaba = compartiendo();
         try { localStorage.removeItem(CLAVE); } catch (error) { /* sin espacio */ }
         const yo = p.persona();

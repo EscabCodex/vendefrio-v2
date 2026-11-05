@@ -19,6 +19,7 @@ function capacitorDePrueba() {
                 checkPermissions: () => Promise.resolve({ display: "granted" }),
                 requestPermissions: () => Promise.resolve({ display: "granted" }),
                 schedule: o => anotar("notificar", o),
+                cancel: o => anotar("cancelar", o),
                 removeAllDeliveredNotifications: () => anotar("limpiar", true),
                 getDeliveredNotifications: () => Promise.resolve({ notifications: [] })
             },
@@ -38,7 +39,7 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
 
     // Con la app a la vista no se manda notificación (ya está el emergente).
     await page.evaluate(() => window.appAndroidVendeFrio.avisosNuevos([{ id: "a1", tipo: "pedidoNuevo", comercio: "Don Pepe" }]));
-    // En segundo plano, sí: una por aviso y una que los agrupa.
+    // En segundo plano, sí: una notificación aparte por aviso.
     await page.evaluate(() => {
         Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
         return window.appAndroidVendeFrio.avisosNuevos([
@@ -50,10 +51,10 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
     const notificar = pedidos.filter(p => p.nombre === "notificar");
     expect(notificar).toHaveLength(1);
     const lista = notificar[0].valor.notifications;
-    expect(lista).toHaveLength(3);
+    expect(lista).toHaveLength(2);
     expect(lista[0]).toMatchObject({ title: "Pedido nuevo · Don Pepe", body: "Por Maxi: 12 productos", actionTypeId: "pedido", channelId: "avisos" });
     expect(lista[1].actionTypeId).toBe("cobro");
-    expect(lista[2]).toMatchObject({ title: "2 avisos nuevos", groupSummary: true });
+    expect(lista.some(n => n.groupSummary)).toBe(false);
     const acciones = pedidos.find(p => p.nombre === "acciones").valor.types;
     expect(acciones.find(t => t.id === "pedido").actions.map(a => a.title)).toEqual(["Ver pedido", "Marcar leído"]);
 
@@ -71,6 +72,22 @@ test("app de Android: notificaciones con botones y GPS en segundo plano", async 
     const despues = await page.evaluate(() => window.__pedidosCapacitor);
     expect(despues.find(p => p.nombre === "gps").valor).toMatchObject({ backgroundTitle: "Repartiendo", requestPermissions: true });
     expect(despues.find(p => p.nombre === "sinGps").valor).toEqual({ id: "vigia-1" });
+
+    // Reparto: la notificación fija dice por qué parada vas, con Cargar pedido e Ir.
+    const parada = await page.evaluate(async () => {
+        window.__pedidosCapacitor.length = 0;
+        await window.appAndroidVendeFrio.reparto({ hechas: 2, total: 8, destino: { nombre: "Almacén Don Pepe", direccion: "Av. Mitre 1234", lat: -34.6, lng: -58.4 }, lat: -34.6, lng: -58.4054 });
+        // La misma parada y distancia no se vuelve a mandar.
+        await window.appAndroidVendeFrio.reparto({ hechas: 2, total: 8, destino: { nombre: "Almacén Don Pepe", direccion: "Av. Mitre 1234", lat: -34.6, lng: -58.4 }, lat: -34.6, lng: -58.4054 });
+        await window.appAndroidVendeFrio.reparto(null);
+        return window.__pedidosCapacitor;
+    });
+    const mandadas = parada.filter(p => p.nombre === "notificar");
+    expect(mandadas).toHaveLength(1);
+    expect(mandadas[0].valor.notifications[0]).toMatchObject({ id: 28351, title: "Parada 3 de 8 · Almacén Don Pepe", body: "Av. Mitre 1234 · 490 m", ongoing: true, actionTypeId: "parada", channelId: "reparto" });
+    expect(parada.find(p => p.nombre === "cancelar").valor).toEqual({ notifications: [{ id: 28351 }] });
+    const tiposParada = acciones.find(t => t.id === "parada").actions.map(a => a.title);
+    expect(tiposParada).toEqual(["Cargar pedido", "Ir"]);
 });
 
 test("app de Android: en Chrome no hace nada", async ({ page }) => {

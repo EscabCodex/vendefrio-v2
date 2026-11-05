@@ -26,6 +26,10 @@
     const Notificaciones = plugins.LocalNotifications;
     const Gps = plugins.BackgroundGeolocation;
     const CANAL = "avisos";
+    const CANAL_REPARTO = "reparto";
+    // Mismo número que la notificación fija del GPS: así se reemplaza su
+    // texto por el de la parada y queda una sola notificación de reparto.
+    const ID_REPARTO = 28351;
     const COLOR = "#0B8A82";
     let preparado = null;
 
@@ -39,11 +43,14 @@
                     id: CANAL, name: "Avisos de pedidos", description: "Pedidos nuevos, faltantes, entregas y cobros",
                     importance: 4, visibility: 1, vibration: true, lights: true, lightColor: COLOR
                 });
+                await Notificaciones.createChannel({
+                    id: CANAL_REPARTO, name: "Reparto en curso", description: "Por qué parada vas", importance: 2, visibility: 1, vibration: false
+                });
                 await Notificaciones.registerActionTypes({
                     types: [
                         { id: "pedido", actions: [{ id: "ver", title: "Ver pedido" }, { id: "leido", title: "Marcar leído" }] },
                         { id: "cobro", actions: [{ id: "ver", title: "Registrar cobro" }, { id: "leido", title: "Más tarde" }] },
-                        { id: "varios", actions: [{ id: "lista", title: "Ver avisos" }, { id: "leidos", title: "Marcar leídos" }] }
+                        { id: "parada", actions: [{ id: "cargar", title: "Cargar pedido" }, { id: "ir", title: "Ir" }] }
                     ]
                 });
                 Notificaciones.addListener("localNotificationActionPerformed", alTocar);
@@ -86,7 +93,6 @@
                 title: tipo.nombre + (aviso.comercio ? " · " + aviso.comercio : ""),
                 body: texto,
                 largeBody: texto,
-                group: "vendefrio",
                 smallIcon: "ic_stat_copo",
                 iconColor: COLOR,
                 actionTypeId: esCobro(aviso) ? "cobro" : (aviso.tipo === "rolPendiente" ? "" : "pedido"),
@@ -94,20 +100,6 @@
                 extra: { idAviso: String(aviso.id || ""), idPedido: String(aviso.idPedido || ""), tipo: String(aviso.tipo || "") }
             };
         });
-        if (lista.length > 1) {
-            notificaciones.push({
-                id: 7,
-                channelId: CANAL,
-                title: lista.length + " avisos nuevos",
-                body: "Tocá para verlos",
-                group: "vendefrio",
-                groupSummary: true,
-                smallIcon: "ic_stat_copo",
-                iconColor: COLOR,
-                actionTypeId: "varios",
-                extra: { lista: "1" }
-            });
-        }
         try {
             await Notificaciones.schedule({ notifications: notificaciones });
         } catch (error) {
@@ -143,16 +135,8 @@
         const accion = evento && evento.actionId;
         const avisos = window.avisosVendeFrio;
 
-        if (datos.lista) {
-            if (accion === "leidos") {
-                // Marca leídos solo los que avisó esta notificación agrupada.
-                Notificaciones.getDeliveredNotifications?.().then(r => {
-                    (r && r.notifications || []).forEach(n => n.extra && n.extra.idAviso && avisos?.marcarLeido?.(n.extra.idAviso));
-                    Notificaciones.removeAllDeliveredNotifications?.();
-                }).catch(() => {});
-                return;
-            }
-            avisos?.abrirLista?.();
+        if (datos.parada) {
+            tocarParada(accion, datos);
             return;
         }
         if (accion === "leido") {
@@ -165,9 +149,82 @@
     // Al volver a la app, se sacan las notificaciones que ya se ven adentro.
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && Notificaciones) {
-            Notificaciones.removeAllDeliveredNotifications?.().catch?.(() => {});
+            Notificaciones.getDeliveredNotifications?.().then(r => {
+                const viejas = (r && r.notifications || []).filter(n => Number(n.id) !== ID_REPARTO);
+                if (viejas.length) return Notificaciones.removeDeliveredNotifications({ notifications: viejas });
+            }).catch(() => {});
         }
     });
+
+    // ---------- Notificación de reparto: por qué parada vas ----------
+    let ultimaParada = "";
+
+    function distanciaTexto(metros) {
+        if (!Number.isFinite(metros)) return "";
+        return metros < 1000 ? Math.max(10, Math.round(metros / 10) * 10) + " m" : (metros / 1000).toFixed(1).replace(".", ",") + " km";
+    }
+
+    // repartidores.js la llama con cada posición: { hechas, total, destino, lat, lng }.
+    async function reparto(datos) {
+        if (!Notificaciones) return;
+        if (!datos) {
+            ultimaParada = "";
+            Notificaciones.cancel({ notifications: [{ id: ID_REPARTO }] }).catch(() => {});
+            return;
+        }
+        if (!(await preparar())) return;
+        const total = Math.max(0, Number(datos.total) || 0);
+        const numeroParada = Math.min(total, (Number(datos.hechas) || 0) + 1);
+        const destino = datos.destino || null;
+        const nombre = destino && destino.nombre ? String(destino.nombre) : "";
+        let metros = NaN;
+        if (destino && destino.lat !== "" && Number.isFinite(Number(destino.lat)) && window.pruebaEntregaVendeFrio) {
+            metros = window.pruebaEntregaVendeFrio.distanciaMetros(datos.lat, datos.lng, Number(destino.lat), Number(destino.lng));
+        }
+        const titulo = total ? "Parada " + numeroParada + " de " + total + (nombre ? " · " + nombre : "") : "Repartiendo";
+        const texto = [destino && destino.direccion ? String(destino.direccion) : "", metros <= 80 ? "Llegaste" : distanciaTexto(metros)].filter(Boolean).join(" · ") || "En camino";
+        const clave = titulo + "|" + texto;
+        if (clave === ultimaParada) return;
+        ultimaParada = clave;
+        try {
+            await Notificaciones.schedule({
+                notifications: [{
+                    id: ID_REPARTO,
+                    channelId: CANAL_REPARTO,
+                    title: titulo,
+                    body: texto,
+                    smallIcon: "ic_stat_copo",
+                    iconColor: COLOR,
+                    ongoing: true,
+                    autoCancel: false,
+                    actionTypeId: nombre ? "parada" : "",
+                    extra: { parada: "1", comercio: nombre }
+                }]
+            });
+        } catch (error) {
+            console.warn("No se pudo mostrar la parada.", error);
+        }
+    }
+
+    function tocarParada(accion, datos) {
+        const nombre = String(datos.comercio || "");
+        const navegacion = window.navegacionVendeFrio;
+        if (accion === "cargar" && nombre) {
+            // El pedido se carga con ese comercio elegido; al guardarlo queda
+            // a mano "Deslizá para Entregado".
+            if (navegacion?.abierta?.() && navegacion.minimizada?.()) navegacion.restaurar?.();
+            if (typeof window.abrirPedidoEnHoja === "function") window.abrirPedidoEnHoja(nombre);
+            else if (typeof window.irAPedidoRapido === "function") window.irAPedidoRapido(nombre);
+            return;
+        }
+        if (accion === "ir" && nombre) {
+            if (navegacion?.abierta?.()) navegacion.restaurar?.();
+            else navegacion?.abrir?.([nombre]);
+            return;
+        }
+        // Tocar la notificación: vuelve a la navegación si estaba abierta.
+        if (navegacion?.abierta?.() && navegacion.minimizada?.()) navegacion.restaurar?.();
+    }
 
     // ---------- 2) GPS en segundo plano ----------
     // Devuelve un número para dejar de vigilar con dejarDeVigilar().
@@ -180,7 +237,7 @@
         vigilancias.set(clave, null);
         Gps.addWatcher({
             backgroundTitle: "Repartiendo",
-            backgroundMessage: "Compartiendo tu ubicación con el dueño. Tocá para volver a VendeFrío.",
+            backgroundMessage: "Buscando por qué parada vas…",
             requestPermissions: true,
             stale: false,
             distanceFilter: 15
@@ -224,6 +281,7 @@
         esApp: true,
         avisosNuevos,
         vigilarUbicacion: Gps ? vigilarUbicacion : null,
+        reparto,
         dejarDeVigilar
     };
 
