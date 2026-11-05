@@ -90,7 +90,7 @@
         vibrar: true, precios: true, asistenteClaude: true,
         vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
-        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false,
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false, medirFluidez: true, avisarErrores: true,
         // T158: tonos del tema, color a elección, formas, íconos y fondo de Inicio.
         tonoDia: "hielo", tonoNoche: "grafito", acentoPropio: "", formaBotones: "redondos",
         tarjetas: "suaves", iconos: "normales", fondoInicio: "liso",
@@ -2209,6 +2209,10 @@
                     filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
                     filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"') +
                     filaAccion("correo", "azul", "Escribinos", "vendefrio.app@gmail.com", 'data-accion="escribirnos"')) +
+                // monitoreo.js: las dos llaves para medir y avisar errores.
+                grupo("Ayudar a mejorar la app",
+                    filaLlave("rayo", "verde", "Medir la fluidez", "Cuánto tarda en abrir y en responder. Sin datos tuyos", "medirFluidez") +
+                    filaLlave("bandera", "naranja", "Avisar errores", "Si algo se rompe, llega un aviso sin nombres ni montos", "avisarErrores")) +
                 // T62: informar un problema (y, el dueño, ver los informados).
                 grupo("Problemas",
                     filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
