@@ -76,7 +76,7 @@
             "Elegí si vas a traer productos o comercios.",
             "Elegí la planilla de Excel del celular.",
             "Revisá la vista previa y confirmá."] },
-        pantallaCambios: { titulo: "Registro de cambios", pasos: [
+        pantallaCambios: { titulo: "¿Quién cambió qué?", pasos: [
             "Acá ves qué se cambió en la app, quién y cuándo.",
             "Solo lo ves vos, y no se puede borrar.",
             "Sirve para saber, por ejemplo, quién cambió un precio."] },

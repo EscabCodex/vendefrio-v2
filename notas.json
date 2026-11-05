@@ -2,6 +2,22 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 291,
+      "fecha": "2026-11-05",
+      "tipo": "arreglado",
+      "icono": "chispa",
+      "titulo": "Una sola ventana de novedades",
+      "texto": "Antes salían dos al actualizar. Ahora sale una y se desliza bien."
+    },
+    {
+      "version": 291,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "historial",
+      "titulo": "«¿Quién cambió qué?»",
+      "texto": "El Registro de cambios cambió de nombre para no confundirse con las novedades."
+    },
+    {
       "version": 290,
       "fecha": "2026-11-05",
       "tipo": "mejor",
@@ -28,7 +44,7 @@
     {
       "version": 287,
       "fecha": "2026-11-05",
-      "tipo": "arreglo",
+      "tipo": "arreglado",
       "icono": "check",
       "titulo": "Pedidos e Inicio cuentan igual",
       "texto": "Pedidos abre en la primera pestaña con algo, e Inicio cuenta los entregados igual que Terminados."

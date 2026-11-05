@@ -83,11 +83,9 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await novedades.getByRole("button", { name: "Entendido" }).click();
     await expect(novedades).toBeHidden();
 
-    // Después de una actualización se muestran solas, una vez.
+    // Después de una actualización esta ventana vieja ya NO sale sola (avisan
+    // las notas nuevas): así no aparecen dos ventanas a la vez.
     await page.evaluate(() => localStorage.setItem("vendefrio_novedades_vistas", "0.9"));
-    await page.reload();
-    await expect(novedades).toBeVisible();
-    await novedades.getByRole("button", { name: "Entendido" }).click();
     await page.reload();
     await expect(page.locator("#dashNombreDistribuidora")).toHaveText("Distribuidora Prueba");
     await page.waitForTimeout(1800);
