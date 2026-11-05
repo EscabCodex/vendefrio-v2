@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 279,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "check",
+      "titulo": "Escanear códigos en más celulares",
+      "texto": "El lector de códigos de barras ahora anda también en la app de Android y en los celulares que no lo traían."
+    },
+    {
       "version": 277,
       "fecha": "2026-11-05",
       "tipo": "mejor",
