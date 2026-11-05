@@ -90,7 +90,7 @@
         vibrar: true, precios: true, asistenteClaude: true,
         vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
-        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false,
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false, medirFluidez: true, avisarErrores: true,
         // T158: tonos del tema, color a elección, formas, íconos y fondo de Inicio.
         tonoDia: "hielo", tonoNoche: "grafito", acentoPropio: "", formaBotones: "redondos",
         tarjetas: "suaves", iconos: "normales", fondoInicio: "liso",
@@ -279,7 +279,7 @@
                 <small>${texto}</small>
             </label>`).join("");
 
-        // El color a elección: al tocarlo se abre el selector del teléfono.
+        // El color a elección: al tocarlo se abre la paleta propia (piezas.js).
         const propio = valorDe(d, "acentoPropio");
         const varsPropias = propio ? variablesDeColor(propio) : null;
         const colorPropio = `
@@ -310,7 +310,7 @@
                 filaTonos("luna", "violeta", "Tono de noche", "tonoNoche", TONOS_NOCHE), "ajGrupoTemas") +
             grupo("Color principal",
                 `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}${colorPropio}</div>
-                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre los colores del teléfono.</p>`) +
+                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre 48 colores más.</p>`) +
             grupo("Forma y estilo",
                 filaSegmento("etiqueta", "azul", "Forma de los botones", "Las tarjetas acompañan", "formaBotones", [
                     ["redondos", "Redondos"], ["suaves", "Suaves"], ["rectos", "Rectos"]
@@ -2209,6 +2209,10 @@
                     filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
                     filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"') +
                     filaAccion("correo", "azul", "Escribinos", "vendefrio.app@gmail.com", 'data-accion="escribirnos"')) +
+                // monitoreo.js: las dos llaves para medir y avisar errores.
+                grupo("Ayudar a mejorar la app",
+                    filaLlave("rayo", "verde", "Medir la fluidez", "Cuánto tarda en abrir y en responder. Sin datos tuyos", "medirFluidez") +
+                    filaLlave("bandera", "naranja", "Avisar errores", "Si algo se rompe, llega un aviso sin nombres ni montos", "avisarErrores")) +
                 // T62: informar un problema (y, el dueño, ver los informados).
                 grupo("Problemas",
                     filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +

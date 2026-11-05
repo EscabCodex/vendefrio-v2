@@ -53,7 +53,7 @@ test("vender: visita sin pedido con motivo", async ({ page }, testInfo) => {
     // Estadísticas: por qué no hubo pedido.
     await page.evaluate(() => abrirEstadisticas());
     const tarjeta = page.locator(".statsSinPedido");
-    await expect(tarjeta).toContainText("2 en total");
+    await expect(tarjeta).toContainText("2 en los últimos 30 días");
     await expect(tarjeta).toContainText("Tenía mercadería");
     await expect(tarjeta).toContainText("Pidió que vuelva el jueves");
     // Las estadísticas se vuelven a dibujar cuando llega algo de la nube.
