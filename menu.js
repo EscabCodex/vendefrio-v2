@@ -625,10 +625,9 @@ function cuentasDeInicio() {
         const pedidos = pedidosQueCuentanParaLeer();
         const cargadosHoy = pedidos.filter(esDeHoyInicio);
         const pedidosSemana = pedidos.filter(pedido => esFechaDeSemanaActual(obtenerFechaPedidoDashboard(pedido)));
-        // T178: los entregados se cuentan el día que se entregaron.
-        const entregados = pedidos.filter(pedido => estadoInicio(pedido) === "entregado")
-            .map(pedido => horaDelEstadoInicio(pedido)).filter(hora => hora > 0);
-        const inicioSemana = obtenerInicioSemanaActual().getTime();
+        // Tanda 5: Inicio cuenta igual que Pedidos > Terminados (los
+        // entregados y los de antes de los estados, por la fecha del pedido).
+        const terminados = pedidos.filter(pedidoEstaEnHistorial);
         const productosHoy = new Set();
         cargadosHoy.forEach(pedido => (Array.isArray(pedido.productos) ? pedido.productos : []).forEach(item => {
             if (item && Number(item.cantidad) > 0) productosHoy.add(String(item.marca || "") + "|" + String(item.producto || item.nombre || ""));
@@ -641,9 +640,9 @@ function cuentasDeInicio() {
             pedidosSemana: Object.freeze(pedidosSemana),
             visitadosSemana: comercios.filter(comercioVisitadoRecientemente).length,
             visitadosHoy: comercios.filter(comercioVisitadoHoyInicio).length,
-            cargadosSemana: pedidosSemana.filter(pedido => ESTADOS_EN_CAMINO_INICIO.includes(estadoInicio(pedido))).length,
-            entregadosSemana: entregados.filter(hora => hora >= inicioSemana).length,
-            entregadosHoy: entregados.filter(hora => esDeHoyInicio({ timestamp: hora })).length,
+            cargadosSemana: pedidosSemana.length,
+            entregadosSemana: terminados.filter(pedido => coincidePeriodoHistorial(pedido, "semana")).length,
+            entregadosHoy: terminados.filter(pedido => coincidePeriodoHistorial(pedido, "hoy")).length,
             productosHoy: productosHoy.size
         });
     }, new Date().toDateString() + "|" + usaNubeReal());
@@ -930,7 +929,7 @@ function abrirComerciosConFiltroDashboard(filtro) {
 function listaDeInicio(accion) {
     const cuentas = cuentasDeInicio();
     const listas = {
-        cargadosSemana: () => ["Cargados esta semana, sin entregar", cuentas.pedidosSemana.filter(pedido => ESTADOS_EN_CAMINO_INICIO.includes(estadoInicio(pedido)))],
+        cargadosSemana: () => ["Cargados esta semana", cuentas.pedidosSemana],
         cargadosHoy: () => ["Cargados hoy", cuentas.cargadosHoy],
         vendidoHoy: () => ["Vendido hoy", cuentas.cargadosHoy],
         pedidosDeHoy: () => ["Pedidos de hoy", cuentas.pedidosHoy],
