@@ -131,14 +131,15 @@ test("mejoras: elegir varios, catálogo en lista y ronda de WhatsApp", async ({ 
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Dejar de elegir" }).click();
 
-    // Catálogo en lista.
+    // Catálogo en lista (Tanda 3: arranca en filas; los cuadros son el modo foto).
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
-    await page.getByRole("button", { name: "Ver en lista" }).click();
     await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
     await expect(page.locator("#vistaCatalogo")).toContainText("5 productos");
     await capturar(page, "mejoras-05-catalogo-en-lista");
-    await page.getByRole("button", { name: "Ver en cuadros" }).click();
+    await page.getByRole("button", { name: "Modo foto, para mostrar al cliente" }).click();
     await expect(page.locator("#grillaCatalogo")).not.toHaveClass(/vistaLista/);
+    await page.getByRole("button", { name: "Ver en filas" }).click();
+    await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
 
     // Ronda de WhatsApp: "Enviar a…" fijo abajo y "Saltear".
     await abrirMas(page);
@@ -173,7 +174,20 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
     await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
     await expect(aCobrar.locator(".filaACobrar")).toContainText("Super Norte");
     await capturar(page, "mejoras-07-a-cobrar");
-    await aCobrar.getByRole("button", { name: "Todos", exact: true }).click();
+    // Repaso de A cobrar: lupa primera en la fila y filtros con el número.
+    const fila = aCobrar.locator(".filtrosACobrar");
+    await expect(fila.locator(":scope > *").first()).toHaveClass(/pzLupa/);
+    await expect(fila.getByRole("button", { name: /^Todos/ })).toContainText("2");
+    await expect(fila.getByRole("button", { name: /^Más viejas/ })).toContainText("0");
+    await fila.getByRole("button", { name: /^Más grandes/ }).click();
+    await expect(aCobrar.locator(".filaACobrar").first()).toBeVisible();
+    await aCobrar.getByRole("button", { name: /^Todos/ }).click();
+    await fila.getByRole("button", { name: "Buscar comercio" }).click();
+    await aCobrar.locator("#buscarACobrar").fill("luna");
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
+    await expect(aCobrar.locator(".filaACobrar")).toContainText("Kiosco Luna");
+    await aCobrar.getByRole("button", { name: "Cerrar el buscador" }).click();
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(2);
     await aCobrar.getByRole("button", { name: /Recordarles a todos \(2\)/ }).click();
     const todos = page.getByRole("dialog", { name: "Recordarles a todos" });
     await todos.getByRole("button", { name: "Enviar" }).first().click();

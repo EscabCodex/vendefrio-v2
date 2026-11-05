@@ -2,12 +2,92 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
-      "version": 282,
+      "version": 291,
       "fecha": "2026-11-05",
       "tipo": "nuevo",
       "icono": "campana",
-      "titulo": "App de Android: avisos y GPS",
-      "texto": "Con la app de Android, los avisos llegan como notificación y el GPS sigue con la pantalla apagada."
+      "titulo": "App de Android: avisos y reparto",
+      "texto": "En la app de Android, cada aviso llega como notificación y la del reparto dice en qué parada estás."
+    },
+    {
+      "version": 290,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "recibo",
+      "titulo": "Cierre del día más corto",
+      "texto": "Ya no muestra filas y tarjetas en $ 0: solo lo que tiene plata."
+    },
+    {
+      "version": 289,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "engranaje",
+      "titulo": "Ajustes más simples",
+      "texto": "Menos textos largos. Lo que casi no se usa quedó en «Avanzado» y «Más opciones»."
+    },
+    {
+      "version": 288,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "A cobrar con lupa y filtros",
+      "texto": "Buscás un comercio con la lupa y filtrás las deudas más viejas o más grandes."
+    },
+    {
+      "version": 287,
+      "fecha": "2026-11-05",
+      "tipo": "arreglo",
+      "icono": "check",
+      "titulo": "Pedidos e Inicio cuentan igual",
+      "texto": "Pedidos abre en la primera pestaña con algo, e Inicio cuenta los entregados igual que Terminados."
+    },
+    {
+      "version": 286,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Comercios más fáciles de leer",
+      "texto": "Cada tarjeta muestra una sola etiqueta, la más urgente, y el horario entero. La ficha tiene 6 cuadros."
+    },
+    {
+      "version": 285,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "Registro de cambios más ordenado",
+      "texto": "Los 5 filtros entran en una sola fila y cada uno muestra cuántos cambios tiene."
+    },
+    {
+      "version": 284,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "whatsapp",
+      "titulo": "WhatsApp más simple",
+      "texto": "Queda a la vista la ronda de pedidos. Lo automático dice «En construcción» y lo técnico pasó a Avanzado."
+    },
+    {
+      "version": 283,
+      "fecha": "2026-11-05",
+      "tipo": "nuevo",
+      "icono": "grafico",
+      "titulo": "Ficha de la marca para estudiar ventas",
+      "texto": "Elegí una marca en Catálogo: ves cuánto vende, quién la compra y a quién ofrecérsela."
+    },
+    {
+      "version": 282,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "rayo",
+      "titulo": "Los cambios se ven al instante",
+      "texto": "Preparar, entregar o cobrar un pedido se ve enseguida, aunque tengas miles de pedidos."
+    },
+    {
+      "version": 282,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "moneda",
+      "titulo": "«Cobrado hoy» con lo cobrado",
+      "texto": "En Inicio, «Cobrado hoy» suma los cobros del día; antes quedaba en $ 0."
     },
     {
       "version": 281,

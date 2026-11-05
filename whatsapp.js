@@ -698,12 +698,7 @@
         return `
             <section class="waTarjeta" aria-labelledby="waTituloCompartir">
                 <h2 id="waTituloCompartir">Compartir a VendeFrío</h2>
-                <ol class="waPasos">
-                    <li>En WhatsApp, mantené apretado el mensaje o el audio del pedido.</li>
-                    <li>Tocá «Compartir» (o «Reenviar» y después el ícono de compartir) y elegí VendeFrío.</li>
-                    <li>Se abre «Nuevo pedido» con los productos que se entendieron, para revisar y agregar.</li>
-                </ol>
-                <p class="waAyuda">Funciona en Android con la app instalada. En iPhone, copiá el texto y pegalo en «Dictar o pegar pedido».</p>
+                <p class="waAyuda">En WhatsApp, mantené apretado un pedido, tocá «Compartir» y elegí VendeFrío: se abre «Nuevo pedido» con lo que se entendió.</p>
             </section>`;
     }
 
@@ -721,23 +716,27 @@
             </ul>`;
         }
         return `
-            <section class="waTarjeta" aria-labelledby="waTituloAutomatico">
-                <h2 id="waTituloAutomatico">WhatsApp automático</h2>
-                <p class="waAyuda">Con la cuenta oficial de WhatsApp para empresas (Meta), la ronda sale con un toque y las respuestas llegan solas acá. Meta cobra unos centavos de dólar por cada mensaje de la ronda; contestar es gratis.</p>
+            <section class="waTarjeta waConstruccion" aria-labelledby="waTituloConstruccion">
+                <h2 id="waTituloConstruccion">${ico("info", 18)} En construcción</h2>
+                <p class="waAyuda">Pronto los pedidos de WhatsApp van a llegar solos a la app. Mientras, usá la ronda de pedidos.</p>
+                <details class="waAvanzado"${config.activo ? " open" : ""}>
+                <summary>Avanzado</summary>
+                <h3 id="waTituloAutomatico">WhatsApp automático</h3>
                 <label class="waFilaLlave">
-                    <span><strong>Usar WhatsApp automático</strong><small>Necesita la cuenta de Meta conectada en Vercel (M16).</small></span>
+                    <span><strong>Usar WhatsApp automático</strong><small>Necesita la cuenta de WhatsApp para empresas conectada.</small></span>
                     <input type="checkbox" class="ajLlave" id="waLlaveActivo" role="switch" aria-label="Usar WhatsApp automático" ${config.activo ? "checked" : ""}>
                 </label>
                 <label class="waFilaLlave">
-                    <span><strong>Pasar audios a texto</strong><small>Servicio pago, menos de 1 centavo de dólar por minuto (M14).</small></span>
+                    <span><strong>Pasar audios a texto</strong><small>Los audios se leen solos.</small></span>
                     <input type="checkbox" class="ajLlave" id="waLlaveAudios" role="switch" aria-label="Pasar audios a texto" ${config.audios ? "checked" : ""}>
                 </label>
-                <label class="waCampo" for="waPlantilla">Nombre de la plantilla en Meta</label>
+                <label class="waCampo" for="waPlantilla">Nombre del mensaje aprobado</label>
                 <input type="text" id="waPlantilla" value="${escapar(config.plantilla)}" maxlength="80" autocomplete="off" autocapitalize="off">
-                <p class="waAyuda">Código de la distribuidora (para Vercel):</p>
+                <p class="waAyuda">Código de tu distribuidora:</p>
                 <p class="waCodigo"><code>${escapar(idDistribuidora())}</code><button type="button" class="waEnlace" data-wa="copiarCodigo">Copiar</button></p>
                 <button type="button" class="waBotonSecundario" data-wa="revisarConexion">${ico("refrescar", 16)} Revisar la conexión</button>
                 ${estado}
+                </details>
             </section>`;
     }
 

@@ -430,7 +430,8 @@ body > section.pzPantalla > header .logo:empty{display:none;}
 #avisoListas small{font-size:14.5px;color:var(--texto);line-height:1.4;}
 .pzBotonesFijos > .pzBtn{width:100%;}
 /* ---------- Registro de cambios (T82) ---------- */
-#pantallaCambios .pzFiltros{flex-wrap:wrap;}
+#pantallaCambios .pzFiltros{gap:3px;}
+#pantallaCambios .pzFiltro{padding:0 5px;gap:3px;font-size:12px;flex:1 1 auto;justify-content:center;min-width:0;}
 .grupoCambios .pzBloqueCab{margin-top:10px;}
 .filaCambio{align-items:flex-start;padding-top:14px;padding-bottom:14px;}
 .horaCambio{flex-shrink:0;width:46px;padding-top:2px;font-size:14px;font-weight:650;color:var(--texto-sec);font-variant-numeric:tabular-nums;}
@@ -1794,3 +1795,36 @@ html .sugerenciasComercioEditar button{display:flex;align-items:center;gap:12px;
 html .sugerenciasComercioEditar button svg{flex-shrink:0;color:var(--acento-oscuro);}
 html[data-tema="oscuro"] .sugerenciasComercioEditar button svg{color:var(--acento);}
 html .sugerenciasComercioEditar button:active{background:var(--acento-bg);}
+/* Ficha de la marca para estudiar el mercado. */
+html .verFichaMarca{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 10px;padding:12px 14px;border:1px solid var(--borde);border-radius:16px;background:var(--superficie);color:var(--texto);font-size:15px;font-weight:700;text-align:left;cursor:pointer;}
+html .verFichaMarca span{flex:1;min-width:0;}
+html .verFichaMarca svg:first-child{color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .verFichaMarca svg:first-child{color:var(--acento);}
+html .modalFichaMarca .fichaEncabezado{padding-right:96px;}
+html .fichaMarcaLectura{margin:0 0 12px;padding:12px 14px;border-radius:22px;background:var(--superficie-2);}
+html:not([data-tema="oscuro"]) .fichaMarcaLectura{background:#eaf1fd;}
+html .fichaMarcaLectura > strong{display:block;margin-bottom:6px;font-size:12.5px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-sec);}
+html .fichaMarcaLectura ul{margin:0;padding-left:18px;display:grid;gap:5px;}
+html .fichaMarcaLectura li{font-size:14.5px;line-height:1.35;color:var(--texto);}
+html .fichaMarcaProductos + .fichaMarcaProductos{margin-top:12px;}
+html .fichaMarcaProductos > div{padding:0 8px 8px;}
+html .filaBarraMarca{display:flex;align-items:center;gap:10px;width:100%;padding:8px 6px;border:0;border-radius:12px;background:transparent;color:var(--texto);font:inherit;text-align:left;}
+html button.filaBarraMarca{cursor:pointer;}
+html .filaBarraMarca.resaltada{background:var(--superficie);font-weight:800;}
+html .filaBarraNumero{flex:0 0 24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--superficie);font-size:12.5px;font-weight:800;}
+html .filaBarraTexto{flex:1;min-width:0;display:grid;gap:4px;}
+html .filaBarraNombre{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+html .filaBarraMarca b{font-size:14px;white-space:nowrap;}
+html .filaBarra{display:block;height:6px;border-radius:99px;background:var(--borde);overflow:hidden;}
+html .filaBarra i{display:block;height:100%;border-radius:99px;background:var(--tono,var(--acento-oscuro));}
+html[data-tema="oscuro"] .filaBarra i{background:var(--acento);}
+html .ventasFichaMarca{display:grid;grid-template-columns:minmax(40px,90px) auto;align-items:center;gap:8px;font-size:12.5px;color:var(--texto-sec);}
+html .ventasFichaMarca.sinVentas{display:block;color:var(--peligro,#c2410c);}
+html .fichaMarcaVacio{margin:4px 6px 6px;font-size:14px;color:var(--texto-sec);}
+html .modalFichaMarca .fichaMarcaRanking{margin-bottom:64px;}
+html .textosFichaMarca .ventasFichaMarca{color:var(--texto-sec) !important;}
+html .textosFichaMarca .ventasFichaMarca.sinVentas{color:#c2410c !important;}
+html[data-tema="oscuro"] .textosFichaMarca .ventasFichaMarca.sinVentas{color:#fb923c !important;}
+html[data-tema="oscuro"] .filaBarraMarca.resaltada{background:#2A323C;}
+/* Comercios: el horario se lee entero (puede ocupar dos renglones). */
+html body #pantallaComercios .datosComercioGrid .datoHorario{white-space:normal;overflow:visible;align-items:flex-start;}

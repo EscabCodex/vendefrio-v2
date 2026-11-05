@@ -66,8 +66,8 @@
                 <strong>${queda < 0 ? "− " : ""}${p.plata(Math.abs(queda))}</strong>
                 <div class="pzTresNumeros">
                     <div><b>${p.plata(datos.totalRecaudado)}</b><span>cobrado</span></div>
-                    <div><b>${totalGastos ? "− " : ""}${p.plata(totalGastos)}</b><span>gastos</span></div>
-                    <div><b>${p.plata(datos.aCobrar)}</b><span>a cobrar</span></div>
+                    ${totalGastos ? `<div><b>− ${p.plata(totalGastos)}</b><span>gastos</span></div>` : ""}
+                    ${datos.aCobrar ? `<div><b>${p.plata(datos.aCobrar)}</b><span>a cobrar</span></div>` : ""}
                 </div>
             </div>
             <section class="pzBloque" id="gastosCierre">

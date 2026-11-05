@@ -147,6 +147,9 @@
         const hoy = new Date(); hoy.setHours(10, 0, 0, 0);
         const pedidos = [];
         COMERCIOS.forEach((comercio, numero) => {
+            // Repaso de A cobrar: la mitad de los comercios quedó debiendo su
+            // último pedido (entregado y sin cobrar), así "A cobrar" no da $ 0.
+            let debe = numero % 2 === 0;
             for (let hace = comercio.deja || (numero % 3); hace <= 35; hace += comercio.cada) {
                 const variacion = (hace + numero) % 3 - 1;
                 const timestamp = hoy.getTime() - hace * DIA + numero * 1800000;
@@ -160,8 +163,10 @@
                     productos,
                     // Como un pedido cargado en la app: Historial muestra la
                     // fecha, las unidades y el mensaje de "Ver pedido".
-                    ...comoPedidoGuardado(comercio.nombre, timestamp, productos)
+                    ...comoPedidoGuardado(comercio.nombre, timestamp, productos),
+                    ...(debe && hace >= 1 ? { estados: { est_ejemplo: { estado: "entregado", horaCelular: timestamp + 3600000 } } } : {})
                 });
+                if (hace >= 1) debe = false;
             }
         });
         pedidos.sort((a, b) => b.timestamp - a.timestamp);

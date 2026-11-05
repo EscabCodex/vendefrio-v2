@@ -311,7 +311,7 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
     await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 14.800");
     await expect(cierre.locator(".filaCierre", { hasText: "Efectivo" })).toContainText("$ 9.800");
     await expect(cierre.locator(".filaCierre", { hasText: "Transferencia" })).toContainText("$ 5.000");
-    await expect(cierre.locator(".filaCierre", { hasText: "A cobrar" })).toContainText("$ 0");
+    await expect(cierre.locator(".filaCierre", { hasText: "A cobrar" })).toHaveCount(0); // en cero no se muestra
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Por persona que cobró" })).toContainText("Jere");
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Diferencias con el total" })).toContainText("cobró $ 5.000 de $ 5.300");
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Entregados con cambios" })).toContainText("−$ 4.500");
@@ -336,7 +336,9 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
     await cierre.getByRole("button", { name: "Día anterior" }).click();
     await expect(cierre.locator("#nombreDiaCierre")).toContainText("Ayer");
     await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 0");
-    await expect(cierre).toContainText("No se entregaron pedidos este día.");
+    // Día vacío: el $ 0 sale una sola vez arriba, sin filas ni tarjetas en cero.
+    await expect(cierre.locator("#contenidoCierre")).not.toContainText("Transferencia");
+    await expect(cierre.locator("#contenidoCierre")).not.toContainText("Por persona que cobró");
 
     // Un empleado sin "Cobra" no tiene "Cierre del día" en Más.
     const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);

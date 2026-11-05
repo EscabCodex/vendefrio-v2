@@ -587,6 +587,7 @@
         boton.addEventListener("click", () => {
             entrarPorLaBarra = true;
             listaElegida = null;
+            if (enLaNube()) etapaActual = primeraEtapaConPedidos();
             // Ya se sabe que va a la lista: así no se dibuja Nuevo pedido.
             pantalla.dataset.vista = "pedidos";
         }, true);
@@ -756,6 +757,17 @@
         const aviso = idPedidoHistorial ? "Mostrando solamente el pedido seleccionado" : "";
         textoAvisoHistorial.textContent = aviso;
         avisoFiltroHistorial.classList.toggle("oculto", !aviso);
+    }
+
+    // Tanda 5: al entrar por la barra, Pedidos abre en la primera pestaña
+    // (Para armar, Para entregar, Terminados) que tenga algo.
+    function primeraEtapaConPedidos() {
+        const registros = pedidosDeTrabajo();
+        const principales = etapasVisibles().filter(etapa => !etapa.otros);
+        const conAlgo = principales.find(etapa => etapa.id === "historial"
+            ? pedidosDelHistorial().length > 0
+            : registros.some(registro => esDeLaEtapa(registro, etapa)));
+        return (conAlgo || principales[0] || ETAPAS[0]).id;
     }
 
     let cantidadesOtros = [];

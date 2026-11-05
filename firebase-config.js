@@ -30,6 +30,14 @@
     // Tiene que activarse antes de cualquier otro uso de Firestore.
     try {
         if (window.firebase.firestore) {
+            // Sin tope para la copia del celular: los pedidos viejos ya no se
+            // escuchan en vivo y Firestore podría borrarlos de la copia para
+            // hacer lugar (sin señal no se verían). Antes nunca los borraba
+            // porque se escuchaban todos.
+            window.firebase.firestore().settings({
+                cacheSizeBytes: window.firebase.firestore.CACHE_SIZE_UNLIMITED,
+                merge: true
+            });
             window.firebase.firestore()
                 .enablePersistence({ synchronizeTabs: true })
                 .catch(error => {

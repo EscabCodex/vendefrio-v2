@@ -52,6 +52,26 @@
     // Las partes que ya llegaron alguna vez: la primera vez siempre se avisa.
     const partesQueLlegaron = new Set();
 
+    // Pedidos en vivo solo los recientes (arreglar la lentitud de la nube).
+    // Firestore repasa todos los documentos que se escuchan en cada cambio,
+    // por chico que sea: con miles de pedidos, cada toque trababa el celular
+    // varios segundos. Se escuchan en vivo los pedidos de los últimos días;
+    // todos los demás se leen una vez al abrir la app (de la copia del
+    // celular y, enseguida, de la nube) y quedan en memoria igual que antes.
+    // Un pedido viejo que este celular cambia se escucha suelto, solo él.
+    const DIAS_DE_PEDIDOS_EN_VIVO = 60;
+    const ESPERA_ENTRE_BAJADAS_DE_PEDIDOS = 60 * 60 * 1000;
+    let corteDePedidosEnVivo = 0;
+    const idsPedidosEnVivo = new Set();
+    let pedidosViejosCargados = false;
+    let ultimaBajadaDePedidos = 0;
+    // Los ids que trajo la última lectura completa de la nube: solo esos se
+    // dan por borrados si dejan de venir (nunca uno recién creado acá).
+    let idsDeLaUltimaBajada = new Set();
+    const pedidosSueltos = new Map();
+    const sueltosSinSubir = new Set();
+    let vueltaDeEscucha = 0;
+
     // Sincronización visible (T12). Por cada parte que se escucha
     // (comercios, productos, pedidos, rutas, config): ids con cambios que
     // todavía no confirmó la nube y si lo último llegó de la copia del celular.
@@ -449,6 +469,16 @@
         });
 
         documentos[subcoleccion] = nuevos;
+
+        // Un pedido viejo (fuera de la escucha en vivo) que se cambió acá se
+        // escucha suelto: así llega la confirmación o el rechazo de la nube.
+        if (subcoleccion === "pedidos" && pedidosViejosCargados) {
+            escrituras.forEach(escritura => {
+                const id = escritura.ref.id;
+                if (escritura.tipo === "borrar" || idsPedidosEnVivo.has(id)) return;
+                if (!pedidoEnVentana(nuevos.get(id))) escucharPedidoSuelto(id);
+            });
+        }
     }
 
     function errorAlEscribir(error) {
@@ -648,10 +678,41 @@
         return { ref: refDistribuidora.collection("pedidos").doc(id), pedido: deDocumento(id, datos) };
     }
 
-    // No espera a la nube: la escucha muestra el cambio enseguida, también
-    // sin señal. Si la nube lo rechaza, avisa como cualquier otro cambio.
+    // El cambio se ve al instante (arreglar la lentitud de la nube): se
+    // aplica en la memoria y se avisa a las pantallas sin esperar a que
+    // Firestore lo devuelva por la escucha (con miles de pedidos tardaba
+    // segundos). Lo que se guarda y sube es lo mismo de siempre: update()
+    // campo por campo, que Firestore anota en el celular y sube solo, también
+    // sin señal. Cuando la escucha devuelve el cambio, ya es igual y no se
+    // redibuja nada; si la nube lo rechaza, la escucha trae el pedido como
+    // estaba y se avisa como cualquier otro error.
+    function aplicarCamposEnMemoria(id, campos) {
+        const anterior = documentos.pedidos.get(id);
+        if (!anterior || typeof anterior._json === "string") return;
+
+        const copia = JSON.parse(JSON.stringify(anterior));
+        campos.forEach(({ ruta, valor, borrar }) => {
+            let lugar = copia;
+            for (let i = 0; i < ruta.length - 1; i++) {
+                if (!esMapa(lugar[ruta[i]])) {
+                    if (borrar) return;
+                    lugar[ruta[i]] = {};
+                }
+                lugar = lugar[ruta[i]];
+            }
+            const ultima = ruta[ruta.length - 1];
+            if (borrar) delete lugar[ultima];
+            else lugar[ultima] = JSON.parse(JSON.stringify(valor));
+        });
+
+        documentos.pedidos.set(id, congelarHondo(copia));
+        avisarCambio(["historial"]);
+    }
+
     function enviarCambiosDelPedido(ref, campos) {
+        aplicarCamposEnMemoria(ref.id, campos);
         ref.update(...argumentosDeActualizacion(campos)).catch(errorAlEscribir);
+        if (!idsPedidosEnVivo.has(ref.id)) escucharPedidoSuelto(ref.id);
     }
 
     // cambios: { "preparacion.lin_x": valor, "entrega": valor }. La ruta va
@@ -1824,8 +1885,12 @@
     // -------------------------------------------------
 
     function dejarDeEscuchar() {
+        vueltaDeEscucha++;
         desuscripciones.forEach(dejar => dejar());
         desuscripciones = [];
+        pedidosSueltos.forEach(dejar => dejar());
+        pedidosSueltos.clear();
+        sueltosSinSubir.clear();
     }
 
     function alFallarEscucha(error) {
@@ -2031,6 +2096,8 @@
             if (documento.metadata.hasPendingWrites) ids.add(documento.id);
         });
 
+        // Los pedidos viejos que se escuchan sueltos no vienen en esta foto.
+        if (parte === "pedidos") sueltosSinSubir.forEach(id => ids.add(id));
         idsSinSubir[parte] = ids;
 
         if (foto.metadata.fromCache) {
@@ -2073,6 +2140,142 @@
         }
     }
 
+    // -------------------------------------------------
+    // Pedidos viejos (arreglar la lentitud de la nube)
+    // -------------------------------------------------
+
+    // ¿Entra en la escucha en vivo? (tiene hora de carga reciente)
+    function pedidoEnVentana(datos) {
+        const hora = datos && datos.timestamp;
+        return typeof hora === "number" && hora >= corteDePedidosEnVivo;
+    }
+
+    // Pone un pedido en la memoria si cambió. Devuelve true si cambió.
+    function ponerPedido(id, datos) {
+        const anterior = documentos.pedidos.get(id);
+        if (anterior && igualesComoJson(datos, anterior)) return false;
+        documentos.pedidos.set(id, congelarHondo(datos));
+        return true;
+    }
+
+    // Suma a la memoria lo que trajo una lectura de todos los pedidos. Los
+    // que se escuchan en vivo o sueltos no se tocan (lo de ellos es más
+    // nuevo). Con "desdeLaNube", un pedido viejo que trajo la lectura
+    // anterior y esta ya no, se borró en otro celular.
+    function sumarTodosLosPedidos(foto, desdeLaNube) {
+        let cambio = false;
+        const vistos = new Set();
+
+        foto.forEach(documento => {
+            const id = documento.id;
+            vistos.add(id);
+            if (idsPedidosEnVivo.has(id) || pedidosSueltos.has(id)) return;
+            const datos = documento.data();
+            if (ponerPedido(id, datos)) cambio = true;
+            // Un cambio sin subir de otra vez que se abrió la app: se escucha
+            // suelto, así figura en "Sin subir" hasta que sube.
+            if (documento.metadata.hasPendingWrites && !pedidoEnVentana(datos)) escucharPedidoSuelto(id);
+        });
+
+        if (desdeLaNube) {
+            const sinSubir = idsSinSubir.pedidos || new Set();
+            idsDeLaUltimaBajada.forEach(id => {
+                if (vistos.has(id) || idsPedidosEnVivo.has(id) || pedidosSueltos.has(id) || sinSubir.has(id)) return;
+                const datos = documentos.pedidos.get(id);
+                if (datos && !pedidoEnVentana(datos) && documentos.pedidos.delete(id)) cambio = true;
+            });
+            idsDeLaUltimaBajada = vistos;
+        } else {
+            vistos.forEach(id => idsDeLaUltimaBajada.add(id));
+        }
+
+        return cambio;
+    }
+
+    // Al abrir la app: todos los pedidos de la copia del celular (rápido y
+    // sin señal). Si la copia está vacía (celular nuevo), se esperan los de
+    // la nube, como antes.
+    async function cargarPedidosViejos(vuelta) {
+        const ref = refDistribuidora.collection("pedidos");
+        let foto = null;
+
+        try {
+            foto = await ref.get({ source: "cache" });
+        } catch (error) {
+            foto = null;
+        }
+
+        if ((!foto || foto.empty) && vuelta === vueltaDeEscucha) {
+            try {
+                foto = await ref.get();
+                if (!foto.metadata.fromCache) {
+                    ultimaBajadaDePedidos = Date.now();
+                    idsDeLaUltimaBajada = new Set();
+                }
+            } catch (error) {
+                console.warn("No se pudieron leer los pedidos de la nube.", error);
+            }
+        }
+
+        if (vuelta !== vueltaDeEscucha || saliendo) return;
+        if (foto) sumarTodosLosPedidos(foto, false);
+        pedidosViejosCargados = true;
+    }
+
+    // Trae de la nube todos los pedidos, una vez al abrir la app (y a lo
+    // sumo una vez por hora si se reconecta): así llegan los cambios que
+    // otro celular hizo en pedidos viejos y los que se borraron.
+    function refrescarPedidosViejos(vuelta) {
+        if (!refDistribuidora || saliendo || vuelta !== vueltaDeEscucha) return;
+        if (!navigator.onLine || Date.now() - ultimaBajadaDePedidos < ESPERA_ENTRE_BAJADAS_DE_PEDIDOS) return;
+
+        ultimaBajadaDePedidos = Date.now();
+        refDistribuidora.collection("pedidos").get({ source: "server" }).then(foto => {
+            if (vuelta !== vueltaDeEscucha || saliendo) {
+                ultimaBajadaDePedidos = 0;
+                return;
+            }
+            if (sumarTodosLosPedidos(foto, true)) avisarCambio(["historial"]);
+        }).catch(error => {
+            ultimaBajadaDePedidos = 0;
+            console.warn("No se pudieron traer los pedidos viejos de la nube.", error);
+        });
+    }
+
+    // Un pedido viejo que este celular cambió: se escucha solo él hasta que
+    // se cierre la app (pocos, y cada uno cuesta casi nada).
+    function escucharPedidoSuelto(id) {
+        if (!refDistribuidora || !id || pedidosSueltos.has(id) || idsPedidosEnVivo.has(id)) return;
+
+        const dejar = refDistribuidora.collection("pedidos").doc(id).onSnapshot({ includeMetadataChanges: true }, foto => {
+            let cambio = false;
+            if (foto.exists) {
+                cambio = ponerPedido(id, foto.data());
+            } else if (!foto.metadata.fromCache) {
+                cambio = documentos.pedidos.delete(id);
+            }
+
+            const ids = new Set(idsSinSubir.pedidos || []);
+            if (foto.metadata.hasPendingWrites) {
+                sueltosSinSubir.add(id);
+                ids.add(id);
+            } else {
+                sueltosSinSubir.delete(id);
+                ids.delete(id);
+            }
+            idsSinSubir.pedidos = ids;
+
+            if (cambio) avisarCambio(["historial"]);
+            avisarSincronizacion();
+        }, error => {
+            console.warn("Se cortó la escucha de un pedido viejo.", error);
+            pedidosSueltos.delete(id);
+            sueltosSinSubir.delete(id);
+        });
+
+        pedidosSueltos.set(id, dejar);
+    }
+
     function escucharNube() {
         if (!db || !refDistribuidora) return;
 
@@ -2080,6 +2283,8 @@
         partesDesdeCache.clear();
         Object.keys(idsSinSubir).forEach(parte => delete idsSinSubir[parte]);
         cambiarEstado("conectando");
+        const vuelta = vueltaDeEscucha;
+        corteDePedidosEnVivo = Date.now() - DIAS_DE_PEDIDOS_EN_VIVO * 86400000;
 
         const pendientes = new Set(Object.keys(documentos).concat("config"));
         const llego = parte => {
@@ -2094,10 +2299,16 @@
 
         Object.keys(SUBCOLECCIONES).forEach(coleccion => {
             const subcoleccion = SUBCOLECCIONES[coleccion];
+            const esPedidos = subcoleccion === "pedidos";
             let primera = true;
 
-            desuscripciones.push(
-                refDistribuidora.collection(subcoleccion).onSnapshot(opciones, foto => {
+            // Pedidos: en vivo solo los recientes (ver DIAS_DE_PEDIDOS_EN_VIVO).
+            const consulta = esPedidos
+                ? refDistribuidora.collection(subcoleccion).where("timestamp", ">=", corteDePedidosEnVivo)
+                : refDistribuidora.collection(subcoleccion);
+
+            const escucharParte = () => desuscripciones.push(
+                consulta.onSnapshot(opciones, foto => {
                     // Después de la primera foto solo se leen los documentos que
                     // cambiaron, y se avisa solo si cambió algo de verdad (no
                     // cuando vuelve lo que este celular acaba de guardar): con
@@ -2109,7 +2320,16 @@
                     if (primera) {
                         const anteriores = documentos[subcoleccion];
                         const nuevos = new Map();
+                        // Pedidos: la foto trae solo los recientes; los viejos
+                        // que ya están en memoria quedan como están.
+                        if (esPedidos) {
+                            idsPedidosEnVivo.clear();
+                            anteriores.forEach((datos, id) => {
+                                if (!pedidoEnVentana(datos)) nuevos.set(id, datos);
+                            });
+                        }
                         foto.forEach(documento => {
+                            if (esPedidos) idsPedidosEnVivo.add(documento.id);
                             const datos = documento.data();
                             const anterior = anteriores.get(documento.id);
                             if (anterior && igualesComoJson(datos, anterior)) {
@@ -2126,9 +2346,11 @@
                         const mapa = documentos[subcoleccion];
                         foto.docChanges().forEach(({ type, doc }) => {
                             if (type === "removed") {
+                                if (esPedidos) idsPedidosEnVivo.delete(doc.id);
                                 if (mapa.delete(doc.id)) cambio = true;
                                 return;
                             }
+                            if (esPedidos) idsPedidosEnVivo.add(doc.id);
                             const datos = doc.data();
                             const anterior = mapa.get(doc.id);
                             if (anterior && igualesComoJson(datos, anterior)) return;
@@ -2141,10 +2363,22 @@
 
                     if (primera) anotarSincronizacion(subcoleccion, foto, foto.docs);
                     else anotarCambiosDeSincronizacion(subcoleccion, foto, foto.docChanges({ includeMetadataChanges: true }));
+                    const eraPrimera = primera;
                     primera = false;
                     llego(subcoleccion);
+                    // Con todo ya en pantalla, se trae de la nube lo viejo un
+                    // rato después, para no trabar los primeros toques.
+                    if (esPedidos && eraPrimera) setTimeout(() => refrescarPedidosViejos(vuelta), 8000);
                 }, alFallarEscucha)
             );
+
+            if (esPedidos && !pedidosViejosCargados) {
+                cargarPedidosViejos(vuelta).then(() => {
+                    if (vuelta === vueltaDeEscucha) escucharParte();
+                });
+            } else {
+                escucharParte();
+            }
         });
 
         desuscripciones.push(
@@ -3168,6 +3402,12 @@
             if (["sinConexion", "error"].includes(estado)) escucharNube();
         });
 
+        // Al volver a la app (el celular la deja abierta días), se traen de
+        // la nube los pedidos viejos, a lo sumo una vez por hora.
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && pedidosViejosCargados) refrescarPedidosViejos(vueltaDeEscucha);
+        });
+
         // Sin señal se avisa enseguida, sin esperar a que Firestore lo note.
         window.addEventListener("offline", () => {
             if (["conectada", "conectando"].includes(estado)) cambiarEstado("sinConexion");
@@ -3251,6 +3491,8 @@
         avisarSincronizacion,
         reintentarSubida,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
+        // Cuántos pedidos se escuchan en vivo (para las pruebas y la medición).
+        pedidosEnVivo: () => idsPedidosEnVivo.size,
         escucharSincronizacion(oyente) {
             if (typeof oyente !== "function") return () => {};
 

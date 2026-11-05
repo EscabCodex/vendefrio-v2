@@ -2048,8 +2048,8 @@ html .grillaCatalogo.vistaLista .pieItemCatalogo{grid-column:4;grid-row:1 / span
 html .grillaCatalogo.vistaLista .catalogoVacio{padding:24px;}
 
 /* T113: A cobrar con color por antigüedad, filtros y WhatsApp por fila */
-.filtrosACobrar{margin:12px 0;}
-.filtrosACobrar button{flex:1;min-height:40px;font-size:13.5px;}
+.filtrosACobrar{margin:12px -12px;}
+.filtrosACobrar .filtroEtapa{min-height:40px;font-size:13.5px;}
 .filaACobrar{display:flex;align-items:center;border-top:1px solid var(--borde);}
 .filaACobrar:first-child{border-top:0;}
 .filaACobrar .pzFila{border-top:0;flex:1;min-width:0;padding-right:8px;}
@@ -2928,3 +2928,18 @@ html[data-tema="oscuro"] .lpPctValor input{background:none !important;}
 .grupoPinRuta{background:none;border:0;}
 .grupoPinRuta span{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 1px 3px rgba(0,0,0,.25);font-size:14px;font-weight:800;color:#5B6573;}
 html[data-tema="oscuro"] .grupoPinRuta span{color:var(--texto);}
+.waConstruccion h2{display:flex;align-items:center;gap:6px;}
+.waAvanzado{border-top:1px solid var(--borde,rgba(127,127,127,.25));padding-top:10px;display:grid;gap:10px;}
+.waAvanzado summary{cursor:pointer;font-weight:700;color:var(--texto-sec);}
+.waAvanzado h3{margin:0;font-size:14px;}
+
+/* Repaso de Ajustes: fila cerrada "Avanzado" / "Más opciones". */
+.ajCerrado{margin:10px 0 4px;border-radius:var(--radio-tarjeta,18px);background:var(--superficie,#fff);border:1px solid var(--borde,rgba(0,0,0,.08));overflow:hidden;}
+.ajCerrado > summary{list-style:none;cursor:pointer;border-bottom:0 !important;}
+.ajCerrado > summary::-webkit-details-marker{display:none;}
+.ajCerrado > summary b{margin-left:auto;display:flex;color:var(--texto-sec);transition:transform .2s;}
+.ajCerrado[open] > summary b{transform:rotate(90deg);}
+.ajCerrado[open]{padding-bottom:6px;}
+.ajCerrado > .ajGrupo, .ajCerrado > .ajNota{margin-left:8px;margin-right:8px;}
+/* Títulos largos de las subpantallas: se achican antes de cortarse. */
+html #pantallaConfiguracion .configHeader h1{font-size:clamp(18px,5.4vw,24px);}
