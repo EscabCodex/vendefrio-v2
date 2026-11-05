@@ -5,6 +5,14 @@
       "version": 289,
       "fecha": "2026-11-05",
       "tipo": "mejor",
+      "icono": "recibo",
+      "titulo": "Cierre del día más corto",
+      "texto": "Ya no muestra filas y tarjetas en $ 0: solo lo que tiene plata."
+    },
+    {
+      "version": 289,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
       "icono": "engranaje",
       "titulo": "Ajustes más simples",
       "texto": "Menos textos largos. Lo que casi no se usa quedó en «Avanzado» y «Más opciones»."
