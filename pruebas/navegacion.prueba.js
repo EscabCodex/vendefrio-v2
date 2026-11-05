@@ -199,25 +199,12 @@ test("navegación: ir al comercio con indicaciones y marcar la llegada", async (
     }
     await page.locator(".listaProdutos .fila").first().getByRole("button", { name: "Aumentar cantidad" }).click();
     await capturar(page, "navegacion-03b-pedido-encima");
-    await page.evaluate(() => window.addEventListener("pedidoGuardadoVendeFrio", evento => { window.__idPedido = evento.detail.id; }));
     await page.locator("#generar").click();
     await expect(bandeja).toBeHidden();
     const ventanaPedido = page.locator("#modalPedido");
     await expect(ventanaPedido).toBeVisible();
     await expect(navegacion).toBeVisible();
     await ventanaPedido.click({ position: { x: 10, y: 10 } });
-    // Rutas: al cerrar "Pedido generado" pregunta qué hacer con el pedido.
-    const queHacemos = page.locator(".hojaQueHacemosPedido");
-    await expect(queHacemos).toBeVisible();
-    await expect(queHacemos.getByRole("button", { name: "Entregar ahora" })).toBeVisible();
-    await expect(queHacemos.getByRole("button", { name: "Dejarlo cargado" })).toBeVisible();
-    await capturar(page, "navegacion-03c-que-hacemos-con-el-pedido");
-    await queHacemos.getByRole("button", { name: "Pasarlo a En reparto" }).click();
-    await expect(queHacemos).toBeHidden();
-    await expect.poll(() => page.evaluate(() => {
-        const pedido = pedidoParaLeer(window.__idPedido);
-        return Boolean(pedido) && JSON.stringify(pedido.estados || {}).includes("enReparto");
-    })).toBe(true);
     // La notificación de navegación (Capacitor) lee la parada y sus botones.
     expect(await page.evaluate(() => window.navegacionVendeFrio.notificacion())).toEqual({ nombre: "Kiosco La Esquina", numero: 1, total: 1 });
     expect(await page.evaluate(() => typeof window.navegacionVendeFrio.cargarPedido + typeof window.navegacionVendeFrio.sinPedido)).toBe("functionfunction");

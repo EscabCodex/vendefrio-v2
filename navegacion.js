@@ -1536,7 +1536,6 @@
     let fondoPedido = null;
 
     function abrirPedidoEncima(nombre) {
-        window.queHacemosPedido?.marcar(nombre);
         const seccion = document.getElementById("pantallaPedido");
         if (!seccion || typeof abrirPedidoNuevoParaComercio !== "function") {
             minimizar();
