@@ -1,0 +1,14 @@
+name: vendefrio_pedidos
+description: Prototipo de la pantalla Pedidos de VendeFrío en Flutter (solo para comparar fluidez).
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
