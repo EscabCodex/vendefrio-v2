@@ -121,19 +121,48 @@ function actualizarResumenPedido() {
     if (totalPlata) totalPlata.textContent = "$ " + Math.round(plata).toLocaleString("es-AR");
 }
 
-// Las 41 opciones de cantidad se arman una sola vez y se copian para cada
-// producto: copiar es mucho más rápido que crearlas de nuevo (T151).
+// La cantidad de cada producto se guarda en un <select> escondido (los
+// botones − y + lo cambian). Antes llevaba sus 41 opciones (0 a 40): con
+// cientos de productos eran miles de elementos y abrir Nuevo pedido tardaba
+// el doble en un celular barato. Ahora arranca solo con el 0 y cada número
+// se agrega cuando se usa: al poner select.value = "7" (desde cualquier
+// parte de la app) aparece la opción 7 (2026-11-05).
+const MAXIMO_CANTIDAD_SELECT = 40;
 let plantillaSelectCantidad = null;
+
+function asegurarOpcionCantidad(select, valor) {
+    const texto = String(valor);
+    const numero = Number(texto);
+    if (texto === "" || !Number.isInteger(numero) || numero < 0 || numero > MAXIMO_CANTIDAD_SELECT) return;
+    const opciones = select.options;
+    let siguiente = null;
+    for (let i = 0; i < opciones.length; i++) {
+        const otro = Number(opciones[i].value);
+        if (otro === numero) return;
+        if (otro > numero && !siguiente) siguiente = opciones[i];
+    }
+    select.insertBefore(new Option(texto, texto), siguiente);
+}
+
+(function () {
+    const original = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    if (!original || !original.set) return;
+    Object.defineProperty(HTMLSelectElement.prototype, "value", {
+        ...original,
+        set(valor) {
+            if (this.classList.contains("cantidadPerezosa")) asegurarOpcionCantidad(this, valor);
+            original.set.call(this, valor);
+        }
+    });
+})();
 
 function crearSelect(marca, producto) {
     if (!plantillaSelectCantidad) {
         plantillaSelectCantidad = document.createElement("select");
-        for (let cantidad = 0; cantidad <= 40; cantidad++) {
-            const option = document.createElement("option");
-            option.value = cantidad;
-            option.textContent = cantidad;
-            plantillaSelectCantidad.appendChild(option);
-        }
+        plantillaSelectCantidad.className = "cantidadPerezosa";
+        // Si alguna vez se abre la lista, piezas.js arma del 0 al 40.
+        plantillaSelectCantidad.dataset.hasta = String(MAXIMO_CANTIDAD_SELECT);
+        plantillaSelectCantidad.appendChild(new Option("0", "0"));
     }
     const select = plantillaSelectCantidad.cloneNode(true);
     select.dataset.marca = marca;
@@ -1433,7 +1462,8 @@ function crearModalEdicionPedido() {
             <h2 id="tituloEditarPedido">Editar pedido</h2>
             <p class="explicacionTextoPedido" id="explicacionEditarPedido"></p>
             <label for="comercioEditarPedido">Comercio</label>
-            <input id="comercioEditarPedido" type="text" list="listaComercios" autocomplete="off" placeholder="Nombre del comercio">
+            <input id="comercioEditarPedido" type="text" autocomplete="off" placeholder="Nombre del comercio">
+            <div id="sugerenciasComercioEditar" class="sugerenciasComercioEditar" role="listbox" aria-label="Comercios guardados" hidden></div>
             <h3 class="tituloSeccionEditar">Productos</h3>
             <div id="productosEditarPedido" class="productosEditarPedido"></div>
             <label for="buscarEditarPedido">Agregar producto</label>
@@ -1500,6 +1530,32 @@ function crearModalEdicionPedido() {
             ocultarErrorEdicion();
             dibujarCambiosEdicion();
         });
+    });
+
+    // Sugerencias de comercios con el estilo de la app (antes, la lista de
+    // Chrome): al escribir, hasta 5 comercios guardados que coinciden.
+    const inputComercio = document.getElementById("comercioEditarPedido");
+    const sugerencias = document.getElementById("sugerenciasComercioEditar");
+    const dibujarSugerencias = () => {
+        const texto = normalizarTexto(inputComercio.value);
+        const lista = texto && document.activeElement === inputComercio
+            ? comerciosActivosOrdenadosParaLeer().filter(comercio => normalizarTexto(comercio.nombre).includes(texto) && normalizarTexto(comercio.nombre) !== texto).slice(0, 5)
+            : [];
+        sugerencias.hidden = !lista.length;
+        sugerencias.innerHTML = lista.map(comercio => `<button type="button" role="option" data-comercio="${escaparHtmlPedido(comercio.nombre)}">${window.icono ? window.icono("tienda", 18) : ""}<span>${escaparHtmlPedido(comercio.nombre)}</span></button>`).join("");
+    };
+    inputComercio.addEventListener("input", dibujarSugerencias);
+    inputComercio.addEventListener("focus", dibujarSugerencias);
+    inputComercio.addEventListener("blur", () => setTimeout(() => { sugerencias.hidden = true; }, 150));
+    // pointerdown: elegir antes de que el campo pierda el foco.
+    sugerencias.addEventListener("pointerdown", event => event.preventDefault());
+    sugerencias.addEventListener("click", event => {
+        const boton = event.target.closest("button[data-comercio]");
+        if (!boton) return;
+        inputComercio.value = boton.dataset.comercio;
+        inputComercio.dispatchEvent(new Event("input", { bubbles: true }));
+        inputComercio.dispatchEvent(new Event("change", { bubbles: true }));
+        sugerencias.hidden = true;
     });
 
     return modal;

@@ -116,8 +116,36 @@
         pantalla.querySelector(".estadoEscanear").textContent = flujo ? "Apuntá al siguiente producto" : "Escribí el número del siguiente producto";
     }
 
+    // Donde el navegador no trae lector (la app de Android, iPhone), se usa
+    // uno propio (vendor/lector-codigos). Se baja solo la primera vez que se
+    // escanea, así no pesa para nadie más.
+    let cargandoLector = null;
+    function cargarLector() {
+        if ("BarcodeDetector" in window) return Promise.resolve(true);
+        if (!cargandoLector) {
+            cargandoLector = new Promise(resolver => {
+                const script = document.createElement("script");
+                script.src = "vendor/lector-codigos/lector.js";
+                script.onload = () => {
+                    try {
+                        window.BarcodeDetectionAPI?.setZXingModuleOverrides?.({
+                            locateFile: (archivo, prefijo) => archivo.endsWith(".wasm")
+                                ? new URL("vendor/lector-codigos/" + archivo, document.baseURI).href
+                                : prefijo + archivo
+                        });
+                    } catch (error) { /* sigue con lo que trae */ }
+                    resolver("BarcodeDetector" in window);
+                };
+                script.onerror = () => { cargandoLector = null; resolver(false); };
+                document.head.appendChild(script);
+            });
+        }
+        return cargandoLector;
+    }
+
     async function prenderCamara() {
         const estado = pantalla.querySelector(".estadoEscanear");
+        if (!("BarcodeDetector" in window) && navigator.mediaDevices?.getUserMedia) await cargarLector();
         if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) {
             pantalla.classList.add("sinCamara");
             estado.textContent = "Este celular no lee códigos con la cámara: escribí el número.";

@@ -228,6 +228,8 @@ function iniciarMapa() {
     mapaLeaflet.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 
     capaMarcadores = L.layerGroup().addTo(mapaLeaflet);
+    capaGruposRuta = L.layerGroup().addTo(mapaLeaflet);
+    mapaLeaflet.on("zoomend", acomodarGruposRuta);
     mapaLeaflet.on("click", alTocarMapa);
 }
 
@@ -476,15 +478,71 @@ function renderizarPines(ajustar = true) {
         });
 
         marcador.clavePinRuta = textoPinRuta(comercio) + (comerciosSeleccionadosRuta.has(comercio.nombre) ? "+" : "-");
-        capaMarcadores.addLayer(marcador);
         marcadoresPorNombre.set(comercio.nombre, marcador);
         limites.extend(coordenadas);
     });
 
-    destacarPinRuta(paradaDestacadaRuta);
     if (ajustar) {
         // Arriba la cabecera y abajo la hoja de la vista previa: que no tapen ningún pin.
         mapaLeaflet.fitBounds(limites, margenesMapaRutas());
+    }
+    // Con fitBounds el zoom ya quedó (si cambió, zoomend vuelve a acomodar).
+    acomodarGruposRuta();
+}
+
+// Con cientos de comercios (pedido del dueño, 2026-11-05): los pines que
+// quedan encimados se juntan en un círculo con cuántos son; tocarlo acerca
+// el mapa ahí. Los de la ruta, el destacado y el que se mueve van siempre
+// sueltos. Así el celular dibuja decenas de pines, no cientos.
+const MINIMO_PINES_PARA_JUNTAR = 60;
+const LADO_GRUPO_PINES = 56;
+let capaGruposRuta = null;
+
+function acomodarGruposRuta() {
+    if (!mapaLeaflet || !capaMarcadores || !capaGruposRuta) return;
+    capaGruposRuta.clearLayers();
+    const zoom = mapaLeaflet.getZoom();
+    const juntar = marcadoresPorNombre.size >= MINIMO_PINES_PARA_JUNTAR && zoom < 17;
+    const sueltos = new Set();
+    const celdas = new Map();
+    marcadoresPorNombre.forEach((marcador, nombre) => {
+        if (!juntar || comerciosSeleccionadosRuta.has(nombre) || nombre === paradaDestacadaRuta || marcador === marcadorPinManual) {
+            sueltos.add(marcador);
+            return;
+        }
+        const punto = mapaLeaflet.project(marcador.getLatLng(), zoom);
+        const clave = Math.floor(punto.x / LADO_GRUPO_PINES) + ":" + Math.floor(punto.y / LADO_GRUPO_PINES);
+        if (!celdas.has(clave)) celdas.set(clave, []);
+        celdas.get(clave).push(marcador);
+    });
+    celdas.forEach(grupo => {
+        if (grupo.length < 3) {
+            grupo.forEach(marcador => sueltos.add(marcador));
+            return;
+        }
+        const limites = L.latLngBounds(grupo.map(marcador => marcador.getLatLng()));
+        const icono = L.divIcon({
+            className: "grupoPinRuta",
+            html: `<span>${grupo.length}</span>`,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+        });
+        const circulo = L.marker(limites.getCenter(), { icon: icono, keyboard: true, title: grupo.length + " comercios acá. Tocá para acercar" });
+        circulo.on("click", () => {
+            if (mapaLeaflet.getZoom() >= 16) mapaLeaflet.setView(limites.getCenter(), 17);
+            else mapaLeaflet.fitBounds(limites.pad(0.3), margenesMapaRutas());
+        });
+        capaGruposRuta.addLayer(circulo);
+    });
+    marcadoresPorNombre.forEach(marcador => {
+        const esta = capaMarcadores.hasLayer(marcador);
+        if (sueltos.has(marcador) && !esta) capaMarcadores.addLayer(marcador);
+        else if (!sueltos.has(marcador) && esta) capaMarcadores.removeLayer(marcador);
+    });
+    const destacado = marcadoresPorNombre.get(paradaDestacadaRuta);
+    if (destacado) {
+        destacado.getElement()?.classList.add("pinDestacado");
+        destacado.setZIndexOffset(1000);
     }
 }
 
@@ -515,6 +573,7 @@ function refrescarPines() {
         marcador.clavePinRuta = clave;
     });
     destacarPinRuta(paradaDestacadaRuta);
+    acomodarGruposRuta();
 }
 
 // "+ Agregar dirección" (y otros datos que falten) en Rutas: abre la hoja
@@ -2105,6 +2164,8 @@ function destacarPinRuta(nombre) {
     }
     paradaDestacadaRuta = nombre;
     const marcador = marcadoresPorNombre.get(nombre);
+    // Si estaba dentro de un círculo, sale suelto.
+    if (marcador && capaMarcadores && !capaMarcadores.hasLayer(marcador)) acomodarGruposRuta();
     if (marcador) {
         marcador.getElement()?.classList.add("pinDestacado");
         marcador.setZIndexOffset(1000);

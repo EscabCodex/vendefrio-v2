@@ -1782,3 +1782,15 @@ html .calDia:disabled{opacity:.3;}
 html .modal.menuFlotante.menuElegir{z-index:10100 !important;}
 /* En las listas para elegir, la X tapaba opciones: se cierra tocando afuera o con el atrás. */
 html .menuElegir .menuFlotanteX{display:none;}
+/* Paleta propia para el color a elección (2026-11-05). */
+html .paletaPropia .menuFlotanteCaja{width:min(300px,calc(100vw - 24px));}
+.paletaColores{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;padding:4px 6px 8px;}
+html .paletaColor{width:100%;aspect-ratio:1;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:var(--color);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);}
+html .paletaColor.elegido{box-shadow:0 0 0 3px var(--superficie),0 0 0 5px var(--texto);}
+/* Sugerencias de comercios en Editar pedido, en lugar de la lista de Chrome (2026-11-05). */
+.sugerenciasComercioEditar{display:grid;gap:2px;margin:6px 0 4px;padding:6px;border-radius:18px;background:var(--superficie);border:var(--borde-tarjeta);box-shadow:0 8px 22px rgba(0,0,0,.16);}
+.sugerenciasComercioEditar[hidden]{display:none;}
+html .sugerenciasComercioEditar button{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;margin:0;padding:0 12px;border:0;border-radius:12px;background:none;box-shadow:none;color:var(--texto);font:inherit;font-size:15px;font-weight:650;text-align:left;}
+html .sugerenciasComercioEditar button svg{flex-shrink:0;color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .sugerenciasComercioEditar button svg{color:var(--acento);}
+html .sugerenciasComercioEditar button:active{background:var(--acento-bg);}
