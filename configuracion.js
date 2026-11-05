@@ -279,7 +279,7 @@
                 <small>${texto}</small>
             </label>`).join("");
 
-        // El color a elección: al tocarlo se abre el selector del teléfono.
+        // El color a elección: al tocarlo se abre la paleta propia (piezas.js).
         const propio = valorDe(d, "acentoPropio");
         const varsPropias = propio ? variablesDeColor(propio) : null;
         const colorPropio = `
@@ -310,7 +310,7 @@
                 filaTonos("luna", "violeta", "Tono de noche", "tonoNoche", TONOS_NOCHE), "ajGrupoTemas") +
             grupo("Color principal",
                 `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}${colorPropio}</div>
-                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre los colores del teléfono.</p>`) +
+                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre 48 colores más.</p>`) +
             grupo("Forma y estilo",
                 filaSegmento("etiqueta", "azul", "Forma de los botones", "Las tarjetas acompañan", "formaBotones", [
                     ["redondos", "Redondos"], ["suaves", "Suaves"], ["rectos", "Rectos"]

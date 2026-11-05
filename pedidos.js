@@ -1462,7 +1462,8 @@ function crearModalEdicionPedido() {
             <h2 id="tituloEditarPedido">Editar pedido</h2>
             <p class="explicacionTextoPedido" id="explicacionEditarPedido"></p>
             <label for="comercioEditarPedido">Comercio</label>
-            <input id="comercioEditarPedido" type="text" list="listaComercios" autocomplete="off" placeholder="Nombre del comercio">
+            <input id="comercioEditarPedido" type="text" autocomplete="off" placeholder="Nombre del comercio">
+            <div id="sugerenciasComercioEditar" class="sugerenciasComercioEditar" role="listbox" aria-label="Comercios guardados" hidden></div>
             <h3 class="tituloSeccionEditar">Productos</h3>
             <div id="productosEditarPedido" class="productosEditarPedido"></div>
             <label for="buscarEditarPedido">Agregar producto</label>
@@ -1529,6 +1530,32 @@ function crearModalEdicionPedido() {
             ocultarErrorEdicion();
             dibujarCambiosEdicion();
         });
+    });
+
+    // Sugerencias de comercios con el estilo de la app (antes, la lista de
+    // Chrome): al escribir, hasta 5 comercios guardados que coinciden.
+    const inputComercio = document.getElementById("comercioEditarPedido");
+    const sugerencias = document.getElementById("sugerenciasComercioEditar");
+    const dibujarSugerencias = () => {
+        const texto = normalizarTexto(inputComercio.value);
+        const lista = texto && document.activeElement === inputComercio
+            ? comerciosActivosOrdenadosParaLeer().filter(comercio => normalizarTexto(comercio.nombre).includes(texto) && normalizarTexto(comercio.nombre) !== texto).slice(0, 5)
+            : [];
+        sugerencias.hidden = !lista.length;
+        sugerencias.innerHTML = lista.map(comercio => `<button type="button" role="option" data-comercio="${escaparHtmlPedido(comercio.nombre)}">${window.icono ? window.icono("tienda", 18) : ""}<span>${escaparHtmlPedido(comercio.nombre)}</span></button>`).join("");
+    };
+    inputComercio.addEventListener("input", dibujarSugerencias);
+    inputComercio.addEventListener("focus", dibujarSugerencias);
+    inputComercio.addEventListener("blur", () => setTimeout(() => { sugerencias.hidden = true; }, 150));
+    // pointerdown: elegir antes de que el campo pierda el foco.
+    sugerencias.addEventListener("pointerdown", event => event.preventDefault());
+    sugerencias.addEventListener("click", event => {
+        const boton = event.target.closest("button[data-comercio]");
+        if (!boton) return;
+        inputComercio.value = boton.dataset.comercio;
+        inputComercio.dispatchEvent(new Event("input", { bubbles: true }));
+        inputComercio.dispatchEvent(new Event("change", { bubbles: true }));
+        sugerencias.hidden = true;
     });
 
     return modal;

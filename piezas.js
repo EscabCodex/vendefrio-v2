@@ -907,7 +907,7 @@
     function seAbreSolo(elemento) {
         if (!elemento || elemento.disabled || elemento.readOnly) return false;
         if (elemento.tagName === "SELECT") return !elemento.multiple && !(elemento.size > 1) && elemento.options.length > 0;
-        return elemento.tagName === "INPUT" && elemento.type === "date";
+        return elemento.tagName === "INPUT" && (elemento.type === "date" || elemento.type === "color");
     }
     function avisarCambio(elemento) {
         elemento.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1003,8 +1003,43 @@
         const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
         caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
     }
+    // El color a elección (Apariencia): una paleta propia en lugar del
+    // círculo de Chrome. Ocho tonos, cada uno en tres intensidades.
+    const PALETA = ["#E53935", "#F4511E", "#FB8C00", "#F9A825", "#7CB342", "#2E7D32", "#00897B", "#00ACC1",
+        "#1E88E5", "#3949AB", "#5E35B1", "#8E24AA", "#D81B60", "#6D4C41", "#546E7A", "#212121"];
+    function aclarar(hex, cuanto) {
+        const n = parseInt(hex.slice(1), 16);
+        const mezclar = c => Math.round(c + (cuanto > 0 ? (255 - c) * cuanto : c * cuanto));
+        const r = mezclar(n >> 16), g = mezclar((n >> 8) & 255), b = mezclar(n & 255);
+        return "#" + [r, g, b].map(c => c.toString(16).padStart(2, "0")).join("");
+    }
+    function elegirColor(input) {
+        const actual = String(input.value || "").toLowerCase();
+        const colores = [];
+        [-0.35, 0, 0.35].forEach(cuanto => PALETA.forEach(base => colores.push(cuanto ? aclarar(base, cuanto) : base.toLowerCase())));
+        const caja = menu(input, { clase: "menuElegir paletaPropia", titulo: "Elegí un color", items: [] });
+        const grilla = document.createElement("div");
+        grilla.className = "paletaColores";
+        grilla.innerHTML = colores.map(color => `<button type="button" class="paletaColor${color === actual ? " elegido" : ""}" data-color="${color}" style="--color:${color}" aria-label="Color ${color}"${color === actual ? ' aria-pressed="true"' : ""}></button>`).join("");
+        caja.appendChild(grilla);
+        grilla.addEventListener("click", evento => {
+            const boton = evento.target.closest(".paletaColor");
+            if (!boton) return;
+            caja.parentElement.remove();
+            if (input.value.toLowerCase() !== boton.dataset.color) {
+                input.value = boton.dataset.color;
+                avisarCambio(input);
+            }
+        });
+        const r = input.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const ancho = caja.offsetWidth;
+        caja.style.left = Math.max(12, Math.min(window.innerWidth - ancho - 12, r.left + r.width / 2 - ancho / 2)) + "px";
+        caja.style.top = (r.bottom + 8 + alto <= window.innerHeight - 96 ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+    }
     function abrirPropio(elemento) {
         if (elemento.tagName === "SELECT") elegirOpcion(elemento);
+        else if (elemento.type === "color") elegirColor(elemento);
         else elegirFecha(elemento);
     }
     // Con el dedo: se abre al soltar (si no fue para desplazar la pantalla),
@@ -1012,7 +1047,7 @@
     // la computadora, al apretar. Con el teclado, Enter o espacio.
     let toqueEnCampo = null;
     document.addEventListener("touchstart", evento => {
-        const campo = evento.target.closest && evento.target.closest("select, input[type='date']");
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date'], input[type='color']");
         toqueEnCampo = seAbreSolo(campo) && evento.touches.length === 1
             ? { campo, x: evento.touches[0].clientX, y: evento.touches[0].clientY } : null;
     }, { passive: true, capture: true });
@@ -1026,15 +1061,19 @@
         abrirPropio(toque.campo);
     }, { passive: false, capture: true });
     document.addEventListener("mousedown", evento => {
-        const campo = evento.target.closest && evento.target.closest("select, input[type='date']");
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date'], input[type='color']");
         if (!seAbreSolo(campo) || evento.button !== 0) return;
         evento.preventDefault();
         abrirPropio(campo);
     }, true);
-    // El ícono del calendario del campo de fecha también abre el propio.
+    // El ícono del calendario del campo de fecha también abre el propio, y
+    // tocar el color (o su etiqueta) no abre el de Chrome.
     document.addEventListener("click", evento => {
-        const campo = evento.target.closest && evento.target.closest("input[type='date']");
-        if (seAbreSolo(campo)) evento.preventDefault();
+        const campo = evento.target.closest && evento.target.closest("input[type='date'], input[type='color']");
+        if (!seAbreSolo(campo)) return;
+        evento.preventDefault();
+        // Tocado desde su etiqueta: el campo no recibió el dedo, se abre acá.
+        if (!document.querySelector(".modal.menuElegir")) abrirPropio(campo);
     }, true);
     document.addEventListener("keydown", evento => {
         const campo = evento.target;

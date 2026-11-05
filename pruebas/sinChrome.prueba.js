@@ -56,4 +56,30 @@ test("sin Chrome: listas y fechas con el estilo de la app", async ({ page }) => 
         return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-10`;
     });
     await expect(hojaFecha.locator("#fechaEntregaElegida")).toHaveValue(esperado);
+
+    // 3. El color a elección de Apariencia: paleta propia.
+    await page.evaluate(() => window.piezas.cerrar());
+    await page.evaluate(() => mostrarPantalla("menu"));
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
+    await page.locator('.configFila[data-config-seccion="apariencia"]').click();
+    await page.locator(".muestraPropia").tap();
+    const paleta = page.locator(".paletaPropia .paletaColor");
+    await expect(paleta).toHaveCount(48);
+    await paleta.nth(20).click();
+    await expect(paleta).toHaveCount(0);
+    await expect(page.locator('input[data-campo="acentoPropio"]')).toHaveValue("#7cb342");
+
+    // 4. Editar pedido: sugerencias de comercios propias, sin la lista de Chrome.
+    await page.evaluate(() => { agregarComercio({ nombre: "Almacén La Esquina", direccion: "Roca 5" }); mostrarPantalla("menu"); crearModalEdicionPedido().classList.remove("oculto"); });
+    const comercio = page.locator("#comercioEditarPedido");
+    await expect(comercio).not.toHaveAttribute("list", /.+/);
+    await comercio.tap();
+    await comercio.fill("alma");
+    const sugerencias = page.locator("#sugerenciasComercioEditar");
+    await expect(sugerencias.getByRole("option")).toHaveCount(2);
+    await capturar(page, "sinchrome-03-comercios-editar-pedido");
+    await sugerencias.getByRole("option", { name: "Almacén La Esquina" }).click();
+    await expect(comercio).toHaveValue("Almacén La Esquina");
+    await expect(sugerencias).toBeHidden();
 });
