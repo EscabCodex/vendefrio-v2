@@ -386,25 +386,26 @@
         <h2 id="tituloPedidoGenerado">Pedido generado</h2>
         <p><span id="pedidoCliente"></span> · <span id="pedidoCantidad"></span> <span id="pedidoCantidadTexto">productos</span></p>
       </div>
+      <button type="button" id="editarPedidoGenerado" class="botonRedondoFicha botonEditarGenerado" aria-label="Volver a editar" title="Editar el pedido"><i data-ico="lapiz" data-ico-tam="20"></i></button>
+      <button type="button" class="botonRedondoFicha cerrarPedidoGenerado" aria-label="Cerrar"><i data-ico="cerrarX" data-ico-tam="22"></i></button>
     </div>
 
     <p class="etiquetaPedidoGenerado"><i data-ico="copiar" data-ico-tam="14"></i> Mensaje copiado</p>
     <div id="pedidoDetalle" class="detallePedido"></div>
 
-    <div class="modalBotones">
-      <button id="whatsappPedido" class="btnModalWhatsapp">
-        <i data-ico="whatsapp" data-ico-tam="20"></i>Enviar por WhatsApp
+    <!-- Acciones: WhatsApp, copiar e imprimir (siempre). Editar va arriba, con el lápiz. -->
+    <div class="modalBotones accionesPedidoGenerado">
+      <button id="whatsappPedido" class="btnModalWhatsapp" type="button" aria-label="Enviar por WhatsApp">
+        <i data-ico="whatsapp" data-ico-tam="20"></i><span>WhatsApp</span>
       </button>
-
-      <button id="copiarPedido" class="btnModalSecundario">
-        <i data-ico="copiar" data-ico-tam="18"></i>Copiar nuevamente
+      <button id="copiarPedido" class="btnModalSecundario" type="button" aria-label="Copiar nuevamente">
+        <i data-ico="copiar" data-ico-tam="20"></i><span>Copiar</span>
+      </button>
+      <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
+      <button id="imprimirPedidoGenerado" class="btnModalSecundario botonImprimirGenerado" type="button" aria-label="Imprimir ticket">
+        <i data-ico="impresora" data-ico-tam="20"></i><span>Imprimir</span>
       </button>
     </div>
-
-    <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
-    <button id="imprimirPedidoGenerado" class="btnAccion secundario botonImprimirGenerado oculto" type="button">
-      <i data-ico="impresora" data-ico-tam="18"></i>Imprimir ticket
-    </button>
   </div>
 </div>
 
@@ -482,7 +483,6 @@
 <script src="nuevoPedido.js"></script>
 <!-- Repaso de Catálogo: el pedido en hoja y la barrita del pedido a medio hacer. -->
 <script src="pedidoEnHoja.js"></script>
-<script src="queHacemosPedido.js"></script>
 <script src="tieneQuiere.js"></script>
 <script src="queHacer.js"></script>
 <script src="ayuda.js"></script>

@@ -108,7 +108,7 @@ test("reparto: ya llego por WhatsApp y repartidores en el mapa", async ({ page }
     await parada.evaluate(el => el.scrollIntoView({ block: "center" }));
     await capturar(page, "reparto-04-ya-llego");
 
-    // Un pedido En reparto: el aviso para compartir la ubicación.
+    // Un pedido En reparto: el switch "Estoy repartiendo" arriba en Inicio.
     await cargarPedido(page, false);
     const ficha = await abrirPedido(page);
     await ficha.getByRole("button", { name: "Más opciones" }).click();
@@ -117,10 +117,13 @@ test("reparto: ya llego por WhatsApp y repartidores en el mapa", async ({ page }
     await ficha.getByRole("button", { name: "Cerrar", exact: true }).click();
     await expect(ficha).toBeHidden();
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    const compartir = page.locator("#avisoCompartirUbicacion");
-    await expect(compartir).toContainText("¿Compartís tu ubicación?");
-    await compartir.getByRole("button", { name: "Activar: compartir mi ubicación" }).click();
-    await expect(compartir).toContainText("Compartiendo tu ubicación");
+    const compartir = page.locator("#switchRepartiendo");
+    const llave = compartir.getByRole("switch", { name: "Estoy repartiendo" });
+    await expect(llave).not.toBeChecked();
+    await capturar(page, "inicio-switch-apagado");
+    await llave.check();
+    await expect(llave).toBeChecked();
+    await capturar(page, "inicio-switch-prendido");
 
     // El dueño (acá, el mismo) ve "Repartiendo ahora".
     const aviso = page.locator("#avisoRepartiendo");
@@ -134,12 +137,15 @@ test("reparto: ya llego por WhatsApp y repartidores en el mapa", async ({ page }
     await expect(pantalla.locator(".pinRepartidorCabeza")).toHaveCount(1);
     await capturar(page, "reparto-05-repartiendo-ahora");
 
-    // Al entregar el último, se apaga sola.
+    // Al entregar el último sigue prendido: se apaga a mano con el switch.
     await page.evaluate(() => {
         const pedido = obtenerHistorial().find(p => p.comercio === "Almacén Don Pepe");
         window.nubeVendeFrio.entregarPedido(pedido.id, {});
         actualizarDashboard();
     });
-    await expect(page.locator("#avisoCompartirUbicacion")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.repartidoresVendeFrio.compartiendo())).toBe(true);
+    await pantalla.getByRole("button", { name: /Volver|Atrás/ }).first().click().catch(() => page.goBack());
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await page.locator("#switchRepartiendo").getByRole("switch").uncheck();
     await expect.poll(() => page.evaluate(() => window.repartidoresVendeFrio.compartiendo())).toBe(false);
 });

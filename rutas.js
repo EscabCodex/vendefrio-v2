@@ -2214,7 +2214,6 @@ function abrirOpcionesParadaRuta(nombre, ancla) {
             { icono: carga.pedidos.length ? "check" : "documento", texto: carga.pedidos.length ? "Entregar" : "Hacer pedido", principal: true, alTocar: () => {
                 const actual = cargaParaParada(nombre);
                 if (actual.pedidos.length && window.seguimientoVendeFrio?.abrirPedido?.(actual.pedidos[0].id)) return;
-                window.queHacemosPedido?.marcar(nombre);
                 if (typeof irAPedidoRapido === "function") irAPedidoRapido(nombre);
             } },
             window.visitasVendeFrio?.abrir ? { icono: "chevDerecha", texto: "Pasé, sin pedido", alTocar: () => window.visitasVendeFrio.abrir(nombre, pasar) } : null,
@@ -2401,6 +2400,8 @@ function empezarRutaEnCurso() {
         planMetros: Math.round(cuenta.metros),
         nombre: rutaGuardadaActual?.nombre || ""
     });
+    // Iniciar ruta prende "Estoy repartiendo" (Inicio).
+    window.repartidoresVendeFrio?.activar?.(true);
 }
 
 function datosCierreRuta() {
@@ -2517,6 +2518,10 @@ function guardarCierreRuta(datos) {
     });
     guardarJsonRutas(CLAVE_RUTAS_HECHAS, lista.slice(-60));
     guardarJsonRutas(CLAVE_RUTA_EN_CURSO, null);
+    if (window.repartidoresVendeFrio?.compartiendo?.()) {
+        window.piezas.preguntar({ icono: "camion", titulo: "¿Dejás de repartir?", texto: "Se apaga «Estoy repartiendo» y se deja de compartir tu ubicación.", si: "Sí, apagar", no: "Sigo repartiendo" })
+            .then(si => { if (si) window.repartidoresVendeFrio.apagar(false); });
+    }
 }
 
 window.rutasVendeFrio = {

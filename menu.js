@@ -274,8 +274,7 @@ function dibujarKpisInicio(cuentas, nube, conPlata) {
             { id: "cargados", texto: "Cargados", valor: cuentas.cargadosSemana, accion: "cargadosSemana" },
             { id: "entregados", texto: "Entregados", valor: cuentas.entregadosSemana, accion: "entregadosSemana" }
         ];
-        const cobrado = conPlata && window.cierreVendeFrio?.disponible?.() ? cobradoHoyInicio() : null;
-        if (cobrado !== null) kpis.push({ id: "cobradoHoy", texto: "Cobrado hoy", valor: textoPlataCortoInicio(cobrado), accion: "cobradoHoy" });
+        // "Cobrado hoy" va grande arriba, no en un cuadrito.
         kpis.push(
             { id: "cargadosHoy", texto: "Cargados hoy", valor: cuentas.cargadosHoy.length, accion: "cargadosHoy" },
             { id: "entregadosHoy", texto: "Entregados hoy", valor: cuentas.entregadosHoy, accion: "entregadosHoy" },
@@ -672,12 +671,15 @@ function actualizarDashboard() {
     // T93: sin permiso para ver la plata, unidades en vez de pesos.
     const vePlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
     const conPlata = vePlata && (hayPrecios || nube);
+    // Lo grande es "Cobrado hoy": un pedido cargado todavía no es plata.
+    // Lo vendido queda chico debajo.
+    const cobradoGrande = conPlata && window.cierreVendeFrio?.disponible?.() ? cobradoHoyInicio() : null;
     const textos = {
-        dashTituloHoy: conPlata ? "Vendido hoy" : "Unidades hoy",
-        dashVendidoHoy: conPlata
+        dashTituloHoy: cobradoGrande !== null ? "Cobrado hoy" : conPlata ? "Vendido hoy" : "Unidades hoy",
+        dashVendidoHoy: cobradoGrande !== null ? textoPlataInicio(cobradoGrande) : conPlata
             ? textoPlataInicio(vendido)
             : String(cargadosHoy.reduce((total, pedido) => total + unidadesInicio(pedido), 0)) + " u",
-        dashResumenHoy: cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
+        dashResumenHoy: (cobradoGrande !== null ? "Vendido " + textoPlataCortoInicio(vendido) + " · " : "") + cargadosHoy.length + (cargadosHoy.length === 1 ? " pedido" : " pedidos") + " · " +
             comerciosHoy + (comerciosHoy === 1 ? " comercio" : " comercios"),
         dashVisitasHechas: visitadosSemana,
         dashVisitasTotal: "de " + comercios.length,
@@ -1025,7 +1027,7 @@ function prepararTarjetasDashboard() {
     // comercios visitados" a la lista de los visitados.
     const tocable = window.piezas && window.piezas.tocable;
     if (!tocable) return;
-    tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard("vendidoHoy"));
+    tocable(document.getElementById("dashHoyVendido"), () => ejecutarAccionTarjetaDashboard(document.getElementById("dashTituloHoy")?.textContent === "Cobrado hoy" ? "cobradoHoy" : "vendidoHoy"));
     tocable(document.getElementById("dashSemanaVisitados"), () => ejecutarAccionTarjetaDashboard("visitadosSemana"));
     // La barra dice "Visitados", así que lleva a los visitados; "Te deben", a A cobrar.
     document.getElementById("dashVisitas")?.addEventListener("click", () => ejecutarAccionTarjetaDashboard("visitadosSemana"));

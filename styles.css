@@ -2519,3 +2519,10 @@ html[data-tema] .inicioContenido .inicioEncabezado h2{margin:0;font-size:22px;}
 .contadorCobroTanda{color:var(--acento-oscuro);font-size:14px;font-weight:800;}
 .terminarCobroTanda{min-height:36px;padding:0 14px;border:1px solid var(--acento);border-radius:var(--radio-pildora);background:transparent;color:var(--acento-oscuro);font-size:13px;font-weight:700;cursor:pointer;}
 .terminarCobroTanda:active{background:var(--fondo);}
+
+/* Switch "Estoy repartiendo" arriba en Inicio */
+.switchRepartiendo { display: flex; align-items: center; gap: 8px; width: max-content; margin-top: 2px; padding: 3px 5px 3px 10px; gap: 6px; border-radius: 999px; background: rgba(255,255,255,.16); color: inherit; cursor: pointer; flex: none; }
+.switchRepartiendo > span { display: flex; flex-direction: column; font-weight: 700; font-size: 13px; line-height: 1.15; }
+.switchRepartiendo small { display: none; }
+.dashboardMarca:has(#switchRepartiendo) #dashSaludo { display: none; }
+.switchRepartiendo .ajLlave { flex: none; margin: 0; }

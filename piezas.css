@@ -886,21 +886,21 @@ html[data-tema] #modalPedido .etiquetaPedidoGenerado{
   font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--texto-ter);
 }
 html[data-tema] #modalPedido .detallePedido{
-  max-height:38dvh;overflow-y:auto;margin:0;padding:14px 16px;
+  max-height:26dvh;overflow-y:auto;margin:0;padding:12px 14px;
   border:0;border-radius:20px 20px 20px 6px;background:var(--superficie-2);color:var(--texto);
   font-size:14px;line-height:1.5;white-space:normal;
 }
 html[data-tema] #modalPedido .detallePedido strong{color:var(--texto);}
-html[data-tema] #modalPedido .modalBotones{grid-template-columns:1fr;margin-top:16px;}
+html[data-tema] #modalPedido .accionesPedidoGenerado{display:flex;gap:8px;margin-top:12px;}
+html[data-tema] #modalPedido .accionesPedidoGenerado button{
+  flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-height:64px;margin:0;padding:8px 4px;border:0;border-radius:18px;font-size:13px;font-weight:650;
+}
+html[data-tema] #modalPedido .accionesPedidoGenerado button.oculto{display:none;}
 html[data-tema] #modalPedido .btnModalWhatsapp{background:var(--pz-wa);color:#fff;}
 html[data-tema="oscuro"] #modalPedido .btnModalWhatsapp{background:var(--pz-wa-bg);color:var(--pz-wa);}
 html[data-tema] #modalPedido .btnModalSecundario{background:var(--superficie-2);color:var(--texto);}
-html[data-tema] #modalPedido .botonImprimirGenerado{
-  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin:8px 0 0;
-  border:0;border-radius:var(--radio-pildora);background:var(--acento-bg);color:var(--pz-pri-fuerte);font-size:15px;font-weight:650;
-}
-html[data-tema="oscuro"] #modalPedido .botonImprimirGenerado{background:var(--superficie-2);color:var(--texto);}
-html[data-tema] #modalPedido .botonImprimirGenerado.oculto{display:none;}
+
 
 /* ---------- Hoja "Editar producto" del catálogo ---------- */
 .hojaEditarCatalogo .fotoEdicionCatalogo{display:flex;align-items:center;gap:14px;padding:6px 8px 8px;}
@@ -1828,3 +1828,24 @@ html[data-tema="oscuro"] .textosFichaMarca .ventasFichaMarca.sinVentas{color:#fb
 html[data-tema="oscuro"] .filaBarraMarca.resaltada{background:#2A323C;}
 /* Comercios: el horario se lee entero (puede ocupar dos renglones). */
 html body #pantallaComercios .datosComercioGrid .datoHorario{white-space:normal;overflow:visible;align-items:flex-start;}
+/* ¿Qué hacemos con este pedido? (en "Pedido generado" y en Rutas) */
+.queHacerPedido{margin-top:16px;padding-top:14px;border-top:1px solid var(--borde);}
+.qhpTit{margin:0 0 10px;font-size:15px;font-weight:700;color:var(--texto);}
+.qhpOpciones{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.qhpOpcion{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:84px;padding:10px 6px;
+  border:1.5px solid var(--borde);border-radius:18px;background:var(--superficie);color:var(--texto);
+  font:inherit;text-align:center;cursor:pointer;
+}
+.qhpOpcion strong{font-size:14px;font-weight:700;line-height:1.15;color:var(--texto);}
+.qhpOpcion small{font-size:12px;color:var(--texto-sec);}
+.qhpOpcion .pzIco{color:var(--acento-oscuro);}
+html[data-tema="oscuro"] .qhpOpcion .pzIco{color:var(--acento);}
+/* Entregar ahora: mismo tamaño que los otros, resaltado con el borde. */
+.qhpOpcion.qhp-entregar{border-color:var(--acento);background:var(--acento-bg);}
+.qhpOpcion:active{transform:scale(.97);}
+#modalPedido .cabezaPedidoGenerado > div{flex:1;min-width:0;}
+html #modalPedido .cabezaPedidoGenerado .botonRedondoFicha{display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;margin:0;padding:0;border:0;border-radius:50%;background:var(--gris-claro);color:var(--texto);}
+html #modalPedido .cabezaPedidoGenerado .botonEditarGenerado{color:var(--acento-oscuro);}
+html[data-tema="oscuro"] #modalPedido .cabezaPedidoGenerado .botonEditarGenerado{color:var(--acento);}
+html #modalPedido .cabezaPedidoGenerado .botonRedondoFicha.oculto{display:none;}
