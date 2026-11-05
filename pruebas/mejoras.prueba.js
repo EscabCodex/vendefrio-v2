@@ -131,14 +131,15 @@ test("mejoras: elegir varios, catálogo en lista y ronda de WhatsApp", async ({ 
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Dejar de elegir" }).click();
 
-    // Catálogo en lista.
+    // Catálogo en lista (Tanda 3: arranca en filas; los cuadros son el modo foto).
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
-    await page.getByRole("button", { name: "Ver en lista" }).click();
     await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
     await expect(page.locator("#vistaCatalogo")).toContainText("5 productos");
     await capturar(page, "mejoras-05-catalogo-en-lista");
-    await page.getByRole("button", { name: "Ver en cuadros" }).click();
+    await page.getByRole("button", { name: "Modo foto, para mostrar al cliente" }).click();
     await expect(page.locator("#grillaCatalogo")).not.toHaveClass(/vistaLista/);
+    await page.getByRole("button", { name: "Ver en filas" }).click();
+    await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
 
     // Ronda de WhatsApp: "Enviar a…" fijo abajo y "Saltear".
     await abrirMas(page);
