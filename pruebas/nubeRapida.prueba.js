@@ -1,8 +1,9 @@
 // VendeFrío - Arreglar la lentitud de la nube, con los emuladores de Firebase.
 // La app escucha en vivo solo los pedidos de los últimos 60 días; los más
 // viejos se leen una vez al abrir. Estas pruebas cuidan que nada se pierda:
-// 1. Un pedido viejo se ve, se cobra sin señal (el cobro se ve al instante),
-//    sigue ahí al cerrar y abrir la app sin señal, y sube al volver.
+// 1. Un pedido viejo se ve, se cobra sin señal (el cobro se ve al instante y
+//    cuenta en «Cobrado hoy»), sigue ahí al cerrar y abrir la app sin señal,
+//    y sube al volver.
 // 2. Lo que otro celular cambia llega: al instante en un pedido reciente y,
 //    en uno viejo, al volver a abrir la app. Si la nube rechaza un cambio,
 //    la pantalla vuelve a como estaba.
@@ -93,6 +94,8 @@ test("nube rápida: un pedido viejo se cobra sin señal y no se pierde", async (
     }), { timeout: 30000 }).toBe("efectivo 9800");
     await irAInicio(page);
     await expect(page.locator("#avisoSinSubir")).toContainText("1 cambio sin subir", { timeout: 30000 });
+    // El cobro de hoy (de un pedido viejo) cuenta en «Cobrado hoy».
+    await expect(page.locator('.kpiHoy[data-kpi="cobradoHoy"]')).toContainText("9.800");
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "nubeRapida-01-cobro-viejo-sin-subir");
     expect((await refPedidos.doc("ped_viejoPrueba").get()).data().cobro).toBeFalsy();

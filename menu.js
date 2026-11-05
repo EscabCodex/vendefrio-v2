@@ -325,7 +325,9 @@ function cobradoHoyInicio() {
         try {
             const inicio = new Date();
             inicio.setHours(0, 0, 0, 0);
-            return Number(window.cierreVendeFrio.calcular(inicio).totalRecaudado) || 0;
+            // calcular() recibe la hora en milisegundos: con la fecha entera
+            // «inicio + 1 día» quedaba como texto y daba siempre $ 0.
+            return Number(window.cierreVendeFrio.calcular(inicio.getTime()).totalRecaudado) || 0;
         } catch (error) {
             return 0;
         }
