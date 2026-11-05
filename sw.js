@@ -1,7 +1,7 @@
 // =====================================================
 // VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v291";
+const CACHE_NAME = "vendefrio-v292";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ const ARCHIVOS = [
   "./estadisticas.js",
   "./catalogo.js",
   "./pedidoEnHoja.js",
+  "./queHacemosPedido.js",
   "./pedidos.js",
   "./comerciosAdmin.js",
   "./comercioFicha.js",
