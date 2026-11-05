@@ -7,12 +7,21 @@ name: App Android APK
 on:
   workflow_dispatch:
   push:
+    # Solo estas ramas publican el APK: así otra rama vieja no lo pisa.
+    branches:
+      - desarrollo
+      - claude/project-thread-j5745l
     paths:
       - "app-android/**"
       - ".github/workflows/app-android-apk.yml"
 
 permissions:
   contents: write
+
+# De a uno: el último que termina es el último que se subió.
+concurrency:
+  group: app-android-apk
+  cancel-in-progress: false
 
 jobs:
   apk:
