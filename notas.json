@@ -36,7 +36,7 @@
     {
       "version": 287,
       "fecha": "2026-11-05",
-      "tipo": "arreglo",
+      "tipo": "arreglado",
       "icono": "check",
       "titulo": "Pedidos e Inicio cuentan igual",
       "texto": "Pedidos abre en la primera pestaña con algo, e Inicio cuenta los entregados igual que Terminados."
