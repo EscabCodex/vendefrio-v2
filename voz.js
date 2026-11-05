@@ -345,7 +345,7 @@
             const cuerpo = await respuesta.json().catch(() => ({}));
             if (!respuesta.ok) {
                 console.warn("Claude respondió " + respuesta.status + ".", cuerpo.codigo || "", cuerpo.message || "", cuerpo.detalle || "");
-                porQueFallo = cuerpo.codigo === "sinConfigurar" ? "Falta configurar Vercel: " + (cuerpo.message || "")
+                porQueFallo = cuerpo.codigo === "sinConfigurar" ? "Al asistente le falta configuración. Avisale a quien administra VendeFrío."
                     : respuesta.status === 401 ? "Tu sesión venció: salí de la cuenta y volvé a entrar."
                         : respuesta.status === 429 ? "Muchas preguntas seguidas a Claude. Esperá un minuto."
                             : "Claude falló (error " + respuesta.status + (cuerpo.detalle ? ": " + cuerpo.detalle : "") + ").";

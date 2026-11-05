@@ -79,11 +79,13 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     const nombres = await page.locator("#listaComerciosAdmin .filaTituloComercio > :first-child").allTextContents();
     expect(nombres.slice(0, 3).map(texto => texto.trim())).toEqual(["Almacén Don Pepe", "Bar Aurora", "Kiosco Luna"]);
 
-    // Cómo hacés el recorrido.
+    // Recorrido: vehículo y voz a la vista; lo demás en «Más opciones».
     await abrirSeccion(page, "navegacion");
     await expect(detalle.getByRole("radio", { name: "Moto", exact: true })).toBeChecked();
-    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
+    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toHaveCount(0);
     await capturar(page, "ajustes-04-recorrido");
+    await detalle.locator(".ajCerrado summary", { hasText: "Más opciones" }).click();
+    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
 
     // Las demás secciones, con su estilo nuevo.
     for (const [seccion, captura] of [["respaldo", "05-respaldo"], ["seguridad", "06-seguridad"], ["empleados", "07-empleados"], ["avisos", "08-avisos"], ["cuenta", "09-cuenta"]]) {

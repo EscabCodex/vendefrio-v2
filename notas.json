@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 289,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "engranaje",
+      "titulo": "Ajustes más simples",
+      "texto": "Menos textos largos. Lo que casi no se usa quedó en «Avanzado» y «Más opciones»."
+    },
+    {
       "version": 288,
       "fecha": "2026-11-05",
       "tipo": "mejor",

@@ -82,12 +82,13 @@ async function prepararServidores(page, valhallaContesta) {
     return pedidos;
 }
 
-// Más > Cómo hacés el recorrido: Moto y Valhalla.
+// Más > Recorrido: Moto y Valhalla.
 async function elegirValhallaEnMoto(page) {
     await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="navegacion"]').click();
     const detalle = page.locator("#configDetalle");
     await expect(detalle).toBeVisible();
+    await detalle.locator(".ajCerrado summary", { hasText: "Más opciones" }).click();
     const camino = detalle.getByRole("radiogroup", { name: "Cómo calcula el camino" });
     await expect(camino.getByRole("radio", { name: "Normal" })).toBeChecked();
     await detalle.locator(".ajSegmento label", { hasText: /^Moto$/ }).click();

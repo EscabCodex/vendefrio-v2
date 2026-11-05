@@ -28,6 +28,11 @@
             </section>`;
     }
 
+    // Repaso de Ajustes: lo que se usa poco va en una fila cerrada.
+    function cerrado(titulo, contenido) {
+        return `<details class="ajCerrado"><summary class="ajFila"><span class="ajIcono" data-tono="gris">${ico("herramientas")}</span><span class="ajTexto"><strong>${titulo}</strong></span><b aria-hidden="true">${ico("chevDerecha", 18)}</b></summary>${contenido}</details>`;
+    }
+
     function cabezaFila(icono, tono, titulo, ayuda) {
         return `
             <span class="ajIcono" data-tono="${tono}">${ico(icono)}</span>
@@ -965,6 +970,12 @@
             " para subir a la nube. Se suben solos cuando haya señal.";
     }
 
+    // Solo lo que falta subir (en Cuenta ya dice "Conectada").
+    function textoPendientes() {
+        const sinSubir = window.nubeVendeFrio?.sincronizacion?.().sinSubir;
+        return sinSubir ? textoSincronizacion() : "";
+    }
+
     function htmlSincronizacion() {
         return `<p class="configEstado" id="sincronizacionNube" role="status">${textoSincronizacion()}</p>`;
     }
@@ -975,7 +986,7 @@
 
         const textos = {
             conectando: "Conectando con la nube…",
-            conectada: "Conectada: los cambios se ven en los otros celulares con esta cuenta.",
+            conectada: "Conectada a la nube: los cambios se ven en los otros celulares.",
             sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
             sinPermiso: "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas.",
             error: "Hubo un problema con la nube. Probá de nuevo."
@@ -986,16 +997,9 @@
             : "";
 
         return `
-            <p class="configEstado">
-                <strong>Usando la nube</strong><br>
-                Tus datos salen de tu distribuidora en la nube.
-            </p>
-            <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
-            ${htmlSincronizacion()}
+            <p class="configEstado" role="status"><span id="estadoNube">${textos[estadoNube] || ""}</span>
+                <span id="sincronizacionNube" data-solo-pendientes>${textoPendientes()}</span></p>
             ${reintentar}
-            <button type="button" data-accion="juntarRepetidos">
-                Juntar comercios y productos repetidos
-            </button>
         `;
     }
 
@@ -1023,6 +1027,7 @@
                 `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
                 filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
                 filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"') +
+                filaAccion("usuarios", "verde", "Juntar comercios y productos repetidos", "Si un comercio o producto quedó dos veces, deja uno solo", 'data-accion="juntarRepetidos"') +
                 // T61: cada cuánto avisa en Inicio.
                 filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
                     ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
@@ -1104,13 +1109,13 @@
                 ${boton}
             </div>`;
 
-        return `
+        return cerrado("Avanzado", `
             <section class="ajGrupo configMigracion" id="configLimpiezaDatosViejos">
                 <h3 class="ajGrupoTitulo">Datos viejos de este celular</h3>
                 <div class="ajTarjeta">
                     <div class="ajFila ajTextoLargo">
                         <span class="ajIcono" data-tono="naranja">${ico("celular")}</span>
-                        <span class="ajTexto"><strong>La app ya no los usa</strong><small>Comercios, productos, pedidos, rutas y la copia interna de antes de la nube. Podés borrarlos en tres pasos. La nube no se toca.</small></span>
+                        <span class="ajTexto"><strong>La app ya no los usa</strong><small>Quedaron de antes de usar la nube. Podés borrarlos en tres pasos; la nube no se toca.</small></span>
                     </div>
                     <div class="ajPasos">
                         ${paso(1, descargado, `<button type="button" data-accion="limpiezaDescargar" ${limpieza.revisando ? "disabled" : ""}>${textoDescargar}</button>`)}
@@ -1122,7 +1127,7 @@
                 </div>
             </section>
             ${nota("Quedan tus preferencias, el borrador del pedido y tu sesión.")}
-        `;
+        `);
     }
 
     // Se cambian solo los textos, sin redibujar la sección.
@@ -1389,9 +1394,7 @@
                     <input type="checkbox" class="ajLlave" role="switch" id="llaveTodosPuedenTodo" aria-label="Todos pueden hacer todo" ${prendida ? "checked" : ""}>
                 </label>
                 <p class="ajFila ajEstadoFila">
-                    ${ico("escudo", 16)}<span>Siempre, prendida o apagada: cobrar es solo tuyo y de quien tiene
-                    un rol con «Cobra» aprobado por vos. Editar, eliminar y cancelar un
-                    pedido, solo quien lo cargó y vos.</span>
+                    ${ico("escudo", 16)}<span>Igual, cobrar es tuyo y de quien tiene «Cobra». Editar o borrar un pedido, de quien lo cargó y vos.</span>
                 </p>
             </div>
         `;
@@ -1425,7 +1428,7 @@
 
     function htmlTextoLlave(prendida) {
         return prendida
-            ? "Prendida: cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias. Los roles deciden solo a quién le llega cada aviso."
+            ? "Prendida: cualquiera hace cualquier paso de un pedido. Los roles deciden a quién le llega cada aviso."
             : "Apagada: cada uno según los permisos de sus roles.";
     }
 
@@ -1730,11 +1733,8 @@
             noSePuede: `Este celular o este navegador no puede recibir notificaciones.
                 En Android, usá Chrome. En iPhone, hace falta iOS 16.4 o más nuevo y la app
                 instalada en la pantalla de inicio.`,
-            bloqueadas: `Las notificaciones están bloqueadas para VendeFrío en este celular.
-                Para permitirlas en Android: mantené apretado el ícono de VendeFrío, tocá
-                <strong>Información de la app</strong> y después <strong>Notificaciones</strong>
-                (o, en Chrome, los tres puntos > Configuración > Configuración de sitios >
-                Notificaciones). Después volvé acá.`,
+            bloqueadas: `Están bloqueadas en este celular. Mantené apretado el ícono de VendeFrío,
+                tocá <strong>Información de la app › Notificaciones</strong> y permitilas.`,
             apagadas: "Prendelas para que te suenen los avisos aunque tengas la app cerrada. Valen solo para este celular.",
             activando: "Activando… Si el celular pregunta, tocá «Permitir».",
             activadas: "<strong>Activadas en este celular.</strong> Te suenan los avisos aunque tengas la app cerrada."
@@ -2052,8 +2052,8 @@
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
-            navegacion: ["Cómo hacés el recorrido", "Vehículo, navegación y voz"],
-            seguridad: ["Seguridad y aplicación", "Información y permisos"],
+            navegacion: ["Recorrido", "Vehículo, navegación y voz"],
+            seguridad: ["Seguridad y ayuda", "Información y permisos"],
             ajustes: ["Ajustes", "Cómo trabajás, tu distribuidora y la app"]
         };
 
@@ -2106,7 +2106,7 @@
                 "vendefrio_ultimo_respaldo_automatico"
             );
 
-            caja.innerHTML +=
+            const copiaInterna =
                 grupo("Copia en este celular",
                     filaDato("historial", "gris", "Última copia interna",
                         ultima ? new Date(Number(ultima)).toLocaleString("es-AR") : "Todavía no hay una copia",
@@ -2114,14 +2114,16 @@
                     filaElegir("refrescar", "verde", "Respaldo automático", "Cada cuánto se hace la copia", "frecuenciaRespaldo", [
                         ["desactivado", "Nunca"], ["diario", "Todos los días"], ["semanal", "Cada semana"], ["mensual", "Cada mes"]
                     ]) +
-                    filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
+                    filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"'));
+            caja.innerHTML +=
                 grupo("Archivo de respaldo",
                     filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
                     filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"') +
                     filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
                     ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
                 ])) +
-                nota("Guardá el archivo en un lugar seguro, como Google Drive.");
+                nota("Guardá el archivo en un lugar seguro, como Google Drive.") +
+                cerrado("Avanzado", copiaInterna);
         }
 
         if (seccion === "trabajo") {
@@ -2152,10 +2154,11 @@
                 // T155: un solo asistente, el de Claude. Lo fácil lo contesta
                 // el celular; lo demás va a Claude (api/entender.js).
                 grupo("Asistente",
-                    filaLlave("chispa", "violeta", "Asistente con Claude", "Entiende cualquier frase, pedidos largos y preguntas", "asistenteClaude") +
+                    filaLlave("chispa", "violeta", "Asistente con Claude", "Entiende cualquier frase, pedidos largos y preguntas", "asistenteClaude")) +
+                cerrado("Avanzado", grupo("",
                     filaAccion("nube", "azul", "Probar el asistente", "Dice si Claude anda o qué le falta", 'data-accion="probarIA"')) +
-                `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
-                nota("El asistente es uno solo: el botón de Inicio, la voz (también navegando) y «Dictar o pegar pedido». Lo fácil lo contesta el celular al toque, sin internet y sin gastar; lo demás se lo pregunta a Claude. Claude necesita internet y la cuenta de la distribuidora; cada pregunta cuesta una fracción de centavo de dólar.");
+                    `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
+                    nota("Lo fácil lo contesta el celular, sin internet. Lo demás se lo pregunta a Claude, con internet; cada pregunta cuesta muy poco."));
         }
 
         if (seccion === "navegacion") {
@@ -2164,6 +2167,10 @@
                     filaSegmento("bicicleta", "naranja", "Cómo te movés", "", "vehiculo", [
                         ["bicicleta", "Bici"], ["moto", "Moto"], ["auto", "Auto"], ["pie", "A pie"]
                     ]) +
+                    filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [
+                        ["si", "Sí"], ["no", "No"]
+                    ])) +
+                cerrado("Más opciones", grupo("Navegación",
                     filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
                         ["app", "VendeFrío"], ["google", "Google Maps"]
                     ]) +
@@ -2171,9 +2178,6 @@
                         ["osrm", "Normal"], ["valhalla", "Con modo moto"]
                     ])) +
                 grupo("Voz",
-                    filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [
-                        ["si", "Sí"], ["no", "No"]
-                    ]) +
                     filaSegmento("velocimetro", "violeta", "Velocidad de la voz", "", "velocidadVoz", [
                         ["lenta", "Lenta"], ["normal", "Normal"], ["rapida", "Rápida"]
                     ])) +
@@ -2182,10 +2186,10 @@
                         ["15", "Lejos"], ["17", "Normal"], ["18", "Cerca"]
                     ]) +
                     filaLlave("mira", "verde", "Seguir mi ubicación", "El mapa se mueve con vos", "seguimiento") +
-                    filaLlave("celular", "gris", "Pantalla siempre encendida", "Mientras navegás", "pantallaEncendida")) +
+                    filaLlave("celular", "gris", "Pantalla siempre encendida", "Mientras navegás", "pantallaEncendida"))) +
                 grupo("",
                     filaAccion("mapa", "azul", "Abrir Rutas", "Elegí comercios y armá la ruta del día", 'data-accion="rutas"')) +
-                nota("La navegación usa los mapas de OpenStreetMap y calcula el camino por calles con internet. Necesita el GPS del comercio (se guarda desde su ficha).");
+                nota("Para navegar hace falta internet y el GPS del comercio (se guarda desde su ficha).");
         }
 
         if (seccion === "seguridad") {
@@ -2220,7 +2224,7 @@
                 grupo("Ayuda",
                     `<div class="ajFila ajTextoLargo ayudaVendeFrio">
                         <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
-                        <span class="ajTexto"><strong>Si algo no anda</strong><small>Cerrá la app del todo y abrila de nuevo con internet (así se actualiza). Si sigue, sacale una captura a la pantalla y mandásela a quien administra VendeFrío en tu distribuidora.</small></span>
+                        <span class="ajTexto"><strong>Si algo no anda</strong><small>Cerrala y abrila con internet. Si sigue, tocá «Informar un problema».</small></span>
                     </div>
                     <div class="ajFila ajTextoLargo">
                         <span class="ajIcono" data-tono="azul">${ico("descargar")}</span>
@@ -2354,7 +2358,7 @@
                 (faltan.length
                     ? "Faltan en la nube: " + faltan.join(", ") + ". Después de borrar, quedan solo en el archivo que descargaste: si los necesitás, los recuperás con \"Combinar respaldo\". "
                     : "Todo está en la nube. ") +
-                    "Se borran de este celular los comercios, productos, marcas, pedidos, rutas y la copia interna viejos. La nube no se toca.",
+                    "Se borran de este celular los comercios, productos, marcas, pedidos y rutas de antes de la nube. La nube no se toca.",
                 () => {
                     if (!borrarDatosViejosDelCelular()) {
                         return mostrarAviso("No se pudo borrar", "Los datos viejos de este celular quedaron como estaban.");
@@ -3305,7 +3309,7 @@
 
         window.nubeVendeFrio.escucharSincronizacion(() => {
             const texto = document.getElementById("sincronizacionNube");
-            if (texto) texto.textContent = textoSincronizacion();
+            if (texto) texto.textContent = "soloPendientes" in texto.dataset ? textoPendientes() : textoSincronizacion();
         });
     }
 
