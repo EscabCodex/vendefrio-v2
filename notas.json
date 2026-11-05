@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 282,
+      "fecha": "2026-11-05",
+      "tipo": "nuevo",
+      "icono": "campana",
+      "titulo": "App de Android: avisos y GPS",
+      "texto": "Con la app de Android, los avisos llegan como notificación y el GPS sigue con la pantalla apagada."
+    },
+    {
       "version": 281,
       "fecha": "2026-11-05",
       "tipo": "mejor",

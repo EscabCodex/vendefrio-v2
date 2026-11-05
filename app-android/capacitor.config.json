@@ -20,6 +20,10 @@
       "backgroundColor": "#0B615F",
       "showSpinner": false,
       "androidScaleType": "CENTER_CROP"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_copo",
+      "iconColor": "#0B8A82"
     }
   }
 }

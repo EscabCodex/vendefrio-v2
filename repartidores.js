@@ -97,7 +97,14 @@
     }
 
     function vigilar() {
-        if (vigilancia !== null || !navigator.geolocation) return;
+        if (vigilancia !== null) return;
+        // App de Android: GPS que sigue con la pantalla apagada (appAndroid.js).
+        const app = window.appAndroidVendeFrio;
+        if (app && app.vigilarUbicacion) {
+            vigilancia = { app: app.vigilarUbicacion(escribir, error => console.warn("No se pudo leer la ubicación para compartir.", error)) };
+            return;
+        }
+        if (!navigator.geolocation) return;
         vigilancia = navigator.geolocation.watchPosition(escribir, error => {
             console.warn("No se pudo leer la ubicación para compartir.", error);
         }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
@@ -116,7 +123,8 @@
     }
 
     function apagar(solo) {
-        if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
+        if (vigilancia && typeof vigilancia === "object") window.appAndroidVendeFrio?.dejarDeVigilar?.(vigilancia.app);
+        else if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
         const estaba = compartiendo();
         try { localStorage.removeItem(CLAVE); } catch (error) { /* sin espacio */ }
