@@ -138,9 +138,13 @@
         dibujarPantalla();
     }
 
-    // T113: filtro elegido en "A cobrar" (Todos, De mi ruta hoy, Más viejos).
+    // T113: filtro elegido en "A cobrar". Repaso de A cobrar: la fila de
+    // filtros es como la de Pedidos (número adentro) y la lupa va primera.
     let filtroACobrar = "todos";
+    let buscarACobrar = "";
+    let lupaACobrar = null;
     const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const DIAS_VIEJA = 7;
 
     function diasDesde(hora) {
         const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -163,17 +167,74 @@
         return `<span class="pzChip ${clase}">${textoAntiguedad(grupo.desde)}</span>`;
     }
 
-    function cuentasFiltradas(lista) {
-        if (filtroACobrar === "ruta") return lista.filter(esDeMiRutaHoy);
-        if (filtroACobrar === "viejos") return lista.slice().sort((a, b) => a.desde - b.desde);
-        return lista;
+    // "Más viejas": las de más de una semana, la más vieja primero.
+    // "Más grandes": las que pasan el promedio, la más grande primero.
+    function gruposDeFiltros(lista) {
+        const promedio = lista.length ? lista.reduce((suma, grupo) => suma + grupo.total, 0) / lista.length : 0;
+        return {
+            todos: lista,
+            ruta: lista.filter(esDeMiRutaHoy),
+            viejas: lista.filter(grupo => diasDesde(grupo.desde) > DIAS_VIEJA).sort((a, b) => a.desde - b.desde),
+            grandes: lista.filter(grupo => grupo.total >= promedio).sort((a, b) => b.total - a.total)
+        };
+    }
+
+    function dibujarFiltros(seccion, grupos) {
+        const fila = seccion.querySelector(".filtrosACobrar");
+        if (!fila) return;
+        if (!lupaACobrar || !fila.contains(lupaACobrar.caja)) {
+            const input = document.createElement("input");
+            input.type = "search";
+            input.id = "buscarACobrar";
+            input.placeholder = "Buscar comercio";
+            input.value = buscarACobrar;
+            input.addEventListener("input", () => { buscarACobrar = input.value; dibujarLista(); });
+            lupaACobrar = p.lupa ? p.lupa(input, { etiqueta: "Buscar comercio" }) : null;
+        }
+        [...fila.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
+        [["todos", "Todos"], ["ruta", "De mi ruta hoy"], ["viejas", "Más viejas"], ["grandes", "Más grandes"]].forEach(([clave, texto]) => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "filtroEtapa" + (filtroACobrar === clave ? " activo" : "");
+            chip.dataset.filtroCobrar = clave;
+            chip.setAttribute("aria-pressed", String(filtroACobrar === clave));
+            chip.innerHTML = `<span class="filtroEtapaNombre">${texto}</span><small class="filtroEtapaCantidad">${grupos[clave].length}</small>`;
+            fila.appendChild(chip);
+        });
+        if (lupaACobrar) lupaACobrar.poner(fila);
     }
 
     function dibujarPantalla() {
         const seccion = document.getElementById("pantallaACobrar");
         if (!seccion || seccion.classList.contains("oculto")) return;
+        const main = seccion.querySelector("main");
+        if (!main.querySelector(".listaACobrar")) {
+            lupaACobrar = null;
+            main.innerHTML = `<div class="pzTarjeta pzRelleno pzTotalGrande"></div>
+                <div class="filtrosEtapaPedidos filtrosACobrar" role="group" aria-label="Filtrar"></div>
+                <div class="pzTarjeta pzLista listaACobrar"></div>
+                <div class="recordarACobrar"></div>`;
+            main.onclick = evento => {
+                const filtro = evento.target.closest("[data-filtro-cobrar]");
+                if (filtro) { filtroACobrar = filtro.dataset.filtroCobrar; dibujarLista(); return; }
+                const wa = evento.target.closest("[data-recordar]");
+                if (wa) { const grupo = cuentaDe(wa.dataset.recordar); if (grupo) recordar(grupo); return; }
+                if (evento.target.closest("[data-recordar-todos]")) { recordarATodos(); return; }
+                const fila = evento.target.closest("[data-cuenta]");
+                if (fila) opcionesCuenta(fila.dataset.cuenta);
+            };
+        }
+        dibujarLista();
+    }
+
+    function dibujarLista() {
+        const seccion = document.getElementById("pantallaACobrar");
+        if (!seccion) return;
         const todas = cuentas();
-        const lista = cuentasFiltradas(todas);
+        const grupos = gruposDeFiltros(todas);
+        if (!grupos[filtroACobrar]) filtroACobrar = "todos";
+        const texto = normal(buscarACobrar.trim());
+        const lista = texto ? grupos[filtroACobrar].filter(grupo => normal(grupo.nombre).includes(texto)) : grupos[filtroACobrar];
         const total = todas.reduce((suma, grupo) => suma + grupo.total, 0);
         const pedidos = todas.reduce((suma, grupo) => suma + grupo.pedidos.length, 0);
         const conWhatsapp = todas.filter(grupo => enlaceRecordatorio(grupo));
@@ -191,28 +252,18 @@
                 ${wa ? `<button type="button" class="botonWaACobrar" data-recordar="${p.esc(grupo.nombre)}" aria-label="Mandar recordatorio a ${p.esc(grupo.nombre)}">${p.ico("whatsapp", 20)}</button>` : ""}
             </div>`;
         }).join("");
-        const filtros = [["todos", "Todos"], ["ruta", "De mi ruta hoy"], ["viejos", "Más viejos"]]
-            .map(([clave, texto]) => `<button type="button" data-filtro-cobrar="${clave}" aria-pressed="${filtroACobrar === clave}">${texto}</button>`).join("");
-        const vacio = filtroACobrar === "ruta" && todas.length
-            ? "Nadie de tu ruta de hoy te debe."
+        const vacio = texto ? "Nadie con ese nombre te debe."
+            : filtroACobrar === "ruta" && todas.length ? "Nadie de tu ruta de hoy te debe."
             : "No te deben nada. ¡Bien!";
-        seccion.querySelector("main").innerHTML = `<div class="pzTarjeta pzRelleno pzTotalGrande">
-                <small>Te deben en total</small>
+        seccion.querySelector(".pzTotalGrande").innerHTML = `<small>Te deben en total</small>
                 <strong>${p.plata(total)}</strong>
-                <span>${textoPedidos(pedidos)} · ${todas.length} ${todas.length === 1 ? "comercio" : "comercios"}</span>
-            </div>
-            ${todas.length ? `<div class="pzSegmentos filtrosACobrar" role="group" aria-label="Filtrar">${filtros}</div>` : ""}
-            <div class="pzTarjeta pzLista">${filas || `<div class="pzVacio">${vacio}</div>`}</div>
-            ${conWhatsapp.length > 1 ? `<button type="button" class="pzBtn pzBtnSec recordarATodos" data-recordar-todos>${p.ico("whatsapp", 20)}Recordarles a todos (${conWhatsapp.length})</button>` : ""}`;
-        seccion.querySelector("main").onclick = evento => {
-            const filtro = evento.target.closest("[data-filtro-cobrar]");
-            if (filtro) { filtroACobrar = filtro.dataset.filtroCobrar; dibujarPantalla(); return; }
-            const wa = evento.target.closest("[data-recordar]");
-            if (wa) { const grupo = cuentaDe(wa.dataset.recordar); if (grupo) recordar(grupo); return; }
-            if (evento.target.closest("[data-recordar-todos]")) { recordarATodos(); return; }
-            const fila = evento.target.closest("[data-cuenta]");
-            if (fila) opcionesCuenta(fila.dataset.cuenta);
-        };
+                <span>${textoPedidos(pedidos)} · ${todas.length} ${todas.length === 1 ? "comercio" : "comercios"}</span>`;
+        const filaFiltros = seccion.querySelector(".filtrosACobrar");
+        filaFiltros.classList.toggle("oculto", !todas.length);
+        if (todas.length) dibujarFiltros(seccion, grupos);
+        seccion.querySelector(".listaACobrar").innerHTML = filas || `<div class="pzVacio">${vacio}</div>`;
+        seccion.querySelector(".recordarACobrar").innerHTML = conWhatsapp.length > 1
+            ? `<button type="button" class="pzBtn pzBtnSec recordarATodos" data-recordar-todos>${p.ico("whatsapp", 20)}Recordarles a todos (${conWhatsapp.length})</button>` : "";
     }
 
     // "Recordarles a todos": WhatsApp abre de a uno, así que se mandan en fila.

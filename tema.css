@@ -2048,8 +2048,8 @@ html .grillaCatalogo.vistaLista .pieItemCatalogo{grid-column:4;grid-row:1 / span
 html .grillaCatalogo.vistaLista .catalogoVacio{padding:24px;}
 
 /* T113: A cobrar con color por antigüedad, filtros y WhatsApp por fila */
-.filtrosACobrar{margin:12px 0;}
-.filtrosACobrar button{flex:1;min-height:40px;font-size:13.5px;}
+.filtrosACobrar{margin:12px -12px;}
+.filtrosACobrar .filtroEtapa{min-height:40px;font-size:13.5px;}
 .filaACobrar{display:flex;align-items:center;border-top:1px solid var(--borde);}
 .filaACobrar:first-child{border-top:0;}
 .filaACobrar .pzFila{border-top:0;flex:1;min-width:0;padding-right:8px;}

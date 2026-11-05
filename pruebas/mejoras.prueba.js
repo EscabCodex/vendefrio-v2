@@ -173,7 +173,20 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
     await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
     await expect(aCobrar.locator(".filaACobrar")).toContainText("Super Norte");
     await capturar(page, "mejoras-07-a-cobrar");
-    await aCobrar.getByRole("button", { name: "Todos", exact: true }).click();
+    // Repaso de A cobrar: lupa primera en la fila y filtros con el número.
+    const fila = aCobrar.locator(".filtrosACobrar");
+    await expect(fila.locator(":scope > *").first()).toHaveClass(/pzLupa/);
+    await expect(fila.getByRole("button", { name: /^Todos/ })).toContainText("2");
+    await expect(fila.getByRole("button", { name: /^Más viejas/ })).toContainText("0");
+    await fila.getByRole("button", { name: /^Más grandes/ }).click();
+    await expect(aCobrar.locator(".filaACobrar").first()).toBeVisible();
+    await aCobrar.getByRole("button", { name: /^Todos/ }).click();
+    await fila.getByRole("button", { name: "Buscar comercio" }).click();
+    await aCobrar.locator("#buscarACobrar").fill("luna");
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
+    await expect(aCobrar.locator(".filaACobrar")).toContainText("Kiosco Luna");
+    await aCobrar.getByRole("button", { name: "Cerrar el buscador" }).click();
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(2);
     await aCobrar.getByRole("button", { name: /Recordarles a todos \(2\)/ }).click();
     const todos = page.getByRole("dialog", { name: "Recordarles a todos" });
     await todos.getByRole("button", { name: "Enviar" }).first().click();
