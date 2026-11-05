@@ -121,19 +121,48 @@ function actualizarResumenPedido() {
     if (totalPlata) totalPlata.textContent = "$ " + Math.round(plata).toLocaleString("es-AR");
 }
 
-// Las 41 opciones de cantidad se arman una sola vez y se copian para cada
-// producto: copiar es mucho más rápido que crearlas de nuevo (T151).
+// La cantidad de cada producto se guarda en un <select> escondido (los
+// botones − y + lo cambian). Antes llevaba sus 41 opciones (0 a 40): con
+// cientos de productos eran miles de elementos y abrir Nuevo pedido tardaba
+// el doble en un celular barato. Ahora arranca solo con el 0 y cada número
+// se agrega cuando se usa: al poner select.value = "7" (desde cualquier
+// parte de la app) aparece la opción 7 (2026-11-05).
+const MAXIMO_CANTIDAD_SELECT = 40;
 let plantillaSelectCantidad = null;
+
+function asegurarOpcionCantidad(select, valor) {
+    const texto = String(valor);
+    const numero = Number(texto);
+    if (texto === "" || !Number.isInteger(numero) || numero < 0 || numero > MAXIMO_CANTIDAD_SELECT) return;
+    const opciones = select.options;
+    let siguiente = null;
+    for (let i = 0; i < opciones.length; i++) {
+        const otro = Number(opciones[i].value);
+        if (otro === numero) return;
+        if (otro > numero && !siguiente) siguiente = opciones[i];
+    }
+    select.insertBefore(new Option(texto, texto), siguiente);
+}
+
+(function () {
+    const original = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    if (!original || !original.set) return;
+    Object.defineProperty(HTMLSelectElement.prototype, "value", {
+        ...original,
+        set(valor) {
+            if (this.classList.contains("cantidadPerezosa")) asegurarOpcionCantidad(this, valor);
+            original.set.call(this, valor);
+        }
+    });
+})();
 
 function crearSelect(marca, producto) {
     if (!plantillaSelectCantidad) {
         plantillaSelectCantidad = document.createElement("select");
-        for (let cantidad = 0; cantidad <= 40; cantidad++) {
-            const option = document.createElement("option");
-            option.value = cantidad;
-            option.textContent = cantidad;
-            plantillaSelectCantidad.appendChild(option);
-        }
+        plantillaSelectCantidad.className = "cantidadPerezosa";
+        // Si alguna vez se abre la lista, piezas.js arma del 0 al 40.
+        plantillaSelectCantidad.dataset.hasta = String(MAXIMO_CANTIDAD_SELECT);
+        plantillaSelectCantidad.appendChild(new Option("0", "0"));
     }
     const select = plantillaSelectCantidad.cloneNode(true);
     select.dataset.marca = marca;

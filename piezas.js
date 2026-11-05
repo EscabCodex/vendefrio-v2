@@ -914,6 +914,18 @@
         elemento.dispatchEvent(new Event("change", { bubbles: true }));
     }
     function elegirOpcion(select) {
+        // Listas que agregan sus números a medida que se usan (la cantidad
+        // de Nuevo pedido): al abrirlas se completan del 0 al tope.
+        const hasta = Number(select.dataset.hasta);
+        if (Number.isInteger(hasta) && hasta > 0 && hasta <= 500) {
+            const hay = new Set([...select.options].map(opcion => opcion.value));
+            const elegido = select.value;
+            for (let numero = 0; numero <= hasta; numero++) {
+                if (!hay.has(String(numero))) select.add(new Option(String(numero), String(numero)));
+            }
+            [...select.options].sort((a, b) => Number(a.value) - Number(b.value)).forEach(opcion => select.appendChild(opcion));
+            select.value = elegido;
+        }
         const caja = menu(select, {
             clase: "menuElegir",
             items: [...select.options].filter(opcion => !opcion.hidden).map(opcion => ({
