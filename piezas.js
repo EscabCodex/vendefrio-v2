@@ -798,7 +798,10 @@
             if (item.desactivado) boton.disabled = true;
             // Cantidad (repaso de Pedidos): el globito de la derecha, como en los filtros.
             const cantidad = item.cantidad === undefined || item.cantidad === null ? "" : `<span class="filtroEtapaCantidad menuFlotanteCantidad">${esc(item.cantidad)}</span>`;
-            boton.innerHTML = ico(item.icono || "chevDerecha", 20) + `<span class="menuFlotanteTexto">${esc(item.texto)}</span>` + cantidad;
+            // icono "" deja el lugar vacío (las opciones de una lista, donde
+            // solo la elegida lleva el tilde).
+            const icono = item.icono === "" ? '<span class="menuFlotanteSinIcono"></span>' : ico(item.icono || "chevDerecha", 20);
+            boton.innerHTML = icono + `<span class="menuFlotanteTexto">${esc(item.texto)}</span>` + cantidad;
             // Con cantidad, se lee "En preparación (2)" (como los botones de antes).
             if (cantidad) boton.setAttribute("aria-label", item.texto + " (" + item.cantidad + ")");
             boton.addEventListener("click", () => {
@@ -895,6 +898,138 @@
             }
         };
     }
+
+    // ---------- Sin listas ni calendarios de Chrome (pedido del dueño, 2026-11-05) ----------
+    // Los <select> y los <input type="date"> siguen en la página (guardan el
+    // valor y avisan con input y change, como siempre), pero al tocarlos no
+    // se abre la ventana de Chrome: se abre el menú propio de la app (las
+    // opciones) o un calendario propio, con el mismo estilo que el resto.
+    function seAbreSolo(elemento) {
+        if (!elemento || elemento.disabled || elemento.readOnly) return false;
+        if (elemento.tagName === "SELECT") return !elemento.multiple && !(elemento.size > 1) && elemento.options.length > 0;
+        return elemento.tagName === "INPUT" && elemento.type === "date";
+    }
+    function avisarCambio(elemento) {
+        elemento.dispatchEvent(new Event("input", { bubbles: true }));
+        elemento.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    function elegirOpcion(select) {
+        const caja = menu(select, {
+            clase: "menuElegir",
+            items: [...select.options].filter(opcion => !opcion.hidden).map(opcion => ({
+                texto: opcion.textContent.trim() || "—",
+                icono: opcion.selected ? "check" : "",
+                actual: opcion.selected,
+                desactivado: opcion.disabled,
+                alTocar: () => {
+                    if (select.value === opcion.value && opcion.selected) return;
+                    select.value = opcion.value;
+                    avisarCambio(select);
+                }
+            }))
+        });
+        const elegida = caja.querySelector(".menuFlotanteItem.actual");
+        if (elegida) caja.scrollTop = Math.max(0, elegida.offsetTop - caja.clientHeight / 2 + elegida.offsetHeight / 2);
+    }
+
+    const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const isoDe = fecha => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+    function fechaDe(iso) {
+        const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+        return partes ? new Date(+partes[1], +partes[2] - 1, +partes[3]) : null;
+    }
+    function elegirFecha(input) {
+        const hoy = new Date();
+        const elegida = fechaDe(input.value);
+        const minimo = input.min || "";
+        const maximo = input.max || "";
+        let mes = new Date((elegida || hoy).getFullYear(), (elegida || hoy).getMonth(), 1);
+        const caja = menu(input, { clase: "menuElegir calendarioPropio", titulo: "Elegí el día", items: [] });
+        const cuerpo = document.createElement("div");
+        cuerpo.className = "calPropio";
+        caja.appendChild(cuerpo);
+        function dibujar() {
+            const primero = (mes.getDay() + 6) % 7;
+            const dias = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
+            const anteriorFin = isoDe(new Date(mes.getFullYear(), mes.getMonth(), 0));
+            const siguienteIni = isoDe(new Date(mes.getFullYear(), mes.getMonth() + 1, 1));
+            let celdas = "";
+            for (let i = 0; i < primero; i++) celdas += "<span></span>";
+            for (let dia = 1; dia <= dias; dia++) {
+                const iso = isoDe(new Date(mes.getFullYear(), mes.getMonth(), dia));
+                const fuera = (minimo && iso < minimo) || (maximo && iso > maximo);
+                const clases = ["calDia", iso === isoDe(hoy) ? "hoy" : "", iso === input.value ? "elegido" : ""].filter(Boolean).join(" ");
+                celdas += `<button type="button" class="${clases}" data-iso="${iso}"${fuera ? " disabled" : ""}${iso === input.value ? ' aria-pressed="true"' : ""} aria-label="${dia} de ${MESES[mes.getMonth()]}">${dia}</button>`;
+            }
+            cuerpo.innerHTML = `<div class="calCabeza">
+                    <button type="button" class="calPaso" data-paso="-1" aria-label="Mes anterior"${minimo && anteriorFin < minimo ? " disabled" : ""}>${ico("chevDerecha", 18)}</button>
+                    <strong>${MESES[mes.getMonth()]} ${mes.getFullYear()}</strong>
+                    <button type="button" class="calPaso" data-paso="1" aria-label="Mes siguiente"${maximo && siguienteIni > maximo ? " disabled" : ""}>${ico("chevDerecha", 18)}</button>
+                </div>
+                <div class="calSemana" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+                <div class="calDias">${celdas}</div>`;
+        }
+        cuerpo.addEventListener("click", evento => {
+            const paso = evento.target.closest(".calPaso");
+            if (paso) {
+                mes = new Date(mes.getFullYear(), mes.getMonth() + Number(paso.dataset.paso), 1);
+                dibujar();
+                return;
+            }
+            const dia = evento.target.closest(".calDia");
+            if (!dia || dia.disabled) return;
+            caja.parentElement.remove();
+            if (input.value !== dia.dataset.iso) {
+                input.value = dia.dataset.iso;
+                avisarCambio(input);
+            }
+        });
+        dibujar();
+        // Ya con el calendario adentro, se vuelve a ubicar junto al campo.
+        const r = input.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
+        caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+    }
+    function abrirPropio(elemento) {
+        if (elemento.tagName === "SELECT") elegirOpcion(elemento);
+        else elegirFecha(elemento);
+    }
+    // Con el dedo: se abre al soltar (si no fue para desplazar la pantalla),
+    // y cancelar el toque hace que Chrome no abra lo suyo. Con el mouse o en
+    // la computadora, al apretar. Con el teclado, Enter o espacio.
+    let toqueEnCampo = null;
+    document.addEventListener("touchstart", evento => {
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date']");
+        toqueEnCampo = seAbreSolo(campo) && evento.touches.length === 1
+            ? { campo, x: evento.touches[0].clientX, y: evento.touches[0].clientY } : null;
+    }, { passive: true, capture: true });
+    document.addEventListener("touchend", evento => {
+        const toque = toqueEnCampo;
+        toqueEnCampo = null;
+        if (!toque || !evento.cancelable) return;
+        const punto = evento.changedTouches[0];
+        if (Math.abs(punto.clientX - toque.x) > 10 || Math.abs(punto.clientY - toque.y) > 10) return;
+        evento.preventDefault();
+        abrirPropio(toque.campo);
+    }, { passive: false, capture: true });
+    document.addEventListener("mousedown", evento => {
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date']");
+        if (!seAbreSolo(campo) || evento.button !== 0) return;
+        evento.preventDefault();
+        abrirPropio(campo);
+    }, true);
+    // El ícono del calendario del campo de fecha también abre el propio.
+    document.addEventListener("click", evento => {
+        const campo = evento.target.closest && evento.target.closest("input[type='date']");
+        if (seAbreSolo(campo)) evento.preventDefault();
+    }, true);
+    document.addEventListener("keydown", evento => {
+        const campo = evento.target;
+        if (!seAbreSolo(campo) || !(evento.key === "Enter" || evento.key === " " || (evento.altKey && evento.key === "ArrowDown"))) return;
+        evento.preventDefault();
+        abrirPropio(campo);
+    }, true);
 
     window.piezas = {
         refNube, persona, esDueno, dispositivo,

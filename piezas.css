@@ -1761,3 +1761,22 @@ html .modalFichaProducto .quienCompraNumero{width:24px;height:24px;border-radius
 html .modalFichaProducto .quienCompraVacio{margin:6px 2px;color:var(--texto-sec);font-size:14px;}
 html .modalFichaProducto .fichaQuienCompra{margin-bottom:60px;}
 html .modalFichaProducto .comoVieneLinea select{width:auto !important;min-width:0 !important;height:34px !important;min-height:0 !important;padding:0 28px 0 10px !important;font-size:14px !important;}
+/* Sin listas ni calendarios de Chrome (2026-11-05): menú de opciones y calendario propios. */
+.menuFlotanteSinIcono{flex:0 0 20px;width:20px;}
+html .menuElegir .menuFlotanteCaja{width:min(280px,calc(100vw - 24px));}
+html .menuElegir .menuFlotanteCaja .menuFlotanteItem{min-height:44px;font-weight:600;}
+html .menuElegir .menuFlotanteCaja .menuFlotanteItem.actual{font-weight:750;}
+html .calendarioPropio .menuFlotanteCaja{width:min(320px,calc(100vw - 24px));overflow:visible;}
+.calPropio{padding:2px 4px 6px;}
+.calCabeza{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 0 8px;}
+.calCabeza strong{font-size:15.5px;color:var(--texto);text-transform:capitalize;}
+html .calPaso{display:grid;place-items:center;width:40px;height:40px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--superficie-2);color:var(--texto);box-shadow:none;}
+html .calPaso[data-paso="-1"] svg{transform:scaleX(-1);}
+html .calPaso:disabled{opacity:.35;}
+.calSemana,.calDias{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;}
+.calSemana span{font-size:12px;font-weight:700;color:var(--texto-sec);padding:4px 0;}
+html .calDia{display:grid;place-items:center;width:100%;aspect-ratio:1;min-height:0;margin:0;padding:0;border:0;border-radius:50%;background:none;box-shadow:none;color:var(--texto);font:inherit;font-size:15px;font-weight:600;}
+html .calDia.hoy{box-shadow:inset 0 0 0 2px var(--acento);}
+html .calDia.elegido{background:var(--acento);color:var(--acento-txt);font-weight:800;}
+html .calDia:disabled{opacity:.3;}
+html .modal.menuFlotante.menuElegir{z-index:10100 !important;}
