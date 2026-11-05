@@ -303,10 +303,14 @@
 
     // La nota del pedido: un renglón que crece al escribir.
     const nota = document.getElementById("obs");
+    // Se mide solo si el texto cambió: medir obliga al celular a acomodar
+    // toda la pantalla, y esto corre en cada + y − de los productos.
+    let notaMedida = null;
     function ajustarNota() {
-        if (!nota || !nota.offsetParent) return;
+        if (!nota || nota.value === notaMedida || !nota.offsetParent) return;
         nota.style.height = "";
         if (nota.scrollHeight > nota.clientHeight + 1) nota.style.height = Math.min(140, nota.scrollHeight) + "px";
+        notaMedida = nota.value;
     }
     if (nota) nota.addEventListener("input", ajustarNota);
 
