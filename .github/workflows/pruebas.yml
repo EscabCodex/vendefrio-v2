@@ -1,0 +1,80 @@
+# VendeFrío - Pruebas automáticas en GitHub (2026-11-05).
+# - Cada subida a "desarrollo": el set rápido (unos minutos), para saber
+#   enseguida si se rompió lo básico.
+# - Pull request a "main" y el botón "Run workflow": todas las pruebas
+#   (tardan ~40 min). Si llega otra subida, la vuelta anterior se corta.
+# El repo es público: GitHub no cobra estos minutos.
+name: Pruebas
+
+on:
+  push:
+    branches: [desarrollo]
+    paths-ignore: ["**.md", "capturas/**", "app-android/**", "prototipo-flutter/**"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["**.md", "capturas/**"]
+  workflow_dispatch:
+    inputs:
+      todas:
+        description: "¿Correr todas las pruebas? (si no, solo el set rápido)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # Set rápido (~6 min): abrir la app, botón atrás, modo simple, reglas
+      # y lista con la nube (emuladores), notas de cambios y monitoreo.
+      RAPIDAS: arranque atras simple reglas lista notasCambios monitoreo
+      TODAS: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.todas) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Los emuladores de Firebase necesitan Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Guardar los emuladores de Firebase entre vueltas
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: emuladores-firebase-15.33.0
+
+      - run: npm ci
+
+      - name: Instalar el navegador de las pruebas
+        run: npx playwright install --with-deps chromium
+
+      - name: Correr las pruebas
+        run: |
+          if [ "$TODAS" = "true" ]; then
+            npm test
+          else
+            archivos=""
+            for nombre in $RAPIDAS; do archivos="$archivos $nombre.prueba.js"; done
+            npx --yes firebase-tools@15.33.0 emulators:exec --only auth,firestore --project demo-vendefrio "playwright test -c pruebas $archivos"
+          fi
+
+      - name: Guardar lo que falló (fotos y pasos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pruebas-que-fallaron
+          path: test-results/
+          retention-days: 7

@@ -2690,7 +2690,19 @@ function limpiarNombrePersona(nombre) {
 // Quién usa este celular, para guardarlo en el pedido: { idPersona, nombre,
 // uid }, o null si todavía no se sabe. idPersona es el id de la ficha del
 // empleado (no cambia con un reingreso) o "dueno".
+// Se calcula una sola vez por vuelta: la lista de Pedidos la pide para cada
+// pedido (con miles de pedidos, leerla cada vez trababa el toque). La copia
+// guardada se olvida apenas termina lo que se está haciendo.
+let personaDeEsteCelularGuardada;
 function personaDeEsteCelular() {
+    if (personaDeEsteCelularGuardada === undefined) {
+        personaDeEsteCelularGuardada = calcularPersonaDeEsteCelular();
+        queueMicrotask(() => { personaDeEsteCelularGuardada = undefined; });
+    }
+    return personaDeEsteCelularGuardada && { ...personaDeEsteCelularGuardada };
+}
+
+function calcularPersonaDeEsteCelular() {
     const yo = window.empleadosVendeFrio?.quienSoy?.();
 
     if (yo && (yo.tipo === "dueno" || yo.tipo === "empleado") && yo.idPersona && yo.uid) {

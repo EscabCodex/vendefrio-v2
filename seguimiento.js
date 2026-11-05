@@ -587,6 +587,8 @@
         boton.addEventListener("click", () => {
             entrarPorLaBarra = true;
             listaElegida = null;
+            // Ya se sabe que va a la lista: así no se dibuja Nuevo pedido.
+            pantalla.dataset.vista = "pedidos";
         }, true);
     });
 
@@ -5181,6 +5183,7 @@
             if (idFichaAbierta) cerrarFicha();
             if (pantalla.classList.contains("oculto")) {
                 entrarPorLaBarra = true;
+                pantalla.dataset.vista = "pedidos";
                 mostrarPantalla("pedido");
             } else {
                 cambiarVista("pedidos");
@@ -5197,6 +5200,7 @@
             if (idFichaAbierta) cerrarFicha();
             if (pantalla.classList.contains("oculto")) {
                 entrarPorLaBarra = true;
+                pantalla.dataset.vista = "pedidos";
                 mostrarPantalla("pedido");
             } else {
                 cambiarVista("pedidos");
@@ -5229,6 +5233,7 @@
 
             if (pantalla.classList.contains("oculto")) {
                 entrarPorLaBarra = true;
+                pantalla.dataset.vista = "pedidos";
                 mostrarPantalla("pedido");
             } else {
                 cambiarVista("pedidos");

@@ -56,8 +56,10 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
         const ayuda = page.locator(pantalla).getByRole("button", { name: "Ayuda de esta pantalla" });
         await expect(chispa).toBeVisible();
         await expect(ayuda).toBeVisible();
-        expect(Math.abs(await centro(chispa) - await centro(flecha(page)))).toBeLessThan(1.5);
-        expect(Math.abs(await centro(ayuda) - await centro(flecha(page)))).toBeLessThan(1.5);
+        // Se mide cuando termina la entrada de la pantalla (mientras se
+        // desliza, los botones todavía se están moviendo).
+        await expect.poll(async () => Math.abs(await centro(chispa) - await centro(flecha(page)))).toBeLessThan(1.5);
+        await expect.poll(async () => Math.abs(await centro(ayuda) - await centro(flecha(page)))).toBeLessThan(1.5);
         await page.locator(pantalla).getByRole("button", { name: "Volver a Inicio" }).click();
         await expect(page.locator("#pantallaMenu")).toBeVisible();
     }
