@@ -114,6 +114,9 @@ test("whatsapp: ronda de pedidos uno por uno y compartir a VendeFrío", async ({
     await expect(page.locator("#waEmpezar")).toHaveText(/Empezar ronda \(2\)/);
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "whatsapp-01-ronda");
+    await expect(page.getByRole("heading", { name: "En construcción" })).toBeVisible();
+    await page.evaluate(() => window.scrollBy(0, document.getElementById("waTituloCompartir").getBoundingClientRect().top - 110));
+    await capturar(page, "whatsapp-01b-en-construccion");
 
     await page.locator("#waEmpezar").click();
     const enviar = page.locator(".waBotonGrande", { hasText: "Enviar a Almacén Don Pepe" });
@@ -193,6 +196,7 @@ test("whatsapp: automático, con la ronda y las respuestas que llegan solas", as
 
     // El dueño lo prende en Más > WhatsApp.
     await abrirWhatsapp(page);
+    await page.getByText("Avanzado", { exact: true }).click();
     await page.getByRole("switch", { name: "Usar WhatsApp automático" }).check();
     await page.getByRole("switch", { name: "Pasar audios a texto" }).check();
     await expect.poll(async () => (await nube.doc(`distribuidoras/${idDistribuidora}/config/whatsapp`).get()).data()).toEqual({

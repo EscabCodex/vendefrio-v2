@@ -2928,3 +2928,7 @@ html[data-tema="oscuro"] .lpPctValor input{background:none !important;}
 .grupoPinRuta{background:none;border:0;}
 .grupoPinRuta span{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--superficie);border:3px solid #9AA4B2;box-shadow:0 1px 3px rgba(0,0,0,.25);font-size:14px;font-weight:800;color:#5B6573;}
 html[data-tema="oscuro"] .grupoPinRuta span{color:var(--texto);}
+.waConstruccion h2{display:flex;align-items:center;gap:6px;}
+.waAvanzado{border-top:1px solid var(--borde,rgba(127,127,127,.25));padding-top:10px;display:grid;gap:10px;}
+.waAvanzado summary{cursor:pointer;font-weight:700;color:var(--texto-sec);}
+.waAvanzado h3{margin:0;font-size:14px;}
