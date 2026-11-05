@@ -1,0 +1,25 @@
+{
+  "appId": "com.vendefrio.app",
+  "appName": "VendeFrío",
+  "webDir": "www",
+  "server": {
+    "url": "https://vendefrio-v2-git-desarrollo-escab-codex.vercel.app/",
+    "errorPath": "sin-conexion.html",
+    "androidScheme": "https"
+  },
+  "appendUserAgent": "VendeFrioApp/1",
+  "backgroundColor": "#EEF3FA",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#0B615F",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}
