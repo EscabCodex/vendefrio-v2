@@ -69,23 +69,37 @@
         return "﻿" + filas(pedidos).map(linea => linea.map(celda).join(";")).join("\r\n") + "\r\n";
     }
 
+    // Cualquier tabla (una lista de filas) como texto CSV (T162).
+    function csvDeFilas(lineas) {
+        return "\ufeff" + lineas.map(linea => linea.map(celda).join(";")).join("\r\n") + "\r\n";
+    }
+
     // Descarga el archivo. nombre: sin extensión.
     function descargar(pedidos, nombre) {
-        const archivo = new Blob([textoCsv(pedidos)], { type: "text/csv;charset=utf-8" });
+        bajarArchivo(textoCsv(pedidos), nombre || "pedidos");
+        if (typeof mostrarToast === "function") {
+            mostrarToast(pedidos.length === 1 ? "Planilla con 1 pedido descargada" : "Planilla con " + pedidos.length + " pedidos descargada");
+        }
+    }
+
+    // Descarga una tabla cualquiera como planilla (T162). nombre: sin extensión.
+    function descargarFilas(lineas, nombre) {
+        bajarArchivo(csvDeFilas(lineas), nombre || "planilla");
+    }
+
+    function bajarArchivo(texto, nombre) {
+        const archivo = new Blob([texto], { type: "text/csv;charset=utf-8" });
         const enlace = document.createElement("a");
         enlace.href = URL.createObjectURL(archivo);
         // Sin tildes: algunos navegadores descartan el nombre si las tiene.
-        enlace.download = String(nombre || "pedidos").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\- ]/g, "") + ".csv";
+        enlace.download = String(nombre).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\- ]/g, "") + ".csv";
         document.body.appendChild(enlace);
         enlace.click();
         setTimeout(() => {
             URL.revokeObjectURL(enlace.href);
             enlace.remove();
         }, 1000);
-        if (typeof mostrarToast === "function") {
-            mostrarToast(pedidos.length === 1 ? "Planilla con 1 pedido descargada" : "Planilla con " + pedidos.length + " pedidos descargada");
-        }
     }
 
-    window.exportarVendeFrio = { textoCsv, descargar };
+    window.exportarVendeFrio = { textoCsv, descargar, csvDeFilas, descargarFilas };
 }());

@@ -9,10 +9,13 @@
 (function () {
     // Botones volver que ya tenía cada pantalla en su encabezado.
     const PROPIOS = [".botonVolverPedidos", "#cerrarCargaPedido", ".configVolver", ".botonVolverPantalla"];
-    // Los que llevan a Inicio no necesitan la casita al lado.
-    const VAN_A_INICIO = ['.volverGenerico[data-volver="menu"]', "#cerrarCargaPedido"];
     const DESDE_MAS = ["pantallaEstadisticas", "pantallaCierre", "pantallaWhatsapp"];
     const DESTINOS = { mas: "Más", menu: "Inicio" };
+    // Encabezados (tanda 1, pedido del dueño, 2026-11-02): las pantallas
+    // principales llevan solo la flecha; las subpantallas (las que se abren
+    // desde otra pantalla) suman la casita para ir directo a Inicio.
+    const SUBPANTALLAS = ["pantallaMapaVentas", "pantallaRecibo", "pantallaPreciosLista", "pantallaTodaLista",
+        "pantallaFolleto", "pantallaProblemas", "pantallaSinSubir", "pantallaHeladera", "pantallaEscanear"];
 
     function preferencia(campo) {
         try {
@@ -27,7 +30,11 @@
         return elemento.getClientRects().length > 0;
     }
 
+    // Casi siempre hay una sola pantalla sin "oculto": esa es, sin medir
+    // nada (medir obliga al celular a acomodar toda la página).
     function pantallaVisible() {
+        const abiertas = document.querySelectorAll('body > section[id^="pantalla"]:not(.oculto)');
+        if (abiertas.length === 1 && !abiertas[0].hidden) return abiertas[0];
         return [...document.querySelectorAll('body > section[id^="pantalla"]')].find(seVe) || null;
     }
 
@@ -59,7 +66,11 @@
             const destino = pantalla.dataset.volverA || (DESDE_MAS.includes(pantalla.id) ? "mas" : "menu");
             const generico = crearBoton("botonVolverPantalla volverGenerico", "flechaIzquierda", DESTINOS[destino] ? "Volver a " + DESTINOS[destino] : "Volver");
             generico.dataset.volver = destino;
-            barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"));
+            // T160: el Asistente, arriba a la derecha de cada pantalla.
+            const asistente = crearBoton("botonAsistentePantalla conNombre", "chispa", "Asistente");
+            asistente.dataset.abrirAsistente = "";
+            asistente.dataset.nombre = "Asistente";
+            barra.append(generico, crearBoton("botonInicioPantalla", "casa", "Ir a Inicio"), asistente);
         }
         // Los que llegan tarde al encabezado (Pedidos agrega su flecha
         // después) también pasan a la barra, antes del genérico.
@@ -90,7 +101,7 @@
         }
         const casita = barra.querySelector(".botonInicioPantalla");
         const propio = [...barra.children].find(boton => {
-            return boton !== generico && boton !== casita && !boton.hidden && !boton.classList.contains("oculto");
+            return boton !== generico && boton !== casita && !boton.matches(".botonAsistentePantalla") && !boton.hidden && !boton.classList.contains("oculto");
         });
         if (generico.hidden !== Boolean(propio)) generico.hidden = Boolean(propio);
         const volver = propio || generico;
@@ -103,13 +114,28 @@
                 ? (document.querySelector("#configDetalle .configSubVolver")?.textContent || "").replace("‹", "").trim()
                 : "";
             const texto = seccion || "Más";
-            if (titulo.textContent !== texto) titulo.textContent = texto;
+            if (titulo.textContent !== texto) {
+                titulo.textContent = texto;
+                // Que el nombre nuevo entre al lado de la flecha (letra más chica).
+                window.piezas?.acomodarCabeceras?.();
+            }
         }
 
-        const vaAInicio = VAN_A_INICIO.some(selector => volver.matches(selector))
-            || (volver.matches(".configVolver") && !enSeccionDeMas());
-        if (casita.hidden !== vaAInicio) casita.hidden = vaAInicio;
-        const botones = vaAInicio ? "1" : "2";
+        const enSeccion = pantalla.id === "pantallaConfiguracion" && enSeccionDeMas();
+        const esSubpantalla = enSeccion || SUBPANTALLAS.includes(pantalla.id) || pantalla.dataset.volverA === "propio";
+        const sinCasita = !esSubpantalla;
+        if (casita.hidden !== sinCasita) casita.hidden = sinCasita;
+        // El Asistente (la chispa) va arriba a la derecha, al lado del "?", en
+        // las pantallas principales (Inicio tiene el suyo); las subpantallas
+        // llevan solo el "?" para que entren la casita y el título.
+        const asistente = barra.querySelector(".botonAsistentePantalla");
+        const conAsistente = !esSubpantalla;
+        if (asistente && asistente.hidden !== !conAsistente) asistente.hidden = !conAsistente;
+        const marca = conAsistente ? "si" : "no";
+        if (pantalla.dataset.conAsistente !== marca) pantalla.dataset.conAsistente = marca;
+        const seccionMarca = enSeccion ? "si" : "no";
+        if (pantalla.dataset.enSeccion !== seccionMarca) pantalla.dataset.enSeccion = seccionMarca;
+        const botones = sinCasita ? "1" : "2";
         if (pantalla.dataset.botonesVolver !== botones) pantalla.dataset.botonesVolver = botones;
 
         // Al bajar, una barrita con el nombre de la pantalla queda detrás de
@@ -163,7 +189,12 @@
     window.addEventListener("scroll", marcarDespegado, { passive: true });
     window.addEventListener("load", pedirActualizar);
     // Pantallas que se abren o cambian por código.
-    new MutationObserver(pedirActualizar).observe(document.body, {
+    // Lo que cambia dentro de un mapa o de la navegación (cuadraditos del
+    // mapa, cada posición del GPS) no cambia de pantalla: se ignora (T141).
+    new MutationObserver(cambios => {
+        if (cambios.every(cambio => cambio.target.closest?.(".leaflet-container, #pantallaNavegacion > *"))) return;
+        pedirActualizar();
+    }).observe(document.body, {
         attributes: true, attributeFilter: ["class", "data-vista"], subtree: true
     });
 

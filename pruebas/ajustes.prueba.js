@@ -2,12 +2,13 @@
 // filas, y los ajustes de Apariencia, Trabajo y Recorrido que cambian algo
 // de verdad. También "Comercios para esta ruta" en Rutas.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
 async function abrirSeccion(page, seccion) {
-    await abrirMas(page);
+    if (seccion === "cuenta") await abrirMas(page);
+    else await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
     await expect(page.locator("#configDetalle")).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -37,11 +38,13 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     const acentoDespues = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--acento").trim());
     expect(acentoDespues).not.toBe(acentoAntes);
 
-    // El tamaño del texto agranda la pantalla de verdad.
-    const altoAntes = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
+    // El tamaño del texto agranda la pantalla de verdad (se mira una fila: el
+    // título de arriba se achica solo para entrar al lado de la flecha).
+    const letraDe = () => detalle.locator(".ajFila").first().evaluate(el => el.getBoundingClientRect().height);
+    const altoAntes = await letraDe();
     await detalle.locator(".ajSegmento label", { hasText: "Muy grande" }).click();
     expect(await raiz(page, "texto")).toBe("enorme");
-    const altoDespues = await page.locator(".configHeader h1").evaluate(el => el.getBoundingClientRect().height);
+    const altoDespues = await letraDe();
     expect(altoDespues).toBeGreaterThan(altoAntes * 1.15);
 
     // El espaciado separa más las filas.
@@ -76,11 +79,13 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
     const nombres = await page.locator("#listaComerciosAdmin .filaTituloComercio > :first-child").allTextContents();
     expect(nombres.slice(0, 3).map(texto => texto.trim())).toEqual(["Almacén Don Pepe", "Bar Aurora", "Kiosco Luna"]);
 
-    // Cómo hacés el recorrido.
+    // Recorrido: vehículo y voz a la vista; lo demás en «Más opciones».
     await abrirSeccion(page, "navegacion");
-    await expect(detalle.getByRole("radio", { name: "Moto" })).toBeChecked();
-    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
+    await expect(detalle.getByRole("radio", { name: "Moto", exact: true })).toBeChecked();
+    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toHaveCount(0);
     await capturar(page, "ajustes-04-recorrido");
+    await detalle.locator(".ajCerrado summary", { hasText: "Más opciones" }).click();
+    await expect(detalle.getByRole("switch", { name: "Seguir mi ubicación" })).toBeChecked();
 
     // Las demás secciones, con su estilo nuevo.
     for (const [seccion, captura] of [["respaldo", "05-respaldo"], ["seguridad", "06-seguridad"], ["empleados", "07-empleados"], ["avisos", "08-avisos"], ["cuenta", "09-cuenta"]]) {
@@ -89,20 +94,18 @@ test("ajustes: secciones de Más con el estilo nuevo y ajustes que andan", async
         await capturar(page, "ajustes-" + captura);
     }
 
-    // Rutas: comercios para esta ruta, con buscador y resumen.
+    // Rutas: «Elegir comercios», con la lupa y la cuenta de elegidos.
     await page.evaluate(() => mostrarPantalla("rutas"));
-    const tarjeta = page.locator(".tarjetaSeleccionRuta");
-    // Desplegable (T51): cerrada muestra el resumen; se abre al tocarla.
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toBeVisible();
-    await expect(page.getByLabel("Buscar comercio para la ruta")).toBeHidden();
-    await tarjeta.locator("summary").click();
-    await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(3);
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("1 elegido");
-    await tarjeta.getByRole("button", { name: "Todos" }).click();
-    await expect(tarjeta.locator(".chipResumenRuta").first()).toContainText("3 elegidos");
-    await page.getByLabel("Buscar comercio para la ruta").fill("luna");
-    await expect(tarjeta.locator(".opcionSeleccionRuta")).toHaveCount(1);
-    await page.getByLabel("Buscar comercio para la ruta").fill("");
-    await tarjeta.scrollIntoViewIfNeeded();
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await expect(elegir.locator(".filaElegirRuta")).toHaveCount(3);
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText("0 elegidos");
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await expect(elegir.locator(".cuantosElegidosRuta")).toHaveText("3 elegidos");
+    await elegir.getByRole("button", { name: "Buscar comercio" }).click();
+    await elegir.getByRole("searchbox").fill("luna");
+    await expect(elegir.locator(".filaElegirRuta")).toHaveCount(1);
+    await elegir.getByRole("searchbox").fill("");
     await capturar(page, "ajustes-10-comercios-para-la-ruta");
 });

@@ -9,11 +9,13 @@
 <meta name="theme-color" content="#0C0F13" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VendeFrío">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<!-- La letra va dentro de la app: sin señal no se espera a Google Fonts (T150). -->
+<link rel="preload" href="vendor/inter/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="vendor/inter/inter.css">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="tema.css">
 <!-- Piezas de las ideas para la 1.0 (Etapa 7). -->
@@ -27,7 +29,7 @@
 <section id="pantallaMenu">
   <header class="dashboardHeader">
     <div class="dashboardHeaderTop">
-      <div class="inicioLogo" aria-hidden="true">VF</div>
+      <div class="inicioLogo" aria-hidden="true" title="Tu cuenta">VF</div>
       <div class="dashboardMarca">
         <p class="inicioDistribuidora"><span id="dashNombreDistribuidora" class="dashNombreDistribuidora">VendeFrío</span><span class="puntoConexion oculto" data-conexion role="img" aria-label="Conexión"></span></p>
         <h1 id="dashSaludo">Hola</h1>
@@ -41,13 +43,26 @@
 
     <section class="resumenHoy" id="resumenHoy" aria-label="Resumen de hoy">
       <p class="resumenHoyFecha" id="dashFechaHoy">Hoy</p>
-      <small id="dashTituloHoy">Vendido hoy</small>
-      <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
-      <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+      <div class="resumenHoyGrandes">
+        <div class="resumenHoyVendido" id="dashHoyVendido">
+          <small id="dashTituloHoy">Vendido hoy</small>
+          <strong class="resumenHoyTotal" id="dashVendidoHoy">$ 0</strong>
+          <span class="resumenHoySub" id="dashResumenHoy">0 pedidos</span>
+        </div>
+        <button type="button" class="resumenHoyDerecha" id="dashDerechaHoy">
+          <small>Productos distintos</small>
+          <strong class="resumenHoyTotal">0</strong>
+          <span class="resumenHoySub">vendidos hoy</span>
+        </button>
+      </div>
+      <button type="button" class="resumenVisitas" id="dashVisitas" aria-label="Comercios visitados esta semana. Ver los visitados">
+        <span class="resumenVisitasFila"><span>Visitados esta semana</span><b><span id="dashVisitasHechas">0</span> <small id="dashVisitasTotal">de 0</small></b></span>
+        <span class="resumenVisitasBarra"><span id="dashVisitasBarra"></span></span>
+      </button>
       <div class="kpisHoy" id="dashKpis"></div>
     </section>
 
-    <h2 class="seccionTitulo">Próxima parada</h2>
+    <h2 class="seccionTitulo" id="tituloProximaParada">Próxima parada</h2>
     <div id="dashProximaParada" class="card cardProximaParada"></div>
 
     <section id="dashVisitarHoy" class="oculto" aria-labelledby="tituloVisitarHoy">
@@ -55,21 +70,30 @@
       <div class="card listaInicio" id="dashListaVisitarHoy"></div>
     </section>
 
-    <div class="bloqueCabecera">
+    <div class="bloqueCabecera" id="cabeceraPedidosHoy">
       <h2 class="seccionTitulo">Pedidos de hoy</h2>
       <button type="button" class="enlaceVerTodos" id="dashVerTodos">Ver todos</button>
     </div>
     <div id="dashPedidosDeHoy" class="card listaInicio" aria-live="polite"></div>
 
-    <h2 class="seccionTitulo">Esta semana</h2>
+    <h2 class="seccionTitulo" id="tituloSemana">Esta semana</h2>
     <div class="card semanaInicio" id="dashSemana">
-      <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
-      <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
+      <div class="semanaVisitados" id="dashSemanaVisitados">
+        <p class="semanaTexto"><strong id="dashVisitadosSemana">0</strong> de <span id="dashTotalComercios">0</span> comercios visitados</p>
+        <div class="barraSemana" role="progressbar" aria-label="Comercios visitados esta semana"><span id="dashBarraSemana"></span></div>
+      </div>
       <div class="miniSemana">
         <button type="button" data-dashboard-accion="pedidosSemana" class="clickeableDashboard"><strong id="dashPedidosSemana">0</strong><small>pedidos</small></button>
         <button type="button" data-dashboard-accion="vendidoSemana" class="clickeableDashboard"><strong id="dashVendidoSemana">$ 0</strong><small id="dashEtiquetaVendidoSemana">vendido</small></button>
         <button type="button" data-dashboard-accion="pendientesSemana" class="clickeableDashboard"><strong id="dashPendientesSemana">0</strong><small>sin visitar</small></button>
       </div>
+    </div>
+
+    <!-- T156: si se apagaron todas las tarjetas en Más > Apariencia. -->
+    <div class="card inicioVacio" id="inicioVacio">
+      <strong>Inicio está vacío</strong>
+      <small>Apagaste todas las tarjetas. Elegí cuáles ver en Más › Apariencia.</small>
+      <button type="button" class="btnAccion principal" id="inicioVacioElegir">Elegir qué ver</button>
     </div>
 
     <section class="card cardRespaldo">
@@ -99,7 +123,7 @@
     <button id="cerrarCargaPedido" class="botonCerrarCarga oculto" type="button" aria-label="Cerrar" title="Volver a Inicio"><i data-ico="cerrarX" data-ico-tam="22"></i></button>
     <div class="logo" data-ico="documento" data-ico-tam="22"></div>
     <div>
-      <h1>Nuevo Pedido</h1>
+      <h1>Nuevo pedido</h1>
       <p>VendeFrío</p>
     </div>
   </header>
@@ -123,10 +147,10 @@
 
     <div id="productos"></div>
 
-    <section class="card observacionesPedido">
-      <label>Observaciones</label>
-      <textarea id="obs" placeholder="Observaciones"></textarea>
-    </section>
+    <label class="notaPedido observacionesPedido" for="obs">
+      <i data-ico="notaLapiz" data-ico-tam="19"></i>
+      <textarea id="obs" rows="1" placeholder="Agregar una nota para este pedido" aria-label="Nota del pedido"></textarea>
+    </label>
   </main>
 
   <footer class="piePedido">
@@ -148,20 +172,28 @@
   </header>
 
   <main class="container">
-    <div class="card filtrosComercios">
-      <input id="buscarComercio" type="text" placeholder="Buscar comercio...">
+    <div class="filtrosComercios">
+      <div id="filtrosEstadoComercios" class="filtrosEtapaPedidos" role="group" aria-label="Filtrar comercios por visitas">
+        <button type="button" class="filtroEtapa activo" data-filtro="todos" aria-pressed="true"><span class="filtroEtapaNombre">Todos</span><span class="filtroEtapaCantidad">0</span></button>
+        <button type="button" class="filtroEtapa" data-filtro="pendientes" aria-pressed="false"><span class="filtroEtapaNombre">Pendientes</span><span class="filtroEtapaCantidad">0</span></button>
+        <button type="button" class="filtroEtapa" data-filtro="visitados" aria-pressed="false"><span class="filtroEtapaNombre">Visitados</span><span class="filtroEtapaCantidad">0</span></button>
+      </div>
 
-      <select id="filtroEstadoComercios" aria-label="Filtrar comercios por visitas">
+      <select id="filtroEstadoComercios" class="oculto" aria-hidden="true" tabindex="-1">
         <option value="todos">Todos los comercios</option>
         <option value="pendientes">Pendientes esta semana</option>
         <option value="visitados">Visitados esta semana</option>
+        <option value="visitadosHoy">Visitados hoy</option>
       </select>
 
-      <p id="resumenComercios" class="resumenComercios" aria-live="polite">
-        Comercios: 0 - Pendientes: 0 - Visitados: 0
-      </p>
+      <input id="buscarComercio" class="buscadorMarcas" type="search" placeholder="Buscar comercio..." aria-label="Buscar comercio">
 
-      <button id="agregarComercio" class="btnAccion agregar">Agregar comercio</button>
+      <p id="resumenComercios" class="oculto" aria-live="polite"></p>
+
+      <div class="filaCantidadComercios">
+        <span id="cantidadComercios">0 comercios</span>
+        <button id="agregarComercio" class="pzBtn agregarComercioBtn" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar comercio</button>
+      </div>
     </div>
 
     <div id="listaComerciosAdmin"></div>
@@ -173,17 +205,17 @@
     <div class="logo" data-ico="paquete" data-ico-tam="22"></div>
     <div>
       <h1>Catálogo</h1>
-      <p>Editar marcas y productos</p>
+      <p>Marcas y productos</p>
     </div>
   </header>
 
   <main class="container">
-    <div class="card">
-      <input id="buscarProducto" type="text" placeholder="Buscar marca o producto">
+    <div class="herramientasMarcas">
+      <input id="buscarProducto" class="buscadorMarcas" type="search" placeholder="Buscar marca o producto" aria-label="Buscar marca o producto">
 
-      <div class="filaBotones">
-        <button id="agregarMarca" class="btnAccion agregar">Agregar marca</button>
-        <button id="agregarProducto" class="btnAccion agregar">Agregar producto</button>
+      <div class="pzBotones">
+        <button id="agregarMarca" class="pzBtn pzBtnSec" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar marca</button>
+        <button id="agregarProducto" class="pzBtn pzBtnPri" type="button"><i data-ico="mas" data-ico-tam="18"></i>Agregar producto</button>
       </div>
     </div>
 
@@ -201,90 +233,60 @@
     </div>
   </header>
 
-  <main class="container">
-    <div class="card tarjetaMapaRuta">
-      <div id="mapaRuta" style="height: 320px; width: 100%; border-radius: 12px; background: var(--gris-claro);"></div>
-
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
-        <button id="btnOptimizarRuta" class="btnAccion agregar" style="flex: 1; justify-content: center;">
-          <i data-ico="rayo" data-ico-tam="14"></i> Optimizar Ruta
-        </button>
-
-        <button id="btnGoogleMaps" class="btnAccion ver" style="flex: 1; justify-content: center;">
-          <i data-ico="auto" data-ico-tam="14"></i> Google Maps
-        </button>
-      </div>
-
-      <div id="listaRutaOrdenada" style="margin-top: 15px; font-size: 14px;"></div>
+  <!-- Rutas (repaso 2026-11-02): el mapa ocupa toda la pantalla. Arriba,
+       el título con Ayuda y Asistente, y cómo y desde dónde se sale. Abajo,
+       «Armar ruta» o, con la ruta armada, sus números, Iniciar, Paradas y ⋯. -->
+  <div class="vistaPreviaRutas">
+    <div id="mapaRuta"></div>
+    <div class="cabezaRutas">
+      <button class="volverRutas" type="button" aria-label="Volver a Más" title="Volver a Más"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <h1>Rutas</h1>
+      <button class="botonAyudaPantalla" type="button" aria-label="Ayuda de esta pantalla" title="¿Qué hago acá?"><span aria-hidden="true">?</span></button>
+      <button class="asistenteRutas" type="button" aria-label="Asistente" title="Asistente" data-abrir-asistente><i data-ico="chispa" data-ico-tam="18"></i></button>
     </div>
-    <details class="card tarjetaSeleccionRuta tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="brujula" data-ico-tam="19"></div>
-        <div>
-          <h2>Comercios para esta ruta</h2>
-          <p id="estadoSeleccionRuta" class="estadoSeleccionRuta" aria-live="polite"></p>
-        </div>
-      </summary>
-      <p class="ayudaDesplegable">Elegí qué paradas querés incluir en la próxima ruta.</p>
-
-      <div class="accionesSeleccionRuta" role="group" aria-label="Elegir comercios">
-        <button id="seleccionarTodosRuta" class="btnAccion secundario" type="button">
-          <i data-ico="check" data-ico-tam="15"></i> Todos
-        </button>
-
-        <button id="seleccionarPendientesRuta" class="btnAccion secundario" type="button">
-          <i data-ico="reloj" data-ico-tam="15"></i> Pendientes
-        </button>
-
-        <button id="limpiarSeleccionRuta" class="btnAccion secundario" type="button">
-          <i data-ico="cerrarX" data-ico-tam="15"></i> Ninguno
-        </button>
+    <div class="chipsRutas">
+      <button type="button" id="pillVehiculoRutas" class="chipRutas" aria-haspopup="menu"><i data-ico="auto" data-ico-tam="17"></i> <span>Auto</span> <i data-ico="chevAbajo" data-ico-tam="15"></i></button>
+      <button type="button" id="pillDesdeRutas" class="chipRutas" aria-haspopup="menu"><span>Desde vos</span> <i data-ico="chevAbajo" data-ico-tam="15"></i></button>
+      <button type="button" id="btnCentrarRutas" class="centrarRutas" aria-label="Ver dónde estoy" title="Ver dónde estoy"><i data-ico="mira" data-ico-tam="22"></i></button>
+    </div>
+    <div class="hojaPlanRutas" role="region" aria-label="Ruta de hoy">
+      <div class="asaPlanRutas" aria-hidden="true"></div>
+      <div class="vaciaPlanRutas">
+        <h2>Ruta de hoy</h2>
+        <p id="textoVaciaRutas">Todavía no armaste la ruta.</p>
+        <button id="btnArmarRuta" class="pzBtn pzBtnPri armarRutas" type="button"><i data-ico="ubicacion" data-ico-tam="20"></i> Armar ruta</button>
       </div>
-
-      <label class="buscadorSeleccionRuta">
-        <i data-ico="buscar" data-ico-tam="17"></i>
-        <input id="buscarSeleccionRuta" type="search" placeholder="Buscar comercio" aria-label="Buscar comercio para la ruta">
-      </label>
-
-      <div id="listaSeleccionRuta" class="listaSeleccionRuta"></div>
-    </details>
-
-    <details class="card tarjetaRutasGuardadas tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="disquete" data-ico-tam="19"></div>
-        <div>
-          <h2>Rutas guardadas</h2>
-          <p id="resumenRutasGuardadas">Guardá esta selección para volver a usarla.</p>
+      <div class="armadaPlanRutas" aria-live="polite">
+        <button id="cierranAntesRutas" class="avisoPlanRutas cierranAntesRutas" type="button" hidden><i data-ico="alarma" data-ico-tam="16"></i><span class="textoAvisoPlan"></span><b>Ordenar</b></button>
+        <button id="faltanDatosRutas" class="avisoPlanRutas faltanDatosRutas" type="button" hidden><i data-ico="info" data-ico-tam="16"></i><span class="textoAvisoPlan"></span><b>Completar</b></button>
+        <div id="numerosPlanRutas" class="numerosPlanRutas"></div>
+        <p id="detallePlanRutas" class="detallePlanRutas"></p>
+        <div class="botonesPlanRutas">
+          <button id="btnNavegarRuta" class="pzBtn pzBtnPri iniciarRutas" type="button"><i data-ico="navegar" data-ico-tam="20"></i> Iniciar</button>
+          <button id="btnParadasRutas" class="pzBtn pzBtnSec" type="button"><i data-ico="lista" data-ico-tam="18"></i> Paradas</button>
+          <button id="btnMasRutas" class="masPlanRutas" type="button" aria-label="Más opciones de la ruta" title="Más opciones"><i data-ico="puntos" data-ico-tam="24"></i></button>
         </div>
-      </summary>
-    </details>
+      </div>
+    </div>
+  </div>
 
-    <details class="card tarjetaUbicacionesRuta tarjetaDesplegable">
-      <summary class="encabezadoTarjetaRuta">
-        <div class="iconoTarjetaRuta" data-ico="ubicacion" data-ico-tam="19"></div>
-        <div>
-          <h2>Ubicaciones de los comercios</h2>
-          <p>Poner un pin a mano o borrar una ubicación.</p>
-        </div>
-      </summary>
-      <p class="notaGpsFicha">Para guardar el GPS parado en la puerta, abrí el comercio en Comercios y tocá «Actualizar con mi GPS».</p>
-
-      <label>Comercio:</label>
-
-      <select id="selectComercioGps" style="width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px;"></select>
-
-      <p id="resumenRuta" class="resumenRuta" aria-live="polite">
-        Paradas con GPS: 0 - Sin GPS: 0 - Total: 0
-      </p>
-
-      <button id="btnGuardarGps" class="btnAccion agregar oculto" style="width: 100%; justify-content: center; margin-bottom: 8px;">
-        <i data-ico="ubicacion" data-ico-tam="14"></i> Guardar mi GPS actual en este comercio
-      </button>
-
-      <button id="btnBorrarGps" class="btnAccion eliminar" style="width: 100%; justify-content: center;">
-        <i data-ico="tacho" data-ico-tam="14"></i> Borrar GPS de este comercio
-      </button>
-    </details>
+  <main class="container panelParadasRutas" aria-label="Paradas">
+    <!-- T138: la lista de paradas del día como línea de tiempo. -->
+    <div class="cabezaPanelParadas">
+      <button id="btnCerrarParadas" class="volverRutas" type="button" aria-label="Volver al mapa" title="Volver al mapa"><i data-ico="flechaIzquierda" data-ico-tam="22"></i></button>
+      <h2>Paradas de hoy</h2>
+    </div>
+    <div id="numerosParadas" class="numerosParadas"></div>
+    <div id="filtrosParadas" class="filtrosEtapaPedidos filtrosParadas" role="group" aria-label="Ver paradas"></div>
+    <input id="buscarParadas" type="search" placeholder="Buscar parada" autocomplete="off">
+    <div class="card tarjetaMapaRuta">
+      <div id="listaRutaOrdenada"></div>
+    </div>
+    <div id="sinUbicacionParadas" class="sinUbicacionParadas"></div>
+    <div class="pieParadas">
+      <button id="btnListoParadas" class="pzBtn pzBtnPri" type="button">Listo, ver mapa</button>
+      <button id="btnMasParadas" class="masPlanRutas" type="button" aria-label="Más opciones de la ruta" title="Más opciones"><i data-ico="puntos" data-ico-tam="24"></i></button>
+    </div>
   </main>
 </section>
 
@@ -293,7 +295,7 @@
     <div class="logo" data-ico="historial" data-ico-tam="22"></div>
     <div>
       <h1>Historial</h1>
-      <p>Pedidos guardados</p>
+      <p>Los pedidos que ya cargaste</p>
     </div>
   </header>
 
@@ -307,9 +309,6 @@
         <option value="semana">Esta semana</option>
       </select>
 
-      <p id="resumenHistorial" class="resumenHistorial" aria-live="polite">
-        Pedidos encontrados: 0 - Unidades: 0
-      </p>
 
       <div id="filtroHistorialActivo" class="filtroHistorialActivo oculto">
         <span id="textoFiltroHistorial"></span>
@@ -319,6 +318,8 @@
         </button>
       </div>
     </div>
+
+    <p id="resumenHistorial" class="resumenHistorial" aria-live="polite">0 pedidos</p>
 
     <div id="contenedorHistorial">
       <div class="card">
@@ -338,7 +339,7 @@
     <span class="nav-icon" aria-hidden="true" data-ico="lista" data-ico-tam="22"></span>
     Pedidos
   </button>
-  <button class="nav-item nav-nuevo" data-accion="nuevoPedido" type="button" aria-label="Nuevo pedido">
+  <button class="nav-item nav-nuevo" data-accion="crear" type="button" aria-label="Crear" aria-haspopup="menu">
     <span class="nav-icon" aria-hidden="true" data-ico="mas" data-ico-tam="26"></span>
   </button>
   <button class="nav-item" data-pantalla="comercios" type="button">
@@ -355,120 +356,54 @@
   </button>
 </nav>
 
-<div id="modalAviso" class="modal oculto">
-  <div class="modalContenido">
-    <h2 id="tituloAviso">Aviso</h2>
-    <p id="mensajeAviso" style="margin: 15px 0; color: #374151;"></p>
-
-    <div class="modalBotones">
-      <button id="cerrarAviso" class="btnModalConfirmar" style="width: 100%;">
-        Entendido
-      </button>
+<!-- Marca y producto: hoja de piezas, con la manija y sin "Cancelar"
+     (se cierra arrastrando, tocando afuera o con el atrás). Las clases
+     pzFondo y pzHoja se ponen solo mientras está abierta. -->
+<div id="modalProducto" class="oculto">
+  <div class="hojaProducto" role="dialog" aria-modal="true" aria-labelledby="modalProductoTitulo">
+    <div class="pzAsa"></div>
+    <h2 id="modalProductoTitulo" class="pzHojaTit">Producto</h2>
+    <p id="modalProductoSub" class="pzHojaSub" hidden></p>
+    <div class="pzHojaCuerpo">
+      <label id="labelMarca" class="pzCampo"><span>Marca</span><select id="productoMarca"></select></label>
+      <label class="pzCampo"><span>Nombre</span><input id="productoNombre" type="text" placeholder="Por ejemplo, Helado 1 kg"></label>
+      <label id="labelPrecio" class="pzCampo"><span>Precio</span><input id="productoPrecio" type="number" inputmode="decimal" placeholder="0"></label>
+      <label id="labelContenido" class="pzCampo"><span>Gramaje o unidades</span><input id="productoContenido" type="text" maxlength="30" placeholder="Por ejemplo, 500 g o 12 unidades"></label>
     </div>
+    <button id="guardarProducto" class="pzBtn pzBtnPri" type="button"><i data-ico="check" data-ico-tam="18"></i>Guardar</button>
+    <button id="archivarDesdeModal" class="pzBtn pzBtnSec oculto" type="button"><i data-ico="archivo" data-ico-tam="18"></i>Archivar producto</button>
   </div>
 </div>
 
-<div id="modal" class="modal oculto">
-  <div class="modalContenido">
-    <h2 id="modalTitulo">Comercio</h2>
-
-    <label>Nombre</label>
-    <input id="modalNombre" type="text">
-
-    <label>Dirección</label>
-    <input id="modalDireccion" type="text" placeholder="Pegá la dirección de Google Maps">
-
-    <label>Enlace de Google Maps (opcional)</label>
-    <input id="modalEnlaceMaps" type="url" placeholder="Pegá el enlace de Google Maps">
-
-    <label>Teléfono</label>
-    <input id="modalTelefono" type="text">
-
-    <div class="modalBotones">
-      <button id="cancelarModal" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="guardarModal" class="btnModalConfirmar">
-        Guardar
-      </button>
+<div id="modalPedido" class="modal modalHoja oculto">
+  <div class="modalContenido" role="dialog" aria-modal="true" aria-labelledby="tituloPedidoGenerado">
+    <!-- T166: "Pedido generado" con el estilo nuevo: el comercio y los
+         productos arriba, el mensaje que se copió en una burbuja y los
+         botones grandes abajo. -->
+    <div class="cabezaPedidoGenerado">
+      <span class="iconoPedidoGenerado" data-ico="check" data-ico-tam="26"></span>
+      <div>
+        <h2 id="tituloPedidoGenerado">Pedido generado</h2>
+        <p><span id="pedidoCliente"></span> · <span id="pedidoCantidad"></span> <span id="pedidoCantidadTexto">productos</span></p>
+      </div>
+      <button type="button" id="editarPedidoGenerado" class="botonRedondoFicha botonEditarGenerado" aria-label="Volver a editar" title="Editar el pedido"><i data-ico="lapiz" data-ico-tam="20"></i></button>
+      <button type="button" class="botonRedondoFicha cerrarPedidoGenerado" aria-label="Cerrar"><i data-ico="cerrarX" data-ico-tam="22"></i></button>
     </div>
-  </div>
-</div>
 
-<div id="modalConfirmacion" class="modal oculto">
-  <div class="modalContenido">
-    <h2 id="tituloConfirmacion">Confirmar</h2>
-
-    <p id="mensajeConfirmacion">
-      ¿Estás seguro de realizar esta acción?
-    </p>
-
-    <div class="modalBotones">
-      <button id="cancelarConfirmacion" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="aceptarConfirmacion" class="btnModalPeligro">
-        Aceptar
-      </button>
-    </div>
-  </div>
-</div>
-
-<div id="modalProducto" class="modal oculto">
-  <div class="modalContenido">
-    <h2 id="modalProductoTitulo">Producto</h2>
-
-    <label id="labelMarca">Marca</label>
-    <select id="productoMarca"></select>
-
-    <label>Nombre</label>
-    <input id="productoNombre" type="text" placeholder="Nombre">
-
-    <label id="labelPrecio">Precio</label>
-    <input id="productoPrecio" type="number" placeholder="0">
-
-    <div class="modalBotones">
-      <button id="cancelarProducto" class="btnModalCancelar">
-        Cancelar
-      </button>
-
-      <button id="guardarProducto" class="btnModalConfirmar">
-        Guardar
-      </button>
-    </div>
-  </div>
-</div>
-
-<div id="modalPedido" class="modal oculto">
-  <div class="modalContenido">
-    <h2>Pedido generado</h2>
-
-    <p>
-      <strong>Cliente:</strong>
-      <span id="pedidoCliente"></span>
-    </p>
-
-    <p>
-      <strong>Productos:</strong>
-      <span id="pedidoCantidad"></span>
-    </p>
-
+    <p class="etiquetaPedidoGenerado"><i data-ico="copiar" data-ico-tam="14"></i> Mensaje copiado</p>
     <div id="pedidoDetalle" class="detallePedido"></div>
 
-    <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
-    <button id="imprimirPedidoGenerado" class="btnAccion secundario botonImprimirGenerado oculto" type="button">
-      Imprimir ticket
-    </button>
-
-    <div class="modalBotones">
-      <button id="whatsappPedido" class="btnModalWhatsapp">
-        Enviar por WhatsApp
+    <!-- Acciones: WhatsApp, copiar e imprimir (siempre). Editar va arriba, con el lápiz. -->
+    <div class="modalBotones accionesPedidoGenerado">
+      <button id="whatsappPedido" class="btnModalWhatsapp" type="button" aria-label="Enviar por WhatsApp">
+        <i data-ico="whatsapp" data-ico-tam="20"></i><span>WhatsApp</span>
       </button>
-
-      <button id="copiarPedido" class="btnModalSecundario">
-        Copiar nuevamente
+      <button id="copiarPedido" class="btnModalSecundario" type="button" aria-label="Copiar nuevamente">
+        <i data-ico="copiar" data-ico-tam="20"></i><span>Copiar</span>
+      </button>
+      <!-- Imprimir ticket (T28b): solo en la nube y con Web Bluetooth. -->
+      <button id="imprimirPedidoGenerado" class="btnModalSecundario botonImprimirGenerado" type="button" aria-label="Imprimir ticket">
+        <i data-ico="impresora" data-ico-tam="20"></i><span>Imprimir</span>
       </button>
     </div>
   </div>
@@ -496,6 +431,7 @@
 <script src="menu.js"></script>
 <script src="pedidos.js"></script>
 <script src="comerciosAdmin.js"></script>
+<script src="datosComercio.js"></script>
 <script src="productosAdmin.js"></script>
 <script src="historial.js"></script>
 <!-- Imprimir ticket (T28b): antes de seguimiento.js, que muestra el botón. -->
@@ -504,6 +440,7 @@
 <!-- Pedidos y seguimiento (T21): después de pedidos.js y historial.js. -->
 <script src="seguimiento.js"></script>
 <!-- Avisos en la app (T23): después de nube.js, empleados.js y seguimiento.js. -->
+<script src="appAndroid.js"></script>
 <script src="avisos.js"></script>
 <!-- Notificaciones con la app cerrada (T29): después de avisos.js. -->
 <script src="notificaciones.js"></script>
@@ -516,15 +453,18 @@
 <!-- Pedidos por WhatsApp (T55 a T59): después de voz.js y pedidos.js. -->
 <script src="whatsapp.js"></script>
 <!-- Ideas para la 1.0 (Etapa 7): después de todo lo demás, antes de volver.js. -->
+<script src="notasDeCambios.js"></script>
 <script src="confianza.js"></script>
 <script src="extras.js"></script>
 <script src="visitas.js"></script>
 <script src="ofertas.js"></script>
 <script src="sugerencias.js"></script>
+<script src="elegirComercio.js"></script>
 <script src="pruebaEntrega.js"></script>
 <script src="devoluciones.js"></script>
 <script src="yaLlego.js"></script>
 <script src="repartidores.js"></script>
+<script src="equipoRuta.js"></script>
 <script src="saldos.js"></script>
 <script src="gastos.js"></script>
 <script src="cobrarQr.js"></script>
@@ -541,12 +481,17 @@
 <script src="preguntale.js"></script>
 <script src="heladeras.js"></script>
 <script src="nuevoPedido.js"></script>
+<!-- Repaso de Catálogo: el pedido en hoja y la barrita del pedido a medio hacer. -->
+<script src="pedidoEnHoja.js"></script>
 <script src="tieneQuiere.js"></script>
 <script src="queHacer.js"></script>
 <script src="ayuda.js"></script>
 <script src="asistente.js"></script>
 <script src="ayudaPantallas.js"></script>
+<script src="tutorial.js"></script>
 <script src="volver.js"></script>
+<script src="lugar.js"></script>
+<script src="monitoreo.js" defer></script>
 
 <script>
   // Hidrata todos los placeholders de íconos (data-ico) presentes en el HTML estático.
@@ -584,6 +529,24 @@
       document.documentElement.dataset.temaPreferido = preferencia;
       document.documentElement.dataset.texto = d.texto || "normal";
       document.documentElement.dataset.densidad = d.densidad || "compacto";
+      // T156 y T158: color, tonos, formas, íconos, fondo y tarjetas de Inicio
+      // (los mismos valores de fábrica que configuracion.js).
+      const raiz = document.documentElement.dataset;
+      raiz.acento = d.acento || "original";
+      raiz.tonoDia = d.tonoDia || "hielo";
+      raiz.tonoNoche = d.tonoNoche || "grafito";
+      raiz.forma = d.formaBotones || "redondos";
+      raiz.tarjetas = d.tarjetas || "suaves";
+      raiz.iconos = d.iconos || "normales";
+      raiz.fondoInicio = d.fondoInicio || "liso";
+      const tarjetas = { inicioVerAvisos: "avisos", inicioVerResumen: "resumen", inicioVerQueHacer: "queHacer", inicioVerProxima: "proxima",
+        inicioVerSuelenPedir: "suelenPedir", inicioVerPedidosHoy: "pedidosHoy", inicioVerSemana: "semana" };
+      raiz.inicioSin = Object.keys(tarjetas)
+        // Arrancan apagadas: "Suelen pedir los…", "¿Qué querés hacer?" y "Esta semana" (T178).
+        .filter(campo => ["inicioVerSuelenPedir", "inicioVerQueHacer", "inicioVerSemana"].includes(campo) ? d[campo] !== true : d[campo] === false)
+        .map(campo => tarjetas[campo]).join(" ");
+      const propias = d.acento === "propio" && d.acentoPropioVars && d.acentoPropioVars[temaVisual];
+      if (propias) Object.keys(propias).forEach(nombre => document.documentElement.style.setProperty(nombre, propias[nombre]));
     } catch (e) {}
   })();
 </script>

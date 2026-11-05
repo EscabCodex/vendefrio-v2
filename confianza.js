@@ -17,12 +17,24 @@
     // hay una versión nueva. Esta pantalla sigue con el código viejo hasta
     // que se recarga: el aviso ofrece hacerlo en un toque.
     let versionNueva = false;
+    let cambiosNuevos = null;
     let ultimaRevision = 0;
     const MINUTOS_ENTRE_REVISIONES = 30;
+    const notas = () => window.notasDeCambiosVendeFrio;
 
     function avisarVersionNueva() {
         versionNueva = true;
         dibujarAvisos();
+        // Cuántos cambios trae, de las notas de la versión nueva.
+        notas()?.cuantasNuevas?.().then(cantidad => {
+            cambiosNuevos = cantidad;
+            dibujarAvisos();
+        });
+    }
+
+    // Tocar la tarjeta (no el botón) abre las notas de cambios.
+    function verQueCambio() {
+        notas()?.abrir?.({ conActualizar: true, actualizar: actualizarApp });
     }
 
     function actualizarApp() {
@@ -40,6 +52,7 @@
         if (ahora - ultimaRevision < MINUTOS_ENTRE_REVISIONES * 60000) return;
         ultimaRevision = ahora;
         navigator.serviceWorker.getRegistration().then(registro => registro?.update()).catch(() => {});
+        navigator.serviceWorker.controller?.postMessage({ accion: "revisarVersion" });
     }
 
     if ("serviceWorker" in navigator) {
@@ -47,6 +60,10 @@
         navigator.serviceWorker.addEventListener("controllerchange", () => {
             // La primera vez que se instala no hay nada viejo que reemplazar.
             if (habiaControlador) avisarVersionNueva();
+        });
+        // La app abre desde el celular y baja la versión nueva por detrás (T150).
+        navigator.serviceWorker.addEventListener("message", evento => {
+            if (evento.data?.accion === "versionNueva") avisarVersionNueva();
         });
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") revisarVersion();
@@ -92,11 +109,14 @@
             color: "Pri",
             icono: "refrescar",
             titulo: "Hay una versión nueva",
-            texto: "Trae arreglos. Tarda unos segundos.",
+            texto: cambiosNuevos ? "Trae " + (cambiosNuevos === 1 ? "1 cambio." : cambiosNuevos + " cambios.") : "Trae arreglos.",
+            destacado: "Tocá para ver qué cambió",
             boton: "Actualizar",
             alTocar: actualizarApp,
             orden: 0
         } : null, "arriba");
+        const tarjetaVersion = document.getElementById("avisoVersionNueva");
+        if (tarjetaVersion) pz().tocable(tarjetaVersion, verQueCambio, { etiqueta: "Hay una versión nueva. Tocá para ver qué cambió" });
 
         const datos = enLaNube() ? detalle() : null;
         pz().avisoInicio("avisoSinSubir", hayQueAvisarSinSubir(datos) ? {
@@ -109,8 +129,10 @@
             orden: 1
         } : null, "arriba");
 
+        // T178: en la nube el recordatorio queda fijo en Avisos (la campanita
+        // marca 1) en vez de en Inicio. Sin cuenta no hay Avisos: va en Inicio.
         const dias = diasSinRespaldo();
-        pz().avisoInicio("avisoRespaldo", dias === null ? null : {
+        const respaldo = dias === null ? null : {
             color: "Ok",
             icono: "disquete",
             titulo: dias < 0 ? "Todavía no guardaste un respaldo" : "Hace " + dias + " días que no guardás un respaldo",
@@ -119,7 +141,10 @@
             claseBoton: "pzBtnSec",
             alTocar: guardarRespaldo,
             orden: 5
-        }, "abajo");
+        };
+        const enAvisos = enLaNube() && typeof window.avisosVendeFrio?.fijar === "function";
+        if (enAvisos) window.avisosVendeFrio.fijar("respaldo", respaldo && { ...respaldo, texto: "Queda acá hasta que lo guardes" });
+        pz().avisoInicio("avisoRespaldo", enAvisos ? null : respaldo, "abajo");
 
         if (document.getElementById("pantallaSinSubir")?.classList.contains("oculto") === false) dibujarSinSubir();
     }
@@ -147,8 +172,7 @@
             if (preferencia === "nunca") return null;
             if (valido && dias < (DIAS_SEGUN_PREFERENCIA[preferencia] || 7)) return null;
             // Sin datos no hay nada que guardar.
-            const total = contarRegistrosRespaldo(crearDatosRespaldo());
-            if (!total.comercios && !total.productos && !total.pedidos) return null;
+            if (!hayDatosParaRespaldar()) return null;
             return dias;
         } catch (error) {
             return null;

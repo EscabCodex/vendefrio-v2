@@ -23,7 +23,11 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await expect(pasos).toBeHidden();
 
     // "Suelen pedir hoy": pidió los mismos días de la semana, hace 1 y 2
-    // semanas, y hoy todavía no.
+    // semanas, y hoy todavía no. Arranca apagada (T156): se prende en
+    // Más > Apariencia > Qué se ve en Inicio.
+    await abrirConfiguracionEn(page, "apariencia");
+    await page.getByRole("switch", { name: "Suelen pedir los…" }).check();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await page.evaluate(() => {
         agregarComercio({ nombre: "Kiosco Luna", direccion: "Sarmiento 20" });
         agregarComercio({ nombre: "Super Norte", direccion: "Mitre 900" });
@@ -55,12 +59,12 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await expect(page.locator("#cliente")).toHaveValue("Kiosco Luna");
 
     // Planilla del período desde Estadísticas.
-    await page.evaluate(() => window.abrirEstadisticas());
+    await page.evaluate(() => window.abrirEstadisticas("anio"));
     const [descarga] = await Promise.all([
         page.waitForEvent("download"),
         page.getByRole("button", { name: "Descargar planilla del período" }).click()
     ]);
-    expect(descarga.suggestedFilename()).toMatch(/^VendeFrio pedidos todos .*\.csv$/);
+    expect(descarga.suggestedFilename()).toMatch(/^VendeFrio pedidos del ano .*\.csv$/);
     const texto = fs.readFileSync(await descarga.path(), "utf8");
     const lineas = texto.replace(/^﻿/, "").trim().split("\r\n");
     expect(lineas[0]).toBe("Fecha;Hora;N° de pedido;Comercio;Estado;Productos;Unidades;Total;Cobro;Monto cobrado;Cargado por");
@@ -79,11 +83,9 @@ test("1.0: primeros pasos, suelen pedir hoy, planilla y novedades", async ({ pag
     await novedades.getByRole("button", { name: "Entendido" }).click();
     await expect(novedades).toBeHidden();
 
-    // Después de una actualización se muestran solas, una vez.
+    // Después de una actualización esta ventana vieja ya NO sale sola (avisan
+    // las notas nuevas): así no aparecen dos ventanas a la vez.
     await page.evaluate(() => localStorage.setItem("vendefrio_novedades_vistas", "0.9"));
-    await page.reload();
-    await expect(novedades).toBeVisible();
-    await novedades.getByRole("button", { name: "Entendido" }).click();
     await page.reload();
     await expect(page.locator("#dashNombreDistribuidora")).toHaveText("Distribuidora Prueba");
     await page.waitForTimeout(1800);

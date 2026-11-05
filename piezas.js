@@ -115,6 +115,7 @@
         seccion.classList.remove("oculto");
         document.querySelectorAll(".nav-item").forEach(boton => boton.classList.remove("activo"));
         window.scrollTo(0, 0);
+        pedirAcomodarCabeceras();
     }
 
     function volverDesde(seccion) {
@@ -215,6 +216,53 @@
         return caja;
     }
 
+    // Ventana del medio que se abre ENCIMA de lo que haya abierto (un aviso
+    // o un "¿Seguro?" sobre una hoja) sin cerrarlo: modal() deja una sola
+    // abierta a la vez. Cada botón la cierra, salvo que alTocar devuelva false.
+    function ventanaEncima({ icono = "alerta", color = "aviso", titulo = "", texto = "", botones = [], id = "", alCerrarFuera } = {}) {
+        const fondo = document.createElement("div");
+        fondo.className = "pzFondo pzFondoCentro";
+        const caja = document.createElement("div");
+        caja.className = "pzModal";
+        if (id) caja.id = id;
+        caja.setAttribute("role", "alertdialog");
+        caja.setAttribute("aria-modal", "true");
+        caja.setAttribute("aria-label", titulo);
+        caja.innerHTML = `<div class="pzIconoGrande pzIcono${color[0].toUpperCase() + color.slice(1)}">${ico(icono, 28)}</div>
+            <h3>${esc(titulo)}</h3>${texto ? `<p>${esc(texto)}</p>` : ""}`;
+        let cerrada = false;
+        const cerrarEsta = () => {
+            if (cerrada) return;
+            cerrada = true;
+            fondo.classList.remove("visible");
+            setTimeout(() => fondo.remove(), 200);
+        };
+        const contenedor = botones.length === 2 ? document.createElement("div") : null;
+        if (contenedor) contenedor.className = "pzBotones";
+        botones.forEach(datos => {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "pzBtn " + (datos.clase || "pzBtnPri");
+            boton.innerHTML = (datos.icono ? ico(datos.icono, 18) : "") + esc(datos.texto);
+            if (datos.id) boton.id = datos.id;
+            boton.addEventListener("click", async () => {
+                const seguir = typeof datos.alTocar === "function" ? (await datos.alTocar(caja, boton)) !== false : true;
+                if (seguir) cerrarEsta();
+            });
+            (contenedor || caja).appendChild(boton);
+        });
+        if (contenedor) caja.appendChild(contenedor);
+        fondo.addEventListener("click", evento => {
+            if (evento.target !== fondo) return;
+            if (typeof alCerrarFuera === "function") alCerrarFuera();
+            cerrarEsta();
+        });
+        fondo.appendChild(caja);
+        document.body.appendChild(fondo);
+        requestAnimationFrame(() => fondo.classList.add("visible"));
+        return caja;
+    }
+
     // Pregunta y devuelve una promesa con true (sí) o false (no).
     function preguntar({ icono, color, titulo, texto, si = "Sí", no = "Cancelar", claseSi = "pzBtnPri", html = "" }) {
         return new Promise(resolver => {
@@ -237,6 +285,60 @@
             });
         });
     }
+
+    // ---------- Lo último que se abre queda arriba ----------
+    // Cada hoja o ventana tiene su altura (z-index) en el CSS, y entre dos de
+    // la misma altura ganaba la que se creó después: la de "una o dos copias"
+    // del ticket salía debajo de la ficha del pedido. Ahora la que se abre
+    // sube por encima de las que ya estaban abiertas, en toda la app.
+    const CAPAS = ".modal, .pzFondo, .modalCatalogo, .pzEscanear";
+    const capasAbiertas = new WeakMap();
+
+    function capaAbierta(capa) {
+        return capa.isConnected && !capa.hidden && !capa.classList.contains("oculto");
+    }
+
+    function alturaDe(capa) {
+        return Number(getComputedStyle(capa).zIndex) || 0;
+    }
+
+    function subirCapa(capa) {
+        capa.style.removeProperty("z-index");
+        let encima = 0;
+        for (const otra of document.body.children) {
+            if (otra !== capa && otra.matches(CAPAS) && capaAbierta(otra)) encima = Math.max(encima, alturaDe(otra));
+        }
+        if (encima && encima >= alturaDe(capa)) capa.style.setProperty("z-index", String(encima + 1), "important");
+    }
+
+    function revisarCapa(capa) {
+        const abiertaAhora = capaAbierta(capa);
+        if (abiertaAhora && !capasAbiertas.get(capa)) subirCapa(capa);
+        capasAbiertas.set(capa, abiertaAhora);
+    }
+
+    // Se mira solo la clase de cada ventana (no todo lo de adentro), así no
+    // cuesta nada mientras la app se usa.
+    const vigiaCapas = new MutationObserver(cambios => {
+        new Set(cambios.map(cambio => cambio.target)).forEach(revisarCapa);
+    });
+
+    function vigilarCapa(capa) {
+        if (!capasAbiertas.has(capa)) vigiaCapas.observe(capa, { attributes: true, attributeFilter: ["class", "hidden"] });
+        capasAbiertas.set(capa, false);
+        revisarCapa(capa);
+    }
+
+    new MutationObserver(cambios => {
+        cambios.forEach(cambio => {
+            cambio.addedNodes.forEach(nodo => {
+                if (nodo.nodeType === 1 && nodo.matches(CAPAS)) vigilarCapa(nodo);
+            });
+        });
+    }).observe(document.body, { childList: true });
+    [...document.body.children].forEach(nodo => {
+        if (nodo.matches(CAPAS)) vigilarCapa(nodo);
+    });
 
     // ---------- "Deshacer" ----------
     let deshacerActual = null;
@@ -285,15 +387,18 @@
             aviso.id = id;
         }
         aviso.className = "pzBanner pzBan" + (datos.color || "Pri");
-        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto ? `<small>${esc(datos.texto)}</small>` : ""}</div>` +
+        aviso.innerHTML = `${ico(datos.icono || "info", 22)}<div><strong>${esc(datos.titulo)}</strong>${datos.texto || datos.destacado ? `<small>${esc(datos.texto || "")}${datos.destacado ? `${datos.texto ? " " : ""}<b class="pzDestacado">${esc(datos.destacado)}</b>` : ""}</small>` : ""}</div>` +
             (conBoton ? `<button type="button" class="pzBtn ${datos.claseBoton || "pzBtnPri"}">${esc(datos.boton)}</button>` : ico("chevDerecha", 20));
         const tocar = conBoton ? aviso.querySelector("button") : aviso;
         tocar.onclick = datos.alTocar || null;
         if (datos.etiqueta) tocar.setAttribute("aria-label", datos.etiqueta);
 
+        // "resumen": justo debajo del resumen de hoy (lo que te deben).
         const ancla = lugar === "arriba"
             ? contenedor.firstElementChild
-            : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
+            : lugar === "resumen"
+                ? (document.getElementById("resumenHoy")?.nextElementSibling || null)
+                : (document.getElementById("dashProximaParada")?.nextElementSibling || null);
         const orden = Number(datos.orden) || 0;
         aviso.dataset.orden = String(orden);
         if (aviso.parentElement !== contenedor || aviso.dataset.lugar !== lugar) {
@@ -406,13 +511,584 @@
         return /Mobile/i.test(agente) ? "Celular" : "Computadora";
     }
 
+    // Listas largas (T151): las primeras tarjetas se dibujan enseguida y el
+    // resto de a tandas, sin trabar el celular. Volver a dibujar la lista (o
+    // cortarTandas) frena las tandas que quedaban de antes.
+    // Repasada: lo que está a más de dos pantallas de distancia se dibuja
+    // recién cuando el dedo baja y se acerca. Con mil comercios, dibujarlos
+    // todos ocupaba mucha memoria (y Android cerraba antes la app de fondo).
+    function cortarTandas(contenedor) {
+        if (!contenedor) return;
+        const tanda = contenedor.tandaVendeFrio;
+        if (tanda && tanda.soltar) tanda.soltar();
+        contenedor.tandaVendeFrio = null;
+    }
+
+    function dibujarDeATandas(contenedor, items, dibujarUno, opciones) {
+        // Cada tanda dura como mucho unos milisegundos: así el celular sigue
+        // respondiendo al dedo mientras se completa la lista.
+        const { primeros = 8, milisegundos = 10, alTerminar } = opciones || {};
+        cortarTandas(contenedor);
+        const tanda = {};
+        contenedor.tandaVendeFrio = tanda;
+        let siguiente = 0;
+        let vigia = null;
+        tanda.soltar = () => {
+            if (vigia) vigia.disconnect();
+            vigia = null;
+        };
+        function dibujar(minimo) {
+            const inicio = performance.now();
+            const fragmento = document.createDocumentFragment();
+            while (siguiente < items.length && (siguiente < minimo || performance.now() - inicio < milisegundos)) {
+                const elemento = dibujarUno(items[siguiente], siguiente);
+                if (elemento) fragmento.appendChild(elemento);
+                siguiente++;
+            }
+            contenedor.appendChild(fragmento);
+            if (siguiente < items.length) {
+                // El vigía avisa enseguida si el final ya está cerca, sin
+                // obligar al celular a medir la pantalla en este momento.
+                esperarAlDedo();
+                return;
+            }
+            contenedor.tandaVendeFrio = null;
+            if (alTerminar) alTerminar();
+        }
+        // Se mira la última tarjeta: cuando el dedo la acerca, sigue la lista.
+        function esperarAlDedo() {
+            const ultima = contenedor.lastElementChild;
+            if (!ultima || typeof IntersectionObserver !== "function") {
+                setTimeout(seguir, 0);
+                return;
+            }
+            vigia = new IntersectionObserver(entradas => {
+                if (!entradas.some(entrada => entrada.isIntersecting)) return;
+                tanda.soltar();
+                seguir();
+            }, { rootMargin: "0px 0px " + Math.round(window.innerHeight * 2) + "px 0px" });
+            vigia.observe(ultima);
+        }
+        function seguir() {
+            if (contenedor.tandaVendeFrio !== tanda) return;
+            // Si se fue de la pantalla, se corta: al volver se dibuja de nuevo.
+            if (!contenedor.isConnected || contenedor.closest(".oculto")) {
+                cortarTandas(contenedor);
+                return;
+            }
+            dibujar(0);
+        }
+        dibujar(primeros);
+    }
+
+    // Repasada: lo que parece solo información (un número, una tarjeta) se
+    // puede tocar y lleva a su detalle. Se ve igual que antes; al apretarlo
+    // se achica apenas, como los botones. Un solo oyente para toda la app.
+    // Si adentro tiene su propio botón o enlace, ese sigue haciendo lo suyo.
+    const alTocarDe = new WeakMap();
+    function tocable(elemento, alTocar, { etiqueta = "", rol = true } = {}) {
+        if (!elemento || typeof alTocar !== "function") return elemento;
+        alTocarDe.set(elemento, alTocar);
+        elemento.classList.add("pzTocable");
+        if (rol && elemento.tagName !== "BUTTON" && elemento.tagName !== "A") {
+            elemento.setAttribute("role", "button");
+            elemento.tabIndex = 0;
+        }
+        if (etiqueta) elemento.setAttribute("aria-label", etiqueta);
+        return elemento;
+    }
+    function tocadoEn(evento) {
+        const elemento = evento.target.closest?.(".pzTocable");
+        if (!elemento || !alTocarDe.has(elemento)) return null;
+        const propio = evento.target.closest("button, a[href], input, select, textarea, label, [role='button']");
+        return propio && propio !== elemento && elemento.contains(propio) ? null : elemento;
+    }
+    document.addEventListener("click", evento => {
+        const elemento = tocadoEn(evento);
+        if (elemento) alTocarDe.get(elemento)(evento);
+    });
+    document.addEventListener("keydown", evento => {
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        const elemento = evento.target;
+        if (!alTocarDe.has(elemento) || elemento.tagName === "BUTTON" || elemento.tagName === "A") return;
+        evento.preventDefault();
+        alTocarDe.get(elemento)(evento);
+    });
+
+    // Cabeceras en un celular chico (T152): el nombre de la pantalla va
+    // siempre al lado de la flechita (pedido del dueño, 2026-10-28). Si no
+    // entra, se le achica la letra de a poco, sin empujar los botones fuera
+    // de la pantalla. Se mira después de cada toque (que es lo que abre las
+    // pantallas) y al girar el celular.
+    const LETRAS_TITULO = [22, 20, 18];
+    function acomodarCabeceras() {
+        document.querySelectorAll("body > section:not(.oculto) > header").forEach(cabecera => {
+            const titulo = cabecera.querySelector(":scope > div > h1");
+            if (!titulo) return;
+            if (titulo.style.fontSize) titulo.style.fontSize = "";
+            titulo.classList.remove("tituloDosRenglones");
+            for (const letra of LETRAS_TITULO) {
+                if (titulo.scrollWidth <= titulo.clientWidth + 1) return;
+                titulo.style.fontSize = letra + "px";
+            }
+            // Ni así entra (flecha y casita juntas): en dos renglones chicos.
+            if (titulo.scrollWidth > titulo.clientWidth + 1) titulo.classList.add("tituloDosRenglones");
+        });
+    }
+    let cabecerasPendientes = false;
+    function pedirAcomodarCabeceras() {
+        if (cabecerasPendientes) return;
+        cabecerasPendientes = true;
+        requestAnimationFrame(() => setTimeout(() => {
+            cabecerasPendientes = false;
+            acomodarCabeceras();
+        }, 0));
+    }
+    document.addEventListener("click", pedirAcomodarCabeceras, true);
+    window.addEventListener("resize", pedirAcomodarCabeceras);
+    window.addEventListener("load", pedirAcomodarCabeceras);
+
+    // Que mantener apretado no abra el menú de Chrome (abrir imagen, copiar
+    // link) ni se puedan arrastrar las imágenes. Donde se escribe o en lo que
+    // tiene .copiable el menú sigue, para poder copiar y pegar.
+    function dejaMenu(elemento) {
+        return !!(elemento && elemento.closest && elemento.closest("input, textarea, select, [contenteditable], .copiable"));
+    }
+    document.addEventListener("contextmenu", evento => {
+        if (!dejaMenu(evento.target)) evento.preventDefault();
+    });
+    document.addEventListener("dragstart", evento => {
+        if (evento.target && evento.target.closest && evento.target.closest("img, svg, a")) evento.preventDefault();
+    });
+
+    // Deslizar hacia abajo para cerrar (T169): cualquier hoja que sube desde
+    // abajo (las de piezas y las ventanas .modalHoja) se cierra arrastrándola
+    // hacia abajo, como en las apps del celular. Solo mueve la hoja con
+    // transform, para que ande fluido en celulares baratos.
+    const HOJAS = ".pzHoja, .modal.modalHoja > .modalContenido, .modal > .modalContenido.fichaPedido, .modalFichaComercio > .modalContenido, .ventanaNotas > .notasCaja, #pantallaPedido.pedidoEnHoja";
+    let arrastre = null;
+    const BOTONES_CERRAR = /^(Cancelar|Cerrar|Volver|Ahora no|Entendido)$/;
+
+    function subioAlgo(desde, hasta) {
+        for (let elemento = desde; elemento && elemento !== hasta.parentElement; elemento = elemento.parentElement) {
+            if (elemento.scrollTop > 0) return true;
+        }
+        return false;
+    }
+
+    function fondoDe(hoja) {
+        // Una bandeja suelta (el pedido en la navegación, T179) dice cuál es su fondo.
+        return hoja.closest(".pzFondo") || hoja.closest(".modal") || (hoja.dataset.fondo ? document.getElementById(hoja.dataset.fondo) : null);
+    }
+
+    function sigueAbierta(fondo) {
+        if (!fondo.isConnected || fondo.classList.contains("oculto")) return false;
+        return !fondo.classList.contains("pzFondo") || fondo.classList.contains("visible");
+    }
+
+    function soltarHoja(hoja, hasta) {
+        hoja.classList.remove("hojaArrastrando");
+        hoja.classList.add("hojaSoltando");
+        hoja.style.transform = hasta || "";
+        setTimeout(() => hoja.classList.remove("hojaSoltando"), 220);
+    }
+
+    function cerrarArrastrada(hoja) {
+        const fondo = fondoDe(hoja);
+        soltarHoja(hoja, "translateY(100%)");
+        setTimeout(() => {
+            // Igual que tocar afuera: cada ventana decide qué pasa al cerrarla.
+            if (fondo) fondo.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            setTimeout(() => {
+                // Si tocar afuera no la cierra, se usa su botón de cancelar.
+                if (fondo && sigueAbierta(fondo)) {
+                    const cancelar = Array.from(hoja.querySelectorAll("button"))
+                        .find(boton => boton.offsetParent && (BOTONES_CERRAR.test(boton.textContent.trim()) ||
+                            /^Cerrar/.test(boton.getAttribute("aria-label") || "")));
+                    if (cancelar) cancelar.click();
+                }
+                setTimeout(() => {
+                    if (fondo && sigueAbierta(fondo)) soltarHoja(hoja, "");
+                    else hoja.style.transform = "";
+                }, 60);
+            }, 60);
+        }, 160);
+    }
+
+    document.addEventListener("touchstart", evento => {
+        arrastre = null;
+        if (evento.touches.length !== 1 || !evento.target.closest) return;
+        const hoja = evento.target.closest(HOJAS);
+        if (!hoja || evento.target.closest("input, textarea, select, [contenteditable], .sinArrastre")) return;
+        if (subioAlgo(evento.target, hoja)) return;
+        const toque = evento.touches[0];
+        arrastre = { hoja, x: toque.clientX, y: toque.clientY, hora: Date.now(), activo: false, dy: 0, cuadro: 0 };
+    }, { passive: true });
+
+    document.addEventListener("touchmove", evento => {
+        if (!arrastre) return;
+        const toque = evento.touches[0];
+        const dx = toque.clientX - arrastre.x;
+        const dy = toque.clientY - arrastre.y;
+        if (!arrastre.activo) {
+            if (dy < -6 || Math.abs(dx) > Math.abs(dy) + 4) { arrastre = null; return; }
+            if (dy < 10 || arrastre.hoja.scrollTop > 0) return;
+            arrastre.activo = true;
+            arrastre.hoja.classList.add("hojaArrastrando");
+        }
+        arrastre.dy = Math.max(0, dy - 10);
+        if (!arrastre.cuadro) {
+            const actual = arrastre;
+            actual.cuadro = requestAnimationFrame(() => {
+                actual.cuadro = 0;
+                actual.hoja.style.transform = "translateY(" + actual.dy + "px)";
+            });
+        }
+    }, { passive: true });
+
+    function terminarArrastre() {
+        const actual = arrastre;
+        arrastre = null;
+        if (!actual || !actual.activo) return;
+        if (actual.cuadro) cancelAnimationFrame(actual.cuadro);
+        const rapido = actual.dy / Math.max(1, Date.now() - actual.hora);
+        if (actual.dy > Math.max(90, actual.hoja.offsetHeight * 0.25) || (rapido > 0.6 && actual.dy > 40)) {
+            cerrarArrastrada(actual.hoja);
+        } else {
+            soltarHoja(actual.hoja, "");
+        }
+    }
+    document.addEventListener("touchend", terminarArrastre, { passive: true });
+    document.addEventListener("touchcancel", terminarArrastre, { passive: true });
+
+    // ---------- Menú ⋯ flotante (repaso de Comercios y Catálogo) ----------
+    // menu(boton, { titulo, sub, items: [{ icono, color, texto, principal, peligro,
+    // alTocar }, "-"] }): se abre redondeado junto al botón, con el fondo
+    // apenas difuminado; el ⋯ pasa a ser una X. Se cierra tocando afuera, la
+    // X, una opción o el atrás del celular (es una .modal).
+    function menu(ancla, { titulo = "", sub = "", items = [], clase = "" } = {}) {
+        const fondo = document.createElement("div");
+        fondo.className = "modal menuFlotante" + (clase ? " " + clase : "");
+        const caja = document.createElement("div");
+        caja.className = "menuFlotanteCaja";
+        caja.setAttribute("role", "menu");
+        caja.setAttribute("aria-label", titulo || "Opciones");
+        caja.innerHTML = titulo ? `<div class="menuFlotanteCabeza"><strong>${esc(titulo)}</strong>${sub ? `<small>${esc(sub)}</small>` : ""}</div>` : "";
+        const cerrarMenu = () => {
+            fondo.remove();
+            document.removeEventListener("keydown", alTecla);
+        };
+        const alTecla = evento => { if (evento.key === "Escape") cerrarMenu(); };
+        items.forEach(item => {
+            if (item === "-") {
+                caja.appendChild(document.createElement("hr"));
+                return;
+            }
+            if (!item) return;
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "menuFlotanteItem" + (item.principal ? " principal" : "") + (item.peligro ? " peligro" : "") + (item.actual ? " actual" : "");
+            if (item.tono) boton.dataset.tono = item.tono;
+            // color: el del ícono, para menús con íconos de colores (regla 8).
+            if (item.color) {
+                boton.classList.add("conColor");
+                boton.style.setProperty("--ico-menu", item.color);
+            }
+            if (item.actual) boton.setAttribute("aria-current", "true");
+            if (item.desactivado) boton.disabled = true;
+            // Cantidad (repaso de Pedidos): el globito de la derecha, como en los filtros.
+            const cantidad = item.cantidad === undefined || item.cantidad === null ? "" : `<span class="filtroEtapaCantidad menuFlotanteCantidad">${esc(item.cantidad)}</span>`;
+            // icono "" deja el lugar vacío (las opciones de una lista, donde
+            // solo la elegida lleva el tilde).
+            const icono = item.icono === "" ? '<span class="menuFlotanteSinIcono"></span>' : ico(item.icono || "chevDerecha", 20);
+            boton.innerHTML = icono + `<span class="menuFlotanteTexto">${esc(item.texto)}</span>` + cantidad;
+            // Con cantidad, se lee "En preparación (2)" (como los botones de antes).
+            if (cantidad) boton.setAttribute("aria-label", item.texto + " (" + item.cantidad + ")");
+            boton.addEventListener("click", () => {
+                cerrarMenu();
+                if (typeof item.alTocar === "function") item.alTocar();
+            });
+            caja.appendChild(boton);
+        });
+        const equis = document.createElement("button");
+        equis.type = "button";
+        equis.className = "menuFlotanteX";
+        equis.setAttribute("aria-label", "Cerrar las opciones");
+        equis.innerHTML = ico("cerrarX", 22);
+        equis.addEventListener("click", cerrarMenu);
+        fondo.append(caja, equis);
+        fondo.addEventListener("click", evento => { if (evento.target === fondo) cerrarMenu(); });
+        document.body.appendChild(fondo);
+        document.addEventListener("keydown", alTecla);
+        // Junto al botón: abajo si entra, si no arriba.
+        const r = ancla.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const ancho = caja.offsetWidth;
+        const lado = Math.max(12, Math.min(window.innerWidth - ancho - 12, r.right - ancho));
+        const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
+        caja.style.left = lado + "px";
+        caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+        equis.style.left = (r.left + r.width / 2 - 22) + "px";
+        equis.style.top = (r.top + r.height / 2 - 22) + "px";
+        return caja;
+    }
+
+    // ---------- Lupa (repaso de Pedidos, 2026-11-01) ----------
+    // lupa(input, { etiqueta }): la lupa es el primer botón de la fila de
+    // filtros, fija a la izquierda. Al tocarla, el buscador se abre ahí mismo
+    // como una pastilla con una X que lo limpia y lo cierra. Usa el mismo
+    // input de antes (sus eventos siguen igual). poner(fila) la pone primera
+    // en la fila: se llama cada vez que la fila se vuelve a dibujar.
+    function lupa(input, { etiqueta = "Buscar" } = {}) {
+        const caja = document.createElement("span");
+        caja.className = "pzLupa";
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "pzLupaBoton";
+        boton.setAttribute("aria-label", etiqueta);
+        boton.innerHTML = ico("buscar", 20);
+        const pastilla = document.createElement("label");
+        pastilla.className = "pzLupaPastilla";
+        pastilla.innerHTML = ico("buscar", 18);
+        const equis = document.createElement("button");
+        equis.type = "button";
+        equis.className = "pzLupaX";
+        equis.setAttribute("aria-label", "Cerrar el buscador");
+        equis.innerHTML = ico("cerrarX", 16);
+        input.classList.add("pzLupaInput");
+        if (!input.getAttribute("aria-label")) input.setAttribute("aria-label", etiqueta);
+        pastilla.append(input, equis);
+        caja.append(boton, pastilla);
+
+        const abierta = () => caja.classList.contains("abierta");
+        function abrir() {
+            caja.classList.add("abierta");
+            input.focus({ preventScroll: true });
+            const fila = caja.parentElement;
+            if (fila) fila.scrollLeft = 0;
+        }
+        function cerrar() {
+            const habia = input.value !== "";
+            caja.classList.remove("abierta");
+            if (habia) {
+                input.value = "";
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+        }
+        boton.addEventListener("click", abrir);
+        equis.addEventListener("click", cerrar);
+        input.addEventListener("keydown", evento => {
+            if (evento.key === "Escape" && abierta()) {
+                evento.stopPropagation();
+                cerrar();
+            }
+        });
+        if (input.value) caja.classList.add("abierta");
+
+        return {
+            caja,
+            abrir,
+            cerrar,
+            abierta,
+            poner(fila) {
+                if (!fila || fila.firstElementChild === caja) return;
+                const conFoco = document.activeElement === input;
+                fila.prepend(caja);
+                if (conFoco) input.focus({ preventScroll: true });
+            }
+        };
+    }
+
+    // ---------- Sin listas ni calendarios de Chrome (pedido del dueño, 2026-11-05) ----------
+    // Los <select> y los <input type="date"> siguen en la página (guardan el
+    // valor y avisan con input y change, como siempre), pero al tocarlos no
+    // se abre la ventana de Chrome: se abre el menú propio de la app (las
+    // opciones) o un calendario propio, con el mismo estilo que el resto.
+    function seAbreSolo(elemento) {
+        if (!elemento || elemento.disabled || elemento.readOnly) return false;
+        if (elemento.tagName === "SELECT") return !elemento.multiple && !(elemento.size > 1) && elemento.options.length > 0;
+        return elemento.tagName === "INPUT" && (elemento.type === "date" || elemento.type === "color");
+    }
+    function avisarCambio(elemento) {
+        elemento.dispatchEvent(new Event("input", { bubbles: true }));
+        elemento.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    function elegirOpcion(select) {
+        // Listas que agregan sus números a medida que se usan (la cantidad
+        // de Nuevo pedido): al abrirlas se completan del 0 al tope.
+        const hasta = Number(select.dataset.hasta);
+        if (Number.isInteger(hasta) && hasta > 0 && hasta <= 500) {
+            const hay = new Set([...select.options].map(opcion => opcion.value));
+            const elegido = select.value;
+            for (let numero = 0; numero <= hasta; numero++) {
+                if (!hay.has(String(numero))) select.add(new Option(String(numero), String(numero)));
+            }
+            [...select.options].sort((a, b) => Number(a.value) - Number(b.value)).forEach(opcion => select.appendChild(opcion));
+            select.value = elegido;
+        }
+        const caja = menu(select, {
+            clase: "menuElegir",
+            items: [...select.options].filter(opcion => !opcion.hidden).map(opcion => ({
+                texto: opcion.textContent.trim() || "—",
+                icono: opcion.selected ? "check" : "",
+                actual: opcion.selected,
+                desactivado: opcion.disabled,
+                alTocar: () => {
+                    if (select.value === opcion.value && opcion.selected) return;
+                    select.value = opcion.value;
+                    avisarCambio(select);
+                }
+            }))
+        });
+        const elegida = caja.querySelector(".menuFlotanteItem.actual");
+        if (elegida) caja.scrollTop = Math.max(0, elegida.offsetTop - caja.clientHeight / 2 + elegida.offsetHeight / 2);
+    }
+
+    const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const isoDe = fecha => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+    function fechaDe(iso) {
+        const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+        return partes ? new Date(+partes[1], +partes[2] - 1, +partes[3]) : null;
+    }
+    function elegirFecha(input) {
+        const hoy = new Date();
+        const elegida = fechaDe(input.value);
+        const minimo = input.min || "";
+        const maximo = input.max || "";
+        let mes = new Date((elegida || hoy).getFullYear(), (elegida || hoy).getMonth(), 1);
+        const caja = menu(input, { clase: "menuElegir calendarioPropio", titulo: "Elegí el día", items: [] });
+        const cuerpo = document.createElement("div");
+        cuerpo.className = "calPropio";
+        caja.appendChild(cuerpo);
+        function dibujar() {
+            const primero = (mes.getDay() + 6) % 7;
+            const dias = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
+            const anteriorFin = isoDe(new Date(mes.getFullYear(), mes.getMonth(), 0));
+            const siguienteIni = isoDe(new Date(mes.getFullYear(), mes.getMonth() + 1, 1));
+            let celdas = "";
+            for (let i = 0; i < primero; i++) celdas += "<span></span>";
+            for (let dia = 1; dia <= dias; dia++) {
+                const iso = isoDe(new Date(mes.getFullYear(), mes.getMonth(), dia));
+                const fuera = (minimo && iso < minimo) || (maximo && iso > maximo);
+                const clases = ["calDia", iso === isoDe(hoy) ? "hoy" : "", iso === input.value ? "elegido" : ""].filter(Boolean).join(" ");
+                celdas += `<button type="button" class="${clases}" data-iso="${iso}"${fuera ? " disabled" : ""}${iso === input.value ? ' aria-pressed="true"' : ""} aria-label="${dia} de ${MESES[mes.getMonth()]}">${dia}</button>`;
+            }
+            cuerpo.innerHTML = `<div class="calCabeza">
+                    <button type="button" class="calPaso" data-paso="-1" aria-label="Mes anterior"${minimo && anteriorFin < minimo ? " disabled" : ""}>${ico("chevDerecha", 18)}</button>
+                    <strong>${MESES[mes.getMonth()]} ${mes.getFullYear()}</strong>
+                    <button type="button" class="calPaso" data-paso="1" aria-label="Mes siguiente"${maximo && siguienteIni > maximo ? " disabled" : ""}>${ico("chevDerecha", 18)}</button>
+                </div>
+                <div class="calSemana" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+                <div class="calDias">${celdas}</div>`;
+        }
+        cuerpo.addEventListener("click", evento => {
+            const paso = evento.target.closest(".calPaso");
+            if (paso) {
+                mes = new Date(mes.getFullYear(), mes.getMonth() + Number(paso.dataset.paso), 1);
+                dibujar();
+                return;
+            }
+            const dia = evento.target.closest(".calDia");
+            if (!dia || dia.disabled) return;
+            caja.parentElement.remove();
+            if (input.value !== dia.dataset.iso) {
+                input.value = dia.dataset.iso;
+                avisarCambio(input);
+            }
+        });
+        dibujar();
+        // Ya con el calendario adentro, se vuelve a ubicar junto al campo.
+        const r = input.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const abajo = r.bottom + 8 + alto <= window.innerHeight - 96;
+        caja.style.top = (abajo ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+    }
+    // El color a elección (Apariencia): una paleta propia en lugar del
+    // círculo de Chrome. Ocho tonos, cada uno en tres intensidades.
+    const PALETA = ["#E53935", "#F4511E", "#FB8C00", "#F9A825", "#7CB342", "#2E7D32", "#00897B", "#00ACC1",
+        "#1E88E5", "#3949AB", "#5E35B1", "#8E24AA", "#D81B60", "#6D4C41", "#546E7A", "#212121"];
+    function aclarar(hex, cuanto) {
+        const n = parseInt(hex.slice(1), 16);
+        const mezclar = c => Math.round(c + (cuanto > 0 ? (255 - c) * cuanto : c * cuanto));
+        const r = mezclar(n >> 16), g = mezclar((n >> 8) & 255), b = mezclar(n & 255);
+        return "#" + [r, g, b].map(c => c.toString(16).padStart(2, "0")).join("");
+    }
+    function elegirColor(input) {
+        const actual = String(input.value || "").toLowerCase();
+        const colores = [];
+        [-0.35, 0, 0.35].forEach(cuanto => PALETA.forEach(base => colores.push(cuanto ? aclarar(base, cuanto) : base.toLowerCase())));
+        const caja = menu(input, { clase: "menuElegir paletaPropia", titulo: "Elegí un color", items: [] });
+        const grilla = document.createElement("div");
+        grilla.className = "paletaColores";
+        grilla.innerHTML = colores.map(color => `<button type="button" class="paletaColor${color === actual ? " elegido" : ""}" data-color="${color}" style="--color:${color}" aria-label="Color ${color}"${color === actual ? ' aria-pressed="true"' : ""}></button>`).join("");
+        caja.appendChild(grilla);
+        grilla.addEventListener("click", evento => {
+            const boton = evento.target.closest(".paletaColor");
+            if (!boton) return;
+            caja.parentElement.remove();
+            if (input.value.toLowerCase() !== boton.dataset.color) {
+                input.value = boton.dataset.color;
+                avisarCambio(input);
+            }
+        });
+        const r = input.getBoundingClientRect();
+        const alto = caja.offsetHeight;
+        const ancho = caja.offsetWidth;
+        caja.style.left = Math.max(12, Math.min(window.innerWidth - ancho - 12, r.left + r.width / 2 - ancho / 2)) + "px";
+        caja.style.top = (r.bottom + 8 + alto <= window.innerHeight - 96 ? r.bottom + 8 : Math.max(12, r.top - 8 - alto)) + "px";
+    }
+    function abrirPropio(elemento) {
+        if (elemento.tagName === "SELECT") elegirOpcion(elemento);
+        else if (elemento.type === "color") elegirColor(elemento);
+        else elegirFecha(elemento);
+    }
+    // Con el dedo: se abre al soltar (si no fue para desplazar la pantalla),
+    // y cancelar el toque hace que Chrome no abra lo suyo. Con el mouse o en
+    // la computadora, al apretar. Con el teclado, Enter o espacio.
+    let toqueEnCampo = null;
+    document.addEventListener("touchstart", evento => {
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date'], input[type='color']");
+        toqueEnCampo = seAbreSolo(campo) && evento.touches.length === 1
+            ? { campo, x: evento.touches[0].clientX, y: evento.touches[0].clientY } : null;
+    }, { passive: true, capture: true });
+    document.addEventListener("touchend", evento => {
+        const toque = toqueEnCampo;
+        toqueEnCampo = null;
+        if (!toque || !evento.cancelable) return;
+        const punto = evento.changedTouches[0];
+        if (Math.abs(punto.clientX - toque.x) > 10 || Math.abs(punto.clientY - toque.y) > 10) return;
+        evento.preventDefault();
+        abrirPropio(toque.campo);
+    }, { passive: false, capture: true });
+    document.addEventListener("mousedown", evento => {
+        const campo = evento.target.closest && evento.target.closest("select, input[type='date'], input[type='color']");
+        if (!seAbreSolo(campo) || evento.button !== 0) return;
+        evento.preventDefault();
+        abrirPropio(campo);
+    }, true);
+    // El ícono del calendario del campo de fecha también abre el propio, y
+    // tocar el color (o su etiqueta) no abre el de Chrome.
+    document.addEventListener("click", evento => {
+        const campo = evento.target.closest && evento.target.closest("input[type='date'], input[type='color']");
+        if (!seAbreSolo(campo)) return;
+        evento.preventDefault();
+        // Tocado desde su etiqueta: el campo no recibió el dedo, se abre acá.
+        if (!document.querySelector(".modal.menuElegir")) abrirPropio(campo);
+    }, true);
+    document.addEventListener("keydown", evento => {
+        const campo = evento.target;
+        if (!seAbreSolo(campo) || !(evento.key === "Enter" || evento.key === " " || (evento.altKey && evento.key === "ArrowDown"))) return;
+        evento.preventDefault();
+        abrirPropio(campo);
+    }, true);
+
     window.piezas = {
         refNube, persona, esDueno, dispositivo,
         anotarError, erroresRecientes, comprimirImagen,
         ico, esc, plata, hora, fechaCorta, iniciales: inicialesDe, colorIni,
         lsLeer, lsGuardar,
         pantalla, mostrar, volverDesde,
-        hoja, modal, preguntar, cerrar, deshacer,
-        avisoInicio
+        hoja, modal, ventanaEncima, preguntar, cerrar, deshacer, tocable, menu, lupa,
+        avisoInicio, dibujarDeATandas, cortarTandas, acomodarCabeceras: pedirAcomodarCabeceras
     };
 })();

@@ -1,5 +1,5 @@
 // VendeFrío - Nuevo pedido que sugiere (T66) y "¿Seguro?" (T67).
-// Con el comercio elegido: la tarjeta del comercio ("Suele pedir cada N
+// Con el comercio elegido: la tarjeta del comercio ("Pide cada N
 // días") y "Lo de siempre · Usar", que se despliega al tocarla y muestra
 // cada producto con lo que suele llevar (T94). Los favoritos se marcan
 // manteniendo apretado el producto (nuevoPedido.js). Al guardar, si una
@@ -17,8 +17,20 @@
     const clave = (marca, producto) => normal(marca) + "|" + normal(producto);
 
     // ---------- Lo que se sabe del comercio ----------
+    // Se recuerdan los pedidos del último comercio hasta que cambian los
+    // pedidos: cada "+" vuelve a preguntarlos.
+    let pedidosRecordados = null;
+
     function pedidosDe(nombre) {
-        const todos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
+        const marca = typeof marcaDeColeccion === "function" ? marcaDeColeccion("historial") : null;
+        if (marca === null || !pedidosRecordados || pedidosRecordados.nombre !== nombre || pedidosRecordados.marca !== marca) {
+            pedidosRecordados = { nombre, marca, pedidos: calcularPedidosDe(nombre) };
+        }
+        return pedidosRecordados.pedidos.slice();
+    }
+
+    function calcularPedidosDe(nombre) {
+        const todos = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
         return todos.filter(pedido => typeof nombresComercioCompatibles === "function"
             ? nombresComercioCompatibles(nombre, pedido.comercio || pedido.cliente)
             : normal(pedido.comercio || pedido.cliente) === normal(nombre))
@@ -118,27 +130,64 @@
     }
 
 
-    function dibujarTarjetaComercio(comercio, analisis) {
+    // La lista de precios del pedido (T161): se toca para usar otra.
+    function listaDelPedido(comercio) {
+        const extra = window.nuevoPedidoVendeFrio;
+        if (!extra || !extra.hayListas()) return "";
+        const otra = extra.listaElegida(comercio) !== null;
+        return `<button type="button" class="listaDelPedido${otra ? " otraLista" : ""}" id="listaDelPedido" aria-label="Lista de precios: ${p.esc(comercio.listaPrecios || "General")}. Tocá para cambiarla">
+            ${p.ico("etiqueta", 16)}<span>Precios: <b>${p.esc(comercio.listaPrecios || "General")}</b>${otra ? " · solo este pedido" : ""}</span>${p.ico("chevAbajo", 16)}
+        </button>`;
+    }
+
+    // Repaso de diseño (2026-11-01): la tarjeta es como la ficha del
+    // comercio. Muestra la dirección, el teléfono y el horario; el que falta,
+    // con "+ Agregar …" (abre "Datos del comercio" ahí mismo). Si el nombre
+    // escrito no es un comercio guardado, avisa y ofrece crearlo.
+    function filaDato(comercio, campo, icono, valor, agregar) {
+        if (valor) return `<div class="datoComercioPedido">${p.ico(icono, 17)}<span>${p.esc(valor)}</span></div>`;
+        return `<button type="button" class="datoComercioPedido agregarDatoPedido" data-agregar-dato="${campo}">${p.ico("mas", 17)}<span>${agregar}</span></button>`;
+    }
+
+    function dibujarTarjetaComercio(comercio, analisis, suelto) {
         const foco = document.activeElement === input;
-        const mostrar = Boolean(comercio) && !foco && !tarjetaComercio.dataset.cambiando;
+        const mostrar = Boolean(comercio || suelto) && !foco && !tarjetaComercio.dataset.cambiando;
         tarjetaComercio.classList.toggle("pzOcultar", !mostrar);
         tarjetaCliente.classList.toggle("pzOcultar", mostrar);
+        tarjetaComercio.classList.toggle("comercioSinGuardar", mostrar && !comercio);
         if (!mostrar) return;
-        const sub = analisis.cadaDias
-            ? "Suele pedir cada " + analisis.cadaDias + (analisis.cadaDias === 1 ? " día" : " días") + (analisis.total ? " · " + p.plata(analisis.total) : "")
-            : (comercio.direccion || (analisis.pedidos.length ? analisis.pedidos.length + (analisis.pedidos.length === 1 ? " pedido" : " pedidos") : "Primer pedido"));
-        const html = `<div class="pzFila">
-            <div class="pzIni ${p.colorIni(comercio.nombre)}">${p.esc(p.iniciales(comercio.nombre))}</div>
-            <div class="pzFilaTxt"><strong>${p.esc(comercio.nombre)}</strong><small>${p.esc(sub)}</small></div>
-            <button type="button" class="pzEnlace" id="cambiarComercioPedido">Cambiar</button>
-        </div>`;
+        const cambiar = `<button type="button" class="cambiarComercioPedido" id="cambiarComercioPedido">Cambiar</button>`;
+        let html;
+        if (!comercio) {
+            html = `<div class="cabComercioPedido">
+                <div class="pzIni ${p.colorIni(suelto)}">${p.esc(p.iniciales(suelto))}</div>
+                <div class="pzFilaTxt"><strong>${p.esc(suelto)}</strong><small>No está en tus comercios</small></div>
+                ${cambiar}
+            </div>
+            <div class="pzBanner pzBanAviso avisoComercioNuevo">${p.ico("tienda", 22)}<div><strong>Este comercio no existe</strong><small>¿Querés crearlo con este nombre?</small></div></div>
+            <button type="button" class="pzBtn pzBtnPri crearComercioPedido" id="crearComercioPedido">${p.ico("mas", 18)} Crear «${p.esc(suelto)}»</button>`;
+        } else {
+            const sub = analisis.cadaDias
+                ? "Pide cada " + analisis.cadaDias + (analisis.cadaDias === 1 ? " día" : " días") + (analisis.total && verPlata() ? " · " + p.plata(analisis.total) : "")
+                : (analisis.pedidos.length ? analisis.pedidos.length + (analisis.pedidos.length === 1 ? " pedido" : " pedidos") : "Primer pedido");
+            html = `<div class="cabComercioPedido">
+                <div class="pzIni ${p.colorIni(comercio.nombre)}">${p.esc(p.iniciales(comercio.nombre))}</div>
+                <div class="pzFilaTxt"><strong>${p.esc(comercio.nombre)}</strong><small>${p.esc(sub)}</small></div>
+                ${cambiar}
+            </div>
+            <div class="datosComercioPedido">
+                ${filaDato(comercio, "direccion", "ubicacion", comercio.direccion, "Agregar dirección")}
+                ${filaDato(comercio, "telefono", "telefono", comercio.telefono, "Agregar teléfono")}
+                ${filaDato(comercio, "horario", "reloj", comercio.horario, "Agregar horario")}
+            </div>${listaDelPedido(comercio)}`;
+        }
         if (tarjetaComercio.innerHTML !== html) tarjetaComercio.innerHTML = html;
     }
 
     function dibujar() {
         const comercio = typeof comercioDelPedidoActual === "function" ? comercioDelPedidoActual() : null;
         if (!comercio || (typeof comercioArchivado === "function" && comercioArchivado(comercio))) {
-            dibujarTarjetaComercio(null);
+            dibujarTarjetaComercio(null, null, comercio ? "" : input.value.trim());
             if (contenedor.innerHTML) contenedor.innerHTML = "";
             usado = "";
             return;
@@ -198,11 +247,46 @@
     });
 
     tarjetaComercio.addEventListener("click", evento => {
+        if (evento.target.closest("#listaDelPedido")) {
+            window.nuevoPedidoVendeFrio.elegirLista();
+            return;
+        }
+        const agregar = evento.target.closest("[data-agregar-dato]");
+        if (agregar) {
+            const comercio = comercioDelPedidoActual();
+            if (comercio && typeof window.abrirDatosComercio === "function") window.abrirDatosComercio(comercio.nombre, agregar.dataset.agregarDato, () => dibujar());
+            return;
+        }
+        if (evento.target.closest("#crearComercioPedido")) {
+            const nombre = input.value.trim();
+            if (window.datosComercioVendeFrio) window.datosComercioVendeFrio.nuevo({
+                nombre,
+                alGuardar: nuevo => {
+                    input.value = nuevo;
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+            return;
+        }
         if (!evento.target.closest("#cambiarComercioPedido")) return;
+        // "Cambiar" abre la hoja para elegir otro. Mientras está abierta, el
+        // campo queda a mano (lo usan el dictado y las pruebas).
         tarjetaComercio.dataset.cambiando = "1";
         dibujar();
-        input.focus();
-        input.select();
+        const hoja = window.elegirComercioVendeFrio;
+        if (!hoja) {
+            input.focus();
+            input.select();
+            return;
+        }
+        hoja.abrir({
+            alCerrar: () => {
+                if (document.activeElement === input) return;
+                delete tarjetaComercio.dataset.cambiando;
+                dibujar();
+            }
+        });
     });
 
     input.addEventListener("focus", () => dibujar());
@@ -214,7 +298,15 @@
     // Al salir del campo, "change" llega en medio del toque: si se redibuja
     // ya, la pantalla se mueve y el toque cae en otro lado (por ejemplo, en
     // vez de abrir una marca). Se espera lo mismo que en "blur".
-    input.addEventListener("change", () => { usado = ""; setTimeout(dibujar, 150); });
+    // Al cambiar de comercio también se rehacen los precios y el total (su
+    // lista o sus precios guardados pueden ser otros).
+    input.addEventListener("change", () => {
+        usado = "";
+        setTimeout(() => {
+            if (typeof window.actualizarResumenPedido === "function") window.actualizarResumenPedido();
+            else dibujar();
+        }, 150);
+    });
     input.addEventListener("input", () => { usado = ""; dibujar(); });
 
     // Cada vez que cambia el pedido (cantidades, comercio, borrador) se redibuja.
@@ -233,14 +325,34 @@
     }
 
     // ---------- Precios de la lista (ofertas y listas de precios) ----------
+    // Busca el producto del catálogo como productoDelCatalogo, pero con un
+    // índice armado una vez para toda la lista.
+    function indiceDelCatalogo(catalogo) {
+        const marcas = new Map();
+        const productos = new Map();
+        Object.keys(catalogo).forEach(marca => {
+            if (!marcas.has(normal(marca))) marcas.set(normal(marca), marca);
+            (catalogo[marca] || []).forEach(producto => {
+                const k = marca + "\u0000" + normal(producto && producto.nombre);
+                if (producto && !productos.has(k)) productos.set(k, producto);
+            });
+        });
+        return (marca, nombre) => {
+            const marcaReal = marcas.get(normal(marca));
+            if (marcaReal === undefined) return null;
+            const producto = productos.get(marcaReal + "\u0000" + normal(nombre));
+            return producto ? { marca: marcaReal, producto } : null;
+        };
+    }
+
     function actualizarPreciosDeLaLista() {
         const comercio = comercioDelPedidoActual();
-        const catalogo = obtenerProductos();
+        const buscar = indiceDelCatalogo(productosParaLeer());
         document.querySelectorAll("#productos .marca .fila").forEach(fila => {
             const select = fila.querySelector("select");
             const texto = fila.querySelector(".nombreProductoPedido");
             if (!select || !texto) return;
-            const real = productoDelCatalogo(catalogo, select.dataset.marca, select.dataset.producto);
+            const real = buscar(select.dataset.marca, select.dataset.producto);
             if (!real) return;
             // T98: el precio cambiado solo para este pedido, y el lapicito
             // para cambiarlo (si esta persona ve la plata).

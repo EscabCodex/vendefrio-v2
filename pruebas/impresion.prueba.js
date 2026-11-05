@@ -7,7 +7,7 @@
 // 2. "Ticket impreso por" en el seguimiento (T28d): cada impresión queda en el
 //    pedido (quién, cuándo y cuántas copias) y se ve en los dos celulares. La
 //    nube solo deja agregar impresiones a nombre propio.
-// 3. Hoja de reparto impresa (T28e): en Rutas, después de "Optimizar ruta",
+// 3. Hoja de reparto impresa (T28e): en Rutas, con la ruta armada,
 //    se imprime la hoja con los comercios en el orden de la ruta, sus
 //    pedidos sin entregar, lo que deben de antes y el total a cobrar.
 // 4. Cierre del día (T28f): sección nueva para el dueño y "Cobra", con la
@@ -63,9 +63,10 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.locator("#datosTicketTelefono").fill("11 4444-5555");
     await page.locator("#datosTicketDireccion").fill("Belgrano 456, Quilmes");
     await page.locator("#datosTicketCuit").fill("20-12345678-9");
+    await expect(page.locator(".hojaDatosTicket .vistaTicket")).toContainText("Belgrano 456, QuilmesTel.: 11 4444-5555CUIT: 20-12345678-9");
     await page.locator("#formDatosTicket").evaluate(form => form.scrollIntoView({ block: "center" }));
     await capturar(page, "impresion-01-cargar-datos-ticket");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     const datos = page.locator("#cuentaDatosTicket");
     await expect(datos).toContainText("Teléfono: 11 4444-5555");
     await expect(datos).toContainText("Dirección: Belgrano 456, Quilmes");
@@ -85,7 +86,7 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     await page.getByRole("button", { name: "Cambiar datos del ticket" }).click();
     await page.locator("#datosTicketDireccion").fill("");
     await page.locator("#datosTicketCuit").fill("");
-    await page.getByRole("button", { name: "Guardar datos del ticket" }).click();
+    await page.getByRole("dialog", { name: "Datos para el ticket" }).getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.locator("#cuentaDatosTicket")).not.toContainText("CUIT");
     await irAPedidos(page);
     ticket = await imprimirTicket(page, "Almacén Don Pepe", "Una copia");
@@ -125,7 +126,12 @@ test("impresión: datos de la distribuidora en el ticket", async ({ page, browse
     });
     expect(delDueno).toEqual(["permission-denied", "permission-denied", "permission-denied"]);
 
-    await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
+    // Todo subió a la nube y no se ve ninguna etiqueta. Se miran solo las
+    // visibles: lo oculto (la ficha cerrada, otras pantallas) no se
+    // redibuja para no gastar y puede guardar una etiqueta vieja.
+    await expect.poll(() => page.evaluate(() => window.nubeVendeFrio.sincronizacion().sinSubir)).toBe(0);
+    await irAPedidos(page);
+    await expect(page.getByText("Pendiente de sincronizar").filter({ visible: true })).toHaveCount(0);
     await contexto.close();
     expect(errores, "La página del empleado tuvo errores de JavaScript").toEqual([]);
 });
@@ -140,6 +146,7 @@ test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser
     await cargarPedido(page, false);
     await imprimirTicket(page, "Almacén Don Pepe");
     const ficha = page.locator(".fichaPedido");
+    await ficha.getByRole("button", { name: "Ver todo lo que pasó" }).click();
     const impresionDueno = ficha.locator(".pasoSeguimiento.impresion", { hasText: "Jere" });
     await expect(impresionDueno).toContainText("Ticket impreso");
     await expect(impresionDueno).toContainText("Dos copias (comercio y distribuidora)");
@@ -148,6 +155,8 @@ test("impresión: ticket impreso por, en el seguimiento", async ({ page, browser
     await irAPedidos(empleado);
     await empleado.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).click();
     const fichaEmpleado = empleado.locator(".fichaPedido");
+    // Repaso de Pedidos: lo que pasó se ve al tocar "Ver todo lo que pasó".
+    await fichaEmpleado.getByRole("button", { name: "Ver todo lo que pasó" }).click();
     await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion", { hasText: "Jere" })).toBeVisible();
     await imprimirTicket(empleado, "Almacén Don Pepe", "Una copia");
     await expect(fichaEmpleado.locator(".pasoSeguimiento.impresion").first()).toContainText("Maxi");
@@ -214,25 +223,27 @@ test("impresión: hoja de reparto desde Rutas", async ({ page }, testInfo) => {
         window.nubeVendeFrio.entregarPedido(pedido.id, {});
     });
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toContainText("A cobrar");
+    await expect(page.getByRole("menu", { name: "Otros pedidos" })).toContainText("A cobrar");
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Otros pedidos" })).toBeHidden();
+    await expect(page.getByRole("menu", { name: "Otros pedidos" })).toBeHidden();
 
-    // Rutas: todos los comercios y "Optimizar ruta".
+    // Rutas: todos los comercios y la ruta armada.
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     // El mapa viene dentro de la app (T40): abre aunque no haya internet
     // (sin internet, sin las calles).
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
-    const aviso = page.locator("#modalAviso");
-    // "Comercios para esta ruta" es desplegable (T51).
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
-    await page.locator("#seleccionarTodosRuta").click();
-    await page.locator("#btnOptimizarRuta").click();
-    await expect(aviso).toContainText("1. Kiosco Luna");
-    await aviso.getByRole("button", { name: "Entendido" }).click();
-
-    const boton = page.getByRole("button", { name: "Imprimir hoja de reparto" });
+    // «Armar ruta» > Elegir a mano > Marcar todos: la app la ordena sola.
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await elegir.getByRole("button", { name: /^Armar la ruta con \d+$/ }).click();
+    await expect(page.locator(".paradaOrden").first()).toHaveAttribute("data-nombre", "Kiosco Luna");
+    await page.locator("#btnParadasRutas").click();
+    // La hoja de reparto, en el ⋯ de la ruta.
+    await page.locator("#btnMasParadas").click();
+    const boton = page.locator(".menuRutaHoy").getByRole("button", { name: "Imprimir hoja de reparto" });
     await expect(boton).toBeVisible();
     await page.locator("#listaRutaOrdenada").evaluate(lista => lista.scrollIntoView({ block: "start" }));
     await capturar(page, "impresion-04-hoja-de-reparto");
@@ -300,7 +311,7 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
     await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 14.800");
     await expect(cierre.locator(".filaCierre", { hasText: "Efectivo" })).toContainText("$ 9.800");
     await expect(cierre.locator(".filaCierre", { hasText: "Transferencia" })).toContainText("$ 5.000");
-    await expect(cierre.locator(".filaCierre", { hasText: "A cobrar" })).toContainText("$ 0");
+    await expect(cierre.locator(".filaCierre", { hasText: "A cobrar" })).toHaveCount(0); // en cero no se muestra
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Por persona que cobró" })).toContainText("Jere");
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Diferencias con el total" })).toContainText("cobró $ 5.000 de $ 5.300");
     await expect(cierre.locator(".tarjetaCierre", { hasText: "Entregados con cambios" })).toContainText("−$ 4.500");
@@ -325,7 +336,9 @@ test("impresión: cierre del día", async ({ page, browser }, testInfo) => {
     await cierre.getByRole("button", { name: "Día anterior" }).click();
     await expect(cierre.locator("#nombreDiaCierre")).toContainText("Ayer");
     await expect(cierre.locator("#totalRecaudadoCierre")).toHaveText("$ 0");
-    await expect(cierre).toContainText("No se entregaron pedidos este día.");
+    // Día vacío: el $ 0 sale una sola vez arriba, sin filas ni tarjetas en cero.
+    await expect(cierre.locator("#contenidoCierre")).not.toContainText("Transferencia");
+    await expect(cierre.locator("#contenidoCierre")).not.toContainText("Por persona que cobró");
 
     // Un empleado sin "Cobra" no tiene "Cierre del día" en Más.
     const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);

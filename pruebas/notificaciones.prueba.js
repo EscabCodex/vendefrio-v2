@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { test, expect, capturar, prepararPagina } = require("./ayudas");
-const { abrirMas, elegirComercio } = require("./recorridos");
+const { abrirMas, abrirAjustes, elegirComercio } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -118,17 +118,14 @@ async function prepararNotificaciones(pagina) {
 
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
-    await page.getByRole("button", { name: "Entrar con email" }).click();
-    await page.getByRole("button", { name: /Registrarse/ }).click();
+    await page.getByRole("button", { name: "Crear cuenta gratis" }).click();
+    await page.locator("#inicioRegistroDueno").fill("Jere");
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`notif-${testInfo.project.name}-${Date.now()}@prueba.com`);
     await page.locator("#inicioRegistroContrasena").fill("clave-de-prueba");
-    await page.locator("#inicioRegistroRepetir").fill("clave-de-prueba");
-    await page.getByRole("button", { name: "Crear cuenta y distribuidora" }).click();
-    await expect(page.locator("#inicioNombreDueno")).toBeVisible({ timeout: 20000 });
-    await page.locator("#inicioNombreDueno").fill("Jere");
-    await page.locator("#inicioFormDatosDueno").getByRole("button", { name: "Guardar y entrar" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.locator("#inicioFormRegistrarse").getByRole("button", { name: "Crear cuenta", exact: true }).click();
+    // "Tu nombre" va en el mismo formulario: no hay otro paso.
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden({ timeout: 20000 });
 
     const guardado = await page.evaluate(() =>
         agregarComercio({ nombre: "Almacén Don Pepe", direccion: "San Martín 123", telefono: "" }) &&
@@ -142,7 +139,8 @@ async function registrarDistribuidora(page, testInfo) {
 async function cargarPedido(page, comercio) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
     await expect(page.locator("#vistaPedidos")).toBeVisible();
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, comercio);
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
@@ -154,7 +152,7 @@ async function cargarPedido(page, comercio) {
 }
 
 async function abrirConfiguracionEn(page, seccion) {
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 

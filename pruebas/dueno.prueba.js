@@ -1,17 +1,14 @@
 // VendeFrío - Ideas para la 1.0, tanda 5 "Para el dueño" (T79 a T83).
-// 1. Estadísticas contra el período anterior, "Se están enfriando" y el
-//    mapa de ventas (modo personal, con pedidos de prueba).
+// 1. Estadísticas contra el período anterior, "Visitas para vender" (antes "Se están
+//    enfriando") y el mapa de ventas dentro de Estadísticas (modo personal).
 // 2. Registro de cambios, metas del mes y resumen de la noche (nube).
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 const { registrarDistribuidora, cargarPedido, abrirMas } = require("./recorridos");
 
 test.describe("personal", () => {
     test("dueño: comparativas, clientes que se enfrían y mapa de ventas", async ({ page }) => {
         await page.goto("/");
-        await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-        await page.locator("#inicioNombrePersonal").fill("Jere");
-        await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-        await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+        await usarSinCuenta(page, "vendedor");
         await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 
         await page.evaluate(() => {
@@ -38,24 +35,31 @@ test.describe("personal", () => {
             window.abrirEstadisticas();
         });
 
-        // Semana contra la anterior: 3 pedidos contra 2.
+        // 7 días contra los 7 de antes: 3 pedidos contra 2.
         const pantalla = page.locator("#pantallaEstadisticas");
         await pantalla.locator('[data-periodo="semana"]').click();
         const resumen = pantalla.locator(".statsResumen");
-        await expect(resumen.locator(".statsResumenTop .statsDelta")).toHaveText("+1");
+        await expect(resumen.locator(".statsNumeros > div").first().locator(".statsDelta")).toHaveText("+1");
         await expect(resumen.locator(".statsVendido .statsCambio")).toBeVisible();
 
-        // Se están enfriando: Despensa Mary pedía cada semana.
-        const enfriando = pantalla.locator(".statsEnfriando");
-        await expect(enfriando).toContainText("Despensa Mary");
-        await expect(enfriando).toContainText("Pedía cada semana · hace 16 días que no");
-        await expect(enfriando.getByRole("link", { name: "WhatsApp a Despensa Mary" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491144442222\?text=/);
+        // Visitas para vender: Despensa Mary pedía cada semana y dejó de pedir.
+        const llamar = pantalla.locator(".statsVisitasVender");
+        const mary = llamar.locator(".statsFila", { hasText: "Despensa Mary" });
+        await expect(mary.locator('[data-tipo="falta"]')).toHaveText("No compra hace 16 días");
+        await expect(mary).toContainText("Pedía cada semana");
+        await expect(llamar.getByRole("link", { name: "WhatsApp a Despensa Mary" })).toHaveAttribute("href", /^https:\/\/wa\.me\/5491144442222\?text=/);
         await page.evaluate(() => window.scrollTo(0, 0));
         await capturar(page, "dueno-01-estadisticas");
 
-        // Mapa de ventas (Más): Kiosco Luna bien, los otros flojos este mes.
+        // Mapa de ventas: dentro de Estadísticas (ya no en Más) y "Ver grande"
+        // abre el mapa completo: Kiosco Luna bien, los otros flojos este mes.
         await abrirMas(page);
-        await page.locator("#masAccesos").getByRole("button", { name: /Mapa de ventas/ }).click();
+        await expect(page.locator("#masAccesos")).not.toContainText("Mapa de ventas");
+        await page.evaluate(() => window.abrirEstadisticas());
+        const tarjetaMapa = pantalla.locator(".statsMapa");
+        await tarjetaMapa.scrollIntoViewIfNeeded();
+        await expect(tarjetaMapa.locator(".leaflet-interactive, .leaflet-marker-pane, .leaflet-overlay-pane").first()).toBeAttached();
+        await tarjetaMapa.getByRole("button", { name: "Ver grande" }).click();
         const mapa = page.locator("#pantallaMapaVentas");
         await expect(mapa).toBeVisible();
         await expect(mapa.locator(".leaflet-interactive")).toHaveCount(3);
@@ -76,9 +80,11 @@ test.describe("nube", () => {
         // Cambios: un precio (desde el catálogo), un producto archivado y un tope.
         await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
         await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
-        await page.getByRole("button", { name: "Editar precio o foto" }).click();
-        await page.locator(".precioCatalogoEdicion").fill("4800");
-        await page.locator(".guardarEdicionCatalogo").click();
+        await page.getByRole("button", { name: "Ver la ficha" }).click();
+        await page.getByRole("button", { name: "Cambiar precio" }).click();
+        await page.locator(".datoProductoEntrada").fill("4800");
+        await page.locator(".guardarDatoProducto").click();
+        await page.getByRole("button", { name: "Cerrar ficha" }).click();
         await page.evaluate(() => {
             const palito = Object.values(obtenerProductos()).flat().find(producto => producto.nombre === "Palito bombón");
             archivarProductoPorId(palito.id, true);
@@ -87,7 +93,7 @@ test.describe("nube", () => {
 
         // Más > Registro de cambios.
         await abrirMas(page);
-        await page.locator("#masAccesos").getByRole("button", { name: /Registro de cambios/ }).click();
+        await page.locator("#masAccesos").getByRole("button", { name: /¿Quién cambió qué?/ }).click();
         const registro = page.locator("#pantallaCambios");
         await expect(registro).toBeVisible();
         await expect(registro.locator(".grupoCambios h2").first()).toHaveText("Hoy");

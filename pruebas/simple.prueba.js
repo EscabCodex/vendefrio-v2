@@ -12,7 +12,7 @@
 // 7. Inicio con "¿Qué querés hacer?", Más en tres grupos y el Catálogo con
 //    "Productos" y "Editar marcas".
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, cargarPedido, irAPedidos, elegirComercio, entrarComoEmpleado, abrirMas, abrirAjustes, abrirConfiguracionEn } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -26,7 +26,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     });
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
 
     // 1. Marcas desplegables (T97).
     const frioSur = page.locator('.marca[data-marca="Frío Sur"]');
@@ -41,7 +42,10 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await page.evaluate(() => renderizarPedido());
     await expect(aromos.locator(".fila", { hasText: "Tapas criolla" })).toBeVisible();
     await expect(frioSur.locator(".fila").first()).toBeHidden();
-    // Al buscar, la marca se abre sola.
+    // Al buscar, la marca se abre sola. La búsqueda es la lupa, primera de
+    // la fila de marcas (repaso de diseño de Nuevo pedido).
+    await expect(page.locator("#chipsMarcasPedido > .pzLupa")).toBeVisible();
+    await page.getByRole("button", { name: "Buscar producto o marca" }).click();
     await page.locator(".buscadorPedido").fill("palito");
     await expect(frioSur.locator(".fila", { hasText: "Palito bombón" })).toBeVisible();
     await page.locator(".buscadorPedido").fill("");
@@ -55,14 +59,15 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(page.locator("#reset")).toBeHidden();
     const masOpciones = page.getByRole("button", { name: "Más opciones del pedido" });
     await expect(masOpciones).toBeVisible();
-    // No tapa "Guardar pedido".
+    // Está abajo, al lado de "Guardar pedido" (ya no flota sobre los productos).
     const fab = await masOpciones.boundingBox();
     const guardar = await page.locator("#generar").boundingBox();
-    expect(fab.y + fab.height).toBeLessThanOrEqual(guardar.y);
+    expect(fab.x).toBeGreaterThanOrEqual(guardar.x + guardar.width);
+    expect(Math.abs((fab.y + fab.height / 2) - (guardar.y + guardar.height / 2))).toBeLessThan(4);
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator("#cliente").blur();
     await masOpciones.click();
-    const opciones = page.getByRole("dialog", { name: "Opciones del pedido" });
+    const opciones = page.getByRole("menu", { name: "Opciones del pedido" });
     for (const nombre of ["Repetir último pedido", "Dictar o pegar pedido", "Escanear código de barras", "Anotar un cambio", "Elegir fecha de entrega", "Vaciar pedido"]) {
         await expect(opciones.getByRole("button", { name: nombre })).toBeVisible();
     }
@@ -98,6 +103,10 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(hojaPrecio).toContainText("de lista $ 4.500");
     await hojaPrecio.getByLabel("Precio por unidad").fill("4000");
     await hojaPrecio.getByRole("button", { name: "Guardar precio" }).click();
+    // ¿Solo este pedido o para siempre? Este, solo este pedido.
+    const siempre = page.getByRole("alertdialog", { name: "¿Guardar este precio para siempre?" });
+    await expect(siempre).toContainText("Helado 1 kg a $ 4.000 en todos los próximos pedidos de Almacén Don Pepe");
+    await siempre.getByRole("button", { name: "Solo este pedido" }).click();
     await expect(helado.locator(".precioEspecial")).toHaveText("$ 4.000");
     await expect(helado.locator(".pzTachado")).toHaveText("$ 4.500");
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
@@ -119,7 +128,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
 
     // Lo de este pedido no queda para el siguiente.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await expect(page.locator("#cambiosPedido")).toHaveCount(0);
     await expect(page.locator("#fechaEntregaPedido")).toHaveCount(0);
     await expect(frioSur.locator(".precioEspecial")).toHaveCount(0);
@@ -131,20 +141,19 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("Entregar mañana");
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("2 × Helado 1 kg");
     await expect(ficha.locator(".seccionDetallesPedido")).toContainText("Roto");
-    await expect(ficha.locator(".datosFichaPedido")).toContainText("$ 8.000");
+    await expect(ficha.locator('.cuadroFicha[data-dato="total"]')).toContainText("$ 8.000");
     await ficha.locator(".seccionDetallesPedido").scrollIntoViewIfNeeded();
     await capturar(page, "simple-05-ficha-con-cambios");
-    // Los cuatro pasos del pedido, cada uno con su botón (pedido del dueño).
+    // Repaso de Pedidos: a la vista, solo el paso de ahora (con el deslizador
+    // para entregar desde antes); los otros pasos van en el ⋯.
     const pasos = ficha.locator(".pasoFicha");
-    await expect(pasos).toHaveCount(4);
-    await expect(pasos.nth(0)).toContainText("Paso 1: Armá el pedido");
-    await expect(pasos.nth(1)).toContainText("Paso 2: Salí a repartir");
-    await expect(pasos.nth(1).getByRole("button", { name: "Salir a repartir" })).toBeVisible();
-    await expect(pasos.nth(2)).toContainText("Paso 3: Entregalo");
-    await expect(pasos.nth(2).locator(".deslizador")).toBeVisible();
-    await expect(pasos.nth(3)).toContainText("Paso 4: Registrá el cobro");
-    await expect(pasos.nth(3)).toContainText("Se registra después de entregar.");
-    await pasos.nth(1).evaluate(paso => paso.scrollIntoView({ block: "center" }));
+    await expect(pasos).toHaveCount(1);
+    await expect(pasos.first()).toContainText("Armá el pedido");
+    await expect(pasos.first().locator(".deslizador")).toBeVisible();
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await expect(ficha.getByRole("menuitem", { name: "Salir a repartir" })).toBeVisible();
+    await ficha.getByRole("button", { name: "Cerrar opciones" }).click();
+    await pasos.first().evaluate(paso => paso.scrollIntoView({ block: "center" }));
     await capturar(page, "simple-05b-pasos-del-pedido");
 
     // En la nube: el pedido con su precio y los detalles aparte.
@@ -166,7 +175,7 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     const etapas = page.locator("#filtrosEtapaPedidos");
     await expect(etapas.getByRole("tab")).toHaveText([/Para armar/, /Para entregar/, /Terminados/, /Otros/]);
     await etapas.getByRole("tab", { name: /Otros/ }).click();
-    const otros = page.getByRole("dialog", { name: "Otros pedidos" });
+    const otros = page.getByRole("menu", { name: "Otros pedidos" });
     await expect(otros.getByRole("button")).toHaveText([/A cobrar/, /Incidencias/, /Cancelados/]);
     await capturar(page, "simple-06-otros-pedidos");
     await otros.getByRole("button", { name: /Cancelados/ }).click();
@@ -176,14 +185,17 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     await expect(page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first()).toBeVisible();
     await capturar(page, "simple-07-pestanas-pedidos");
 
-    // 6. Ficha del comercio: un solo botón "Más opciones" con todo adentro.
+    // 6. Ficha del comercio: un solo botón de tres puntitos con todo adentro
+    // (Cargar pedido primero y resaltado; Eliminar al final, en rojo).
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
     const fichaComercio = page.locator(".modalFichaComercio");
-    await expect(fichaComercio.locator(".fichaAcciones button")).toHaveCount(1);
+    await expect(fichaComercio.locator(".fichaMenu")).toBeHidden();
     await fichaComercio.getByRole("button", { name: "Más opciones" }).click();
+    await expect(fichaComercio).toHaveClass(/conMenu/);
     const masOpcionesComercio = page.getByRole("dialog", { name: "Más opciones de Almacén Don Pepe" });
-    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Ver sus pedidos/);
-    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Archivar comercio/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveText(/Cargar pedido/);
+    await expect(masOpcionesComercio.getByRole("button").first()).toHaveClass(/fichaMenuPrincipal/);
+    await expect(masOpcionesComercio.getByRole("button").last()).toHaveText(/Eliminar comercio/);
     await capturar(page, "simple-08-ficha-comercio-opciones");
     await masOpcionesComercio.getByRole("button", { name: "Ver sus pedidos" }).click();
     await expect(masOpcionesComercio).toBeHidden();
@@ -192,7 +204,8 @@ test("simple: marcas, botón ⋯, cambios, fecha y precio del pedido", async ({ 
     // 4. Un empleado sin permiso de ver la plata no cambia precios.
     const { empleado, contexto, errores } = await entrarComoEmpleado(page, browser, testInfo);
     await empleado.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
-    await empleado.getByRole("button", { name: "Nuevo pedido" }).click();
+    await empleado.locator(".bottom-nav .nav-nuevo").click();
+    await empleado.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     const frioSurEmpleado = empleado.locator('.marca[data-marca="Frío Sur"]');
     await frioSurEmpleado.locator(".tituloMarca").click();
     await expect(frioSurEmpleado.locator(".fila", { hasText: "Helado 1 kg" })).toBeVisible();
@@ -207,34 +220,60 @@ test("simple: Inicio, Más en grupos y nombres del Catálogo", async ({ page }, 
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     const inicio = page.locator("#pantallaMenu");
 
-    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
+    // T178: "¿Qué querés hacer?" arranca apagada; se prende en Apariencia.
     const queHacer = inicio.locator("#queHacerInicio");
+    await expect(queHacer).toBeHidden();
+    // El logo y el nombre llevan a Tu cuenta (ya no está el botón "Más" de arriba).
+    await expect(inicio.locator("#botonAvatar")).toBeHidden();
+    await inicio.locator(".dashboardMarca").click();
+    await expect(page.locator('.configDetalle, #configDetalle').first()).toBeVisible();
+    await abrirConfiguracionEn(page, "apariencia");
+    await page.locator("#configDetalle").getByRole("switch", { name: "¿Qué querés hacer?" }).check();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+
+    // El resumen sigue arriba de todo y debajo va "¿Qué querés hacer?".
     await expect(queHacer.getByRole("heading", { name: "¿Qué querés hacer?" })).toBeVisible();
     const resumen = await inicio.locator("#resumenHoy").boundingBox();
     expect((await queHacer.boundingBox()).y).toBeGreaterThan(resumen.y);
-    await expect(queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ })).toContainText("1 para armar");
+    await expect(queHacer.getByRole("button", { name: /Pedidos de hoy/ })).toContainText("1 para armar");
     await expect(queHacer.getByRole("button", { name: /Cobrar/ })).toBeVisible();
     // El Asistente arriba a la derecha, en el lugar del micrófono.
     await expect(inicio.locator("header").getByRole("button", { name: "Asistente" })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "simple-09-inicio-que-hacer");
 
-    await queHacer.getByRole("button", { name: /Ver los pedidos de hoy/ }).click();
-    await expect(page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Para armar/ })).toHaveAttribute("aria-selected", "true");
+    // "Pedidos de hoy" abre justo los pedidos de hoy, en todos los pasos.
+    await queHacer.getByRole("button", { name: /Pedidos de hoy/ }).click();
+    await expect(page.locator(".cartelListaElegida")).toContainText("Pedidos de hoy");
+    await expect(page.locator("#listaVistaPedidos .tarjetaSeguimiento")).toHaveCount(1);
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
     await queHacer.getByRole("button", { name: /Cargar un pedido/ }).click();
     await expect(page.locator("#generar")).toBeVisible();
     await page.evaluate(() => mostrarPantalla("menu"));
 
-    // Más: Plata, Ventas y Herramientas; Preguntale ya no está ahí.
+    // Más (informe del desconocido, opción A): lo de todos los días en
+    // cuadros, el resto de las herramientas en lista y una sola fila
+    // "Ajustes" con todo lo demás. Preguntale ya no está ahí.
     await abrirMas(page);
     const grupos = page.locator("#masAccesos");
-    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Plata", "Ventas", "Herramientas"]);
-    await expect(grupos.locator(".masAccesos").nth(0)).toContainText("A cobrar");
-    await expect(grupos.locator(".masAccesos").nth(1)).toContainText("Estadísticas");
-    await expect(grupos.locator(".masAccesos").nth(2)).toContainText("Rutas");
+    await expect(grupos.locator(".masGrupoTitulo")).toHaveText(["Lo de todos los días", "De vez en cuando"]);
+    await expect(grupos.locator(".masAccesos .masAcceso strong")).toHaveText(["A cobrar", "Cierre del día", "Estadísticas", "Rutas", "WhatsApp", "Listas de precios"]);
+    await expect(grupos.locator(".masHerramientas .masFila strong")).toHaveText(["¿Quién cambió qué?", "Importar planilla"]);
     await expect(grupos).not.toContainText("Preguntale");
+    await expect(page.locator(".configMenuPrincipal > .configLista .configFila")).toHaveCount(1);
+    await expect(page.locator("#configFilaAjustes")).toContainText("Ajustes");
     await capturar(page, "simple-10-mas-en-grupos");
+    await page.locator("#configFilaAjustes").click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await expect(page.locator("#configDetalle .configGrupoTitulo")).toHaveText(["Trabajo diario", "Distribuidora", "App"]);
+    await page.locator('#configDetalle [data-config-seccion="trabajo"]').click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Preferencias de trabajo");
+    // La flecha vuelve a Ajustes y, desde ahí, a Más.
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
+    await page.locator("#pantallaConfiguracion").getByRole("button", { name: "Volver", exact: true }).click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Más");
+    await expect(page.locator("#masAccesos")).toBeVisible();
 
     // Catálogo: "Productos" y "Editar marcas".
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
@@ -252,7 +291,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 1. Los íconos de arriba con su nombre abajo (se puede apagar).
     expect(await nombreAbajo("#botonAsistente")).toBe('"Asistente"');
-    expect(await nombreAbajo("#botonAvatar")).toBe('"Más"');
+    expect(await nombreAbajo(".campanaAvisos")).toBe('"Avisos"');
     // Inicio no lleva "?": ahí está el Asistente.
     await expect(inicio.locator(".botonAyudaPantalla")).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -278,7 +317,8 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 3. "Vaciar pedido" sin "¿Seguro?": se vacía y "Deshacer" lo devuelve.
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator("#cliente").blur();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
@@ -286,7 +326,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
     await helado.getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("1");
     await page.getByRole("button", { name: "Más opciones del pedido" }).click();
-    await page.getByRole("dialog", { name: "Opciones del pedido" }).getByRole("button", { name: "Vaciar pedido" }).click();
+    await page.getByRole("menu", { name: "Opciones del pedido" }).getByRole("button", { name: "Vaciar pedido" }).click();
     await expect(page.getByRole("heading", { name: "Vaciar pedido" })).toBeHidden();
     await expect(page.locator("#totalUnidadesPedido")).toHaveText("0");
     const aviso = page.locator(".pzDeshacer");
@@ -298,7 +338,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
 
     // 4. Apariencia: apagar los nombres de arriba.
     await page.evaluate(() => mostrarPantalla("menu"));
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await page.locator("#configDetalle").getByRole("switch", { name: "Nombres en los íconos de arriba" }).uncheck();
     await expect(page.locator("html")).toHaveAttribute("data-nombres-arriba", "no");
@@ -311,7 +351,7 @@ test("simple: ayuda en cada pantalla, deshacer y opciones de arriba y de voz", a
     });
     await page.evaluate(() => mostrarToast("Pedido guardado"));
     expect(await page.evaluate(() => window.dichos)).toEqual([]);
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="trabajo"]').click();
     const llave = page.locator("#configDetalle").getByRole("switch", { name: "Decirlo en voz alta al guardar" });
     await expect(llave).not.toBeChecked();

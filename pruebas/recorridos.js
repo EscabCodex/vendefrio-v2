@@ -7,19 +7,14 @@ const { expect, capturar, prepararPagina } = require("./ayudas");
 async function registrarDistribuidora(page, testInfo) {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Entrar con email" }).click();
-    await page.getByRole("button", { name: /Registrarse/ }).click();
+    await page.getByRole("button", { name: "Crear cuenta gratis" }).click();
+    await page.locator("#inicioRegistroDueno").fill("Jere");
     await page.locator("#inicioRegistroNombre").fill("Distribuidora Prueba");
     await page.locator("#inicioRegistroEmail").fill(`dueno-${testInfo.project.name}-${Date.now()}@prueba.com`);
     await page.locator("#inicioRegistroContrasena").fill("clave-de-prueba");
-    await page.locator("#inicioRegistroRepetir").fill("clave-de-prueba");
-    await page.getByRole("button", { name: "Crear cuenta y distribuidora" }).click();
-
-    // "Tu nombre" (se pide una sola vez al dueño).
-    await expect(page.locator("#inicioNombreDueno")).toBeVisible({ timeout: 20000 });
-    await page.locator("#inicioNombreDueno").fill("Jere");
-    await page.locator("#inicioFormDatosDueno").getByRole("button", { name: "Guardar y entrar" }).click();
-    await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
+    await page.locator("#inicioFormRegistrarse").getByRole("button", { name: "Crear cuenta", exact: true }).click();
+    // "Tu nombre" va en el mismo formulario: no hay otro paso.
+    await expect(page.locator("#pantallaInicioSesion")).toBeHidden({ timeout: 20000 });
     await expect(page.locator("#dashNombreDistribuidora")).toHaveText("Distribuidora Prueba");
 
     const guardado = await page.evaluate(() =>
@@ -34,7 +29,8 @@ async function registrarDistribuidora(page, testInfo) {
 // Carga un pedido de 2 helados y 1 palito (sin captura si no se pide).
 async function cargarPedido(page, conCaptura, comercio = "Almacén Don Pepe") {
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, comercio);
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });
     // Con varias marcas, cada una se abre tocándola (T97): solo si está cerrada.
@@ -67,13 +63,22 @@ async function elegirComercio(page, comercio) {
 // Abre "Más" desde el avatar de Inicio (estilo nuevo, T31).
 async function abrirMas(page) {
     await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
-    await page.locator("#pantallaMenu header").getByRole("button", { name: "Más", exact: true }).click();
+    await page.locator(".bottom-nav").getByRole("button", { name: "Más", exact: true }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
 }
 
-// Abre una sección de la configuración, que está en "Más".
-async function abrirConfiguracionEn(page, seccion) {
+// Más > Ajustes: todos los ajustes juntos (informe del desconocido).
+async function abrirAjustes(page) {
     await abrirMas(page);
+    await page.locator('.configFila[data-config-seccion="ajustes"]').click();
+    await expect(page.locator("#configDetalle .configMenuAjustes")).toBeVisible();
+}
+
+// Abre una sección de la configuración, que está en "Más" (la cuenta) o en
+// "Más > Ajustes" (las demás).
+async function abrirConfiguracionEn(page, seccion) {
+    if (seccion === "cuenta") await abrirMas(page);
+    else await abrirAjustes(page);
     await page.locator(`.configFila[data-config-seccion="${seccion}"]`).click();
 }
 
@@ -168,6 +173,7 @@ module.exports = {
     registrarDistribuidora,
     cargarPedido,
     abrirMas,
+    abrirAjustes,
     abrirConfiguracionEn,
     irAPedidos,
     entrarComoEmpleado,

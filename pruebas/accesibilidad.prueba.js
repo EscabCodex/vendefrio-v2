@@ -47,7 +47,10 @@ test("accesibilidad: botones con nombre y barra fácil de tocar", async ({ page 
         await page.waitForTimeout(300);
         expect(await sinNombre(page), pantalla).toEqual([]);
     }
-    await barra.getByRole("button", { name: "Nuevo pedido" }).click();
+    await barra.getByRole("button", { name: "Crear" }).click();
+    await page.waitForTimeout(300);
+    expect(await sinNombre(page), "Menú Crear").toEqual([]);
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await page.waitForTimeout(300);
     expect(await sinNombre(page), "Nuevo pedido").toEqual([]);
     await page.getByRole("button", { name: "Volver a Pedidos" }).click();

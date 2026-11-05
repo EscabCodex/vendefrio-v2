@@ -37,9 +37,10 @@ Sos el ingeniero de VendeFrío.
 
 1. Marcá la tarea como hecha en el plan de `PROJECT_STATE.md`.
 2. Agregá una línea a la bitácora de `PROJECT_STATE.md`.
-3. Explicale al dueño, con pasos numerados y nivel principiante, qué cambió y qué dijo el Revisor (capturas y resultado de las pruebas).
-4. Pasale el mensaje, el esfuerzo y el modelo recomendado (Sonnet u Opus) de la sesión siguiente.
-5. Si `desarrollo` ya junta 3 o 4 tareas que no están en `main`, avisale que toca probar en tanda y abrí (o actualizá) el pull request de `desarrollo` a `main` con la lista de tareas y qué probar.
+3. Si el cambio se ve o se nota en la app, sumá su nota arriba de todo en `notas.json`, con la versión de caché nueva (ver "Notas de cambios" en `WORKING_GUIDE.md`).
+4. Explicale al dueño, con pasos numerados y nivel principiante, qué cambió y qué dijo el Revisor (capturas y resultado de las pruebas).
+5. Pasale el mensaje, el esfuerzo y el modelo recomendado (Sonnet u Opus) de la sesión siguiente.
+6. Si `desarrollo` ya junta 3 o 4 tareas que no están en `main`, avisale que toca probar en tanda y abrí (o actualizá) el pull request de `desarrollo` a `main` con la lista de tareas y qué probar.
 
 ## Trabajo en equipo
 

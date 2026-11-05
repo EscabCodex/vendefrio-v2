@@ -3,7 +3,7 @@
 // bajar son los mismos botones los que se quedan quietos arriba. "Más"
 // también está en la barra de abajo, y en Rutas las tarjetas se pliegan.
 const { test, expect, capturar } = require("./ayudas");
-const { registrarDistribuidora, abrirMas } = require("./recorridos");
+const { registrarDistribuidora, abrirMas, abrirAjustes } = require("./recorridos");
 
 test.use({ nube: true });
 
@@ -44,10 +44,22 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
     await expect(barra(page).locator(".nav-item.activo")).toHaveText(/Más/);
 
-    // Las pantallas de la barra vuelven a Inicio.
+    // Las pantallas de la barra vuelven a Inicio. Son pantallas principales:
+    // flecha, "?" y la chispa del Asistente, sin casita (tanda 1 de
+    // encabezados), todo a la misma altura.
+    const centro = async boton => { const caja = await boton.boundingBox(); return caja.y + caja.height / 2; };
     for (const [boton, pantalla] of [["Pedidos", "#pantallaPedido"], ["Comercios", "#pantallaComercios"], ["Catálogo", "#pantallaCatalogo"]]) {
         await barra(page).getByRole("button", { name: boton }).click();
         await expect(page.locator(pantalla)).toBeVisible();
+        await expect(casita(page)).toBeHidden();
+        const chispa = arriba(page).getByRole("button", { name: "Asistente" });
+        const ayuda = page.locator(pantalla).getByRole("button", { name: "Ayuda de esta pantalla" });
+        await expect(chispa).toBeVisible();
+        await expect(ayuda).toBeVisible();
+        // Se mide cuando termina la entrada de la pantalla (mientras se
+        // desliza, los botones todavía se están moviendo).
+        await expect.poll(async () => Math.abs(await centro(chispa) - await centro(flecha(page)))).toBeLessThan(1.5);
+        await expect.poll(async () => Math.abs(await centro(ayuda) - await centro(flecha(page)))).toBeLessThan(1.5);
         await page.locator(pantalla).getByRole("button", { name: "Volver a Inicio" }).click();
         await expect(page.locator("#pantallaMenu")).toBeVisible();
     }
@@ -56,18 +68,23 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
     await expect(page.locator("#pantallaRutas")).toBeVisible();
-    // Las tarjetas de Rutas arrancan plegadas, con el resumen a la vista.
-    await expect(page.locator(".tarjetaSeleccionRuta")).not.toHaveAttribute("open", "");
-    await expect(page.locator(".tarjetaSeleccionRuta .chipResumenRuta").first()).toBeVisible();
-    await page.locator(".tarjetaRutasGuardadas").scrollIntoViewIfNeeded();
-    await capturar(page, "volver-02-rutas-plegada");
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // «Paradas» abre la lista de paradas sobre el mapa (comercios con GPS).
+    await page.evaluate(() => guardarComercios(obtenerComercios().map((comercio, i) => ({ ...comercio, lat: -34.6 + i * 0.002, lng: -58.4 + i * 0.002 }))));
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: -34.61, longitude: -58.41 });
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    await elegir.locator('[data-elegir="armar"]').click();
+    await page.locator("#btnParadasRutas").click();
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
+    await capturar(page, "volver-02-rutas-paradas");
+    // Desde las paradas se vuelve al mapa y, desde el mapa, a Más. Rutas
+    // ocupa toda la pantalla como la navegación: sin casita (T136).
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
     await page.locator("#pantallaRutas").getByRole("button", { name: "Volver a Más" }).click();
     await expect(page.locator("#pantallaConfiguracion")).toBeVisible();
-    // Al lado, la casita lleva directo a Inicio.
-    await page.locator("#masAccesos").getByRole("button", { name: "Rutas" }).click();
-    await casita(page).click();
-    await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     for (const acceso of ["Estadísticas", "Cierre del día"]) {
         await abrirMas(page);
@@ -79,15 +96,24 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
 
     // En una sección de Más, la flecha y la casita quedan arriba al bajar:
     // son los mismos botones, en el mismo lugar.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     await expect(page.locator(".configHeader h1")).toHaveText("Apariencia");
     await expect(casita(page)).toBeVisible();
+    // Tanda 1 de encabezados: en una sección de Más, sin campanita ni
+    // Asistente; el "?" a la misma altura que la flecha.
+    await expect(page.locator("#pantallaConfiguracion .campanaAvisos")).toBeHidden();
+    await expect(arriba(page).getByRole("button", { name: "Asistente" })).toBeHidden();
+    const ayudaSeccion = page.locator("#pantallaConfiguracion .configHeader .botonAyudaPantalla");
+    expect(Math.abs(await centro(ayudaSeccion) - await centro(casita(page)))).toBeLessThan(1.5);
     const flechaMas = arriba(page).getByRole("button", { name: "Volver", exact: true });
     await bajarYMirar(page, flechaMas);
     await bajarYMirar(page, casita(page));
     await capturar(page, "volver-03-flotante");
-    // La flecha vuelve a la lista de Más; ahí ya no hace falta la casita.
+    // La flecha vuelve a Ajustes y después a la lista de Más; ahí ya no hace
+    // falta la casita.
+    await flechaMas.click();
+    await expect(page.locator(".configHeader h1")).toHaveText("Ajustes");
     await flechaMas.click();
     await expect(page.locator("#configDetalle")).toBeHidden();
     await expect(page.locator(".configMenuPrincipal")).toBeVisible();
@@ -106,14 +132,14 @@ test("volver: en todas las pantallas y siempre a mano al bajar", async ({ page }
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // La casita, después de bajar, va directo a Inicio.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="respaldo"]').click();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await casita(page).click();
     await expect(page.locator("#pantallaMenu")).toBeVisible();
 
     // Se puede hacer que la flecha suba con la pantalla y sacar "Más" de la barra.
-    await abrirMas(page);
+    await abrirAjustes(page);
     await page.locator('.configFila[data-config-seccion="apariencia"]').click();
     const detalle = page.locator("#configDetalle");
     await detalle.getByRole("switch", { name: "Volver siempre a mano" }).uncheck();

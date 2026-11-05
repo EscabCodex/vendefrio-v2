@@ -35,7 +35,8 @@
     }
 
     // ---------- La hoja "¿Por qué no hubo pedido?" ----------
-    function abrir(nombreComercio) {
+    // alGuardar (opcional): la navegación lo usa para pasar a la parada que sigue.
+    function abrir(nombreComercio, alGuardar) {
         const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreComercio) : null;
         if (!comercio) return;
         if (typeof window.cerrarFichaComercio === "function") window.cerrarFichaComercio();
@@ -56,7 +57,11 @@
                 texto: "Guardar visita",
                 icono: "check",
                 id: "guardarVisita",
-                alTocar: caja => guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value)
+                alTocar: caja => {
+                    const guardada = guardar(comercio, elegido, caja.querySelector("#textoOtroMotivo").value);
+                    if (guardada && typeof alGuardar === "function") alGuardar();
+                    return guardada;
+                }
             }]
         });
         const botonGuardar = caja.querySelector("#guardarVisita");
@@ -108,11 +113,9 @@
         const desde = stats.inicioPeriodo();
         const lista = visitas().filter(visita => !desde || Number(visita.horaCelular) >= desde.getTime());
         const card = stats.tarjeta("cerrarX", "naranja", "Visitas sin pedido",
-            lista.length ? lista.length + " " + ({ hoy: "hoy", semana: "en los últimos 7 días", mes: "este mes" }[stats.periodoElegido()] || "en total") : "Por qué no hubo pedido", "statsSinPedido");
-        if (!lista.length) {
-            card.insertAdjacentHTML("beforeend", stats.vacio("Cuando marques “Visité, sin pedido”, acá vas a ver los motivos."));
-            return card;
-        }
+            lista.length ? lista.length + " " + ({ hoy: "hoy", semana: "en los últimos 7 días", mes: "en los últimos 30 días" }[stats.periodoElegido()] || "en el último año") : "Por qué no hubo pedido", "statsSinPedido");
+        // Sin visitas marcadas no aparece (repaso de diseño de Estadísticas).
+        if (!lista.length) return null;
         const cuenta = {};
         lista.forEach(visita => { cuenta[visita.motivo] = (cuenta[visita.motivo] || 0) + 1; });
         const max = Math.max(...Object.values(cuenta), 1);
@@ -122,16 +125,26 @@
                     <span class="statsPista"><i style="width:${Math.round(cuenta[motivo.clave] / max * 100)}%"></i></span></div>
                 <b class="statsFilaValor">${cuenta[motivo.clave]}</b>
             </div>`).join("");
-        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila">
+        const ultimas = lista.slice(0, 3).map(visita => `<div class="statsFila" data-ficha="${esc(visita.comercio)}">
                 <span class="statsAvatar">${esc(window.piezas.iniciales(visita.comercio))}</span>
                 <div class="statsFilaTexto"><strong>${esc(visita.comercio)}</strong><small>${esc(textoMotivo(visita))} · ${esc(window.piezas.fechaCorta(visita.horaCelular))}${visita.persona && visita.persona.nombre ? " · " + esc(visita.persona.nombre) : ""}</small></div>
             </div>`).join("");
         card.insertAdjacentHTML("beforeend", `<div class="statsLista">${filas}</div><p class="statsSubtitulo">Últimas</p><div class="statsLista">${ultimas}</div>`);
+        // Repasada: cada visita abre la ficha de ese comercio.
+        if (window.abrirFichaComercio) card.querySelectorAll("[data-ficha]").forEach(fila => {
+            window.piezas.tocable(fila, () => window.abrirFichaComercio(fila.dataset.ficha));
+        });
         return card;
     }
 
     (window.tarjetasEstadisticasExtra = window.tarjetasEstadisticasExtra || []).push(tarjetaEstadisticas);
     window.extrasVendeFrio.escuchar("visitas", () => window.estadisticasVendeFrio?.redibujar());
 
-    window.visitasVendeFrio = { MOTIVOS, abrir, visitas, visitasDelComercio, textoMotivo };
+    // Sin elegir motivo (el botón "Sin pedido" de la notificación de navegación).
+    function registrar(nombreComercio, texto) {
+        const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(nombreComercio) : null;
+        return Boolean(comercio) && guardar(comercio, "otro", texto || "Sin pedido (desde la notificación)");
+    }
+
+    window.visitasVendeFrio = { MOTIVOS, abrir, registrar, visitas, visitasDelComercio, textoMotivo };
 }());

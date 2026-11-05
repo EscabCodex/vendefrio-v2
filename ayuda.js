@@ -8,7 +8,7 @@
         {
             id: "cargarPedido", titulo: "Cargar un pedido",
             claves: /(cargo|cargar|hago|hacer|armo|tomo|tomar|anoto|anotar) (un )?pedido|pedido nuevo|nuevo pedido/,
-            pasos: ["Tocá el + de abajo o «Cargar un pedido» en Inicio.", "Elegí el comercio.", "Sumá los productos con el +.", "Tocá «Guardar pedido»."]
+            pasos: ["Tocá el + de abajo y «Nuevo pedido», o «Cargar un pedido» en Inicio.", "Elegí el comercio.", "Sumá los productos con el +.", "Tocá «Guardar pedido»."]
         },
         {
             id: "armarPedido", titulo: "Armar un pedido",
@@ -68,7 +68,7 @@
         {
             id: "ruta", titulo: "Armar la ruta o ir a un comercio",
             claves: /ruta|recorrido|como llego|navegar|mapa/,
-            pasos: ["En Más, tocá «Rutas».", "Elegí los comercios y tocá «Optimizar ruta».", "Para ir a uno solo, en su ficha tocá «Ir»."]
+            pasos: ["En Más, tocá «Rutas».", "Tocá «Armar ruta» y elegí los comercios: la app los ordena sola.", "Para ir a uno solo, en su ficha tocá «Ir»."]
         },
         {
             id: "empleados", titulo: "Sumar un empleado",
@@ -103,7 +103,7 @@
         {
             id: "asistente", titulo: "Qué puede hacer el Asistente",
             claves: /que (podes|sabes|puedo) (hacer|decir|preguntar)|ayuda|como funciona|para que sirve/,
-            pasos: ["Dale órdenes: «nuevo pedido para Don Pepe», «llevame a Super Norte», «llegué».", "Preguntale por tus números: «¿cuánto vendí hoy?», «¿quién me debe?».", "Preguntale cómo se usa algo: «¿cómo registro un cobro?»."]
+            pasos: ["Dale órdenes: «nuevo pedido para Don Pepe», «llevame a Super Norte», «llegué».", "Preguntale por tus números: «¿cuánto vendí hoy?», «¿quién me debe?».", "Preguntale cómo se usa algo: «¿cómo registro un cobro?».", "Pedime varias cosas juntas: «anotá un pedido para Don Pepe, 5 ravioles, e imprimí el ticket». Antes de guardar o imprimir te muestro qué voy a hacer y espero tu «sí».", "Estoy en todas las pantallas (la chispa de arriba a la derecha) y sé lo que estás viendo: navegando, «vamos a lo de Pepe primero»; con un pedido abierto, «imprimí el ticket».", "Lo fácil lo contesto al toque, también sin internet. Lo demás se lo pregunto a Claude, con internet."]
         }
     ];
 

@@ -1,6 +1,6 @@
 // VendeFrío - Repartidores en el mapa (T73).
-// Cada repartidor decide si comparte su ubicación (aviso en Inicio cuando
-// tiene pedidos En reparto) y se apaga sola al terminar el reparto. El dueño
+// Cada repartidor prende el switch "Estoy repartiendo" arriba en Inicio
+// (Iniciar ruta lo prende solo) y lo apaga a mano o al cerrar la ruta. El dueño
 // ve "Repartiendo ahora": el mapa con cada uno, a dónde va y hace cuánto.
 // En la nube: `ubicaciones/{idPersona}` (solo el dueño las lee).
 (function () {
@@ -9,7 +9,6 @@
     const p = window.piezas;
     const extras = window.extrasVendeFrio;
     const CLAVE = "vendefrio_compartiendo_ubicacion";
-    const CLAVE_NO = "vendefrio_ubicacion_no_hoy";
     const VIGENTE = 20 * 60000;
     const MAXIMO = 12 * 3600000;
 
@@ -32,16 +31,21 @@
     }
 
     // Lo que esta persona lleva: { enReparto, hechas, total, siguiente }.
+    // Se recuerda hasta que cambian los pedidos, la persona o el día: Inicio
+    // lo pregunta en cada dibujo (repasada).
     function miReparto() {
         const yo = p.persona();
-        const pedidos = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
-        const vivos = pedidos.filter(pedido => pedido && pedido.eliminado !== true && typeof estadoActualDelPedido === "function");
-        const enReparto = vivos.filter(pedido => estadoActualDelPedido(pedido) === "enReparto" &&
-            (!yo || !ultimaEntrada(pedido, "enReparto") || (ultimaEntrada(pedido, "enReparto").persona || {}).idPersona === yo.idPersona));
-        const hechas = vivos.filter(pedido => estadoActualDelPedido(pedido) === "entregado" &&
-            pedido.entrega && pedido.entrega.persona && yo && pedido.entrega.persona.idPersona === yo.idPersona &&
-            Number(pedido.entrega.horaCelular) >= hoy()).length;
-        return { enReparto, hechas, total: hechas + enReparto.length, siguiente: enReparto[0] || null };
+        const cuenta = recordarHastaQueCambie("miReparto", ["historial"], () => {
+            const vivos = historialParaLeer().filter(pedido => pedido && pedido.eliminado !== true && typeof estadoActualDelPedido === "function");
+            const enReparto = vivos.filter(pedido => estadoActualDelPedido(pedido) === "enReparto" &&
+                (!yo || !ultimaEntrada(pedido, "enReparto") || (ultimaEntrada(pedido, "enReparto").persona || {}).idPersona === yo.idPersona));
+            const hechas = vivos.filter(pedido => estadoActualDelPedido(pedido) === "entregado" &&
+                pedido.entrega && pedido.entrega.persona && yo && pedido.entrega.persona.idPersona === yo.idPersona &&
+                Number(pedido.entrega.horaCelular) >= hoy()).length;
+            return { enReparto, hechas };
+        }, (yo ? String(yo.idPersona || "") : "") + "|" + hoy());
+        const enReparto = cuenta.enReparto.slice();
+        return { enReparto, hechas: cuenta.hechas, total: cuenta.hechas + enReparto.length, siguiente: enReparto[0] || null };
     }
 
     // ---------- Compartir (el repartidor) ----------
@@ -64,11 +68,6 @@
         const yo = p.persona();
         if (!yo || !p.refNube()) return;
         const reparto = miReparto();
-        // Se apaga sola: sin pedidos En reparto, terminó el reparto.
-        if (!reparto.enReparto.length) {
-            apagar(true);
-            return;
-        }
         const lat = posicion.coords.latitude, lng = posicion.coords.longitude;
         const movido = window.pruebaEntregaVendeFrio
             ? window.pruebaEntregaVendeFrio.distanciaMetros(lat, lng, ultimaEscritura.lat, ultimaEscritura.lng) : 999;
@@ -79,12 +78,15 @@
         if (destino && Number.isFinite(Number(destino.lat)) && destino.lat !== "" && window.pruebaEntregaVendeFrio &&
             window.pruebaEntregaVendeFrio.distanciaMetros(lat, lng, Number(destino.lat), Number(destino.lng)) <= 80) paso = "entregando";
         ultimaEscritura = { hora: Date.now(), lat, lng };
+        // App de Android: la notificación de reparto dice por qué parada vas.
+        window.appAndroidVendeFrio?.reparto?.({ hechas: reparto.hechas, total: reparto.total, destino, lat, lng });
         extras.guardar("ubicaciones", {
             nombre: String(yo.nombre || "").slice(0, 60),
             lat, lng,
             precision: Math.round(Number(posicion.coords.accuracy) || 0),
             destino: destino ? String(destino.nombre || "").slice(0, 120) : "",
             paso,
+            desde: Number((p.lsLeer(CLAVE, null) || {}).desde) || Date.now(),
             hechas: reparto.hechas,
             total: reparto.total,
             horaCelular: Date.now()
@@ -92,13 +94,23 @@
     }
 
     function vigilar() {
-        if (vigilancia !== null || !navigator.geolocation) return;
+        if (vigilancia !== null) return;
+        // App de Android: GPS que sigue con la pantalla apagada (appAndroid.js).
+        const app = window.appAndroidVendeFrio;
+        if (app && app.vigilarUbicacion) {
+            vigilancia = { app: app.vigilarUbicacion(escribir, error => console.warn("No se pudo leer la ubicación para compartir.", error)) };
+            // Al volver a abrir la app con el switch prendido, vuelve el resumen.
+            try { app.repartiendo?.(true, (p.lsLeer(CLAVE, null) || {}).desde); } catch (error) { console.warn(error); }
+            return;
+        }
+        if (!navigator.geolocation) return;
         vigilancia = navigator.geolocation.watchPosition(escribir, error => {
             console.warn("No se pudo leer la ubicación para compartir.", error);
         }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
     }
 
-    function activar() {
+    function activar(silencio) {
+        if (compartiendo()) { dibujarAvisos(); return; }
         if (!navigator.geolocation) {
             mostrarToast("Este celular no da la ubicación");
             return;
@@ -106,18 +118,22 @@
         p.lsGuardar(CLAVE, { desde: Date.now() });
         ultimaEscritura = { hora: 0, lat: 0, lng: 0 };
         vigilar();
-        mostrarToast("Compartiendo tu ubicación con el dueño");
+        try { window.appAndroidVendeFrio?.repartiendo?.(true); } catch (error) { console.warn(error); }
+        if (!silencio) mostrarToast("Estás repartiendo: compartís tu ubicación");
         dibujarAvisos();
     }
 
     function apagar(solo) {
-        if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
+        if (vigilancia && typeof vigilancia === "object") window.appAndroidVendeFrio?.dejarDeVigilar?.(vigilancia.app);
+        else if (vigilancia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigilancia);
         vigilancia = null;
+        window.appAndroidVendeFrio?.reparto?.(null);
+        try { window.appAndroidVendeFrio?.repartiendo?.(false); } catch (error) { console.warn(error); }
         const estaba = compartiendo();
         try { localStorage.removeItem(CLAVE); } catch (error) { /* sin espacio */ }
         const yo = p.persona();
         if (yo && p.refNube()) extras.borrar("ubicaciones", yo.idPersona);
-        if (estaba) mostrarToast(solo ? "Terminaste el reparto: dejaste de compartir tu ubicación" : "Dejaste de compartir tu ubicación");
+        if (estaba) mostrarToast(solo ? "Terminaste el reparto: dejaste de compartir tu ubicación" : "Dejaste de repartir");
         dibujarAvisos();
     }
 
@@ -141,7 +157,7 @@
         if (!main.querySelector("#mapaRepartidores")) {
             main.innerHTML = `<div id="mapaRepartidores" class="pzMapa" role="img" aria-label="Mapa con los repartidores"></div>
                 <div class="pzTarjeta pzLista" id="listaRepartidores"></div>
-                <div class="pzNota pzNotaAviso">${p.ico("escudo", 20)}<span>Cada repartidor decide si comparte su ubicación, y se apaga sola al terminar el reparto.</span></div>`;
+                <div class="pzNota pzNotaAviso">${p.ico("escudo", 20)}<span>Cada repartidor prende «Estoy repartiendo» en Inicio; así ves quién trabaja y desde qué hora.</span></div>`;
         }
         p.mostrar(seccion);
         dibujarPantalla();
@@ -164,6 +180,13 @@
         seccion.querySelector("#listaRepartidores").innerHTML = filas || `<div class="pzVacio">Nadie está compartiendo su ubicación ahora.</div>`;
 
         const caja = seccion.querySelector("#mapaRepartidores");
+        // Repasada: tocar a alguien de la lista lo muestra en el mapa.
+        if (window.mapaVendeFrio?.disponible?.()) seccion.querySelectorAll("#listaRepartidores .pzFila").forEach((fila, indice) => p.tocable(fila, () => {
+            const item = lista[indice];
+            if (!mapa || !item) return;
+            caja.scrollIntoView({ block: "center", behavior: "smooth" });
+            mapa.setView([item.lat, item.lng], 16);
+        }));
         if (!window.mapaVendeFrio?.disponible?.()) {
             caja.classList.add("pzOcultar");
             return;
@@ -221,33 +244,39 @@
             etiqueta: "Ver mapa de quién reparte"
         } : null, "arriba");
 
-        // El repartidor: compartir mientras tiene pedidos En reparto.
-        const reparto = miReparto();
-        if (compartiendo()) {
-            vigilar();
-            p.avisoInicio("avisoCompartirUbicacion", {
-                color: "Ok",
-                icono: "ubicacion",
-                titulo: "Compartiendo tu ubicación",
-                texto: "Se apaga sola al terminar el reparto",
-                boton: "Apagar",
-                claseBoton: "pzBtnSec",
-                alTocar: () => apagar(false)
-            }, "arriba");
-            if (!reparto.enReparto.length) apagar(true);
-            return;
-        }
-        const noHoy = p.lsLeer(CLAVE_NO, 0) >= hoy();
+        // El repartidor: el switch "Estoy repartiendo" arriba en Inicio.
+        p.avisoInicio("avisoCompartirUbicacion", null);
+        dibujarSwitch();
+    }
+
+    // Switch fijo arriba en Inicio: prendido comparte la ubicación (y en
+    // Android muestra la notificación fija de reparto); apagado corta todo.
+    function dibujarSwitch() {
+        const contenedor = document.querySelector("#pantallaMenu .dashboardHeaderTop");
+        let fila = document.getElementById("switchRepartiendo");
         const puedeRepartir = !window.empleadosVendeFrio?.puede || window.empleadosVendeFrio.puede("reparte");
-        p.avisoInicio("avisoCompartirUbicacion", reparto.enReparto.length && !noHoy && puedeRepartir ? {
-            color: "Info",
-            icono: "ubicacion",
-            titulo: "¿Compartís tu ubicación?",
-            texto: "Así el dueño ve dónde va el reparto",
-            boton: "Activar",
-            alTocar: activar,
-            etiqueta: "Activar: compartir mi ubicación"
-        } : null, "arriba");
+        if (!contenedor || !puedeRepartir) { fila?.remove(); return; }
+        if (!fila) {
+            fila = document.createElement("label");
+            fila.id = "switchRepartiendo";
+            fila.className = "switchRepartiendo";
+            fila.innerHTML = `<span>Repartiendo<small></small></span>` +
+                `<input type="checkbox" class="ajLlave" role="switch" aria-label="Estoy repartiendo">`;
+            fila.querySelector("input").addEventListener("change", evento => {
+                if (evento.target.checked) activar(); else apagar(false);
+            });
+        }
+        // Va debajo del nombre de la distribuidora, en lugar del saludo.
+        const nombre = contenedor.querySelector(".inicioDistribuidora");
+        if (fila.previousElementSibling !== nombre) nombre.after(fila);
+        const prendido = compartiendo();
+        if (prendido) vigilar();
+        fila.querySelector("input").checked = prendido;
+        fila.classList.toggle("prendido", prendido);
+        const datos = p.lsLeer(CLAVE, null);
+        fila.querySelector("small").textContent = prendido
+            ? "desde las " + new Date(datos.desde).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+            : "apagado";
     }
 
     if (typeof window.actualizarDashboard === "function") {

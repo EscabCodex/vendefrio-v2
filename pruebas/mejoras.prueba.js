@@ -47,7 +47,8 @@ test("mejoras: faltante, vuelto, avisos por tarea y 1 unidad", async ({ page }, 
     await irAPedidos(page);
 
     // "1 unidad", no "1 unidades".
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Kiosco Luna");
     await page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" }).getByRole("button", { name: "Aumentar cantidad" }).click();
     await expect(page.locator("#palabraUnidadesPedido")).toHaveText("unidad");
@@ -123,21 +124,22 @@ test("mejoras: elegir varios, catálogo en lista y ronda de WhatsApp", async ({ 
         await expect(page.locator(".pieTandaPedidos")).toBeVisible({ timeout: 1000 });
     }).toPass();
     await page.getByRole("checkbox", { name: /Almacén Don Pepe/ }).click();
-    await page.getByRole("button", { name: /Mover a otro paso/ }).click();
-    const mover = page.getByRole("dialog", { name: "Mover a otro paso" });
-    await expect(mover).toContainText("Preparado (2)");
+    await page.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    const mover = page.getByRole("menu");
+    await expect(mover.getByRole("button", { name: "Preparado (2)" })).toBeVisible();
     await capturar(page, "mejoras-04-mover-a-otro-paso");
-    await page.evaluate(() => window.piezas.cerrar());
-    await page.getByRole("button", { name: "Cancelar" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Dejar de elegir" }).click();
 
-    // Catálogo en lista.
+    // Catálogo en lista (Tanda 3: arranca en filas; los cuadros son el modo foto).
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
-    await page.getByRole("button", { name: "Ver en lista" }).click();
     await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
     await expect(page.locator("#vistaCatalogo")).toContainText("5 productos");
     await capturar(page, "mejoras-05-catalogo-en-lista");
-    await page.getByRole("button", { name: "Ver en cuadros" }).click();
+    await page.getByRole("button", { name: "Modo foto, para mostrar al cliente" }).click();
     await expect(page.locator("#grillaCatalogo")).not.toHaveClass(/vistaLista/);
+    await page.getByRole("button", { name: "Ver en filas" }).click();
+    await expect(page.locator("#grillaCatalogo")).toHaveClass(/vistaLista/);
 
     // Ronda de WhatsApp: "Enviar a…" fijo abajo y "Saltear".
     await abrirMas(page);
@@ -172,7 +174,20 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
     await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
     await expect(aCobrar.locator(".filaACobrar")).toContainText("Super Norte");
     await capturar(page, "mejoras-07-a-cobrar");
-    await aCobrar.getByRole("button", { name: "Todos", exact: true }).click();
+    // Repaso de A cobrar: lupa primera en la fila y filtros con el número.
+    const fila = aCobrar.locator(".filtrosACobrar");
+    await expect(fila.locator(":scope > *").first()).toHaveClass(/pzLupa/);
+    await expect(fila.getByRole("button", { name: /^Todos/ })).toContainText("2");
+    await expect(fila.getByRole("button", { name: /^Más viejas/ })).toContainText("0");
+    await fila.getByRole("button", { name: /^Más grandes/ }).click();
+    await expect(aCobrar.locator(".filaACobrar").first()).toBeVisible();
+    await aCobrar.getByRole("button", { name: /^Todos/ }).click();
+    await fila.getByRole("button", { name: "Buscar comercio" }).click();
+    await aCobrar.locator("#buscarACobrar").fill("luna");
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(1);
+    await expect(aCobrar.locator(".filaACobrar")).toContainText("Kiosco Luna");
+    await aCobrar.getByRole("button", { name: "Cerrar el buscador" }).click();
+    await expect(aCobrar.locator(".filaACobrar")).toHaveCount(2);
     await aCobrar.getByRole("button", { name: /Recordarles a todos \(2\)/ }).click();
     const todos = page.getByRole("dialog", { name: "Recordarles a todos" });
     await todos.getByRole("button", { name: "Enviar" }).first().click();
@@ -192,22 +207,21 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
     expect(mensaje).toContain("Entregados: 2 de 2 cargados");
     expect(mensaje).toContain("A cobrar: $ 19.600");
 
-    // Estadísticas: Unidades y tocar una barra.
+    // Estadísticas: los 2 pedidos de hoy y qué día se vende más.
     await page.evaluate(() => window.abrirEstadisticas());
-    await page.locator('[data-periodo="semana"]').click();
-    await page.locator('[data-medida="unidades"]').click();
-    await expect(page.locator(".statsGrafico h2")).toHaveText("Unidades por día");
-    await expect(page.locator(".statsColumna.hoy .statsValor")).toHaveText("6");
-    await page.locator(".statsColumna.hoy").click();
-    await expect(page.locator("#detalleDiaEstadisticas")).toContainText("2 pedidos · 6 u");
-    await page.locator(".statsGrafico").scrollIntoViewIfNeeded();
+    await page.locator('[data-periodo="hoy"]').click();
+    await expect(page.locator('[data-periodo="hoy"] .filtroEtapaCantidad')).toHaveText("2");
+    await expect(page.locator(".statsDias .statsDiasBarras .mejor")).toHaveCount(1);
+    await page.locator(".statsDias").scrollIntoViewIfNeeded();
     await capturar(page, "mejoras-09-estadisticas");
 
     // Toda la lista de precios: −10% redondeado a $ 100.
     await page.evaluate(() => window.listasPreciosVendeFrio.abrirLista("Mayorista"));
-    await page.locator("#porcentajeLista").fill("-10");
-    await page.locator('[data-redondeo="100"]').click();
-    await page.locator("#aplicarPorcentajeLista").click();
+    await page.locator("#cambiarRegla").click();
+    const regla = page.getByRole("dialog", { name: "Precios de Mayorista" });
+    await regla.locator("#porcentajeLista").fill("-10");
+    await regla.locator('[data-redondeo="100"]').click();
+    await regla.getByRole("button", { name: /Aplicar a/ }).click();
     await expect(page.getByRole("spinbutton", { name: "Precio Helado 1 kg en Mayorista" })).toHaveValue("4100");
     await capturar(page, "mejoras-10-toda-la-lista");
     await page.locator("#guardarTodaLista").click();
@@ -215,7 +229,8 @@ test("mejoras: a cobrar, cierre, estadísticas, lista de precios y dictado", asy
 
     // Dictado: lo no entendido pregunta «¿cuál es?».
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await page.getByRole("button", { name: "Más opciones del pedido" }).click();
     await page.getByRole("button", { name: "Dictar o pegar pedido" }).click();
     const dictado = page.locator(".ventanaDictado");
@@ -244,11 +259,14 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(page.locator("#mapaRuta.leaflet-container")).toBeVisible();
     await expect(page.locator(".pinRuta")).toHaveCount(3);
-    await page.locator(".tarjetaSeleccionRuta > summary").click();
-    await page.locator("#seleccionarTodosRuta").click();
-    await expect(page.locator("#resumenPinesMapa")).toContainText("3 en la ruta");
-    await page.locator("#btnOptimizarRuta").click();
-    await page.locator("#modalAviso").getByRole("button", { name: "Entendido" }).click();
+    // «Armar ruta» > Elegir a mano > Marcar todos: se ordena sola.
+    await page.locator("#btnArmarRuta").click();
+    await page.locator(".hojaArmarRuta").getByRole("button", { name: /Elegir comercios a mano/ }).click();
+    const elegir = page.getByRole("dialog", { name: "Elegir comercios para la ruta" });
+    await elegir.getByRole("button", { name: "Marcar todos" }).click();
+    // El que no tiene ubicación en el mapa lo dice y se puede sacar.
+    await elegir.getByRole("checkbox", { name: /Almacén Don Pepe.*sin ubicación en el mapa/ }).click();
+    await elegir.getByRole("button", { name: "Armar la ruta con 3" }).click();
 
     // Paradas con distancia, minutos y lo que lleva; la próxima abajo.
     const paradas = page.locator(".paradaOrden");
@@ -256,16 +274,26 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     // La ruta más corta empieza por Despensa Mary, aunque Kiosco Luna esté más cerca.
     await expect(paradas.first()).toHaveAttribute("data-nombre", "Despensa Mary");
     await expect(paradas.first()).toContainText("min");
-    await expect(paradas.first()).toContainText("Sin pedido para entregar");
+    // Sin pedido no lleva nada; sin horario, «+ Agregar horario».
+    await expect(paradas.first().locator(".llevaParada .pzChip")).toHaveCount(0);
+    await expect(paradas.first().locator("[data-agregar-dato='horario']")).toHaveText("Agregar horario");
     await expect(paradas.filter({ hasText: "Kiosco Luna" })).toContainText("Lleva 3 u · $ 9.800");
-    const proxima = page.locator("#proximaParadaRuta");
-    await expect(proxima).toContainText("Próxima parada · 1 de 3");
-    await expect(proxima).toContainText("Despensa Mary");
-    await expect(proxima.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
-    await page.locator("#listaRutaOrdenada").evaluate(lista => window.scrollBy(0, lista.getBoundingClientRect().top - 200));
+    // La próxima es la primera tarjeta del carrusel; en su ⋯, Hacer pedido
+    // y Pasé, sin pedido (repaso de Rutas).
+    const proxima = page.locator("#proximaParadaRuta .paradaCarrusel.actual");
+    await expect(proxima).toHaveAttribute("aria-label", "Parada 1 de 3: Despensa Mary");
+    await proxima.getByRole("button", { name: "Opciones de Despensa Mary" }).click();
+    const opcionesParada = page.locator(".menuParadaRuta");
+    await expect(opcionesParada.getByRole("button", { name: "Hacer pedido" })).toBeVisible();
+    await opcionesParada.getByRole("button", { name: "Pasé, sin pedido" }).click();
+    const visita = page.getByRole("dialog", { name: "¿Por qué no hubo pedido?" });
+    await visita.locator(".pzMotivo").first().click();
+    await visita.getByRole("button", { name: "Guardar visita" }).click();
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 2 de 3: /);
+    // La lista se abre con «Paradas» (T136).
+    await page.locator("#btnParadasRutas").click();
+    await expect(page.locator("#listaRutaOrdenada")).toBeVisible();
     await capturar(page, "mejoras-12-paradas-de-la-ruta");
-    await proxima.getByRole("button", { name: /Ya pasé/ }).click();
-    await expect(proxima).toContainText("Próxima parada · 2 de 3");
 
     // T126: tocando la parada se carga su pedido y, al volver, queda tildada sola.
     const conPedido = await paradas.nth(1).getAttribute("data-nombre");
@@ -282,9 +310,10 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await abrirMas(page);
     await page.locator("#masAccesos").getByRole("button", { name: /Rutas/ }).click();
     await expect(paradas.filter({ hasText: conPedido })).toHaveClass(/hecha/);
-    await expect(proxima).toContainText("Próxima parada · 3 de 3");
+    await expect(proxima).toHaveAttribute("aria-label", /^Parada 3 de 3: /);
 
     // Cambiar el orden con el teclado (con el dedo es arrastrar ≡).
+    await page.locator("#btnParadasRutas").click();
     const segunda = await paradas.nth(1).getAttribute("data-nombre");
     await paradas.nth(1).locator(".agarreParada").focus();
     await page.keyboard.press("ArrowUp");
@@ -292,21 +321,33 @@ test("mejoras: rutas con paradas y pines del mapa", async ({ page }, testInfo) =
     await expect(page.locator(".encabezadoParadas")).toContainText("Orden a tu gusto");
 
     // Tocar un pin: sacarlo de la ruta y moverlo.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: "Volver al mapa" }).click();
+    // El carrusel mueve el mapa: el pin puede quedar debajo de la cabecera.
+    const centrarEnPin = () => page.evaluate(() => {
+        const comercio = buscarComercioPorNombre("Despensa Mary");
+        mapaLeaflet.setView([Number(comercio.lat), Number(comercio.lng)], mapaLeaflet.getZoom(), { animate: false });
+    });
+    await centrarEnPin();
     await page.locator('.pinRuta[title="Despensa Mary"]').click();
-    const opciones = page.getByRole("dialog", { name: "Opciones de Despensa Mary" });
+    const opciones = page.locator(".menuPinRuta");
     await expect(opciones).toContainText("Parada");
     await capturar(page, "mejoras-13-pin-opciones");
     await opciones.getByRole("button", { name: "Sacar de la ruta" }).click();
     await expect(paradas).toHaveCount(2);
-    await expect(page.locator("#resumenPinesMapa")).toContainText("2 en la ruta");
-    await page.locator('.pinRuta[title="Despensa Mary"]').click();
-    await page.getByRole("dialog", { name: "Opciones de Despensa Mary" }).getByRole("button", { name: "Sumar a la ruta" }).click();
+    await expect(page.locator("#numerosPlanRutas")).toContainText("2paradas");
+    // Al sacar la parada el mapa vuelve a encuadrar la ruta un rato después:
+    // si se lleva el pin, se vuelve a centrar y se toca de nuevo.
+    await expect(async () => {
+        await centrarEnPin();
+        await page.locator('.pinRuta[title="Despensa Mary"]').click({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
+    await page.locator(".menuPinRuta").getByRole("button", { name: "Sumar a la ruta" }).click();
+    // Vuelve de paso, donde menos se desvía.
     await expect(paradas).toHaveCount(3);
-    await expect(paradas.last()).toHaveAttribute("data-nombre", "Despensa Mary");
+    await expect(page.locator('.paradaOrden[data-nombre="Despensa Mary"]')).toHaveCount(1);
 
     await page.locator('.pinRuta[title="Super Norte"]').click();
-    await page.getByRole("dialog", { name: "Opciones de Super Norte" }).getByRole("button", { name: "Mover el pin" }).click();
+    await page.locator(".menuPinRuta").getByRole("button", { name: "Mover el pin" }).click();
     await expect(page.locator("#barraMoverPin")).toBeVisible();
     await expect(page.locator("#barraMoverPin")).toContainText("Super Norte");
     await capturar(page, "mejoras-14-mover-pin");
@@ -320,7 +361,9 @@ test("mejoras: nuevo pedido con «Quiere» o «Tiene» y el cartelito en Pedidos
     await irAPedidos(page);
     await cargarPedido(page, false, "Super Norte");
 
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Kiosco Luna");
     const modo = page.locator("#modoPedido");
     await expect(modo.getByRole("button", { name: "Quiere" })).toHaveAttribute("aria-pressed", "true");
@@ -333,7 +376,7 @@ test("mejoras: nuevo pedido con «Quiere» o «Tiene» y el cartelito en Pedidos
     await page.locator("#modalPedido").click({ position: { x: 10, y: 10 } });
 
     const tarjetas = page.locator(".tarjetaSeguimiento");
-    await expect(tarjetas.filter({ hasText: "Kiosco Luna" }).locator(".badge.tipoTiene")).toHaveText("Tiene");
-    await expect(tarjetas.filter({ hasText: "Super Norte" }).locator(".badge.tipoQuiere")).toHaveText("Quiere");
+    await expect(tarjetas.filter({ hasText: "Kiosco Luna" }).locator(".tieneQuiere.tipoTiene")).toHaveText("Tiene");
+    await expect(tarjetas.filter({ hasText: "Super Norte" }).locator(".tieneQuiere.tipoQuiere")).toHaveText("Quiere");
     await capturar(page, "mejoras-16-pedidos-tiene-y-quiere");
 });

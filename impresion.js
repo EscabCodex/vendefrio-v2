@@ -13,6 +13,14 @@
 // =====================================================
 
 (function () {
+    // Tanda 3: el gramaje o las unidades del producto (de la ficha) van en el ticket.
+    function contenidoDeProducto(marca, nombre) {
+        try {
+            const lista = (typeof productosParaLeer === "function" ? productosParaLeer() : {})[marca] || [];
+            const encontrado = lista.find(producto => producto && producto.nombre === nombre);
+            return String(encontrado && encontrado.contenido || "").trim();
+        } catch (error) { return ""; }
+    }
     // Impresora guardada en este celular: { id, nombre }.
     const CLAVE_IMPRESORA = "vendefrio_impresora";
 
@@ -349,8 +357,9 @@
                 grupo = { marca, items: [] };
                 marcas.push(grupo);
             }
+            const contenido = contenidoDeProducto(marca, item.producto);
             grupo.items.push({
-                nombre: String(item.producto || "Sin producto"),
+                nombre: String(item.producto || "Sin producto") + (contenido ? " (" + contenido + ")" : ""),
                 cantidad,
                 pedida: linea.pedida,
                 precio,
@@ -508,7 +517,7 @@
 
         modal = document.createElement("div");
         modal.id = "modalImpresion";
-        modal.className = "modal oculto";
+        modal.className = "modal modalHoja oculto";
         modal.innerHTML = `
             <div class="modalContenido impresionPedido" role="dialog" aria-modal="true" aria-labelledby="tituloImpresion">
                 <h2 id="tituloImpresion"></h2>
@@ -620,7 +629,7 @@
 
         modal = document.createElement("div");
         modal.id = "modalCopiasTicket";
-        modal.className = "modal oculto";
+        modal.className = "modal modalHoja oculto";
         modal.innerHTML = `
             <div class="modalContenido copiasTicket" role="dialog" aria-modal="true" aria-labelledby="tituloCopiasTicket">
                 <h2 id="tituloCopiasTicket"></h2>
@@ -665,7 +674,7 @@
     }
 
     function buscarPedido(id) {
-        return obtenerHistorial().find(item => String(item.id || "") === String(id || "")) || null;
+        return pedidoParaLeer(id);
     }
 
     function elegirCopias(idPedido, opciones) {
@@ -774,7 +783,7 @@
         const sinEntregar = [];
         const aCobrar = [];
 
-        obtenerHistorial().forEach(pedido => {
+        historialParaLeer().forEach(pedido => {
             if (!pedido || pedido.eliminado === true || !mismoComercio(pedido.comercio, nombre)) return;
 
             const estado = estadoActualDelPedido(pedido);

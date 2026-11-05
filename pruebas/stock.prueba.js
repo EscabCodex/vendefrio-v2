@@ -1,12 +1,9 @@
 // VendeFrío - Código de barras (T89) y stock simple (T90), en modo personal.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 async function entrarPersonal(page) {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 }
 
@@ -21,7 +18,7 @@ test("stock y código de barras: contar, llegó de fábrica, poco stock y escane
     });
     await page.locator(".bottom-nav").getByRole("button", { name: "Catálogo" }).click();
     const catalogo = page.locator("#pantallaCatalogo");
-    await catalogo.locator(".chipMarca", { hasText: "Frío Sur" }).click();
+    await catalogo.locator("#chipsMarcasCatalogo .filtroEtapa", { hasText: "Frío Sur" }).click();
 
     // Código de barras del helado.
     await page.getByRole("button", { name: "Opciones de Helado 1 kg" }).click();
@@ -56,12 +53,16 @@ test("stock y código de barras: contar, llegó de fábrica, poco stock y escane
     await expect(tarjeta("Helado 1 kg").locator(".stockCatalogo")).toHaveText(/12 u\s*Poco/);
     await expect(tarjeta("Palito bombón").locator(".stockCatalogo")).toHaveText(/10 u\s*Poco/);
     await expect(tarjeta("Cucurucho").locator(".stockCatalogo")).toHaveText(/100 u\s*Disponible/);
-    await expect(catalogo.locator("#avisoStockBajo")).toContainText("2 productos con poco stock");
+    // Repaso de Catálogo: el aviso es el filtro "Poco stock" (al final) y
+    // muestra solo esos productos.
+    const poco = catalogo.locator("#chipsMarcasCatalogo .filtroEtapa", { hasText: "Poco stock" });
+    await expect(poco).toHaveText(/Poco stock\s*2/);
     await page.evaluate(() => window.scrollTo(0, 0));
     await capturar(page, "stock-01-catalogo");
-    await catalogo.locator("#avisoStockBajo").click();
-    await expect(page.getByRole("dialog", { name: "Poco stock" })).toContainText("Helado 1 kg");
-    await page.keyboard.press("Escape");
+    await poco.click();
+    await expect(catalogo.locator(".itemCatalogo")).toHaveCount(2);
+    await expect(tarjeta("Cucurucho")).toHaveCount(0);
+    await poco.click();
 
     // Escanear en Nuevo pedido (sin cámara: se escribe el número).
     await page.evaluate(() => mostrarPantalla("pedido"));

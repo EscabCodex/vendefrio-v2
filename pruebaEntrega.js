@@ -13,6 +13,7 @@
     const enMemoria = new Map();
 
     function pedidoPorId(id) {
+        if (typeof pedidoParaLeer === "function") return pedidoParaLeer(id);
         const todos = typeof obtenerHistorial === "function" ? obtenerHistorial() : [];
         return todos.find(pedido => String(pedido.id) === String(id)) || null;
     }

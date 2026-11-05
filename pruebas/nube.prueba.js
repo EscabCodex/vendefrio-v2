@@ -42,11 +42,14 @@ test("nube: cargar, armar, entregar y cobrar un pedido", async ({ page }, testIn
     const ficha = page.locator(".fichaPedido");
     await expect(ficha).toBeVisible();
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Cargado");
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cargado por" })).toContainText("Jere");
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Total" })).toContainText("9.800");
+    await expect(ficha.locator('.cuadroFicha[data-dato="autor"]')).toContainText("Jere");
+    await expect(ficha.locator('.cuadroFicha[data-dato="total"]')).toContainText("9.800");
     await expect(ficha.locator(".lineaChecklist")).toHaveCount(2);
     await expect(ficha).toContainText("Tildá cada producto a medida que lo armás.");
-    await expect(ficha.getByRole("button", { name: "Salir a repartir" })).toBeVisible();
+    // "Salir a repartir" desde "Cargado" va en el ⋯ (repaso de Pedidos).
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await expect(ficha.getByRole("menuitem", { name: "Salir a repartir" })).toBeVisible();
+    await ficha.getByRole("button", { name: "Cerrar opciones" }).click();
     await expect(page.getByRole("button", { name: /Deslizá para marcar Entregado/ })).toBeVisible();
     await expect(ficha.getByRole("button", { name: "Empezar a preparar" })).toHaveCount(0);
     await expect(ficha.getByRole("button", { name: "Entregar en el mostrador" })).toHaveCount(0);
@@ -90,8 +93,9 @@ test("nube: cargar, armar, entregar y cobrar un pedido", async ({ page }, testIn
     await capturar(page, "nube-08-como-pago");
     await page.getByRole("button", { name: "Guardar cobro" }).click();
 
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" }).first()).toContainText("Efectivo · $ 9.800");
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobrado por" })).toContainText("Jere");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Cobrado · Efectivo");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("$ 9.800");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Jere");
     await expect(ficha).not.toContainText("vehículo");
     await capturar(page, "nube-09-entregado-y-cobrado");
 
@@ -145,8 +149,8 @@ test("nube: pedido viejo en el vehículo, volver atrás y entregar desde Cargado
     await page.getByRole("button", { name: "Dejar pendiente" }).click();
 
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Entregado");
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Entregado por" })).toContainText("Jere");
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" }).first()).toContainText("Pendiente");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Entregó Jere");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Falta cobrar");
     await capturar(page, "nube-12-entregado-desde-cargado");
 
     await expect(page.getByText("Pendiente de sincronizar")).toHaveCount(0);
@@ -177,18 +181,18 @@ test("nube: salir a repartir en tanda", async ({ page }, testInfo) => {
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(1);
     await expect(pie.getByRole("button", { name: "Salir a repartir (1)" })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeHidden();
+    await expect(page.locator(".bottom-nav").getByRole("button", { name: "Crear" })).toBeHidden();
     await page.getByRole("checkbox", { name: /Kiosco Luna/ }).click();
     await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(2);
     await expect(page.locator(".fichaPedido")).toBeHidden();
     await capturar(page, "nube-13-elegir-varios");
 
-    // "Cancelar" deja todo como estaba.
-    await page.getByRole("button", { name: "Cancelar" }).click();
+    // La X ("Dejar de elegir") deja todo como estaba.
+    await page.getByRole("button", { name: "Dejar de elegir" }).click();
     await expect(pie).toBeHidden();
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(tarjetas).toHaveCount(3);
-    await expect(page.getByRole("button", { name: "Nuevo pedido" })).toBeVisible();
+    await expect(page.locator(".bottom-nav").getByRole("button", { name: "Crear" })).toBeVisible();
 
     // "Marcar todos" y confirmar con el resumen.
     await mantenerApretada(page, tarjetas.first());
@@ -252,19 +256,19 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
         await expect(pie.getByRole("button", { name: nombre })).toBeHidden();
     }
     await capturar(page, "nube-17-acciones-tanda");
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    const mover = page.getByRole("dialog", { name: "Mover a otro paso" });
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    const mover = page.getByRole("menu");
     for (const nombre of ["En preparación (1)", "Preparado (1)", "Entregado (1)"]) {
         await expect(mover.getByRole("button", { name: nombre })).toBeVisible();
     }
-    await expect(mover.getByRole("button", { name: /Eliminar/ })).toHaveCount(0);
+    await expect(mover.getByRole("button", { name: "Eliminar (1)" })).toBeVisible();
     await capturar(page, "nube-17b-mover-a-otro-paso");
-    await page.evaluate(() => window.piezas.cerrar());
+    await page.keyboard.press("Escape");
     await expect(mover).toBeHidden();
 
     // Eliminar, en el ⋯, pide confirmar.
     await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
-    await page.getByRole("dialog", { name: "Más acciones" }).getByRole("button", { name: "Eliminar (1)" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "Eliminar (1)" }).click();
     await expect(confirmar).toContainText("1 pedido (3 unidades) desaparece de la app para todos");
     await capturar(page, "nube-18-eliminar-tanda");
     await confirmar.getByRole("button", { name: "Eliminar (1)" }).click();
@@ -273,12 +277,12 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
 
     // "En preparación" con uno y "Preparado" con el otro.
     await mantenerApretada(page, tarjetas.filter({ hasText: "Kiosco Luna" }));
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "En preparación (1)" }).click();
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "En preparación (1)" }).click();
     await confirmar.getByRole("button", { name: "En preparación (1)" }).click();
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Preparado (1)" }).click();
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "Preparado (1)" }).click();
     await confirmar.getByRole("button", { name: "Preparado (1)" }).click();
     // "Para armar" junta Cargados y En preparación: queda Kiosco Luna.
     await expect(tarjetas).toHaveCount(1);
@@ -293,9 +297,13 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
     // T125b: el ⋯ con "Eliminar" también está en "Para entregar".
     await expect(pie.getByRole("button", { name: "Más acciones con los elegidos" })).toBeVisible();
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    await page.getByRole("dialog", { name: "Mover a otro paso" }).getByRole("button", { name: "Entregado (1)" }).click();
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "Entregado (1)" }).click();
     await confirmar.getByRole("button", { name: "Entregado (1)" }).click();
+    // T130: quien cobra pasa a cobrarlos; "Terminar" lo deja en «A cobrar».
+    await expect(page.locator("#contadorCobroTanda")).toHaveText("Cobro 1 de 1");
+    await page.locator("#terminarCobroTanda").click();
+    await expect(page.locator(".cobroPedido")).toBeHidden();
     await expect(tarjetas).toHaveCount(0);
     await etapas.getByRole("tab", { name: /Terminados/ }).click();
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toBeVisible();
@@ -304,8 +312,8 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     // que en la primera pestaña (sin botón grande: van en "Mover a otro paso").
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
     await expect(pie.getByRole("button", { name: /Salir a repartir/ })).toBeHidden();
-    await pie.getByRole("button", { name: /Mover a otro paso/ }).click();
-    const moverTerminado = page.getByRole("dialog", { name: "Mover a otro paso" });
+    await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
+    const moverTerminado = page.getByRole("menu");
     for (const nombre of ["Salir a repartir (1)", "En preparación (1)", "Preparado (1)"]) {
         await expect(moverTerminado.getByRole("button", { name: nombre })).toBeVisible();
     }
@@ -319,7 +327,7 @@ test("nube: preparar, entregar y eliminar en tanda", async ({ page }, testInfo) 
     // T125b: eliminar fuera de "Cargado" (acá, un pedido «Preparado»).
     await mantenerApretada(page, tarjetas.filter({ hasText: "Almacén Don Pepe" }));
     await pie.getByRole("button", { name: "Más acciones con los elegidos" }).click();
-    await page.getByRole("dialog", { name: "Más acciones" }).getByRole("button", { name: "Eliminar (1)" }).click();
+    await page.getByRole("menu").getByRole("button", { name: "Eliminar (1)" }).click();
     await confirmar.getByRole("button", { name: "Eliminar (1)" }).click();
     await expect(tarjetas.filter({ hasText: "Almacén Don Pepe" })).toHaveCount(0);
     await expect(page.locator("#modalAviso")).toBeHidden();
@@ -430,7 +438,9 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     await modalTexto.getByRole("button", { name: "Resolver", exact: true }).click();
     await expect(ficha.getByRole("button", { name: "Resolver incidencia" })).toHaveCount(0);
 
-    await ficha.getByRole("button", { name: "Salir a repartir" }).click();
+    // Desde "Para armar", "Salir a repartir" va en el ⋯ (repaso de Pedidos).
+    await ficha.getByRole("button", { name: "Más opciones" }).click();
+    await ficha.getByRole("menuitem", { name: "Salir a repartir" }).click();
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("En reparto");
     // Espera a que la nube confirme el paso (la ficha se redibuja una vez).
     await expect(ficha).not.toContainText("Pendiente de sincronizar");
@@ -438,7 +448,7 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     await deslizar(empleado, "Deslizá para marcar Entregado");
     await expect(ficha.locator(".etiquetasFichaPedido")).toContainText("Entregado");
     await expect(empleado.getByText("¿Cómo pagó?")).toHaveCount(0);
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" }).first()).toContainText("Pendiente");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Falta cobrar");
     await expect(ficha.getByRole("button", { name: "Registrar cobro" })).toHaveCount(0);
     await capturar(empleado, "nube-18-empleado-entrega-sin-cobrar");
 
@@ -468,8 +478,12 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     expect(await escribirDirecto(empleado, "cobrar")).toBe("permission-denied");
 
     // Al dueño le llega el aviso; al tocarlo abre Empleados y lo aprueba.
+    // La campanita está solo en Inicio y en Más (repaso de diseño).
     await irAPedidos(page);
-    await page.locator("#pantallaPedido .campanaAvisos").click();
+    await expect(page.locator("#pantallaPedido .campanaAvisos")).toHaveCount(0);
+    await expect(page.locator("#pantallaPedido .botonAsistentePantalla")).toBeVisible();
+    await page.evaluate(() => mostrarPantalla("menu"));
+    await page.locator("#pantallaMenu .campanaAvisos").click();
     const itemAviso = page.locator(".itemAviso[data-tipo=\"rolPendiente\"]");
     await expect(itemAviso).toContainText("Rol pendiente de aprobar");
     await expect(itemAviso).toContainText("Maxi");
@@ -486,12 +500,12 @@ test("nube: todos pueden hacer todo y Cobra para aprobar", async ({ page, browse
     await expect(empleado.locator("#misPermisos")).toContainText("Cobrar: sí");
     await irAPedidos(empleado);
     await empleado.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await empleado.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await empleado.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     await tarjeta.click();
     await ficha.getByRole("button", { name: "Registrar cobro" }).click();
     await empleado.getByRole("button", { name: "Efectivo" }).click();
     await empleado.getByRole("button", { name: "Guardar cobro" }).click();
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobrado por" })).toContainText("Maxi");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Maxi");
     await ficha.getByRole("button", { name: "Cerrar" }).click();
 
     // Con la llave apagada, el empleado (que solo tiene Cobranza) ya no ve

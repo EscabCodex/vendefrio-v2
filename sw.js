@@ -1,7 +1,7 @@
 // =====================================================
 // VendeFrío - Service Worker (v164 - Estilo nuevo)
 // =====================================================
-const CACHE_NAME = "vendefrio-v195";
+const CACHE_NAME = "vendefrio-v297";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -17,14 +17,17 @@ const ARCHIVOS = [
   "./configuracion.js",
   "./estadisticas.js",
   "./catalogo.js",
+  "./pedidoEnHoja.js",
   "./pedidos.js",
   "./comerciosAdmin.js",
   "./comercioFicha.js",
+  "./datosComercio.js",
   "./productosAdmin.js",
   "./historial.js",
   "./impresion.js",
   "./cierre.js",
   "./seguimiento.js",
+  "./appAndroid.js",
   "./avisos.js",
   "./notificaciones.js",
   "./mapa.js",
@@ -32,7 +35,10 @@ const ARCHIVOS = [
   "./navegacion.js",
   "./voz.js",
   "./novedades.js",
+  "./notasDeCambios.js",
+  "./notas.json",
   "./volver.js",
+  "./lugar.js",
   "./exportar.js",
   "./whatsapp.js",
   "./confianza.js",
@@ -40,10 +46,12 @@ const ARCHIVOS = [
   "./visitas.js",
   "./ofertas.js",
   "./sugerencias.js",
+  "./elegirComercio.js",
   "./pruebaEntrega.js",
   "./devoluciones.js",
   "./yaLlego.js",
   "./repartidores.js",
+  "./equipoRuta.js",
   "./saldos.js",
   "./gastos.js",
   "./cobrarQr.js",
@@ -69,7 +77,7 @@ const ARCHIVOS = [
   "./tieneQuiere.js",
   "./queHacer.js",
   "./ayuda.js",
-  "./asistente.js", "./ayudaPantallas.js",
+  "./asistente.js", "./ayudaPantallas.js", "./tutorial.js",
   "./vendor/leaflet/leaflet.js",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/images/marker-icon.png",
@@ -77,6 +85,9 @@ const ARCHIVOS = [
   "./vendor/leaflet/images/marker-shadow.png",
   "./vendor/leaflet/images/layers.png",
   "./vendor/leaflet/images/layers-2x.png",
+  "./vendor/inter/inter.css",
+  "./vendor/inter/inter-latin.woff2",
+  "./vendor/inter/inter-latin-ext.woff2",
   "./navegacion3d.js",
   "./navegacion3d.css",
   "./manifest.json",
@@ -95,7 +106,8 @@ const ARCHIVOS = [
   "./distribuidora.js",
   "./nube.js",
   "./empleados.js",
-  "./inicio.js"
+  "./inicio.js",
+  "./monitoreo.js"
 ];
 
 // Mapas ya vistos (T40): cache aparte, que no se borra al actualizar la app.
@@ -112,19 +124,36 @@ function esCuadraditoDeMapa(request) {
   return url.hostname === "tile.openstreetmap.org";
 }
 
-async function cuadraditoDeMapa(request) {
+// El cuadradito se devuelve apenas llega: guardarlo y recortar la cache van
+// después, sin hacer esperar al mapa (antes cada cuadradito nuevo esperaba
+// a que se escribiera y a que se contaran los 600 guardados, y al mover o
+// agrandar el mapa en un celular barato los cuadraditos llegaban tarde).
+let cuadraditosSinRecortar = 0;
+
+async function guardarCuadradito(request, respuesta) {
+  try {
+    const cache = await caches.open(CACHE_MAPAS);
+    await cache.put(request, respuesta);
+    cuadraditosSinRecortar += 1;
+    if (cuadraditosSinRecortar < 40) return;
+    cuadraditosSinRecortar = 0;
+    const claves = await cache.keys();
+    if (claves.length > MAXIMO_MAPAS) {
+      await Promise.all(claves.slice(0, claves.length - MAXIMO_MAPAS).map(clave => cache.delete(clave)));
+    }
+  } catch (error) {
+    // Sin lugar para guardar: el mapa se ve igual.
+  }
+}
+
+async function cuadraditoDeMapa(event) {
+  const request = event.request;
   const cache = await caches.open(CACHE_MAPAS);
   const guardado = await cache.match(request);
   if (guardado) return guardado;
 
   const respuesta = await fetch(request);
-  if (respuesta && respuesta.ok) {
-    await cache.put(request, respuesta.clone());
-    const claves = await cache.keys();
-    if (claves.length > MAXIMO_MAPAS) {
-      await Promise.all(claves.slice(0, claves.length - MAXIMO_MAPAS).map(clave => cache.delete(clave)));
-    }
-  }
+  if (respuesta && respuesta.ok) event.waitUntil(guardarCuadradito(request, respuesta.clone()));
   return respuesta;
 }
 
@@ -156,6 +185,74 @@ async function respuestaDesdeRedOCache(request) {
     return Response.error();
   }
 }
+
+// Abrir rápido (T150). Antes cada archivo se pedía primero a internet: con
+// poca señal la app tardaba en abrir o quedaba en blanco. Ahora los archivos
+// de la app salen del celular al instante y, mientras tanto, se baja la
+// versión del servidor entera en segundo plano. Si cambió algo, se guarda todo
+// junto (nunca mezcla archivos de dos versiones) y la app avisa "Hay una
+// versión nueva" con el botón para actualizar.
+const RUTAS_DE_LA_APP = new Set(ARCHIVOS.map(archivo => new URL(archivo, self.location).pathname));
+const SEGUNDOS_ENTRE_REVISIONES = 60;
+let revisandoVersion = null;
+let ultimaRevisionVersion = 0;
+
+function esArchivoDeLaApp(request) {
+  return RUTAS_DE_LA_APP.has(new URL(request.url).pathname);
+}
+
+async function respuestaDesdeCacheOPrimeraVez(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const guardada = await cache.match(request, { ignoreSearch: true });
+  if (guardada) return guardada;
+  return respuestaDesdeRedOCache(request);
+}
+
+function mismoContenido(a, b) {
+  if (a.byteLength !== b.byteLength) return false;
+  const x = new Uint8Array(a);
+  const y = new Uint8Array(b);
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+  return true;
+}
+
+async function bajarVersionDelServidor() {
+  // Primero se baja todo; si falla un solo archivo, no se cambia nada.
+  const nuevas = await Promise.all(ARCHIVOS.map(async archivo => {
+    const respuesta = await fetch(archivo, { cache: "no-cache" });
+    if (!respuesta.ok) throw new Error("No se pudo bajar " + archivo);
+    return [archivo, respuesta];
+  }));
+  const cache = await caches.open(CACHE_NAME);
+  const distintas = [];
+  for (const [archivo, respuesta] of nuevas) {
+    const guardada = await cache.match(archivo);
+    const igual = guardada && mismoContenido(await guardada.arrayBuffer(), await respuesta.clone().arrayBuffer());
+    if (!igual) distintas.push([archivo, respuesta]);
+  }
+  if (!distintas.length) return;
+  await Promise.all(distintas.map(([archivo, respuesta]) => cache.put(archivo, respuesta)));
+  const ventanas = await self.clients.matchAll({ type: "window" });
+  ventanas.forEach(ventana => ventana.postMessage({ accion: "versionNueva" }));
+}
+
+// Al abrir, como mucho una revisión por minuto. Cuando la pide la app (al
+// volver a la pantalla, cada 30 minutos) se revisa siempre.
+function revisarVersionDelServidor(siempre) {
+  // Si la app pide revisar mientras hay una revisión en curso, se revisa de
+  // nuevo al terminar: la que está en curso pudo bajar los archivos de antes.
+  if (revisandoVersion) return siempre ? revisandoVersion.then(() => revisarVersionDelServidor(true)) : revisandoVersion;
+  if (!siempre && Date.now() - ultimaRevisionVersion < SEGUNDOS_ENTRE_REVISIONES * 1000) return Promise.resolve();
+  ultimaRevisionVersion = Date.now();
+  revisandoVersion = bajarVersionDelServidor()
+    .catch(() => { /* sin señal: queda la versión guardada */ })
+    .finally(() => { revisandoVersion = null; });
+  return revisandoVersion;
+}
+
+self.addEventListener("message", event => {
+  if (event.data && event.data.accion === "revisarVersion") event.waitUntil(revisarVersionDelServidor(true));
+});
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -216,12 +313,18 @@ self.addEventListener("fetch", event => {
     return;
   }
   if (esCuadraditoDeMapa(event.request)) {
-    event.respondWith(cuadraditoDeMapa(event.request));
+    event.respondWith(cuadraditoDeMapa(event));
     return;
   }
   if (!esSolicitudGETMismaApp(event.request)) return;
 
-  // Network First
+  if (esArchivoDeLaApp(event.request)) {
+    event.respondWith(respuestaDesdeCacheOPrimeraVez(event.request));
+    if (event.request.mode === "navigate") event.waitUntil(revisarVersionDelServidor());
+    return;
+  }
+
+  // El resto (por ejemplo, /api): primero internet, como antes.
   event.respondWith(respuestaDesdeRedOCache(event.request));
 });
 

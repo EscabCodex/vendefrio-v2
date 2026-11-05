@@ -26,23 +26,31 @@ const DB_BORRADOR_PEDIDO = "vendefrio_borrador_pedido";
 let ultimoPedidoTexto = "";
 let buscadorProductosPedido = null;
 let mensajeSinResultadosPedido = null;
+// El último pedido guardado, mientras el formulario no se toca (ver
+// generarPedidoSinRepetir).
+let ultimoPedidoGenerado = null;
 
 // -----------------------------------------------------
 // COMERCIOS
 // -----------------------------------------------------
 
+// La lista ya dibujada: si los comercios no cambiaron, no se rehace.
+let comerciosEnDatalistPedido = null;
+
 function actualizarDatalistPedido() {
     if (!listaComercios) return;
 
+    const comercios = comerciosActivosOrdenadosParaLeer();
+    if (comercios === comerciosEnDatalistPedido && listaComercios.childElementCount === comercios.length) return;
+    comerciosEnDatalistPedido = comercios;
+
     listaComercios.innerHTML = "";
 
-    comerciosActivos()
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-        .forEach(comercio => {
-            const option = document.createElement("option");
-            option.value = comercio.nombre;
-            listaComercios.appendChild(option);
-        });
+    comercios.forEach(comercio => {
+        const option = document.createElement("option");
+        option.value = comercio.nombre;
+        listaComercios.appendChild(option);
+    });
 }
 
 // Alias usados por menu.js para que la pantalla se actualice al abrirla.
@@ -52,10 +60,13 @@ const cargarListaClientes = actualizarDatalistPedido;
 // PRODUCTOS DEL PEDIDO
 // -----------------------------------------------------
 
-// El comercio elegido en Nuevo pedido, o null.
+// El comercio elegido en Nuevo pedido, o null. Si para este pedido se eligió
+// otra lista de precios (T161), viene con esa lista puesta.
 function comercioDelPedidoActual() {
     const nombre = inputCliente ? inputCliente.value.trim() : "";
-    return nombre ? buscarComercioPorNombre(nombre) : null;
+    const comercio = nombre ? buscarComercioPorNombre(nombre) : null;
+    const lista = comercio && window.nuevoPedidoVendeFrio ? window.nuevoPedidoVendeFrio.listaElegida(comercio) : null;
+    return lista === null ? comercio : { ...comercio, listaPrecios: lista };
 }
 
 function actualizarResumenPedido() {
@@ -84,7 +95,7 @@ function actualizarResumenPedido() {
     }
 
     // Estilo nuevo (T34): total en plata abajo y "N en el pedido" por marca.
-    const productosCatalogo = obtenerProductos();
+    const productosCatalogo = productosParaLeer();
     const comercioActual = comercioDelPedidoActual();
     let plata = 0;
     document.querySelectorAll("#productos .marca").forEach(marca => {
@@ -110,18 +121,53 @@ function actualizarResumenPedido() {
     if (totalPlata) totalPlata.textContent = "$ " + Math.round(plata).toLocaleString("es-AR");
 }
 
+// La cantidad de cada producto se guarda en un <select> escondido (los
+// botones − y + lo cambian). Antes llevaba sus 41 opciones (0 a 40): con
+// cientos de productos eran miles de elementos y abrir Nuevo pedido tardaba
+// el doble en un celular barato. Ahora arranca solo con el 0 y cada número
+// se agrega cuando se usa: al poner select.value = "7" (desde cualquier
+// parte de la app) aparece la opción 7 (2026-11-05).
+const MAXIMO_CANTIDAD_SELECT = 40;
+let plantillaSelectCantidad = null;
+
+function asegurarOpcionCantidad(select, valor) {
+    const texto = String(valor);
+    const numero = Number(texto);
+    if (texto === "" || !Number.isInteger(numero) || numero < 0 || numero > MAXIMO_CANTIDAD_SELECT) return;
+    const opciones = select.options;
+    let siguiente = null;
+    for (let i = 0; i < opciones.length; i++) {
+        const otro = Number(opciones[i].value);
+        if (otro === numero) return;
+        if (otro > numero && !siguiente) siguiente = opciones[i];
+    }
+    select.insertBefore(new Option(texto, texto), siguiente);
+}
+
+(function () {
+    const original = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    if (!original || !original.set) return;
+    Object.defineProperty(HTMLSelectElement.prototype, "value", {
+        ...original,
+        set(valor) {
+            if (this.classList.contains("cantidadPerezosa")) asegurarOpcionCantidad(this, valor);
+            original.set.call(this, valor);
+        }
+    });
+})();
+
 function crearSelect(marca, producto) {
-    const select = document.createElement("select");
+    if (!plantillaSelectCantidad) {
+        plantillaSelectCantidad = document.createElement("select");
+        plantillaSelectCantidad.className = "cantidadPerezosa";
+        // Si alguna vez se abre la lista, piezas.js arma del 0 al 40.
+        plantillaSelectCantidad.dataset.hasta = String(MAXIMO_CANTIDAD_SELECT);
+        plantillaSelectCantidad.appendChild(new Option("0", "0"));
+    }
+    const select = plantillaSelectCantidad.cloneNode(true);
     select.dataset.marca = marca;
     select.dataset.producto = producto.nombre;
     select.setAttribute("aria-label", "Cantidad de " + producto.nombre);
-
-    for (let cantidad = 0; cantidad <= 40; cantidad++) {
-        const option = document.createElement("option");
-        option.value = cantidad;
-        option.textContent = cantidad;
-        select.appendChild(option);
-    }
 
     select.addEventListener("change", () => {
         actualizarEstadoCantidad(select);
@@ -159,6 +205,19 @@ function crearBotonCantidad(clase, texto, titulo) {
     return boton;
 }
 
+// Los íconos de los botones también se copian de uno ya armado (T151).
+const iconosArmados = new Map();
+
+function copiaDeIcono(nombre, tamano) {
+    const clave = nombre + "|" + tamano;
+    if (!iconosArmados.has(clave)) {
+        const caja = document.createElement("template");
+        caja.innerHTML = window.icono(nombre, tamano);
+        iconosArmados.set(clave, caja.content);
+    }
+    return iconosArmados.get(clave).cloneNode(true);
+}
+
 function crearControlesProducto(marca, producto) {
     const controles = document.createElement("div");
     controles.className = "controlesCantidad";
@@ -182,9 +241,9 @@ function crearControlesProducto(marca, producto) {
         "",
         "Volver a cero"
     );
-    botonBorrar.innerHTML = window.icono("tacho", 17);
-    botonMenos.innerHTML = window.icono("menos", 18);
-    botonMas.innerHTML = window.icono("mas", 18);
+    botonBorrar.replaceChildren(copiaDeIcono("tacho", 17));
+    botonMenos.replaceChildren(copiaDeIcono("menos", 18));
+    botonMas.replaceChildren(copiaDeIcono("mas", 18));
 
     botonMenos.addEventListener("click", () => {
         cambiarCantidad(select, -1);
@@ -233,6 +292,8 @@ function obtenerDatosBorradorPedido() {
 }
 
 function guardarBorradorPedido() {
+    // Se tocó el formulario: ya no es "el mismo pedido sin tocar".
+    ultimoPedidoGenerado = null;
     const datos = obtenerDatosBorradorPedido();
 
     if (
@@ -309,14 +370,12 @@ function restaurarBorradorPedido() {
 function prepararBuscadorProductosPedido() {
     if (!contenedorProductos || buscadorProductosPedido) return;
 
-    const accionesBusqueda = document.createElement("div");
-    accionesBusqueda.className = "accionesBusquedaPedido";
-
-    // "Repetir último pedido" está en el botón ⋯ de Nuevo pedido (T95).
+    // Repaso de diseño (2026-11-01): sin renglón de búsqueda. El buscador
+    // vive en la lupa, primera de la fila de marcas (piezas.lupa).
     buscadorProductosPedido = document.createElement("input");
     buscadorProductosPedido.type = "search";
     buscadorProductosPedido.className = "buscadorPedido";
-    buscadorProductosPedido.placeholder = "Buscar producto o marca...";
+    buscadorProductosPedido.placeholder = "Buscar producto…";
     buscadorProductosPedido.setAttribute(
         "aria-label",
         "Buscar producto o marca"
@@ -325,13 +384,6 @@ function prepararBuscadorProductosPedido() {
     buscadorProductosPedido.addEventListener("input", () => {
         aplicarFiltroProductosPedido();
     });
-
-    accionesBusqueda.append(buscadorProductosPedido);
-
-    contenedorProductos.parentNode.insertBefore(
-        accionesBusqueda,
-        contenedorProductos
-    );
 
     mensajeSinResultadosPedido = document.createElement("p");
     mensajeSinResultadosPedido.className = "mensajeBusquedaPedido";
@@ -410,12 +462,15 @@ function ordenarProductosDelPedido(productos) {
         return lista.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
     }
     if (orden === "frecuencia") {
-        const pedidos = typeof obtenerPedidosQueCuentan === "function" ? obtenerPedidosQueCuentan() : [];
-        const veces = new Map();
-        pedidos.forEach(pedido => (pedido.productos || []).forEach(item => {
-            const nombre = String(item.nombre || item.producto || "");
-            veces.set(nombre, (veces.get(nombre) || 0) + (Number(item.cantidad) || 0));
-        }));
+        // Se cuenta una vez por cambio de los pedidos, no una vez por marca.
+        const veces = recordarHastaQueCambie("vecesPedidoCadaProducto", ["historial"], () => {
+            const cuenta = new Map();
+            pedidosQueCuentanParaLeer().forEach(pedido => (pedido.productos || []).forEach(item => {
+                const nombre = String(item.nombre || item.producto || "");
+                cuenta.set(nombre, (cuenta.get(nombre) || 0) + (Number(item.cantidad) || 0));
+            }));
+            return cuenta;
+        });
         return lista.sort((a, b) => (veces.get(b.nombre) || 0) - (veces.get(a.nombre) || 0));
     }
     return lista;
@@ -532,51 +587,72 @@ function crearMarca(nombreMarca, productos, indiceMarca, plegable) {
 // Chips de marcas arriba de los productos (T34): "Todas" o una marca.
 let marcaElegidaPedido = "";
 
+let lupaProductosPedido = null;
+
 function dibujarChipsMarcasPedido(marcas, productos) {
     if (!contenedorProductos) return;
     let chips = document.getElementById("chipsMarcasPedido");
     if (!chips) {
         chips = document.createElement("div");
         chips.id = "chipsMarcasPedido";
-        chips.className = "chipsMarcasPedido";
-        chips.setAttribute("role", "tablist");
+        chips.className = "chipsMarcasPedido filtrosEtapaPedidos";
+        chips.setAttribute("role", "group");
         chips.setAttribute("aria-label", "Marcas");
         contenedorProductos.parentNode.insertBefore(chips, contenedorProductos);
     }
     if (marcaElegidaPedido && !marcas.includes(marcaElegidaPedido)) marcaElegidaPedido = "";
+    // La lupa (con lo que tenga escrito) se guarda y vuelve primera.
+    if (!lupaProductosPedido && buscadorProductosPedido && window.piezas && window.piezas.lupa) {
+        lupaProductosPedido = window.piezas.lupa(buscadorProductosPedido, { etiqueta: "Buscar producto o marca" });
+    }
+    const conFoco = Boolean(buscadorProductosPedido) && document.activeElement === buscadorProductosPedido;
+    if (lupaProductosPedido) lupaProductosPedido.caja.remove();
     chips.innerHTML = "";
-    chips.classList.toggle("oculto", marcas.length < 2);
+    chips.classList.toggle("oculto", marcas.length < 1);
 
-    const chip = (valor, texto, cantidad) => {
+    // Mismos botones que Catálogo: el nombre, el punto de color de la marca y
+    // la cantidad adentro.
+    const chip = (valor, texto, cantidad, tono) => {
         const boton = document.createElement("button");
         boton.type = "button";
-        boton.className = "chipMarca" + (marcaElegidaPedido === valor ? " activo" : "");
-        boton.setAttribute("role", "tab");
-        boton.setAttribute("aria-selected", String(marcaElegidaPedido === valor));
-        boton.textContent = texto;
-        if (cantidad !== undefined) {
-            const numero = document.createElement("small");
-            numero.textContent = String(cantidad);
-            boton.appendChild(numero);
-        }
+        boton.className = "filtroEtapa chipMarcaPedido" + (tono ? " conTono " + tono : "") + (marcaElegidaPedido === valor ? " activo" : "");
+        boton.setAttribute("aria-pressed", String(marcaElegidaPedido === valor));
+        const nombre = document.createElement("span");
+        nombre.className = "filtroEtapaNombre";
+        nombre.textContent = texto;
+        const numero = document.createElement("small");
+        numero.className = "filtroEtapaCantidad";
+        numero.textContent = String(cantidad);
+        boton.append(nombre, numero);
         boton.addEventListener("click", () => {
             marcaElegidaPedido = valor;
-            chips.querySelectorAll(".chipMarca").forEach(otro => {
+            chips.querySelectorAll(".chipMarcaPedido").forEach(otro => {
                 const activo = otro === boton;
                 otro.classList.toggle("activo", activo);
-                otro.setAttribute("aria-selected", String(activo));
+                otro.setAttribute("aria-pressed", String(activo));
             });
             aplicarFiltroProductosPedido();
         });
         return boton;
     };
 
-    chips.appendChild(chip("", "Todas"));
-    marcas.forEach(marca => chips.appendChild(chip(marca, marca, (productos[marca] || []).length)));
+    const total = marcas.reduce((suma, marca) => suma + (productos[marca] || []).length, 0);
+    const tono = marca => (typeof window.tonoDeMarca === "function" ? window.tonoDeMarca(marca) : "");
+    if (marcas.length > 1) {
+        chips.appendChild(chip("", "Todas", total));
+        marcas.forEach(marca => chips.appendChild(chip(marca, marca, (productos[marca] || []).length, tono(marca))));
+    }
+    if (lupaProductosPedido) {
+        lupaProductosPedido.poner(chips);
+        if (conFoco) buscadorProductosPedido.focus({ preventScroll: true });
+    }
 }
 
 function renderizarPedido() {
     if (!contenedorProductos) return;
+    // Con la pantalla oculta no se dibuja: mostrarPantalla("pedido") la dibuja al abrirla (T150).
+    if (document.getElementById("pantallaPedido")?.classList.contains("oculto")) return;
+    formularioPorRedibujar = false;
 
     prepararBuscadorProductosPedido();
     contenedorProductos.innerHTML = "";
@@ -660,6 +736,27 @@ function aplicarProductoPendienteCatalogo() {
 // Alias usado por menu.js.
 const renderizarProductosPedido = renderizarPedido;
 
+// Repasada: en la nube, con la lista de Pedidos a la vista, el formulario
+// de Nuevo pedido está escondido en la misma pantalla. Los cambios que
+// llegan de la nube no lo redibujan ahí (al abrir la app con miles de
+// pedidos eso trababa): se dibuja al volver al formulario.
+let formularioPorRedibujar = false;
+const pantallaDelPedido = document.getElementById("pantallaPedido");
+
+function renderizarPedidoSiSeVe() {
+    if (pantallaDelPedido && pantallaDelPedido.dataset.vista === "pedidos") {
+        formularioPorRedibujar = true;
+        return;
+    }
+    renderizarPedido();
+}
+
+if (pantallaDelPedido) {
+    new MutationObserver(() => {
+        if (formularioPorRedibujar && pantallaDelPedido.dataset.vista !== "pedidos") renderizarPedido();
+    }).observe(pantallaDelPedido, { attributes: true, attributeFilter: ["class", "data-vista"] });
+}
+
 actualizarDatalistPedido();
 renderizarPedido();
 
@@ -731,7 +828,7 @@ function obtenerObservacionesPedidoAnterior(pedido) {
 
 function repetirUltimoPedido() {
     // Eliminados y cancelados no se repiten (T26).
-    const historial = obtenerPedidosQueCuentan();
+    const historial = pedidosQueCuentanParaLeer();
     // T64: en la nube, el último pedido que cargó esta persona (no el de
     // otro del equipo).
     const yo = usaNubeReal() && typeof personaDeEsteCelular === "function" ? personaDeEsteCelular() : null;
@@ -765,7 +862,7 @@ function repetirUltimoPedido() {
         }
 
         let cantidadCargada = 0;
-        const productos = obtenerProductos();
+        const productos = productosParaLeer();
         const productosEstructurados = obtenerProductosEstructuradosPedido(ultimo);
         const textoPedido = String(ultimo.pedido || "");
 
@@ -857,10 +954,14 @@ function escaparHtmlPedido(texto) {
 function mostrarVistaPreviaPedido(texto) {
     if (!pedidoDetalle) return;
 
-    const seguro = escaparHtmlPedido(texto);
+    // T166: en la ventana los emojis del mensaje no se muestran (el mensaje
+    // copiado para WhatsApp los sigue teniendo).
+    const seguro = escaparHtmlPedido(String(texto || "").replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}]\uFE0F?\s?/gu, ""));
     pedidoDetalle.innerHTML = seguro
         .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
         .replace(/\n/g, "<br>");
+    const textoCantidad = document.getElementById("pedidoCantidadTexto");
+    if (textoCantidad && pedidoCantidad) textoCantidad.textContent = pedidoCantidad.textContent.trim() === "1" ? "producto" : "productos";
 }
 
 // -----------------------------------------------------
@@ -937,7 +1038,7 @@ function generarPedido() {
     let datosNube = null;
 
     if (usaNubeReal()) {
-        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente);
+        datosNube = prepararPedidoParaLaNube(productosEstructurados, timestamp, cliente, comercioDelPedidoActual());
 
         if (!datosNube) {
             mostrarAviso(
@@ -1021,15 +1122,62 @@ function generarPedido() {
 
     borrarBorradorPedido();
     if (window.nuevoPedidoVendeFrio) window.nuevoPedidoVendeFrio.alGuardar(idPedidoNuevo, cliente);
+    window.dispatchEvent(new CustomEvent("pedidoGuardadoVendeFrio", { detail: { id: idPedidoNuevo, comercio: cliente } }));
 
     if (pedidoCliente) pedidoCliente.textContent = cliente;
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
+    // ¿Qué hacemos con este pedido? (entregar ahora, en reparto o dejarlo).
+    modalPedido?.querySelector(".queHacerPedido")?.remove();
+    window.seguimientoVendeFrio?.queHacerConPedido?.(idPedidoNuevo, {
+        contenedor: modalPedido?.querySelector(".modalContenido"),
+        alElegir: () => modalPedido?.classList.add("oculto")
+    });
     if (modalPedido) modalPedido.classList.remove("oculto");
     if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
+    ultimoPedidoGenerado = { firma: firmaDelPedidoActual(), hora: Date.now() };
 
     return true;
+}
+
+// Repasada: después de "Generar Pedido" el formulario queda lleno (para
+// copiarlo de nuevo o mandarlo por WhatsApp). Si se cerraba la ventana y se
+// volvía a tocar "Generar Pedido" sin cambiar nada, quedaba el mismo pedido
+// dos veces. Ahora, si no se tocó nada desde entonces, pregunta antes. Si se
+// cambió algo (o se volvió a cargar a mano), es a propósito: no pregunta.
+const MINUTOS_PEDIDO_REPETIDO = 15;
+
+function firmaDelPedidoActual() {
+    const cliente = inputCliente ? inputCliente.value.trim().toLocaleLowerCase("es") : "";
+    const observaciones = inputObs ? inputObs.value.trim() : "";
+    const cantidades = Array.from(document.querySelectorAll(".marca select"))
+        .filter(select => Number(select.value) > 0)
+        .map(select => {
+            const titulo = select.closest(".marca")?.querySelector(".tituloMarca span");
+            return (titulo ? titulo.textContent.trim() : "") + "/" + (select.dataset.producto || "") + "=" + select.value;
+        })
+        .sort();
+    return cliente + "|" + cantidades.join(",") + "|" + observaciones;
+}
+
+function generarPedidoSinRepetir() {
+    const repetido = ultimoPedidoGenerado &&
+        Date.now() - ultimoPedidoGenerado.hora < MINUTOS_PEDIDO_REPETIDO * 60000 &&
+        ultimoPedidoGenerado.firma === firmaDelPedidoActual();
+
+    if (!repetido || !window.piezas) return generarPedido();
+
+    const cliente = inputCliente ? inputCliente.value.trim() : "";
+    window.piezas.preguntar({
+        titulo: "\u00bfCargar otro pedido igual?",
+        texto: "Este mismo pedido para " + cliente + " ya se guard\u00f3 hace un momento. Si lo carg\u00e1s de nuevo, va a quedar dos veces.",
+        si: "Cargar otro igual",
+        no: "No, ya est\u00e1"
+    }).then(cargar => {
+        if (cargar) generarPedido();
+    });
+    return false;
 }
 
 // -----------------------------------------------------
@@ -1044,8 +1192,8 @@ function registrarPedido(nombreComercio) {
 
     // T64: el contador sale de los pedidos guardados (más este, que se guarda
     // enseguida), así dos celulares que cargan a la vez no se pisan la cuenta.
-    const anteriores = typeof contarPedidosDelComercio === "function" && typeof obtenerPedidosQueCuentan === "function"
-        ? contarPedidosDelComercio(comercio.nombre, obtenerPedidosQueCuentan())
+    const anteriores = typeof contarPedidosDelComercio === "function"
+        ? contarPedidosDelComercio(comercio.nombre, pedidosQueCuentanParaLeer())
         : Number(comercio.pedidosRealizados) || 0;
 
     return actualizarComercioPorId(comercio.id, {
@@ -1080,6 +1228,7 @@ function recordarPedidoActual() {
 }
 
 function limpiarPedido() {
+    ultimoPedidoGenerado = null;
     if (inputCliente) inputCliente.value = "";
     if (inputObs) inputObs.value = "";
 
@@ -1095,7 +1244,9 @@ function limpiarPedido() {
     actualizarResumenPedido();
 }
 
-function abrirPedidoNuevoParaComercio(nombreComercio) {
+// Con { encima: true } (T179, desde la navegación) no se cambia de pantalla:
+// quien la llama ya muestra la sección como bandeja.
+function abrirPedidoNuevoParaComercio(nombreComercio, opciones) {
     // Este acceso siempre empieza desde cero, sin recuperar el borrador anterior.
     limpiarPedido();
 
@@ -1103,7 +1254,12 @@ function abrirPedidoNuevoParaComercio(nombreComercio) {
         buscadorProductosPedido.value = "";
     }
 
-    if (typeof mostrarPantalla === "function") {
+    if (opciones && opciones.encima) {
+        const seccion = document.getElementById("pantallaPedido");
+        if (seccion) seccion.classList.remove("oculto");
+        if (typeof cargarListaClientes === "function") cargarListaClientes();
+        if (typeof renderizarProductosPedido === "function") renderizarProductosPedido();
+    } else if (typeof mostrarPantalla === "function") {
         mostrarPantalla("pedido");
     }
 
@@ -1125,7 +1281,7 @@ function abrirPedidoNuevoParaComercio(nombreComercio) {
 // -----------------------------------------------------
 
 if (botonGenerar) {
-    botonGenerar.addEventListener("click", generarPedido);
+    botonGenerar.addEventListener("click", generarPedidoSinRepetir);
 }
 
 if (botonReset) {
@@ -1160,7 +1316,7 @@ if (inputObs) {
     inputObs.addEventListener("input", guardarBorradorPedido);
 
     inputObs.addEventListener("keydown", event => {
-        if (event.ctrlKey && event.key === "Enter") generarPedido();
+        if (event.ctrlKey && event.key === "Enter") generarPedidoSinRepetir();
     });
 }
 
@@ -1205,17 +1361,26 @@ function mostrarImprimirPedidoGenerado(id) {
     const boton = document.getElementById("imprimirPedidoGenerado");
     if (!boton) return;
 
-    const pedido = id ? obtenerHistorial().find(item => item.id === id) : null;
-    const puede = Boolean(pedido && window.impresionVendeFrio?.puedeImprimir?.(pedido));
-    boton.classList.toggle("oculto", !puede);
-    if (puede && window.icono && !boton.querySelector("svg")) {
-        boton.insertAdjacentHTML("afterbegin", window.icono("impresora", 18));
-    }
+    const pedido = id ? pedidoParaLeer(id) : null;
+    // Imprimir queda siempre a la vista: si no hay impresora, avisa al tocarlo.
+    // Volver a editar: corrige el pedido recién guardado (en la nube).
+    const editar = document.getElementById("editarPedidoGenerado");
+    const puedeEditar = Boolean(pedido && window.nubeVendeFrio?.puedeEditarElPedido?.(pedido));
+    editar?.classList.toggle("oculto", !puedeEditar);
 }
+
+modalPedido?.querySelector(".cerrarPedidoGenerado")?.addEventListener("click", () => modalPedido.classList.add("oculto"));
+
+document.getElementById("editarPedidoGenerado")?.addEventListener("click", () => {
+    if (!idUltimoPedidoGenerado) return;
+    modalPedido?.classList.add("oculto");
+    abrirEdicionPedido(idUltimoPedidoGenerado);
+});
 
 document.getElementById("imprimirPedidoGenerado")?.addEventListener("click", () => {
     if (!idUltimoPedidoGenerado) return;
-    window.impresionVendeFrio?.elegirCopias?.(idUltimoPedidoGenerado);
+    if (window.impresionVendeFrio?.elegirCopias?.(idUltimoPedidoGenerado)) return;
+    mostrarAviso("No se puede imprimir desde acá", "Para imprimir hace falta la nube y un celular con Bluetooth (Chrome en Android). Prendé el Bluetooth y probá de nuevo.");
 });
 
 // -----------------------------------------------------
@@ -1306,13 +1471,14 @@ function crearModalEdicionPedido() {
 
     modal = document.createElement("div");
     modal.id = "modalEditarPedido";
-    modal.className = "modal oculto";
+    modal.className = "modal modalHoja oculto";
     modal.innerHTML = `
         <div class="modalContenido editarPedido" role="dialog" aria-modal="true" aria-labelledby="tituloEditarPedido">
             <h2 id="tituloEditarPedido">Editar pedido</h2>
             <p class="explicacionTextoPedido" id="explicacionEditarPedido"></p>
             <label for="comercioEditarPedido">Comercio</label>
-            <input id="comercioEditarPedido" type="text" list="listaComercios" autocomplete="off" placeholder="Nombre del comercio">
+            <input id="comercioEditarPedido" type="text" autocomplete="off" placeholder="Nombre del comercio">
+            <div id="sugerenciasComercioEditar" class="sugerenciasComercioEditar" role="listbox" aria-label="Comercios guardados" hidden></div>
             <h3 class="tituloSeccionEditar">Productos</h3>
             <div id="productosEditarPedido" class="productosEditarPedido"></div>
             <label for="buscarEditarPedido">Agregar producto</label>
@@ -1381,6 +1547,32 @@ function crearModalEdicionPedido() {
         });
     });
 
+    // Sugerencias de comercios con el estilo de la app (antes, la lista de
+    // Chrome): al escribir, hasta 5 comercios guardados que coinciden.
+    const inputComercio = document.getElementById("comercioEditarPedido");
+    const sugerencias = document.getElementById("sugerenciasComercioEditar");
+    const dibujarSugerencias = () => {
+        const texto = normalizarTexto(inputComercio.value);
+        const lista = texto && document.activeElement === inputComercio
+            ? comerciosActivosOrdenadosParaLeer().filter(comercio => normalizarTexto(comercio.nombre).includes(texto) && normalizarTexto(comercio.nombre) !== texto).slice(0, 5)
+            : [];
+        sugerencias.hidden = !lista.length;
+        sugerencias.innerHTML = lista.map(comercio => `<button type="button" role="option" data-comercio="${escaparHtmlPedido(comercio.nombre)}">${window.icono ? window.icono("tienda", 18) : ""}<span>${escaparHtmlPedido(comercio.nombre)}</span></button>`).join("");
+    };
+    inputComercio.addEventListener("input", dibujarSugerencias);
+    inputComercio.addEventListener("focus", dibujarSugerencias);
+    inputComercio.addEventListener("blur", () => setTimeout(() => { sugerencias.hidden = true; }, 150));
+    // pointerdown: elegir antes de que el campo pierda el foco.
+    sugerencias.addEventListener("pointerdown", event => event.preventDefault());
+    sugerencias.addEventListener("click", event => {
+        const boton = event.target.closest("button[data-comercio]");
+        if (!boton) return;
+        inputComercio.value = boton.dataset.comercio;
+        inputComercio.dispatchEvent(new Event("input", { bubbles: true }));
+        inputComercio.dispatchEvent(new Event("change", { bubbles: true }));
+        sugerencias.hidden = true;
+    });
+
     return modal;
 }
 
@@ -1393,7 +1585,7 @@ function maximoDeFila(fila) {
 }
 
 function abrirEdicionPedido(id) {
-    const pedido = obtenerHistorial().find(item => String(item.id || "") === String(id || ""));
+    const pedido = pedidoParaLeer(id);
     const nube = window.nubeVendeFrio;
 
     if (!pedido || !nube || typeof nube.puedeEditarElPedido !== "function" || !nube.puedeEditarElPedido(pedido)) {
@@ -1559,7 +1751,7 @@ function dibujarResultadosEdicion() {
     const termino = normalizarTexto(buscador.value);
     if (!termino) return;
 
-    const productos = obtenerProductos();
+    const productos = productosParaLeer();
     const resultados = [];
 
     obtenerMarcasOrdenadas(productos).forEach(marca => {
@@ -1704,14 +1896,14 @@ function guardarEdicionPedido() {
     }
 
     // Si mientras tanto el pedido cambió (otra edición), no se pisa.
-    const pedido = obtenerHistorial().find(item => String(item.id || "") === edicionAbierta.id);
+    const pedido = pedidoParaLeer(edicionAbierta.id);
     if (!pedido || fotoDeLoPedido(pedido) !== edicionAbierta.foto) {
         cerrarEdicionPedido();
         mostrarAviso("El pedido cambió", "Otra persona lo editó mientras lo cambiabas. Abrí «Editar pedido» de nuevo para ver cómo quedó.");
         return;
     }
 
-    const catalogo = obtenerProductos();
+    const catalogo = productosParaLeer();
     const revisar = {};
     const productos = filas.map(fila => {
         if (fila.item && fila.cantidad === fila.original) return JSON.parse(JSON.stringify(fila.item));

@@ -1,0 +1,58 @@
+# Arma el APK de VendeFrío para Android (carpeta app-android, con Capacitor).
+# La app abre la web de VendeFrío, así que los cambios de la web llegan solos:
+# este armado solo hace falta cuando cambia algo de Android (ícono, permisos...).
+# Deja el APK en la versión (release) "app-android" de GitHub para bajarlo al celular.
+name: App Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    # Solo estas ramas publican el APK: así otra rama vieja no lo pisa.
+    branches:
+      - desarrollo
+      - claude/project-thread-j5745l
+    paths:
+      - "app-android/**"
+      - ".github/workflows/app-android-apk.yml"
+
+permissions:
+  contents: write
+
+# De a uno: el último que termina es el último que se subió.
+concurrency:
+  group: app-android-apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm ci
+      - run: npx cap sync android
+      - name: Armar el APK
+        working-directory: app-android/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+      - name: Publicar el APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk vendefrio.apk
+          ls -la vendefrio.apk
+          gh release delete app-android --yes --cleanup-tag || true
+          gh release create app-android --prerelease --target "$GITHUB_SHA" \
+            --title "VendeFrío para Android (prueba)" \
+            --notes "Abre la versión de prueba (desarrollo). Sirve en celulares de 32 y 64 bits, Android 6 o más nuevo. Bajá vendefrio.apk en el celular e instalalo; para actualizar, instalá el nuevo encima (no se borran los datos). Versión 1.0.${{ github.run_number }}." \
+            vendefrio.apk

@@ -85,7 +85,9 @@
 
     function calcular(inicio) {
         const nube = window.nubeVendeFrio;
-        const pedidos = obtenerHistorial().filter(pedido =>
+        // La lista compartida, sin copiarla: acá solo se lee (sin copiar
+        // miles de pedidos en cada cambio).
+        const pedidos = historialParaLeer().filter(pedido =>
             pedido && pedido.eliminado !== true && pedido.estados && typeof pedido.estados === "object"
         );
 
@@ -264,7 +266,9 @@
             } else if (boton.id === "descargarPlanillaCierre") {
                 // Planilla del día (T47): los pedidos cargados ese día.
                 const fin = diaElegido + DIA;
-                const pedidos = obtenerHistorial().filter(pedido => {
+                // La lista compartida, sin copiarla: acá solo se lee (sin copiar
+        // miles de pedidos en cada cambio).
+        const pedidos = historialParaLeer().filter(pedido => {
                     if (!pedido || pedido.eliminado === true) return false;
                     const hora = Number(pedido.timestamp) || 0;
                     return hora >= diaElegido && hora < fin;
@@ -428,9 +432,9 @@
                 <strong id="totalRecaudadoCierre">${precio(datos.totalRecaudado)}</strong>
                 <span>${datos.cobros.length} ${datos.cobros.length === 1 ? "cobro" : "cobros"}</span>
             </div>
-            ${filaDoble("Efectivo", precio(datos.porForma.efectivo))}
-            ${filaDoble("Transferencia", precio(datos.porForma.transferencia))}
-            ${filaDoble("A cobrar (entregados sin cobrar)", precio(datos.aCobrar), "aCobrarCierre")}
+            ${datos.porForma.efectivo ? filaDoble("Efectivo", precio(datos.porForma.efectivo)) : ""}
+            ${datos.porForma.transferencia ? filaDoble("Transferencia", precio(datos.porForma.transferencia)) : ""}
+            ${datos.aCobrar ? filaDoble("A cobrar (entregados sin cobrar)", precio(datos.aCobrar), "aCobrarCierre") : ""}
             ${datos.pagosParciales.length ? filaDoble("Incluye pagos parciales", precio(window.gastosVendeFrio.totalDe(datos.pagosParciales))) : ""}
         `;
 
@@ -439,7 +443,7 @@
                 escapar(persona.nombre) + ` <small>(${persona.cantidad} ${persona.cantidad === 1 ? "cobro" : "cobros"})</small>`,
                 precio(persona.total)
             )).join("") + filaDoble("Total general", precio(datos.totalRecaudado), "totalCierre")
-            : `<p class="vacioCierre">Nadie registró cobros este día.</p>`;
+            : "";
 
         const entregados = datos.entregados.length
             ? datos.entregados.map(item => `
@@ -447,7 +451,7 @@
                     <div><strong>${escapar(item.comercio)}</strong><small>N° ${escapar(item.numero)}</small></div>
                     <div><strong>${precio(item.total)}</strong><small class="${item.cobro ? "" : "pendienteCierre"}">${escapar(textoCobro(item.cobro))}</small></div>
                 </div>`).join("")
-            : `<p class="vacioCierre">No se entregaron pedidos este día.</p>`;
+            : "";
 
         const deOtroDia = datos.cobros.filter(item => item.deOtroDia);
         const cobrosViejos = deOtroDia.length
@@ -488,7 +492,7 @@
             ? `<button type="button" class="btnAccion agregar imprimirCierre" id="imprimirCierre" ${impresion.imprimiendo() ? "disabled" : ""}>
                     ${window.icono("impresora", 16)} ${impresion.imprimiendo() === "cierre" ? "Imprimiendo…" : "Imprimir"}
                </button>`
-            : `<p class="vacioCierre">Para imprimirlo, abrí la app en un celular Android con Chrome.</p>`;
+            : /Android/i.test(navigator.userAgent) ? "" : `<p class="vacioCierre">Para imprimirlo, abrí la app en un celular Android con Chrome.</p>`;
         const planilla = `<button type="button" class="btnAccion secundario descargarPlanilla" id="descargarPlanillaCierre">${window.icono("descargar", 16)} Descargar planilla del día</button>`;
 
         caja.innerHTML =
@@ -496,8 +500,8 @@
             htmlContarPlata(datos) +
             resumen +
             tarjeta("Caja", caja1, "cajaCierre") +
-            tarjeta("Por persona que cobró", personas) +
-            tarjeta("Entregados", entregados) +
+            (personas ? tarjeta("Por persona que cobró", personas) : "") +
+            (entregados ? tarjeta("Entregados", entregados) : "") +
             cobrosViejos +
             diferencias +
             cambios +

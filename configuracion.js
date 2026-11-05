@@ -28,6 +28,11 @@
             </section>`;
     }
 
+    // Repaso de Ajustes: lo que se usa poco va en una fila cerrada.
+    function cerrado(titulo, contenido) {
+        return `<details class="ajCerrado"><summary class="ajFila"><span class="ajIcono" data-tono="gris">${ico("herramientas")}</span><span class="ajTexto"><strong>${titulo}</strong></span><b aria-hidden="true">${ico("chevDerecha", 18)}</b></summary>${contenido}</details>`;
+    }
+
     function cabezaFila(icono, tono, titulo, ayuda) {
         return `
             <span class="ajIcono" data-tono="${tono}">${ico(icono)}</span>
@@ -87,24 +92,132 @@
         tema: "sistema", acento: "original", texto: "normal", densidad: "compacto",
         movimiento: false, barraNombres: true, masEnBarra: true, volverFlotante: true, frecuenciaRespaldo: "semanal", recordarRespaldo: "semanal",
         orden: "pendientes", ordenProductos: "marca", inicio: "menu",
-        vibrar: true, precios: true, iaCelular: false, iaNube: false,
-        vehiculo: "auto", navegador: "app", voz: "si", velocidadVoz: "normal",
+        vibrar: true, precios: true, asistenteClaude: true,
+        vehiculo: "auto", navegador: "app", servidorCaminos: "osrm", voz: "si", velocidadVoz: "normal",
         zoom: "17", seguimiento: true, pantallaEncendida: true, pruebaEntrega: false,
-        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false
+        resumenNoche: true, nombresArriba: true, hablarAlGuardar: false, medirFluidez: true, avisarErrores: true,
+        // T158: tonos del tema, color a elección, formas, íconos y fondo de Inicio.
+        tonoDia: "hielo", tonoNoche: "grafito", acentoPropio: "", formaBotones: "redondos",
+        tarjetas: "suaves", iconos: "normales", fondoInicio: "liso",
+        // T156: qué tarjetas se ven en Inicio ("Suelen pedir los…" arranca apagada).
+        // T178: "¿Qué querés hacer?" y "Esta semana" arrancan apagadas (lo de la
+        // semana ya está en la tarjeta azul); se elige qué botones lleva la primera.
+        inicioVerResumen: true, inicioVerQueHacer: false, inicioVerProxima: true, inicioVerSuelenPedir: false,
+        inicioVerPedidosHoy: true, inicioVerSemana: false, inicioVerAvisos: true,
+        inicioQueHacerPedido: true, inicioQueHacerPedidosHoy: true, inicioQueHacerCobrar: true
     };
-    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante"];
+
+    // Los botones que se pueden elegir para "¿Qué querés hacer?" (T178).
+    const BOTONES_QUE_HACER = [
+        ["inicioQueHacerPedido", "lapiz", "Cargar un pedido"],
+        ["inicioQueHacerPedidosHoy", "camion", "Pedidos de hoy"],
+        ["inicioQueHacerCobrar", "moneda", "Cobrar"]
+    ];
+
+    // Tarjetas de Inicio (T156): campo, clave en data-inicio-sin, título, ayuda, ícono y tono.
+    const TARJETAS_INICIO = [
+        ["inicioVerAvisos", "avisos", "Avisos", "Pedidos que llegaron, reparto y respaldo", "campana", "naranja"],
+        ["inicioVerResumen", "resumen", "Resumen de hoy", "Lo vendido y los pedidos del día", "grafico", "azul"],
+        ["inicioVerQueHacer", "queHacer", "¿Qué querés hacer?", "Botones grandes: elegí cuáles", "chispa", "violeta"],
+        ["inicioVerProxima", "proxima", "Próxima parada", "El comercio que sigue, con «Ir» y «Cargar pedido»", "ubicacion", "verde"],
+        ["inicioVerSuelenPedir", "suelenPedir", "Suelen pedir los…", "Comercios que suelen pedir este día y todavía no pidieron", "calendario", "naranja"],
+        ["inicioVerPedidosHoy", "pedidosHoy", "Pedidos de hoy", "La lista de lo cargado hoy", "lista", "azul"],
+        ["inicioVerSemana", "semana", "Esta semana", "Comercios visitados, pedidos y vendido de la semana", "calendario", "gris"]
+    ];
+
+    const CAMPOS_VISUALES = ["tema", "acento", "texto", "densidad", "movimiento", "barraNombres", "nombresArriba", "masEnBarra", "volverFlotante",
+        "tonoDia", "tonoNoche", "acentoPropio", "acentoPropioVars", "formaBotones", "tarjetas", "iconos", "fondoInicio",
+        ...TARJETAS_INICIO.map(tarjeta => tarjeta[0])];
 
     function valorDe(d, campo) {
         return d[campo] === undefined || d[campo] === "" ? DEFECTOS[campo] : d[campo];
     }
 
-    // --- Apariencia (T50): el tema con una vista de cómo se ve, el color
-    // principal, el tamaño del texto, el espaciado y el movimiento. ---
+    // --- Apariencia (T50 y T158): una vista previa arriba, el tema y sus
+    // tonos, el color principal (también uno a elección), la forma de los
+    // botones, el estilo de las tarjetas, el tamaño de los íconos, el fondo
+    // de Inicio, el texto y el espaciado, qué se ve en Inicio (T156) y el
+    // movimiento. Todo cambia variables y atributos de <html>: no se vuelve
+    // a dibujar ninguna pantalla, así no traba en un celular barato. ---
     const TEMAS = [["sistema", "Como el teléfono"], ["claro", "Claro"], ["oscuro", "Oscuro"]];
     const ACENTOS = [
         ["original", "Hielo y lima"], ["verde", "Verde"], ["violeta", "Violeta"],
-        ["naranja", "Naranja"], ["rosa", "Rosa"]
+        ["naranja", "Naranja"], ["rosa", "Rosa"], ["turquesa", "Turquesa"],
+        ["rojo", "Rojo"], ["dorado", "Dorado"], ["oliva", "Oliva"], ["grafito", "Grafito"]
     ];
+    // Tonos del fondo: valor, nombre, color del fondo y de las tarjetas.
+    const TONOS_DIA = [
+        ["hielo", "Hielo", "#EEF3FA", "#FFFFFF"], ["calido", "Cálido", "#F6F0E6", "#FFFDF9"],
+        ["gris", "Gris", "#F1F2F4", "#FFFFFF"], ["blanco", "Blanco", "#FFFFFF", "#F2F4F7"]
+    ];
+    const TONOS_NOCHE = [
+        ["grafito", "Grafito", "#0C0F13", "#151A20"], ["negro", "Negro puro", "#000000", "#0E1013"],
+        ["azul", "Azul noche", "#0B1220", "#14203A"]
+    ];
+
+    // --- Color a elección (T158): con un solo color se arman los tonos del
+    // modo claro y del oscuro, con contraste suficiente para leer. ---
+    const hexARgb = hex => {
+        const n = parseInt(String(hex).slice(1), 16);
+        return [n >> 16 & 255, n >> 8 & 255, n & 255];
+    };
+    const rgbAHex = rgb => "#" + rgb.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+    const rgba = (rgb, alfa) => `rgba(${rgb.map(Math.round).join(",")},${alfa})`;
+    const mezclar = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+    function luminancia(rgb) {
+        const [r, g, b] = rgb.map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contraste(a, b) {
+        const x = luminancia(a), y = luminancia(b);
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    }
+
+    // Lo acerca de a poco al negro (o al blanco) hasta que se lea sobre el fondo.
+    function hastaContraste(rgb, fondo, minimo, haciaBlanco) {
+        let color = rgb;
+        for (let i = 0; i < 20 && contraste(color, fondo) < minimo; i++) {
+            color = mezclar(color, haciaBlanco ? [255, 255, 255] : [0, 0, 0], 0.1);
+        }
+        return color;
+    }
+
+    function variablesDeColor(hex) {
+        const base = hexARgb(hex);
+        const blanco = [255, 255, 255];
+        const textoSobreBase = contraste(base, blanco) >= 3 ? "#FFFFFF" : "#0F1B2D";
+        const noche = hastaContraste(base, hexARgb("#151A20"), 6, true);
+        return {
+            claro: {
+                "--acento": rgbAHex(base),
+                "--acento-oscuro": rgbAHex(hastaContraste(base, blanco, 4.5, false)),
+                "--acento-bg": rgbAHex(mezclar(base, blanco, 0.84)),
+                "--acento-txt": textoSobreBase,
+                "--hero-bg": `linear-gradient(135deg,${rgbAHex(base)} 0%,${rgbAHex(mezclar(base, blanco, 0.14))} 55%,${rgbAHex(mezclar(base, blanco, 0.28))} 100%)`,
+                "--hero-txt": textoSobreBase,
+                "--sombra-acento": `0 6px 16px -4px ${rgba(base, 0.55)}`,
+                "--acento-claro": rgbAHex(base),
+                "--acento-noche": rgbAHex(noche)
+            },
+            oscuro: {
+                "--acento": rgbAHex(noche),
+                "--acento-oscuro": rgbAHex(noche),
+                "--acento-bg": rgbAHex(mezclar(noche, hexARgb("#0C0F13"), 0.8)),
+                "--acento-txt": contraste(noche, hexARgb("#0C0F13")) >= 4.5 ? "#0C0F13" : "#FFFFFF",
+                "--hero-bg": "var(--superficie)",
+                "--hero-txt": "var(--texto)",
+                "--sombra-acento": `0 6px 18px -4px ${rgba(noche, 0.4)}`,
+                "--acento-claro": rgbAHex(base),
+                "--acento-noche": rgbAHex(noche)
+            }
+        };
+    }
+    const VARIABLES_PROPIAS = Object.keys(variablesDeColor("#1F5FE0").claro);
 
     // Una app en miniatura: barra de arriba, tarjeta principal, dos filas y la
     // barra de abajo con el "+".
@@ -119,7 +232,40 @@
             </span>`;
     }
 
+    // Vista previa (T158): un pedacito de Inicio hecho con las mismas piezas
+    // de la app. Queda arriba al bajar, así se ve cada cambio al tocarlo.
+    function vistaPrevia() {
+        return `
+            <div class="ajVistaPrevia" aria-hidden="true">
+                <small class="ajVistaTitulo">Vista previa</small>
+                <div class="ajVistaFondo">
+                    <div class="ajVistaHero"><small>Vendido hoy</small><strong>$ 38.200</strong><span>2 pedidos</span></div>
+                    <div class="ajVistaTarjeta">
+                        <span class="ajVistaIcono">${ico("tienda", 20)}</span>
+                        <span class="ajVistaTexto"><strong>Almacén Don Pepe</strong><small>San Martín 123</small></span>
+                        <span class="ajVistaBoton">${ico("navegar", 16)}Ir</span>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function filaTonos(icono, tono, titulo, campo, lista) {
+        return `
+            <div class="ajFila ajApilada" role="radiogroup" aria-label="${titulo}">
+                <div class="ajCabeza">${cabezaFila(icono, tono, titulo, "")}</div>
+                <div class="ajTonos">
+                    ${lista.map(([valor, texto, fondo, tarjeta]) => `
+                        <label class="ajTono">
+                            <input type="radio" name="aj-${campo}" value="${valor}" data-campo="${campo}" aria-label="${texto}">
+                            <span class="muestraTono" style="--t-fondo:${fondo};--t-tarjeta:${tarjeta}"><i></i></span>
+                            <small>${texto}</small>
+                        </label>`).join("")}
+                </div>
+            </div>`;
+    }
+
     function htmlApariencia() {
+        const d = leer();
         const temas = TEMAS.map(([valor, texto]) => `
             <label class="ajTema">
                 <input type="radio" name="aj-tema" value="${valor}" data-campo="tema">
@@ -138,11 +284,51 @@
                 <small>${texto}</small>
             </label>`).join("");
 
-        return grupo("Tema",
-                `<div class="ajTemas" role="radiogroup" aria-label="Tema">${temas}</div>`, "ajGrupoTemas") +
+        // El color a elección: al tocarlo se abre la paleta propia (piezas.js).
+        const propio = valorDe(d, "acentoPropio");
+        const varsPropias = propio ? variablesDeColor(propio) : null;
+        const colorPropio = `
+            <label class="ajColor ajColorPropio" title="A elección">
+                <input type="color" data-campo="acentoPropio" aria-label="Color a elección">
+                <span class="muestraColor muestraPropia" ${varsPropias ? `data-elegido style="--m-claro:${varsPropias.claro["--acento"]};--m-noche:${varsPropias.oscuro["--acento"]}"` : ""}><i></i><i></i></span>
+                <small>A elección</small>
+            </label>`;
+
+        // Con "¿Qué querés hacer?" prendida, abajo se eligen sus botones.
+        const chipsQueHacer = `
+            <div class="ajChipsQueHacer" role="group" aria-label="Botones de «¿Qué querés hacer?»">
+                ${BOTONES_QUE_HACER.map(([campo, icono, texto]) => `
+                    <label class="ajChip">
+                        <input type="checkbox" data-campo="${campo}" aria-label="${texto}">
+                        <span>${ico(icono, 16)}${texto}</span>
+                    </label>`).join("")}
+            </div>`;
+        const tarjetasInicio = TARJETAS_INICIO
+            .map(([campo, , titulo, ayuda, icono, tono]) => filaLlave(icono, tono, titulo, ayuda, campo) +
+                (campo === "inicioVerQueHacer" ? chipsQueHacer : ""))
+            .join("");
+
+        return vistaPrevia() +
+            grupo("Tema",
+                `<div class="ajTemas" role="radiogroup" aria-label="Tema">${temas}</div>` +
+                filaTonos("sol", "naranja", "Tono de día", "tonoDia", TONOS_DIA) +
+                filaTonos("luna", "violeta", "Tono de noche", "tonoNoche", TONOS_NOCHE), "ajGrupoTemas") +
             grupo("Color principal",
-                `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}</div>
-                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro.</p>`) +
+                `<div class="ajColores" role="radiogroup" aria-label="Color principal">${acentos}${colorPropio}</div>
+                <p class="ajPie">Cada color tiene un tono para el modo claro y otro para el oscuro. «A elección» abre 48 colores más.</p>`) +
+            grupo("Forma y estilo",
+                filaSegmento("etiqueta", "azul", "Forma de los botones", "Las tarjetas acompañan", "formaBotones", [
+                    ["redondos", "Redondos"], ["suaves", "Suaves"], ["rectos", "Rectos"]
+                ]) +
+                filaSegmento("documento", "violeta", "Estilo de las tarjetas", "", "tarjetas", [
+                    ["suaves", "Suaves"], ["borde", "Borde"], ["planas", "Planas"], ["elevadas", "Elevadas"]
+                ]) +
+                filaSegmento("estrella", "naranja", "Tamaño de los íconos", "", "iconos", [
+                    ["chicos", "Chicos"], ["normales", "Normales"], ["grandes", "Grandes"]
+                ]) +
+                filaSegmento("casa", "verde", "Fondo de Inicio", "", "fondoInicio", [
+                    ["liso", "Liso"], ["degrade", "Degradé"], ["puntos", "Puntos"], ["color", "Con color"]
+                ])) +
             grupo("Texto y espacio",
                 filaSegmento("texto", "azul", "Tamaño del texto", "", "texto", [
                     ["chico", "Chico"], ["normal", "Normal"], ["grande", "Grande"], ["enorme", "Muy grande"]
@@ -154,6 +340,8 @@
                     <strong>Almacén Don Pepe</strong>
                     <small>San Martín 123 · Pidió 2 helados y 1 palito</small>
                 </div>`) +
+            grupo("Qué se ve en Inicio", tarjetasInicio +
+                `<p class="ajPie">Se guarda en este celular. Lo apagado no se calcula, así Inicio abre más rápido.</p>`, "ajGrupoInicio") +
             grupo("Más opciones",
                 filaLlave("barraAbajo", "violeta", "Nombres en la barra de abajo", "Si lo apagás, quedan solo los íconos", "barraNombres") +
                 filaLlave("etiqueta", "azul", "Nombres en los íconos de arriba", "Asistente, Avisos, Ayuda y Más", "nombresArriba") +
@@ -184,6 +372,39 @@
         return `<p class="ajNota" data-tono="${tono}" ${extra}>${ico(tono === "alerta" ? "alerta" : "info", 16)}<span>${texto}</span></p>`;
     }
 
+    const filaMas = (seccion, icono, titulo, extra = "") => `
+                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
+                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
+                        <strong>${titulo}</strong>
+                        <small class="configValor" data-valor="${seccion}"></small>
+                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                    </button>`;
+
+    // Todos los ajustes juntos, en su propia sección de Más.
+    function htmlAjustes() {
+        const fila = filaMas;
+        return `
+                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
+                    <div class="configLista">
+                        ${fila("avisos", "campana", "Qué avisos recibir", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("navegacion", "bicicleta", "Recorrido")}
+                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
+                    </div>
+
+                    <h2 class="configGrupoTitulo">Distribuidora</h2>
+                    <div class="configLista">
+                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
+                        ${fila("respaldo", "nube", "Datos y respaldo")}
+                    </div>
+
+                    <h2 class="configGrupoTitulo">App</h2>
+                    <div class="configLista">
+                        ${fila("apariencia", "luna", "Apariencia")}
+                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                    </div>`;
+    }
+
     function crear() {
         if (pantalla()) return pantalla();
 
@@ -192,14 +413,8 @@
         elemento.className = "oculto pantallaConfiguracion";
 
         // "Más" (T31): la persona y la conexión arriba, los accesos a otras
-        // secciones y la configuración en grupos, con filas de una línea.
-        const fila = (seccion, icono, titulo, extra = "") => `
-                    <button class="configFila" data-config-seccion="${seccion}" ${extra}>
-                        <span class="configIcono" data-color="${seccion}">${window.icono(icono, 20)}</span>
-                        <strong>${titulo}</strong>
-                        <small class="configValor" data-valor="${seccion}"></small>
-                        <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
-                    </button>`;
+        // secciones y, abajo, una sola fila "Ajustes" (informe del desconocido,
+        // opción A que eligió el dueño).
 
         elemento.innerHTML = `
             <header class="configHeader">
@@ -225,24 +440,12 @@
 
                     <div class="masGruposAccesos" id="masAccesos"></div>
 
-                    <h2 class="configGrupoTitulo">Trabajo diario</h2>
-                    <div class="configLista">
-                        ${fila("avisos", "campana", "Avisos", 'id="configFilaAvisos"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("impresora", "impresora", "Impresora de tickets", 'id="configFilaImpresora"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("navegacion", "bicicleta", "Recorrido")}
-                        ${fila("trabajo", "maletin", "Preferencias de trabajo")}
-                    </div>
-
-                    <h2 class="configGrupoTitulo">Distribuidora</h2>
-                    <div class="configLista">
-                        ${fila("empleados", "usuarios", "Empleados y roles", 'id="configFilaEmpleados"').replace('class="configFila"', 'class="configFila oculto"')}
-                        ${fila("respaldo", "nube", "Datos y respaldo")}
-                    </div>
-
-                    <h2 class="configGrupoTitulo">App</h2>
-                    <div class="configLista">
-                        ${fila("apariencia", "luna", "Apariencia")}
-                        ${fila("seguridad", "escudo", "Seguridad y ayuda")}
+                    <div class="configLista masListaAjustes">
+                        <button class="configFila configFilaAjustes" data-config-seccion="ajustes" id="configFilaAjustes">
+                            <span class="configIcono" data-color="trabajo">${window.icono("engranaje", 20)}</span>
+                            <span class="configFilaTexto"><strong>Ajustes</strong><small>Cómo funciona la app: impresora, avisos, recorrido, empleados, respaldo y colores</small></span>
+                            <b aria-hidden="true">${window.icono("chevDerecha", 18)}</b>
+                        </button>
                     </div>
                 </div>
 
@@ -292,17 +495,76 @@
         raiz.dataset.masBarra = valorDe(d, "masEnBarra") === false ? "no" : "si";
         raiz.dataset.volverFlotante = valorDe(d, "volverFlotante") === false ? "no" : "si";
         raiz.dataset.precios = valorDe(d, "precios") === false ? "no" : "si";
+        // T158: tonos, formas, íconos y fondo de Inicio.
+        raiz.dataset.tonoDia = valorDe(d, "tonoDia");
+        raiz.dataset.tonoNoche = valorDe(d, "tonoNoche");
+        raiz.dataset.forma = valorDe(d, "formaBotones");
+        raiz.dataset.tarjetas = valorDe(d, "tarjetas");
+        raiz.dataset.iconos = valorDe(d, "iconos");
+        raiz.dataset.fondoInicio = valorDe(d, "fondoInicio");
+        // T156: las tarjetas apagadas de Inicio.
+        raiz.dataset.inicioSin = TARJETAS_INICIO
+            .filter(([campo]) => valorDe(d, campo) !== true)
+            .map(tarjeta => tarjeta[1]).join(" ");
+        ponerColorPropio(d.acento === "propio" && d.acentoPropio ? variablesDeColor(d.acentoPropio)[temaVisual] : null);
+        // La barra del teléfono, del mismo color que el fondo.
+        const fondo = getComputedStyle(raiz).getPropertyValue("--fondo").trim();
+        if (fondo) document.querySelectorAll('meta[name="theme-color"]').forEach(meta => { meta.content = fondo; });
+    }
+
+    function ponerColorPropio(variables) {
+        const estilo = document.documentElement.style;
+        VARIABLES_PROPIAS.forEach(nombre => {
+            if (variables) estilo.setProperty(nombre, variables[nombre]);
+            else estilo.removeProperty(nombre);
+        });
     }
 
     function guardarCampo(campo, valor) {
         const d = leer();
         d[campo] = valor;
+        // El color a elección (T158) pasa a ser el color principal. Se guardan
+        // sus tonos ya calculados para pintarlos al abrir, antes que este archivo.
+        if (campo === "acentoPropio") {
+            d.acento = "propio";
+            d.acentoPropioVars = variablesDeColor(valor);
+        }
         guardar(d);
         aplicar();
         actualizarMas();
         const caja = document.getElementById("configDetalle");
         if (caja) dibujarMuestraTexto(caja);
+        if (campo === "acentoPropio" && caja) marcarColorPropio(caja, d);
+        // Una tarjeta de Inicio que se prende se calcula recién ahora (T156).
+        if ((campo.startsWith("inicioVer") && valor === true) || campo.startsWith("inicioQueHacer")) window.actualizarDashboard?.();
     }
+
+    // El círculo de "A elección" muestra el color elegido y queda marcado.
+    function marcarColorPropio(caja, d) {
+        const muestra = caja.querySelector(".muestraPropia");
+        if (!muestra || !d.acentoPropio) return;
+        const variables = variablesDeColor(d.acentoPropio);
+        muestra.dataset.elegido = "";
+        muestra.style.setProperty("--m-claro", variables.claro["--acento"]);
+        muestra.style.setProperty("--m-noche", variables.oscuro["--acento"]);
+        caja.querySelectorAll('input[name="aj-acento"]').forEach(radio => { radio.checked = false; });
+    }
+
+    // Mientras se arrastra en el selector de color, se ve en vivo (una vez
+    // por cuadro); se guarda al soltarlo, con el "change" de siempre.
+    let colorEnVivo = null;
+    document.addEventListener("input", event => {
+        if (event.target.dataset?.campo !== "acentoPropio") return;
+        const pedir = colorEnVivo === null;
+        colorEnVivo = event.target.value;
+        if (!pedir) return;
+        requestAnimationFrame(() => {
+            const tema = document.documentElement.dataset.tema === "oscuro" ? "oscuro" : "claro";
+            document.documentElement.dataset.acento = "propio";
+            ponerColorPropio(variablesDeColor(colorEnVivo)[tema]);
+            colorEnVivo = null;
+        });
+    });
 
     function abrir() {
         crear();
@@ -353,28 +615,27 @@
                 { destino: "estadisticas", icono: "grafico", texto: "Estadísticas" },
                 { destino: "whatsapp", icono: "whatsapp", texto: "WhatsApp" },
                 window.cierreVendeFrio?.disponible?.() ? { destino: "cierre", icono: "recibo", texto: "Cierre del día" } : null,
-                !usaNubeReal() ? { destino: "historial", icono: "historial", texto: "Historial" } : null,
                 // Accesos que suman otras partes (Etapa 7: A cobrar, Registro de cambios...).
                 ...(window.accesosMasExtras || []).filter(acceso => {
                     if (acceso.enMas === false) return false;
                     try { return !acceso.mostrar || acceso.mostrar(); } catch (error) { return false; }
                 })
             ].filter(Boolean);
-            // Etapa 8: en tres grupos con título. Lo que no está en la lista va a Herramientas.
-            const GRUPOS = [
-                ["Plata", ["aCobrar", "cierre"]],
-                ["Ventas", ["estadisticas", "mapaVentas", "cambios", "historial"]],
-                ["Herramientas", []]
-            ];
-            const conocidos = GRUPOS.flatMap(([, destinos]) => destinos);
-            accesos.innerHTML = GRUPOS.map(([titulo, destinos]) => {
-                const delGrupo = destinos.length
-                    ? destinos.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean)
-                    : lista.filter(acceso => !conocidos.includes(acceso.destino));
-                if (!delGrupo.length) return "";
-                return `<h2 class="configGrupoTitulo masGrupoTitulo">${titulo}</h2><div class="masAccesos">` +
-                    delGrupo.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>";
-            }).join("");
+            // Informe del desconocido (opción A del dueño): lo de todos los
+            // días en cuadros grandes y el resto de las herramientas en una lista.
+            const DIARIOS = ["aCobrar", "cierre", "estadisticas", "rutas", "whatsapp", "listasPrecios"];
+            const ORDEN_HERRAMIENTAS = ["mapaVentas", "historial", "cambios", "importar"];
+            const diarios = DIARIOS.map(destino => lista.find(acceso => acceso.destino === destino)).filter(Boolean);
+            const posicion = destino => { const i = ORDEN_HERRAMIENTAS.indexOf(destino); return i < 0 ? ORDEN_HERRAMIENTAS.length : i; };
+            const herramientas = lista.filter(acceso => !DIARIOS.includes(acceso.destino))
+                .sort((a, b) => posicion(a.destino) - posicion(b.destino));
+            const filaHerramienta = (destino, icono, texto) =>
+                `<button type="button" class="configFila masFila" data-mas="${destino}"><span class="configIcono" data-color="${destino}">${window.icono(icono, 20)}</span><strong>${texto}</strong><b aria-hidden="true">${window.icono("chevDerecha", 18)}</b></button>`;
+            accesos.innerHTML =
+                (diarios.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">Lo de todos los días</h2><div class="masAccesos">` +
+                    diarios.map(acceso => tarjeta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "") +
+                (herramientas.length ? `<h2 class="configGrupoTitulo masGrupoTitulo">De vez en cuando</h2><div class="configLista masHerramientas">` +
+                    herramientas.map(acceso => filaHerramienta(acceso.destino, acceso.icono, acceso.texto)).join("") + "</div>" : "");
         }
 
         const valores = {
@@ -428,8 +689,6 @@
     // --- Datos de la distribuidora para el ticket (T28c) ---
     // Solo el dueño: teléfono y, si tiene, dirección y CUIT. En el ticket
     // sale cada dato solo si está cargado.
-    let editandoDatosTicket = false;
-
     function htmlDatosTicket() {
         const distribuidora = window.distribuidoraVendeFrio;
         const usuario = window.cuentaVendeFrio?.usuarioActual();
@@ -438,28 +697,6 @@
 
         const datos = distribuidora.datosTicket();
         const largos = distribuidora.largosDatosTicket;
-
-        if (editandoDatosTicket) {
-            return `
-                <form class="configCuentaFormulario" id="formDatosTicket" novalidate>
-                    <label>${window.icono("telefono",15)} Teléfono de la distribuidora
-                        <input type="tel" id="datosTicketTelefono" autocomplete="tel"
-                            maxlength="${largos.telefono}" value="${escaparTexto(datos.telefono)}">
-                    </label>
-                    <label>${window.icono("ubicacion",15)} Dirección (si tiene local a la calle)
-                        <input type="text" id="datosTicketDireccion" autocomplete="street-address"
-                            maxlength="${largos.direccion}" value="${escaparTexto(datos.direccion)}">
-                    </label>
-                    <label>${window.icono("documento",15)} CUIT (si tiene)
-                        <input type="text" id="datosTicketCuit" inputmode="numeric"
-                            maxlength="${largos.cuit}" value="${escaparTexto(datos.cuit)}">
-                    </label>
-                    <p class="configEstado">Los que dejes vacíos no salen en el ticket.</p>
-                    <button type="submit" class="configCuentaIngresar">Guardar datos del ticket</button>
-                    <button type="button" data-accion="cancelarDatosTicket">Cancelar</button>
-                </form>
-            `;
-        }
 
         const filas = [
             datos.telefono ? "Teléfono: " + escaparTexto(datos.telefono) : "",
@@ -470,6 +707,73 @@
         return `<div id="cuentaDatosTicket">${filaEditable("recibo", "violeta", "Datos para el ticket",
             filas.length ? filas.join("<br>") : "Todavía sin cargar: el ticket sale solo con el nombre.", "",
             "editarDatosTicket", filas.length ? "Cambiar datos del ticket" : "Cargar datos del ticket")}</div>`;
+    }
+
+    // Cargar o cambiar los datos del ticket (T167, opción A): una hoja desde
+    // abajo con los tres campos y cómo van a salir en el ticket.
+    function abrirDatosTicket() {
+        const distribuidora = window.distribuidoraVendeFrio;
+        if (!distribuidora?.datosTicket || !window.piezas) return;
+        const datos = distribuidora.datosTicket();
+        const largos = distribuidora.largosDatosTicket;
+        const campo = (id, icono, titulo, tipo, extra, valor, largo) => `
+            <label class="pzCampo campoDatoTicket"><span>${titulo}</span>
+                <span class="pzIco">${ico(icono, 18)}</span>
+                <input type="${tipo}" id="${id}" ${extra} maxlength="${largo}" value="${escaparTexto(valor)}">
+            </label>`;
+        const caja = window.piezas.hoja({
+            titulo: "Datos para el ticket",
+            sub: "Salen arriba de cada ticket. Los que dejes vacíos no salen.",
+            clase: "hojaDatosTicket",
+            html: `
+                <form id="formDatosTicket" novalidate>
+                    ${campo("datosTicketTelefono", "telefono", "Teléfono", "tel", 'autocomplete="tel"', datos.telefono, largos.telefono)}
+                    ${campo("datosTicketDireccion", "ubicacion", "Dirección (si tiene local a la calle)", "text", 'autocomplete="street-address"', datos.direccion, largos.direccion)}
+                    ${campo("datosTicketCuit", "documento", "CUIT (si tiene)", "text", 'inputmode="numeric"', datos.cuit, largos.cuit)}
+                    <p class="etiquetaVistaTicket">Así sale en el ticket</p>
+                    <div class="vistaTicket" aria-live="polite"></div>
+                </form>`,
+            botones: [
+                { texto: "Cancelar", clase: "pzBtnGris", par: true },
+                { texto: "Guardar", clase: "pzBtnPri", par: true, alTocar: () => guardarDatosTicket(caja) }
+            ]
+        });
+        const valor = id => (caja.querySelector("#" + id)?.value || "").trim();
+        const vista = caja.querySelector(".vistaTicket");
+        const dibujarVista = () => {
+            const lineas = [
+                distribuidora.nombreActual?.() || "Tu distribuidora",
+                valor("datosTicketDireccion"),
+                valor("datosTicketTelefono") ? "Tel.: " + valor("datosTicketTelefono") : "",
+                valor("datosTicketCuit") ? "CUIT: " + valor("datosTicketCuit") : ""
+            ].filter(Boolean);
+            vista.innerHTML = lineas.map((linea, posicion) => posicion ? escaparTexto(linea) : `<b>${escaparTexto(linea)}</b>`).join("<br>");
+        };
+        caja.addEventListener("input", dibujarVista);
+        caja.querySelector("form").addEventListener("submit", evento => {
+            evento.preventDefault();
+            caja.querySelector(".pzBtnPri")?.click();
+        });
+        dibujarVista();
+        setTimeout(() => caja.querySelector("#datosTicketTelefono")?.focus(), 220);
+    }
+
+    function guardarDatosTicket(caja) {
+        const valor = id => (caja.querySelector("#" + id)?.value || "").trim();
+        return window.distribuidoraVendeFrio.cambiarDatosTicket({
+            telefono: valor("datosTicketTelefono"),
+            direccion: valor("datosTicketDireccion"),
+            cuit: valor("datosTicketCuit")
+        })
+            .then(() => {
+                if (seccionAbierta === "cuenta") detalle("cuenta");
+                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
+                return true;
+            })
+            .catch(fallo => {
+                mostrarAviso("No se guardaron los datos", fallo.message);
+                return false;
+            });
     }
 
     // --- Alias y QR para cobrar (T77) ---
@@ -666,6 +970,12 @@
             " para subir a la nube. Se suben solos cuando haya señal.";
     }
 
+    // Solo lo que falta subir (en Cuenta ya dice "Conectada").
+    function textoPendientes() {
+        const sinSubir = window.nubeVendeFrio?.sincronizacion?.().sinSubir;
+        return sinSubir ? textoSincronizacion() : "";
+    }
+
     function htmlSincronizacion() {
         return `<p class="configEstado" id="sincronizacionNube" role="status">${textoSincronizacion()}</p>`;
     }
@@ -676,7 +986,7 @@
 
         const textos = {
             conectando: "Conectando con la nube…",
-            conectada: "Conectada: los cambios se ven en los otros celulares con esta cuenta.",
+            conectada: "Conectada a la nube: los cambios se ven en los otros celulares.",
             sinConexion: "Sin señal: los cambios se guardan en el celular y se suben solos cuando vuelva internet.",
             sinPermiso: "La nube no deja leer tu distribuidora. Revisá que las reglas de seguridad estén publicadas.",
             error: "Hubo un problema con la nube. Probá de nuevo."
@@ -687,16 +997,9 @@
             : "";
 
         return `
-            <p class="configEstado">
-                <strong>Usando la nube</strong><br>
-                Tus datos salen de tu distribuidora en la nube.
-            </p>
-            <p class="configEstado" id="estadoNube">${textos[estadoNube] || ""}</p>
-            ${htmlSincronizacion()}
+            <p class="configEstado" role="status"><span id="estadoNube">${textos[estadoNube] || ""}</span>
+                <span id="sincronizacionNube" data-solo-pendientes>${textoPendientes()}</span></p>
             ${reintentar}
-            <button type="button" data-accion="juntarRepetidos">
-                Juntar comercios y productos repetidos
-            </button>
         `;
     }
 
@@ -724,6 +1027,7 @@
                 `<p class="ajFila ajEstadoFila" id="configConexionRespaldo" role="status">${textoConexionRespaldo()}</p>` +
                 filaAccion("descargar", "azul", "Exportar respaldo", "Un archivo con todo lo de la nube", 'data-accion="exportar"') +
                 filaAccion("refrescar", "violeta", "Combinar respaldo", "Suma lo que falte de un archivo, sin borrar nada", 'data-accion="importar"') +
+                filaAccion("usuarios", "verde", "Juntar comercios y productos repetidos", "Si un comercio o producto quedó dos veces, deja uno solo", 'data-accion="juntarRepetidos"') +
                 // T61: cada cuánto avisa en Inicio.
                 filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
                     ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
@@ -805,13 +1109,13 @@
                 ${boton}
             </div>`;
 
-        return `
+        return cerrado("Avanzado", `
             <section class="ajGrupo configMigracion" id="configLimpiezaDatosViejos">
                 <h3 class="ajGrupoTitulo">Datos viejos de este celular</h3>
                 <div class="ajTarjeta">
                     <div class="ajFila ajTextoLargo">
                         <span class="ajIcono" data-tono="naranja">${ico("celular")}</span>
-                        <span class="ajTexto"><strong>La app ya no los usa</strong><small>Comercios, productos, pedidos, rutas y la copia interna de antes de la nube. Podés borrarlos en tres pasos. La nube no se toca.</small></span>
+                        <span class="ajTexto"><strong>La app ya no los usa</strong><small>Quedaron de antes de usar la nube. Podés borrarlos en tres pasos; la nube no se toca.</small></span>
                     </div>
                     <div class="ajPasos">
                         ${paso(1, descargado, `<button type="button" data-accion="limpiezaDescargar" ${limpieza.revisando ? "disabled" : ""}>${textoDescargar}</button>`)}
@@ -823,7 +1127,7 @@
                 </div>
             </section>
             ${nota("Quedan tus preferencias, el borrador del pedido y tu sesión.")}
-        `;
+        `);
     }
 
     // Se cambian solo los textos, sin redibujar la sección.
@@ -1090,9 +1394,7 @@
                     <input type="checkbox" class="ajLlave" role="switch" id="llaveTodosPuedenTodo" aria-label="Todos pueden hacer todo" ${prendida ? "checked" : ""}>
                 </label>
                 <p class="ajFila ajEstadoFila">
-                    ${ico("escudo", 16)}<span>Siempre, prendida o apagada: cobrar es solo tuyo y de quien tiene
-                    un rol con «Cobra» aprobado por vos. Editar, eliminar y cancelar un
-                    pedido, solo quien lo cargó y vos.</span>
+                    ${ico("escudo", 16)}<span>Igual, cobrar es tuyo y de quien tiene «Cobra». Editar o borrar un pedido, de quien lo cargó y vos.</span>
                 </p>
             </div>
         `;
@@ -1126,7 +1428,7 @@
 
     function htmlTextoLlave(prendida) {
         return prendida
-            ? "Prendida: cualquiera del equipo hace cualquier paso de cualquier pedido, anota faltantes y resuelve incidencias. Los roles deciden solo a quién le llega cada aviso."
+            ? "Prendida: cualquiera hace cualquier paso de un pedido. Los roles deciden a quién le llega cada aviso."
             : "Apagada: cada uno según los permisos de sus roles.";
     }
 
@@ -1431,11 +1733,8 @@
             noSePuede: `Este celular o este navegador no puede recibir notificaciones.
                 En Android, usá Chrome. En iPhone, hace falta iOS 16.4 o más nuevo y la app
                 instalada en la pantalla de inicio.`,
-            bloqueadas: `Las notificaciones están bloqueadas para VendeFrío en este celular.
-                Para permitirlas en Android: mantené apretado el ícono de VendeFrío, tocá
-                <strong>Información de la app</strong> y después <strong>Notificaciones</strong>
-                (o, en Chrome, los tres puntos > Configuración > Configuración de sitios >
-                Notificaciones). Después volvé acá.`,
+            bloqueadas: `Están bloqueadas en este celular. Mantené apretado el ícono de VendeFrío,
+                tocá <strong>Información de la app › Notificaciones</strong> y permitilas.`,
             apagadas: "Prendelas para que te suenen los avisos aunque tengas la app cerrada. Valen solo para este celular.",
             activando: "Activando… Si el celular pregunta, tocá «Permitir».",
             activadas: "<strong>Activadas en este celular.</strong> Te suenan los avisos aunque tengas la app cerrada."
@@ -1576,6 +1875,20 @@
     }
 
     // Modo personal (T16d): nombre y roles de quien usa la app sin cuenta.
+    // Repaso de Rutas: el depósito, para salir o volver ahí. Se guarda en
+    // este celular (Rutas, «Desde vos ▾»); tocarlo abre Rutas con su hoja.
+    function htmlDeposito() {
+        let deposito = null;
+        try {
+            deposito = (JSON.parse(localStorage.getItem("vendefrio_preferencias") || "{}").lugares || {}).deposito || null;
+        } catch (error) {
+            deposito = null;
+        }
+        const tiene = deposito && Number.isFinite(Number(deposito.lat)) && deposito.lat !== "" && deposito.lat !== null;
+        const texto = tiene ? (String(deposito.direccion || "").trim() || "Marcado en el mapa") : "+ Agregar dirección del depósito";
+        return filaAccion("tienda", "azul", "Depósito", escaparTexto(texto), 'data-accion="depositoRutas"');
+    }
+
     function htmlModoPersonal() {
         const inicio = window.inicioVendeFrio;
         const datos = inicio?.usaModoPersonal?.() ? inicio.datosPersonales() : null;
@@ -1593,6 +1906,7 @@
             <button type="button" data-accion="cambiarDatosPersonales">
                 Cambiar mi nombre y mis roles
             </button>
+            ${grupo("Para tus rutas", htmlDeposito())}
         `;
     }
 
@@ -1635,6 +1949,7 @@
                     <h3 class="ajGrupoTitulo">Tu distribuidora</h3>
                     <div class="ajTarjeta">
                         ${htmlNombreDistribuidora()}
+                        ${htmlDeposito()}
                         ${htmlDatosTicket()}
                         ${htmlCobroTransferencia()}
                         ${htmlDistribuidora()}
@@ -1724,6 +2039,8 @@
         const menu = document.querySelector(".configMenuPrincipal");
 
         if (!caja || !menu) return;
+        // Para volver a abrir la misma sección si Android cierra la app (lugar.js).
+        caja.dataset.seccion = seccion;
 
         const titulos = {
             cuenta: ["Cuenta", window.empleadosVendeFrio?.esEmpleado()
@@ -1735,8 +2052,9 @@
             apariencia: ["Apariencia", "Personalizá cómo se ve la aplicación"],
             respaldo: ["Datos y respaldo", "Protegé y restaurá la información de VendeFrío"],
             trabajo: ["Preferencias de trabajo", "Elegí cómo organizar tu trabajo diario"],
-            navegacion: ["Cómo hacés el recorrido", "Vehículo, navegación y voz"],
-            seguridad: ["Seguridad y aplicación", "Información y permisos"]
+            navegacion: ["Recorrido", "Vehículo, navegación y voz"],
+            seguridad: ["Seguridad y ayuda", "Información y permisos"],
+            ajustes: ["Ajustes", "Cómo trabajás, tu distribuidora y la app"]
         };
 
         caja.innerHTML = `
@@ -1748,6 +2066,10 @@
 
         if (seccion === "cuenta") {
             caja.innerHTML += htmlCuenta();
+        }
+
+        if (seccion === "ajustes") {
+            caja.innerHTML += `<div class="configMenuAjustes">${htmlAjustes()}</div>`;
         }
 
         if (seccion === "empleados") {
@@ -1784,7 +2106,7 @@
                 "vendefrio_ultimo_respaldo_automatico"
             );
 
-            caja.innerHTML +=
+            const copiaInterna =
                 grupo("Copia en este celular",
                     filaDato("historial", "gris", "Última copia interna",
                         ultima ? new Date(Number(ultima)).toLocaleString("es-AR") : "Todavía no hay una copia",
@@ -1792,14 +2114,16 @@
                     filaElegir("refrescar", "verde", "Respaldo automático", "Cada cuánto se hace la copia", "frecuenciaRespaldo", [
                         ["desactivado", "Nunca"], ["diario", "Todos los días"], ["semanal", "Cada semana"], ["mensual", "Cada mes"]
                     ]) +
-                    filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"')) +
+                    filaAccion("restaurarNube", "naranja", "Restaurar última copia interna", "Vuelve a los datos de la última copia", 'data-accion="restaurar"'));
+            caja.innerHTML +=
                 grupo("Archivo de respaldo",
                     filaAccion("descargar", "azul", "Exportar", "Descargá un archivo con todos tus datos", 'data-accion="exportar"') +
                     filaAccion("documento", "violeta", "Importar archivo", "Cargá un respaldo que descargaste antes", 'data-accion="importar"') +
                     filaElegir("alarma", "naranja", "Recordarme el respaldo", "Aviso en Inicio si pasa este tiempo sin descargarlo", "recordarRespaldo", [
                     ["diario", "Cada día"], ["semanal", "Cada semana"], ["mensual", "Cada mes"], ["nunca", "Nunca"]
                 ])) +
-                nota("Guardá el archivo en un lugar seguro, como Google Drive.");
+                nota("Guardá el archivo en un lugar seguro, como Google Drive.") +
+                cerrado("Avanzado", copiaInterna);
         }
 
         if (seccion === "trabajo") {
@@ -1810,7 +2134,10 @@
                     ]) +
                     filaElegir("paquete", "naranja", "Orden de productos", "En Nuevo pedido, dentro de cada marca", "ordenProductos", [
                         ["marca", "Catálogo"], ["alfabetico", "A a Z"], ["frecuencia", "Más pedidos"]
-                    ])) +
+                    ]) +
+                    // Repaso de Catálogo: el orden de las marcas, que antes
+                    // eran flechitas en cada marca de Editar marcas.
+                    filaAccion("ordenar", "azul", "Orden de las marcas", "En Catálogo y en Nuevo pedido", 'data-accion="ordenMarcas"')) +
                 grupo("Al usar la app",
                     filaElegir("casa", "azul", "Pantalla al abrir", "Dónde arranca la app", "inicio", [
                         ["menu", "Inicio"], ["pedido", "Pedidos"], ["comercios", "Comercios"]
@@ -1824,22 +2151,14 @@
                 // T79: el resumen del día a la noche (dueño y quien cobra).
                 grupo("A la noche",
                     filaLlave("luna", "violeta", "Resumen de la noche", "A las 20:30: vendido, entregado, cobrado y lo que falta", "resumenNoche")) +
-                // T54: IA para la voz. Se usa solo cuando la voz gratis no entiende.
-                grupo("Voz con IA",
-                    filaLlave("celular", "verde", "IA del celular", "Gratis y privada, si tu celular la tiene", "iaCelular") +
-                    filaLlave("nube", "azul", "IA en la nube", "Entiende cualquier frase y pedidos largos", "iaNube") +
-                    filaAccion("chispa", "violeta", "Probar la IA en la nube", "Dice si anda o qué le falta", 'data-accion="probarIA"')) +
-                `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
-                nota("La IA se usa solo cuando la voz no entiende lo que dijiste. <span id=\"estadoIACelular\">Revisando si este celular tiene IA…</span> La de la nube necesita internet, la cuenta de la distribuidora y la clave de Anthropic (tarea M15); cada vez que se usa cuesta una fracción de centavo de dólar.");
-            window.vozVendeFrio?.estadoIACelular?.().then(estado => {
-                const texto = document.getElementById("estadoIACelular");
-                if (!texto) return;
-                texto.textContent = {
-                    available: "Este celular tiene IA y está lista.",
-                    downloadable: "Este celular tiene IA: se descarga la primera vez que la uses, con wifi.",
-                    downloading: "Este celular está descargando su IA."
-                }[estado] || "Este celular todavía no tiene IA propia para páginas.";
-            });
+                // T155: un solo asistente, el de Claude. Lo fácil lo contesta
+                // el celular; lo demás va a Claude (api/entender.js).
+                grupo("Asistente",
+                    filaLlave("chispa", "violeta", "Asistente con Claude", "Entiende cualquier frase, pedidos largos y preguntas", "asistenteClaude")) +
+                cerrado("Avanzado", grupo("",
+                    filaAccion("nube", "azul", "Probar el asistente", "Dice si Claude anda o qué le falta", 'data-accion="probarIA"')) +
+                    `<p class="ajNota" id="resultadoProbarIA" aria-live="polite" hidden>${ico("info", 16)}<span></span></p>` +
+                    nota("Lo fácil lo contesta el celular, sin internet. Lo demás se lo pregunta a Claude, con internet; cada pregunta cuesta muy poco."));
         }
 
         if (seccion === "navegacion") {
@@ -1848,13 +2167,17 @@
                     filaSegmento("bicicleta", "naranja", "Cómo te movés", "", "vehiculo", [
                         ["bicicleta", "Bici"], ["moto", "Moto"], ["auto", "Auto"], ["pie", "A pie"]
                     ]) +
-                    filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
-                        ["app", "VendeFrío"], ["google", "Google Maps"]
-                    ])) +
-                grupo("Voz",
                     filaSegmento("volumen", "verde", "Indicaciones con voz", "Te dice cuándo y dónde doblar", "voz", [
                         ["si", "Sí"], ["no", "No"]
+                    ])) +
+                cerrado("Más opciones", grupo("Navegación",
+                    filaElegir("navegar", "azul", "Al tocar «Ir»", "", "navegador", [
+                        ["app", "VendeFrío"], ["google", "Google Maps"]
                     ]) +
+                    filaSegmento("mapa", "violeta", "Cómo calcula el camino", "«Con modo moto» está en prueba. Si no contesta, usa el normal", "servidorCaminos", [
+                        ["osrm", "Normal"], ["valhalla", "Con modo moto"]
+                    ])) +
+                grupo("Voz",
                     filaSegmento("velocimetro", "violeta", "Velocidad de la voz", "", "velocidadVoz", [
                         ["lenta", "Lenta"], ["normal", "Normal"], ["rapida", "Rápida"]
                     ])) +
@@ -1863,10 +2186,10 @@
                         ["15", "Lejos"], ["17", "Normal"], ["18", "Cerca"]
                     ]) +
                     filaLlave("mira", "verde", "Seguir mi ubicación", "El mapa se mueve con vos", "seguimiento") +
-                    filaLlave("celular", "gris", "Pantalla siempre encendida", "Mientras navegás", "pantallaEncendida")) +
+                    filaLlave("celular", "gris", "Pantalla siempre encendida", "Mientras navegás", "pantallaEncendida"))) +
                 grupo("",
                     filaAccion("mapa", "azul", "Abrir Rutas", "Elegí comercios y armá la ruta del día", 'data-accion="rutas"')) +
-                nota("La navegación usa los mapas de OpenStreetMap y calcula el camino por calles con internet. Necesita el GPS del comercio (se guarda desde su ficha).");
+                nota("Para navegar hace falta internet y el GPS del comercio (se guarda desde su ficha).");
         }
 
         if (seccion === "seguridad") {
@@ -1877,10 +2200,23 @@
                         window.nubeVendeFrio?.modoNube?.()
                             ? "En la nube de tu distribuidora"
                             : "En este dispositivo") +
+                    // T157: el tutorial, para volver a verlo, y la llave del de cada pantalla.
+                    (window.tutorialVendeFrio
+                        ? filaAccion("chispa", "naranja", "Ver el tutorial", "Lo básico de la app, paso a paso", 'data-accion="verTutorial"') +
+                            `<label class="ajFila">
+                                ${cabezaFila("info", "azul", "Explicar cada pantalla nueva", "La primera vez que entrás, te muestra cómo se usa")}
+                                <input type="checkbox" class="ajLlave" data-tutorial-pantallas role="switch" aria-label="Explicar cada pantalla nueva" ${window.tutorialVendeFrio.pantallasPrendidas() ? "checked" : ""}>
+                            </label>`
+                        : "") +
                     filaAccion("lista", "violeta", "Ver qué hay de nuevo", "Lo último que se sumó a la app", "data-novedades") +
-                    // T87: presentación y términos (borrador hasta que lo revise un abogado, M19).
+                    // T87: presentación y términos (repaso casero en T159) y el mail de la app.
                     filaAccion("info", "azul", "Qué es VendeFrío", "La presentación de la app, para mostrarla", 'data-accion="abrirPresentacion"') +
-                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"')) +
+                    filaAccion("escudo", "gris", "Términos y privacidad", "Qué datos guarda la app y para qué", 'data-accion="abrirTerminos"') +
+                    filaAccion("correo", "azul", "Escribinos", "vendefrio.app@gmail.com", 'data-accion="escribirnos"')) +
+                // monitoreo.js: las dos llaves para medir y avisar errores.
+                grupo("Ayudar a mejorar la app",
+                    filaLlave("rayo", "verde", "Medir la fluidez", "Cuánto tarda en abrir y en responder. Sin datos tuyos", "medirFluidez") +
+                    filaLlave("bandera", "naranja", "Avisar errores", "Si algo se rompe, llega un aviso sin nombres ni montos", "avisarErrores")) +
                 // T62: informar un problema (y, el dueño, ver los informados).
                 grupo("Problemas",
                     filaAccion("bandera", "rojo", "Informar un problema", "Contalo con tus palabras: lo técnico se adjunta solo", 'data-accion="informarProblema"') +
@@ -1888,7 +2224,7 @@
                 grupo("Ayuda",
                     `<div class="ajFila ajTextoLargo ayudaVendeFrio">
                         <span class="ajIcono" data-tono="naranja">${ico("herramientas")}</span>
-                        <span class="ajTexto"><strong>Si algo no anda</strong><small>Cerrá la app del todo y abrila de nuevo con internet (así se actualiza). Si sigue, sacale una captura a la pantalla y mandásela a quien administra VendeFrío en tu distribuidora.</small></span>
+                        <span class="ajTexto"><strong>Si algo no anda</strong><small>Cerrala y abrila con internet. Si sigue, tocá «Informar un problema».</small></span>
                     </div>
                     <div class="ajFila ajTextoLargo">
                         <span class="ajIcono" data-tono="azul">${ico("descargar")}</span>
@@ -1904,19 +2240,31 @@
 
             if (control.type === "checkbox") control.checked = valor === true;
             else if (control.type === "radio") control.checked = control.value === String(valor);
+            else if (control.type === "color") control.value = valor || "#E0457B";
             else control.value = valor;
         });
         dibujarMuestraTexto(caja);
+        if (seccion === "ajustes") {
+            actualizarFilasSegunCuenta();
+            actualizarMas();
+        }
 
         menu.classList.add("oculto");
         caja.classList.remove("oculto");
     }
 
+    // Una sección abierta desde Ajustes vuelve a Ajustes, no a Más.
+    let volverAAjustes = false;
+
     document.addEventListener("click", event => {
         const fila = event.target.closest("[data-config-seccion]");
 
         if (fila) {
+            volverAAjustes = Boolean(fila.closest(".configMenuAjustes"));
             detalle(fila.dataset.configSeccion);
+            // La sección abre desde arriba, con el título a la vista, aunque
+            // la lista de Más estuviera bajada (pedido del dueño, 2026-10-26).
+            window.scrollTo(0, 0);
         }
 
         if (event.target.closest(".configVolver")) {
@@ -1925,7 +2273,10 @@
             mostrarPantalla("menu");
         }
 
-        if (event.target.closest(".configSubVolver")) {
+        if (event.target.closest(".configSubVolver") && volverAAjustes && seccionAbierta !== "ajustes") {
+            volverAAjustes = false;
+            detalle("ajustes");
+        } else if (event.target.closest(".configSubVolver")) {
             document.getElementById("configDetalle")
                 ?.classList.add("oculto");
 
@@ -2007,7 +2358,7 @@
                 (faltan.length
                     ? "Faltan en la nube: " + faltan.join(", ") + ". Después de borrar, quedan solo en el archivo que descargaste: si los necesitás, los recuperás con \"Combinar respaldo\". "
                     : "Todo está en la nube. ") +
-                    "Se borran de este celular los comercios, productos, marcas, pedidos, rutas y la copia interna viejos. La nube no se toca.",
+                    "Se borran de este celular los comercios, productos, marcas, pedidos y rutas de antes de la nube. La nube no se toca.",
                 () => {
                     if (!borrarDatosViejosDelCelular()) {
                         return mostrarAviso("No se pudo borrar", "Los datos viejos de este celular quedaron como estaban.");
@@ -2065,6 +2416,12 @@
 
         // Salir lleva siempre a la pantalla de inicio (T16c). Como el
         // empleado, el dueño no sale con cambios sin subir.
+        if (accion === "depositoRutas") {
+            if (typeof mostrarPantalla === "function") mostrarPantalla("rutas");
+            setTimeout(() => window.rutasVendeFrio?.abrirLugar?.("deposito"), 250);
+            return;
+        }
+
         if (accion === "salirCuenta") {
             const boton = event.target.closest("[data-accion]");
             const nube = window.nubeVendeFrio;
@@ -2437,20 +2794,13 @@
         }
 
         if (accion === "editarDatosTicket") {
-            editandoDatosTicket = true;
-            detalle("cuenta");
-            document.getElementById("datosTicketTelefono")?.focus();
+            abrirDatosTicket();
         }
 
         if (accion === "editarCobroTransferencia") {
             window.cobrarQrVendeFrio?.editar(() => {
                 if (seccionAbierta === "cuenta") detalle("cuenta");
             });
-        }
-
-        if (accion === "cancelarDatosTicket") {
-            editandoDatosTicket = false;
-            detalle("cuenta");
         }
 
         if (accion === "editarNombreDueno") {
@@ -2478,7 +2828,9 @@
 
         if (accion === "informarProblema") window.confianzaVendeFrio?.informarProblema();
         if (accion === "abrirPresentacion") window.open("presentacion.html", "_blank", "noopener");
+        if (accion === "verTutorial") window.tutorialVendeFrio?.abrir();
         if (accion === "abrirTerminos") window.open("terminos.html", "_blank", "noopener");
+        if (accion === "escribirnos") location.href = "mailto:vendefrio.app@gmail.com?subject=" + encodeURIComponent("Consulta sobre VendeFrío");
         if (accion === "verProblemas") window.confianzaVendeFrio?.verProblemas();
 
         if (accion === "restablecer") {
@@ -2602,26 +2954,6 @@
                     error.classList.remove("oculto");
                 }
             });
-    });
-
-    // Datos del ticket (T28c).
-    document.addEventListener("submit", event => {
-        if (event.target.id !== "formDatosTicket") return;
-
-        event.preventDefault();
-
-        const valor = id => (document.getElementById(id)?.value || "").trim();
-        window.distribuidoraVendeFrio.cambiarDatosTicket({
-            telefono: valor("datosTicketTelefono"),
-            direccion: valor("datosTicketDireccion"),
-            cuit: valor("datosTicketCuit")
-        })
-            .then(() => {
-                editandoDatosTicket = false;
-                if (seccionAbierta === "cuenta") detalle("cuenta");
-                mostrarToast(navigator.onLine ? "Datos del ticket guardados" : "Datos guardados. Se suben cuando vuelva la señal");
-            })
-            .catch(fallo => mostrarAviso("No se guardaron los datos", fallo.message));
     });
 
     // Nombre del dueño (T18).
@@ -2812,6 +3144,11 @@
         detalle(seccion);
     };
 
+    // Inicio vacío (T156): "Elegir qué ver" lleva a Apariencia.
+    document.addEventListener("click", event => {
+        if (event.target.closest?.("#inicioVacioElegir")) window.abrirConfiguracionEn("apariencia");
+    });
+
     document.addEventListener("change", event => {
         const casilla = event.target.closest?.(".casillaAviso");
         if (!casilla || !window.avisosVendeFrio) return;
@@ -2827,6 +3164,11 @@
     document.addEventListener("click", event => {
         const boton = event.target.closest?.("[data-tarea-aviso]");
         if (boton) tocarTareaAvisos(boton);
+    });
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest?.('#pantallaConfiguracion [data-accion="ordenMarcas"]')) return;
+        window.abrirOrdenMarcas?.();
     });
 
     document.addEventListener("click", event => {
@@ -2935,7 +3277,7 @@
         window.distribuidoraVendeFrio.escucharDatosTicket?.(() => {
             const caja = document.getElementById("configDetalle");
             if (seccionAbierta !== "cuenta" || !caja || caja.classList.contains("oculto")) return;
-            if (editandoNombre || editandoNombreDueno || editandoDatosTicket) return;
+            if (editandoNombre || editandoNombreDueno) return;
             if (document.getElementById("cuentaDatosTicket")) detalle("cuenta");
         });
     }
@@ -2967,7 +3309,7 @@
 
         window.nubeVendeFrio.escucharSincronizacion(() => {
             const texto = document.getElementById("sincronizacionNube");
-            if (texto) texto.textContent = textoSincronizacion();
+            if (texto) texto.textContent = "soloPendientes" in texto.dataset ? textoPendientes() : textoSincronizacion();
         });
     }
 

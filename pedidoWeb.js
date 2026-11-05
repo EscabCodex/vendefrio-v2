@@ -42,8 +42,15 @@
     // ---------- Catálogo público ----------
     // Lo que ve el comercio: nombre, marca, precio, listas y oferta. Sin
     // fotos (pesan) ni productos archivados.
+    // Se arma una vez por cambio del catálogo (y por día, por las ofertas):
+    // se revisa con cada dibujo de Inicio (repasada).
     function catalogo() {
-        const productos = typeof obtenerProductos === "function" ? obtenerProductos() : {};
+        if (typeof recordarHastaQueCambie !== "function") return armarCatalogo();
+        return recordarHastaQueCambie("catalogoPublico", ["productos"], () => Object.freeze(armarCatalogo()), new Date().toDateString()).slice();
+    }
+
+    function armarCatalogo() {
+        const productos = typeof productosParaLeer === "function" ? productosParaLeer() : {};
         const lista = [];
         Object.keys(productos).forEach(marca => (productos[marca] || []).forEach(producto => {
             if (!producto || producto.archivado === true || lista.length >= MAXIMO_PRODUCTOS) return;
@@ -246,14 +253,14 @@
             observaciones.value = ("Pidió por el link" + (pedido.nota ? ": «" + pedido.nota + "»" : "")).slice(0, 300);
             observaciones.dispatchEvent(new Event("input", { bubbles: true }));
         }
-        const antes = new Set((typeof obtenerHistorial === "function" ? obtenerHistorial() : []).map(item => item.id));
+        const antes = new Set((typeof historialParaLeer === "function" ? historialParaLeer() : []).map(item => item.id));
         const guardado = generarPedido();
         document.getElementById("modalPedido")?.classList.add("oculto");
         if (!guardado) {
             mostrarToast?.("Revisá el pedido y guardalo a mano.", "error");
             return;
         }
-        const nuevo = (typeof obtenerHistorial === "function" ? obtenerHistorial() : []).find(item => !antes.has(item.id) && item.comercio === pedido.comercio);
+        const nuevo = (typeof historialParaLeer === "function" ? historialParaLeer() : []).find(item => !antes.has(item.id) && item.comercio === pedido.comercio);
         try {
             await tomar(pedido, "cargado", nuevo ? nuevo.id : "");
         } catch (error) {

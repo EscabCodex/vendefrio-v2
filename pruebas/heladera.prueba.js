@@ -1,14 +1,11 @@
 // VendeFrío - Foto de la heladera (T92), en modo personal: dos visitas con
 // foto, la última grande y la anterior abajo para comparar.
 const path = require("path");
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 
 test("heladera: foto con comentario y las anteriores para comparar", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
     await page.evaluate(() => agregarComercio({ nombre: "Almacén Don Pepe", direccion: "San Martín 123" }));
 

@@ -89,7 +89,9 @@ async function calcularRutaCalles3D() {
         [posicionNavegacion3D.coords.longitude, posicionNavegacion3D.coords.latitude],
         ...rutaNavegacion3D.slice(paradaNavegacion3D).map(parada => [Number(parada.lng), Number(parada.lat)])
     ];
-    const url = "https://router.project-osrm.org/route/v1/driving/" +
+    // T133: solo calles de auto, el mismo servidor y perfil que navegacion.js
+    // (el OSRM de demostración mezclaba pasos peatonales).
+    const url = "https://routing.openstreetmap.de/routed-car/route/v1/driving/" +
         puntos.map(punto => punto.join(",")).join(";") +
         "?overview=full&geometries=geojson&steps=true";
 

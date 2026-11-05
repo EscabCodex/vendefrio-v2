@@ -43,9 +43,34 @@
     };
     let configMarcas = {};
 
-    // Texto de lo último entregado a la app por colección, para avisar
-    // solo cuando algo cambió de verdad.
-    const textos = {};
+    // Lo que se le da a la app de cada documento, congelado y recordado
+    // mientras el documento no cambie (repasada): con miles de pedidos ya no
+    // se arma, se copia ni se compara todo de nuevo en cada cambio. Los
+    // documentos guardados en "documentos" también quedan congelados.
+    const registrosDeDocumentos = new WeakMap();
+    const documentosDeRegistros = new WeakMap();
+    // Las partes que ya llegaron alguna vez: la primera vez siempre se avisa.
+    const partesQueLlegaron = new Set();
+
+    // Pedidos en vivo solo los recientes (arreglar la lentitud de la nube).
+    // Firestore repasa todos los documentos que se escuchan en cada cambio,
+    // por chico que sea: con miles de pedidos, cada toque trababa el celular
+    // varios segundos. Se escuchan en vivo los pedidos de los últimos días;
+    // todos los demás se leen una vez al abrir la app (de la copia del
+    // celular y, enseguida, de la nube) y quedan en memoria igual que antes.
+    // Un pedido viejo que este celular cambia se escucha suelto, solo él.
+    const DIAS_DE_PEDIDOS_EN_VIVO = 60;
+    const ESPERA_ENTRE_BAJADAS_DE_PEDIDOS = 60 * 60 * 1000;
+    let corteDePedidosEnVivo = 0;
+    const idsPedidosEnVivo = new Set();
+    let pedidosViejosCargados = false;
+    let ultimaBajadaDePedidos = 0;
+    // Los ids que trajo la última lectura completa de la nube: solo esos se
+    // dan por borrados si dejan de venir (nunca uno recién creado acá).
+    let idsDeLaUltimaBajada = new Set();
+    const pedidosSueltos = new Map();
+    const sueltosSinSubir = new Set();
+    let vueltaDeEscucha = 0;
 
     // Sincronización visible (T12). Por cada parte que se escucha
     // (comercios, productos, pedidos, rutas, config): ids con cambios que
@@ -151,7 +176,8 @@
     // marca de cada producto. Si el registro tiene listas dentro de listas,
     // se guarda entero como texto en "_json".
     function aDocumento(registro, extras) {
-        const limpio = JSON.parse(JSON.stringify(registro));
+        // Lo congelado ya tiene la forma de JSON: no hace falta copiarlo.
+        const limpio = Object.isFrozen(registro) ? registro : JSON.parse(JSON.stringify(registro));
 
         if (tieneListasAnidadas(limpio, false)) {
             return { _json: JSON.stringify(limpio), ...extras };
@@ -170,13 +196,35 @@
                 console.error("Un registro de la nube estaba dañado: " + id, error);
             }
         } else {
-            registro = { ...datos };
+            // Una copia que se puede cambiar: el documento guardado está congelado.
+            registro = Object.isFrozen(datos) ? JSON.parse(JSON.stringify(datos)) : { ...datos };
         }
 
         delete registro._orden;
         delete registro._marca;
         delete registro._json;
         registro.id = id;
+        return registro;
+    }
+
+    // El registro de un documento para la app, congelado y compartido: el
+    // mismo objeto mientras el documento no cambie.
+    function registroParaLeer(id, datos) {
+        let registro = registrosDeDocumentos.get(datos);
+        if (!registro) {
+            if (typeof datos._json === "string") {
+                registro = deDocumento(id, datos);
+            } else {
+                registro = { ...datos };
+                delete registro._orden;
+                delete registro._marca;
+                delete registro._json;
+                registro.id = id;
+            }
+            congelarHondo(registro);
+            registrosDeDocumentos.set(datos, registro);
+            documentosDeRegistros.set(registro, datos);
+        }
         return registro;
     }
 
@@ -268,7 +316,7 @@
                 resultado.push({ ruta: rutaCampo, borrar: true });
             } else if (tiene(antes, clave) && esMapa(antes[clave]) && esMapa(despues[clave])) {
                 camposCambiados(antes[clave], despues[clave], rutaCampo, resultado);
-            } else if (!tiene(antes, clave) || textoComparable(antes[clave]) !== textoComparable(despues[clave])) {
+            } else if (!tiene(antes, clave) || !igualesComoJson(despues[clave], antes[clave])) {
                 resultado.push({ ruta: rutaCampo, valor: despues[clave] });
             }
         });
@@ -309,7 +357,7 @@
             documentosOrdenados(documentos.productos).forEach(([id, datos]) => {
                 const marca = String(datos._marca || "").trim() || "Sin marca";
                 if (!productos[marca]) productos[marca] = [];
-                productos[marca].push(deDocumento(id, datos));
+                productos[marca].push(registroParaLeer(id, datos));
             });
 
             return productos;
@@ -319,22 +367,12 @@
         if (!subcoleccion) return undefined;
 
         return documentosOrdenados(documentos[subcoleccion])
-            .map(([id, datos]) => deDocumento(id, datos));
+            .map(([id, datos]) => registroParaLeer(id, datos));
     }
 
-    // Devuelve true si lo que ve la app de esa colección cambió.
-    function actualizarTexto(coleccion) {
-        const texto = textoComparable(leerDatos(coleccion));
-        const cambio = textos[coleccion] !== texto;
-        textos[coleccion] = texto;
-        return cambio;
-    }
-
-    function avisarSiCambio(colecciones) {
+    function avisarCambio(colecciones) {
         colecciones.forEach(coleccion => {
-            if (actualizarTexto(coleccion) && alCambiarDatos) {
-                alCambiarDatos(coleccion);
-            }
+            if (alCambiarDatos) alCambiarDatos(coleccion);
         });
     }
 
@@ -391,15 +429,28 @@
 
         validos.forEach((item, posicion) => {
             const id = item.registro.id;
-            const datos = aDocumento(item.registro, { ...item.extras, _orden: ordenes[posicion] });
             const anterior = anteriores.get(id);
+
+            // Sin cambios (repasada): el mismo registro que salió de este
+            // documento, en el mismo lugar, ni se arma ni se compara.
+            if (anterior && documentosDeRegistros.get(item.registro) === anterior && anterior._orden === ordenes[posicion] &&
+                Object.keys(item.extras).every(campo => anterior[campo] === item.extras[campo])) {
+                nuevos.set(id, anterior);
+                return;
+            }
+
+            const datos = congelarHondo(aDocumento(item.registro, { ...item.extras, _orden: ordenes[posicion] }));
             const ref = refDistribuidora.collection(subcoleccion).doc(id);
 
             nuevos.set(id, datos);
+            if (Object.isFrozen(item.registro)) {
+                registrosDeDocumentos.set(datos, item.registro);
+                documentosDeRegistros.set(item.registro, datos);
+            }
 
             if (!anterior) {
                 escrituras.push({ tipo: "guardar", ref, datos });
-            } else if (textoComparable(anterior) !== textoComparable(datos)) {
+            } else if (!igualesComoJson(datos, anterior)) {
                 // Un pedido que ya está en la nube nunca se reescribe entero
                 // (T20): se mandan solo los campos que cambiaron.
                 if (subcoleccion === "pedidos") {
@@ -418,6 +469,16 @@
         });
 
         documentos[subcoleccion] = nuevos;
+
+        // Un pedido viejo (fuera de la escucha en vivo) que se cambió acá se
+        // escucha suelto: así llega la confirmación o el rechazo de la nube.
+        if (subcoleccion === "pedidos" && pedidosViejosCargados) {
+            escrituras.forEach(escritura => {
+                const id = escritura.ref.id;
+                if (escritura.tipo === "borrar" || idsPedidosEnVivo.has(id)) return;
+                if (!pedidoEnVentana(nuevos.get(id))) escucharPedidoSuelto(id);
+            });
+        }
     }
 
     function errorAlEscribir(error) {
@@ -523,7 +584,7 @@
             if (coleccion === "ordenMarcas") {
                 const orden = (Array.isArray(datos) ? datos : []).map(marca => String(marca));
 
-                if (textoComparable(orden) !== textoComparable(configMarcas.orden || [])) {
+                if (!igualesComoJson(orden, configMarcas.orden || [])) {
                     configMarcas = { ...configMarcas, orden };
                     escrituras.push({ tipo: "guardar", ref: refMarcas, datos: { orden }, combinar: true });
                 }
@@ -542,7 +603,7 @@
 
                 compararRegistros("productos", items, escrituras);
 
-                if (textoComparable(marcas) !== textoComparable(configMarcas.marcas || [])) {
+                if (!igualesComoJson(marcas, configMarcas.marcas || [])) {
                     configMarcas = { ...configMarcas, marcas };
                     escrituras.push({ tipo: "guardar", ref: refMarcas, datos: { marcas }, combinar: true });
                 }
@@ -565,7 +626,6 @@
                 throw new Error("Colección desconocida: " + coleccion);
             }
 
-            actualizarTexto(coleccion);
             if (escrituras.length) enviarEscrituras(escrituras);
 
             pedidosCreados.forEach(pedido => avisarAccionDePedido({ accion: "pedidoNuevo", pedido: JSON.parse(JSON.stringify(pedido)) }));
@@ -618,10 +678,41 @@
         return { ref: refDistribuidora.collection("pedidos").doc(id), pedido: deDocumento(id, datos) };
     }
 
-    // No espera a la nube: la escucha muestra el cambio enseguida, también
-    // sin señal. Si la nube lo rechaza, avisa como cualquier otro cambio.
+    // El cambio se ve al instante (arreglar la lentitud de la nube): se
+    // aplica en la memoria y se avisa a las pantallas sin esperar a que
+    // Firestore lo devuelva por la escucha (con miles de pedidos tardaba
+    // segundos). Lo que se guarda y sube es lo mismo de siempre: update()
+    // campo por campo, que Firestore anota en el celular y sube solo, también
+    // sin señal. Cuando la escucha devuelve el cambio, ya es igual y no se
+    // redibuja nada; si la nube lo rechaza, la escucha trae el pedido como
+    // estaba y se avisa como cualquier otro error.
+    function aplicarCamposEnMemoria(id, campos) {
+        const anterior = documentos.pedidos.get(id);
+        if (!anterior || typeof anterior._json === "string") return;
+
+        const copia = JSON.parse(JSON.stringify(anterior));
+        campos.forEach(({ ruta, valor, borrar }) => {
+            let lugar = copia;
+            for (let i = 0; i < ruta.length - 1; i++) {
+                if (!esMapa(lugar[ruta[i]])) {
+                    if (borrar) return;
+                    lugar[ruta[i]] = {};
+                }
+                lugar = lugar[ruta[i]];
+            }
+            const ultima = ruta[ruta.length - 1];
+            if (borrar) delete lugar[ultima];
+            else lugar[ultima] = JSON.parse(JSON.stringify(valor));
+        });
+
+        documentos.pedidos.set(id, congelarHondo(copia));
+        avisarCambio(["historial"]);
+    }
+
     function enviarCambiosDelPedido(ref, campos) {
+        aplicarCamposEnMemoria(ref.id, campos);
         ref.update(...argumentosDeActualizacion(campos)).catch(errorAlEscribir);
+        if (!idsPedidosEnVivo.has(ref.id)) escucharPedidoSuelto(ref.id);
     }
 
     // cambios: { "preparacion.lin_x": valor, "entrega": valor }. La ruta va
@@ -1794,8 +1885,12 @@
     // -------------------------------------------------
 
     function dejarDeEscuchar() {
+        vueltaDeEscucha++;
         desuscripciones.forEach(dejar => dejar());
         desuscripciones = [];
+        pedidosSueltos.forEach(dejar => dejar());
+        pedidosSueltos.clear();
+        sueltosSinSubir.clear();
     }
 
     function alFallarEscucha(error) {
@@ -1986,7 +2081,9 @@
         const pedidos = Array.from(idsSinSubir.pedidos || []).sort().join(",");
         if (pedidos !== textoPedidosSinSubir) {
             textoPedidosSinSubir = pedidos;
-            if (typeof renderizarHistorial === "function") intentar(renderizarHistorial);
+            // Solo si se ve: al abrir Historial se dibuja de nuevo.
+            const historial = document.getElementById("pantallaHistorial");
+            if (typeof renderizarHistorial === "function" && historial && !historial.classList.contains("oculto")) intentar(renderizarHistorial);
         }
     }
 
@@ -1997,6 +2094,27 @@
 
         documentosDeLaFoto.forEach(documento => {
             if (documento.metadata.hasPendingWrites) ids.add(documento.id);
+        });
+
+        // Los pedidos viejos que se escuchan sueltos no vienen en esta foto.
+        if (parte === "pedidos") sueltosSinSubir.forEach(id => ids.add(id));
+        idsSinSubir[parte] = ids;
+
+        if (foto.metadata.fromCache) {
+            partesDesdeCache.add(parte);
+        } else {
+            partesDesdeCache.delete(parte);
+        }
+    }
+
+    // Lo mismo, mirando solo los documentos que cambiaron desde la foto
+    // anterior (incluye los que solo cambiaron de "sin subir" a subido).
+    function anotarCambiosDeSincronizacion(parte, foto, cambios) {
+        const ids = new Set(idsSinSubir[parte] || []);
+
+        cambios.forEach(cambio => {
+            if (cambio.type !== "removed" && cambio.doc.metadata.hasPendingWrites) ids.add(cambio.doc.id);
+            else ids.delete(cambio.doc.id);
         });
 
         idsSinSubir[parte] = ids;
@@ -2022,6 +2140,142 @@
         }
     }
 
+    // -------------------------------------------------
+    // Pedidos viejos (arreglar la lentitud de la nube)
+    // -------------------------------------------------
+
+    // ¿Entra en la escucha en vivo? (tiene hora de carga reciente)
+    function pedidoEnVentana(datos) {
+        const hora = datos && datos.timestamp;
+        return typeof hora === "number" && hora >= corteDePedidosEnVivo;
+    }
+
+    // Pone un pedido en la memoria si cambió. Devuelve true si cambió.
+    function ponerPedido(id, datos) {
+        const anterior = documentos.pedidos.get(id);
+        if (anterior && igualesComoJson(datos, anterior)) return false;
+        documentos.pedidos.set(id, congelarHondo(datos));
+        return true;
+    }
+
+    // Suma a la memoria lo que trajo una lectura de todos los pedidos. Los
+    // que se escuchan en vivo o sueltos no se tocan (lo de ellos es más
+    // nuevo). Con "desdeLaNube", un pedido viejo que trajo la lectura
+    // anterior y esta ya no, se borró en otro celular.
+    function sumarTodosLosPedidos(foto, desdeLaNube) {
+        let cambio = false;
+        const vistos = new Set();
+
+        foto.forEach(documento => {
+            const id = documento.id;
+            vistos.add(id);
+            if (idsPedidosEnVivo.has(id) || pedidosSueltos.has(id)) return;
+            const datos = documento.data();
+            if (ponerPedido(id, datos)) cambio = true;
+            // Un cambio sin subir de otra vez que se abrió la app: se escucha
+            // suelto, así figura en "Sin subir" hasta que sube.
+            if (documento.metadata.hasPendingWrites && !pedidoEnVentana(datos)) escucharPedidoSuelto(id);
+        });
+
+        if (desdeLaNube) {
+            const sinSubir = idsSinSubir.pedidos || new Set();
+            idsDeLaUltimaBajada.forEach(id => {
+                if (vistos.has(id) || idsPedidosEnVivo.has(id) || pedidosSueltos.has(id) || sinSubir.has(id)) return;
+                const datos = documentos.pedidos.get(id);
+                if (datos && !pedidoEnVentana(datos) && documentos.pedidos.delete(id)) cambio = true;
+            });
+            idsDeLaUltimaBajada = vistos;
+        } else {
+            vistos.forEach(id => idsDeLaUltimaBajada.add(id));
+        }
+
+        return cambio;
+    }
+
+    // Al abrir la app: todos los pedidos de la copia del celular (rápido y
+    // sin señal). Si la copia está vacía (celular nuevo), se esperan los de
+    // la nube, como antes.
+    async function cargarPedidosViejos(vuelta) {
+        const ref = refDistribuidora.collection("pedidos");
+        let foto = null;
+
+        try {
+            foto = await ref.get({ source: "cache" });
+        } catch (error) {
+            foto = null;
+        }
+
+        if ((!foto || foto.empty) && vuelta === vueltaDeEscucha) {
+            try {
+                foto = await ref.get();
+                if (!foto.metadata.fromCache) {
+                    ultimaBajadaDePedidos = Date.now();
+                    idsDeLaUltimaBajada = new Set();
+                }
+            } catch (error) {
+                console.warn("No se pudieron leer los pedidos de la nube.", error);
+            }
+        }
+
+        if (vuelta !== vueltaDeEscucha || saliendo) return;
+        if (foto) sumarTodosLosPedidos(foto, false);
+        pedidosViejosCargados = true;
+    }
+
+    // Trae de la nube todos los pedidos, una vez al abrir la app (y a lo
+    // sumo una vez por hora si se reconecta): así llegan los cambios que
+    // otro celular hizo en pedidos viejos y los que se borraron.
+    function refrescarPedidosViejos(vuelta) {
+        if (!refDistribuidora || saliendo || vuelta !== vueltaDeEscucha) return;
+        if (!navigator.onLine || Date.now() - ultimaBajadaDePedidos < ESPERA_ENTRE_BAJADAS_DE_PEDIDOS) return;
+
+        ultimaBajadaDePedidos = Date.now();
+        refDistribuidora.collection("pedidos").get({ source: "server" }).then(foto => {
+            if (vuelta !== vueltaDeEscucha || saliendo) {
+                ultimaBajadaDePedidos = 0;
+                return;
+            }
+            if (sumarTodosLosPedidos(foto, true)) avisarCambio(["historial"]);
+        }).catch(error => {
+            ultimaBajadaDePedidos = 0;
+            console.warn("No se pudieron traer los pedidos viejos de la nube.", error);
+        });
+    }
+
+    // Un pedido viejo que este celular cambió: se escucha solo él hasta que
+    // se cierre la app (pocos, y cada uno cuesta casi nada).
+    function escucharPedidoSuelto(id) {
+        if (!refDistribuidora || !id || pedidosSueltos.has(id) || idsPedidosEnVivo.has(id)) return;
+
+        const dejar = refDistribuidora.collection("pedidos").doc(id).onSnapshot({ includeMetadataChanges: true }, foto => {
+            let cambio = false;
+            if (foto.exists) {
+                cambio = ponerPedido(id, foto.data());
+            } else if (!foto.metadata.fromCache) {
+                cambio = documentos.pedidos.delete(id);
+            }
+
+            const ids = new Set(idsSinSubir.pedidos || []);
+            if (foto.metadata.hasPendingWrites) {
+                sueltosSinSubir.add(id);
+                ids.add(id);
+            } else {
+                sueltosSinSubir.delete(id);
+                ids.delete(id);
+            }
+            idsSinSubir.pedidos = ids;
+
+            if (cambio) avisarCambio(["historial"]);
+            avisarSincronizacion();
+        }, error => {
+            console.warn("Se cortó la escucha de un pedido viejo.", error);
+            pedidosSueltos.delete(id);
+            sueltosSinSubir.delete(id);
+        });
+
+        pedidosSueltos.set(id, dejar);
+    }
+
     function escucharNube() {
         if (!db || !refDistribuidora) return;
 
@@ -2029,6 +2283,8 @@
         partesDesdeCache.clear();
         Object.keys(idsSinSubir).forEach(parte => delete idsSinSubir[parte]);
         cambiarEstado("conectando");
+        const vuelta = vueltaDeEscucha;
+        corteDePedidosEnVivo = Date.now() - DIAS_DE_PEDIDOS_EN_VIVO * 86400000;
 
         const pendientes = new Set(Object.keys(documentos).concat("config"));
         const llego = parte => {
@@ -2043,29 +2299,98 @@
 
         Object.keys(SUBCOLECCIONES).forEach(coleccion => {
             const subcoleccion = SUBCOLECCIONES[coleccion];
+            const esPedidos = subcoleccion === "pedidos";
             let primera = true;
 
-            desuscripciones.push(
-                refDistribuidora.collection(subcoleccion).onSnapshot(opciones, foto => {
-                    // Si solo cambió el estado de sincronización, los datos son los mismos.
-                    if (primera || foto.docChanges().length) {
-                        const mapa = new Map();
-                        foto.forEach(documento => mapa.set(documento.id, documento.data()));
-                        documentos[subcoleccion] = mapa;
-                        avisarSiCambio([coleccion]);
-                        primera = false;
+            // Pedidos: en vivo solo los recientes (ver DIAS_DE_PEDIDOS_EN_VIVO).
+            const consulta = esPedidos
+                ? refDistribuidora.collection(subcoleccion).where("timestamp", ">=", corteDePedidosEnVivo)
+                : refDistribuidora.collection(subcoleccion);
+
+            const escucharParte = () => desuscripciones.push(
+                consulta.onSnapshot(opciones, foto => {
+                    // Después de la primera foto solo se leen los documentos que
+                    // cambiaron, y se avisa solo si cambió algo de verdad (no
+                    // cuando vuelve lo que este celular acaba de guardar): con
+                    // miles de pedidos, rehacer todo en cada cambio trababa un
+                    // celular barato (repasada).
+                    let cambio = !partesQueLlegaron.has(subcoleccion);
+                    partesQueLlegaron.add(subcoleccion);
+
+                    if (primera) {
+                        const anteriores = documentos[subcoleccion];
+                        const nuevos = new Map();
+                        // Pedidos: la foto trae solo los recientes; los viejos
+                        // que ya están en memoria quedan como están.
+                        if (esPedidos) {
+                            idsPedidosEnVivo.clear();
+                            anteriores.forEach((datos, id) => {
+                                if (!pedidoEnVentana(datos)) nuevos.set(id, datos);
+                            });
+                        }
+                        foto.forEach(documento => {
+                            if (esPedidos) idsPedidosEnVivo.add(documento.id);
+                            const datos = documento.data();
+                            const anterior = anteriores.get(documento.id);
+                            if (anterior && igualesComoJson(datos, anterior)) {
+                                nuevos.set(documento.id, anterior);
+                            } else {
+                                nuevos.set(documento.id, congelarHondo(datos));
+                                cambio = true;
+                            }
+                        });
+                        if (nuevos.size !== anteriores.size) cambio = true;
+                        documentos[subcoleccion] = nuevos;
+                    } else {
+                        // Si solo cambió el estado de sincronización, los datos son los mismos.
+                        const mapa = documentos[subcoleccion];
+                        foto.docChanges().forEach(({ type, doc }) => {
+                            if (type === "removed") {
+                                if (esPedidos) idsPedidosEnVivo.delete(doc.id);
+                                if (mapa.delete(doc.id)) cambio = true;
+                                return;
+                            }
+                            if (esPedidos) idsPedidosEnVivo.add(doc.id);
+                            const datos = doc.data();
+                            const anterior = mapa.get(doc.id);
+                            if (anterior && igualesComoJson(datos, anterior)) return;
+                            mapa.set(doc.id, congelarHondo(datos));
+                            cambio = true;
+                        });
                     }
 
-                    anotarSincronizacion(subcoleccion, foto, foto.docs);
+                    if (cambio) avisarCambio([coleccion]);
+
+                    if (primera) anotarSincronizacion(subcoleccion, foto, foto.docs);
+                    else anotarCambiosDeSincronizacion(subcoleccion, foto, foto.docChanges({ includeMetadataChanges: true }));
+                    const eraPrimera = primera;
+                    primera = false;
                     llego(subcoleccion);
+                    // Con todo ya en pantalla, se trae de la nube lo viejo un
+                    // rato después, para no trabar los primeros toques.
+                    if (esPedidos && eraPrimera) setTimeout(() => refrescarPedidosViejos(vuelta), 8000);
                 }, alFallarEscucha)
             );
+
+            if (esPedidos && !pedidosViejosCargados) {
+                cargarPedidosViejos(vuelta).then(() => {
+                    if (vuelta === vueltaDeEscucha) escucharParte();
+                });
+            } else {
+                escucharParte();
+            }
         });
 
         desuscripciones.push(
             refDistribuidora.collection("config").doc("marcas").onSnapshot(opciones, foto => {
+                const anterior = configMarcas;
                 configMarcas = foto.exists ? (foto.data() || {}) : {};
-                avisarSiCambio(["productos", "ordenMarcas"]);
+                const primeraVez = !partesQueLlegaron.has("config");
+                partesQueLlegaron.add("config");
+                const cambiaron = [];
+                if (primeraVez || !igualesComoJson(configMarcas.marcas || [], anterior.marcas || [])) cambiaron.push("productos");
+                if (primeraVez || !igualesComoJson(configMarcas.orden || [], anterior.orden || [])) cambiaron.push("ordenMarcas");
+                if (cambiaron.length) avisarCambio(cambiaron);
                 anotarSincronizacion("config", foto, foto.exists ? [foto] : []);
                 llego("config");
             }, alFallarEscucha)
@@ -2099,12 +2424,14 @@
             if (typeof actualizarDatalistPedido === "function") intentar(actualizarDatalistPedido);
             if (typeof actualizarDatalist === "function") intentar(actualizarDatalist);
             if (typeof renderizarComercios === "function") intentar(renderizarComercios);
-            if (typeof cargarSelectComerciosRuta === "function") intentar(cargarSelectComerciosRuta);
+            if (typeof refrescarRutasDesdeNube === "function") intentar(refrescarRutasDesdeNube);
         }
 
         if (cambioProductos) {
             // El borrador del pedido se guarda en cada cambio y se vuelve a cargar al redibujar.
-            if (typeof renderizarPedido === "function") intentar(renderizarPedido);
+            // Con la lista de Pedidos a la vista, se redibuja al volver al formulario (repasada).
+            if (typeof renderizarPedidoSiSeVe === "function") intentar(renderizarPedidoSiSeVe);
+            else if (typeof renderizarPedido === "function") intentar(renderizarPedido);
 
             if (typeof renderizarProductosAdmin === "function") {
                 const buscador = document.getElementById("buscarProducto");
@@ -2116,12 +2443,13 @@
             }
         }
 
-        if (cambio("historial") && typeof renderizarHistorial === "function") {
+        // Historial se dibuja al abrirlo: oculto, no hace falta.
+        if (cambio("historial") && typeof renderizarHistorial === "function" && pantallaVisible("pantallaHistorial")) {
             intentar(renderizarHistorial);
         }
 
-        if (cambio("rutasGuardadas") && typeof renderizarRutasGuardadas === "function") {
-            intentar(renderizarRutasGuardadas);
+        if (cambio("rutasGuardadas") && typeof refrescarRutasDesdeNube === "function") {
+            intentar(refrescarRutasDesdeNube);
         }
 
         // Cierre del día (T28f): se recalcula con cada cambio de los pedidos.
@@ -2131,7 +2459,8 @@
             intentar(window.abrirEstadisticas);
         }
 
-        if (typeof actualizarDashboard === "function") intentar(actualizarDashboard);
+        if (typeof window.pedirActualizarDashboard === "function") window.pedirActualizarDashboard();
+        else if (typeof actualizarDashboard === "function") intentar(actualizarDashboard);
     }
 
     // -------------------------------------------------
@@ -3073,6 +3402,12 @@
             if (["sinConexion", "error"].includes(estado)) escucharNube();
         });
 
+        // Al volver a la app (el celular la deja abierta días), se traen de
+        // la nube los pedidos viejos, a lo sumo una vez por hora.
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && pedidosViejosCargados) refrescarPedidosViejos(vueltaDeEscucha);
+        });
+
         // Sin señal se avisa enseguida, sin esperar a que Firestore lo note.
         window.addEventListener("offline", () => {
             if (["conectada", "conectando"].includes(estado)) cambiarEstado("sinConexion");
@@ -3156,6 +3491,8 @@
         avisarSincronizacion,
         reintentarSubida,
         pedidoSinSubir: id => Boolean(id && idsSinSubir.pedidos && idsSinSubir.pedidos.has(String(id))),
+        // Cuántos pedidos se escuchan en vivo (para las pruebas y la medición).
+        pedidosEnVivo: () => idsPedidosEnVivo.size,
         escucharSincronizacion(oyente) {
             if (typeof oyente !== "function") return () => {};
 

@@ -1,14 +1,11 @@
 // VendeFrío - Importar planilla (T84): productos desde un CSV, con vista
 // previa, y comercios desde otra planilla.
-const { test, expect, capturar } = require("./ayudas");
+const { test, expect, capturar, usarSinCuenta } = require("./ayudas");
 const { abrirMas } = require("./recorridos");
 
 async function entrarPersonal(page) {
     await page.goto("/");
-    await page.getByRole("button", { name: "Continuar sin iniciar sesión" }).click();
-    await page.locator("#inicioNombrePersonal").fill("Jere");
-    await page.locator("#inicioRolesPersonales").getByText("Vendedor").click();
-    await page.locator("#inicioFormPersonal").getByRole("button", { name: "Guardar y entrar" }).click();
+    await usarSinCuenta(page, "vendedor");
     await expect(page.locator("#pantallaInicioSesion")).toBeHidden();
 }
 

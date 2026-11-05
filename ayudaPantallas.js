@@ -14,31 +14,32 @@
         pedidos: { titulo: "Pedidos", pasos: [
             "Acá están los pedidos de hoy, separados por lo que falta hacer.",
             "Tocá un pedido para armarlo o entregarlo. Adentro tenés los pasos en orden.",
-            "Para cargar uno nuevo, tocá el + de abajo."] },
+            "Para cargar uno nuevo, tocá el + de abajo y «Nuevo pedido»."] },
         pantallaPedido: { titulo: "Nuevo pedido", pasos: [
-            "Arriba, elegí el comercio.",
+            "Arriba, tocá «Elegí un comercio» y buscalo con la lupa.",
             "Tocá una marca para abrirla y sumá cada producto con el +.",
-            "Tocá «Guardar pedido». Con el botón redondo ⋯ repetís el último, dictás o anotás un cambio."] },
+            "Tocá «Guardar pedido». Con el ⋯ de al lado repetís el último, dictás o anotás un cambio."] },
         pantallaComercios: { titulo: "Comercios", pasos: [
             "Acá están todos tus comercios. Arriba ves cuántos te faltan visitar.",
             "Tocá uno para abrir su ficha: llamarlo, ir, o cargarle un pedido.",
             "Para sumar uno nuevo, tocá «Agregar comercio»."] },
         pantallaProductos: { titulo: "Productos y marcas", pasos: [
             "Acá sumás productos y marcas nuevos.",
-            "Tocá los tres puntos de un producto para editarlo o archivarlo.",
+            "Tocá un producto para cambiarle el nombre o el precio, o archivarlo.",
+            "Con las flechas de cada marca cambiás el orden; con sus tres puntos, el nombre.",
             "Lo archivado deja de salir en Nuevo pedido, pero se puede recuperar."] },
         pantallaCatalogo: { titulo: "Catálogo", pasos: [
             "Acá ves todo lo que vendés, con su precio.",
             "Tocá los tres puntos de un producto para cambiarle el precio o la foto.",
             "En «Editar marcas» sumás productos y marcas nuevos."] },
         pantallaRutas: { titulo: "Rutas", pasos: [
-            "Elegí los comercios que vas a visitar.",
-            "Tocá «Optimizar ruta» para recorrerlos en el orden más corto.",
-            "Guardala con un nombre para usarla otro día."] },
+            "Tocá un pin para marcarlo, o tocá «Armar ruta» y elegí con qué arrancar.",
+            "La app ordena las paradas sola por el camino más corto. Arriba elegís desde dónde salís.",
+            "Con «Iniciar» te lleva. En ⋯ la guardás con un nombre para usarla otro día."] },
         pantallaHistorial: { titulo: "Historial", pasos: [
             "Acá están los pedidos terminados, del más nuevo al más viejo.",
             "Buscá por comercio o filtrá por fecha.",
-            "Tocá uno para ver el detalle."] },
+            "Tocá uno para ver el detalle. Con los tres puntitos lo podés eliminar."] },
         pantallaEstadisticas: { titulo: "Estadísticas", pasos: [
             "Arriba elegí el período: hoy, la semana, el mes o todo.",
             "Ves cuánto vendiste y lo más pedido.",
@@ -75,7 +76,7 @@
             "Elegí si vas a traer productos o comercios.",
             "Elegí la planilla de Excel del celular.",
             "Revisá la vista previa y confirmá."] },
-        pantallaCambios: { titulo: "Registro de cambios", pasos: [
+        pantallaCambios: { titulo: "¿Quién cambió qué?", pasos: [
             "Acá ves qué se cambió en la app, quién y cuándo.",
             "Solo lo ves vos, y no se puede borrar.",
             "Sirve para saber, por ejemplo, quién cambió un precio."] },
@@ -91,6 +92,12 @@
             "Acá están los problemas que informaron en tu distribuidora.",
             "Cada uno dice quién, cuándo y en qué pantalla estaba.",
             "Para informar uno nuevo, entrá a Más › Seguridad y ayuda."] },
+        pantallaListasPrecios: { titulo: "Listas de precios", pasos: [
+            "Cada lista tiene un precio distinto para cada producto (por ejemplo, Supermercados, Almacenes y Kioscos).",
+            "Tocá una lista para cargar sus precios, o «Lista nueva» para crear otra.",
+            "Con los tres puntitos le cambiás el nombre o la borrás.",
+            "En la ficha de cada comercio elegís qué lista usa. Al armar un pedido podés usar otra.",
+            "Si un producto no tiene precio en la lista del comercio, va el precio general."] },
         pantallaPreciosLista: { titulo: "Precios por lista", pasos: [
             "Cada lista puede tener un precio distinto para este producto.",
             "Escribí el precio de cada lista.",
@@ -98,7 +105,8 @@
         pantallaNavegacion: { titulo: "Navegación", pasos: [
             "Seguí la línea del mapa.",
             "Si está prendida, la voz te avisa cuándo doblar.",
-            "Al llegar, tocá «Llegué»."] },
+            "Al llegar, tocá «Llegué».",
+            "Para usar otra parte de la app sin cortarla, tocá la flecha para abajo: queda una burbuja que la trae de vuelta."] },
         pantallaEscanear: { titulo: "Escanear", pasos: [
             "Apuntá la cámara al código de barras.",
             "Cuando lo lee, la app busca el producto.",
@@ -121,7 +129,7 @@
         const titulo = seccion.querySelector(":scope > header h1")?.textContent?.trim() || "Esta pantalla";
         return { titulo, pasos: [
             "Leé el título de arriba: dice para qué es esta pantalla.",
-            "Si no sabés cómo hacer algo, preguntale al Asistente (el botón con la chispa en Inicio).",
+            "Si no sabés cómo hacer algo, tocá ✨ arriba a la derecha y preguntale al Asistente.",
             "Volvé con la flecha de arriba o con la barra de abajo."] };
     }
 
@@ -165,10 +173,9 @@
     function crearBoton() {
         const boton = document.createElement("button");
         boton.type = "button";
-        boton.className = "botonAyudaPantalla conNombre";
+        boton.className = "botonAyudaPantalla";
         boton.setAttribute("aria-label", "Ayuda de esta pantalla");
         boton.title = "¿Qué hago acá?";
-        boton.dataset.nombre = "Ayuda";
         boton.innerHTML = '<span aria-hidden="true">?</span>';
         return boton;
     }
@@ -187,17 +194,31 @@
         if (boton) abrirAyuda(boton.closest('body > section[id^="pantalla"]'));
     });
 
-    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se mira
-    // todo el cuerpo, una vez por cuadro.
+    // Algunas pantallas (como Más) se vuelven a dibujar enteras: se miran
+    // las pantallas nuevas del cuerpo y lo que cambia justo debajo de cada
+    // una (donde va el encabezado), una vez por cuadro. Lo de adentro (las
+    // listas, un mapa, cada posición del GPS) no agrega encabezados: no se
+    // mira, así no se trabaja de más con cada tarjeta que se dibuja (T141).
     let pendiente = false;
-    new MutationObserver(() => {
+    const miradas = new WeakSet();
+    const vigia = new MutationObserver(() => {
         if (pendiente) return;
         pendiente = true;
         requestAnimationFrame(() => {
             pendiente = false;
+            mirarPantallas();
             ponerBotones();
         });
-    }).observe(document.body, { childList: true, subtree: true });
+    });
+    function mirarPantallas() {
+        document.querySelectorAll('body > section[id^="pantalla"]').forEach(seccion => {
+            if (miradas.has(seccion)) return;
+            miradas.add(seccion);
+            vigia.observe(seccion, { childList: true });
+        });
+    }
+    vigia.observe(document.body, { childList: true });
+    mirarPantallas();
     ponerBotones();
 
     // ---------- Confirmación hablada al guardar (opcional) ----------

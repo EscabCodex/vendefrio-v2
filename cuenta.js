@@ -128,6 +128,26 @@ window.opcionesVendeFrio = Object.assign({ entrarConGoogle: false }, window.opci
         }
     }
 
+    // "¿Te olvidaste la contraseña?" (2026-11-02): Firebase manda el email
+    // para elegir una nueva.
+    async function restablecerContrasena(email) {
+        const auth = obtenerAuth();
+
+        if (!auth) {
+            throw new Error("La cuenta no está disponible en este momento.");
+        }
+
+        try {
+            await auth.sendPasswordResetEmail(String(email || "").trim());
+        } catch (error) {
+            // Por seguridad no se dice si el email tiene cuenta o no.
+            if (error && error.code === "auth/user-not-found") return;
+            const aviso = new Error(mensajeDeError(error));
+            aviso.code = error && error.code;
+            throw aviso;
+        }
+    }
+
     async function salir() {
         const auth = obtenerAuth();
         if (!auth) return;
@@ -172,6 +192,7 @@ window.opcionesVendeFrio = Object.assign({ entrarConGoogle: false }, window.opci
         ingresar,
         registrarse,
         entrarConGoogle,
+        restablecerContrasena,
         salir,
         escuchar
     };

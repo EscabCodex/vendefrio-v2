@@ -31,10 +31,29 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
         .filter(pedido => pedido.comercio === "Almacén Don Pepe")
         .forEach(pedido => window.nubeVendeFrio.entregarPedido(pedido.id, {})));
 
+    // "Te deben" grande en la tarjeta azul, al lado de "Vendido hoy" (T178),
+    // y "Debe" abajo de Pendiente/Visitado en Comercios.
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    const teDeben = page.locator("#resumenHoy #dashDerechaHoy");
+    await expect(teDeben).toContainText("Te deben");
+    await expect(teDeben).toContainText("$ 19.600");
+    await expect(teDeben).toContainText("1 comercio");
+    await expect(page.locator("#avisoTeDeben")).toHaveCount(0);
+    await teDeben.scrollIntoViewIfNeeded();
+    await capturar(page, "plata-00-te-deben-en-inicio");
+    await page.locator(".bottom-nav").getByRole("button", { name: "Comercios" }).click();
+    const tarjetaComercio = page.locator(".comercioCard", { hasText: "Almacén Don Pepe" });
+    await expect(tarjetaComercio.locator(".chipsComercio .estadoComercio")).toBeVisible();
+    await expect(tarjetaComercio.locator(".chipsComercio .chipDebe")).toHaveText("Debe $ 19.600");
+    await capturar(page, "plata-00-debe-en-comercios");
+    await page.locator(".bottom-nav").getByRole("button", { name: "Inicio" }).click();
+    await teDeben.click();
+    await expect(page.locator("#pantallaACobrar")).toBeVisible();
+
     // Pedidos > A cobrar: "Te deben" y "ver por comercio".
     await irAPedidos(page);
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await page.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     const banner = page.locator("#verACobrarPorComercio");
     await expect(banner).toContainText("Te deben $ 19.600");
     await banner.click();
@@ -97,15 +116,17 @@ test("plata: saldo por comercio, pago parcial y recibo", async ({ page }, testIn
 
     // "Debe" en la ficha del comercio y al cargar un pedido nuevo.
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    const debe = page.locator(".modalFichaComercio .pzDebe");
-    await expect(debe).toContainText("$ 7.600");
-    await expect(debe.locator(".pzChip")).toHaveText("1 pedido");
+    // En la ficha nueva es uno de los 9 números, en rojo, y lleva a la cuenta.
+    const debe = page.locator(".modalFichaComercio .fichaNumeroDebe");
+    await expect(debe).toHaveText(/\$ 7\.600\s*debe/);
+    await expect(debe).toHaveAttribute("role", "button");
     await page.locator(".modalFichaComercio .modalContenido").evaluate(el => { el.scrollTop = 0; });
     await capturar(page, "plata-04-ficha-debe");
     await page.keyboard.press("Escape");
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await expect(page.locator("#avisoDeudaPedido")).toContainText("Debe $ 7.600");
     await expect(page.locator("#avisoDeudaPedido")).toContainText("1 pedido sin cobrar · tope $ 15.000");
@@ -137,12 +158,16 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await page.evaluate(id => window.nubeVendeFrio.registrarCobro(id, { forma: "efectivo", monto: 9800 }), ids[0]);
     await irAPedidos(page);
     await page.locator("#filtrosEtapaPedidos").getByRole("tab", { name: /Otros/ }).click();
-    await page.getByRole("dialog", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
+    await page.getByRole("menu", { name: "Otros pedidos" }).getByRole("button", { name: /A cobrar/ }).click();
     await page.locator(".tarjetaSeguimiento", { hasText: "Almacén Don Pepe" }).first().click();
     const ficha = page.locator(".fichaPedido");
     await ficha.getByRole("button", { name: "Registrar cobro" }).click();
     await page.locator("#modalCobroPedido").getByRole("button", { name: "Transferencia" }).click();
-    await page.getByRole("button", { name: "Mostrar alias y QR" }).click();
+    // Repaso de Pedidos: el alias y el QR se ven ahí mismo, con "Mostrar grande".
+    const tarjetaAlias = page.locator("#modalCobroPedido .tarjetaAliasCobro");
+    await expect(tarjetaAlias).toContainText("DISTRI.PRUEBA.MP");
+    await expect(tarjetaAlias.locator("img")).toBeVisible();
+    await tarjetaAlias.getByRole("button", { name: "Mostrar grande" }).click();
     const qr = page.getByRole("dialog", { name: "Cobrar por transferencia" });
     await expect(qr).toContainText("Almacén Don Pepe paga $ 9.800");
     await expect(qr).toContainText("Mostrale esta pantalla");
@@ -150,7 +175,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await expect(qr.locator("#copiarAlias")).toContainText("distri.prueba.mp");
     await capturar(page, "plata-05-cobrar-qr");
     await qr.getByRole("button", { name: "Ya me transfirió" }).click();
-    await expect(ficha.locator(".datoFichaPedido", { hasText: "Cobro" })).toContainText("Transferencia");
+    await expect(ficha.locator(".cartelCobroFicha")).toContainText("Cobrado · Transferencia");
     expect(await page.evaluate(id => window.nubeVendeFrio.cobroDelPedido(obtenerHistorial().find(p => p.id === id)).forma, ids[1])).toBe("transferencia");
     await ficha.getByRole("button", { name: "Cerrar", exact: true }).click();
 
@@ -192,7 +217,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     for (const [nombre, precio] of [["Mayorista", "4200"], ["Minorista", "4650"]]) {
         if (nombre !== "Mayorista") await listas.getByRole("button", { name: "Lista nueva" }).click();
         const nueva = page.getByRole("dialog", { name: "Lista nueva" });
-        await nueva.locator("#nombreListaNueva").fill(nombre);
+        await nueva.locator("#nombreListaPrecios").fill(nombre);
         await nueva.getByRole("button", { name: "Crear lista" }).click();
         await listas.getByRole("spinbutton", { name: "Precio " + nombre }).fill(precio);
     }
@@ -203,7 +228,7 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
 
     // Don Pepe pasa a "Mayorista" (ficha > datos) y el pedido usa ese precio.
     await page.evaluate(() => window.abrirFichaComercio("Almacén Don Pepe"));
-    await page.locator(".modalFichaComercio").getByRole("button", { name: /^Editar horario, nota y envases/ }).click();
+    await page.locator(".modalFichaComercio").getByRole("button", { name: "Cambiar lista de precios" }).click();
     const datos = page.getByRole("dialog", { name: "Datos del comercio" });
     await datos.locator("#datoLista").selectOption("Mayorista");
     await datos.getByRole("button", { name: "Guardar" }).click();
@@ -211,7 +236,8 @@ test("plata: alias y QR, gastos del día y listas de precios", async ({ page }, 
     await page.keyboard.press("Escape");
 
     await irAPedidos(page);
-    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.locator(".bottom-nav .nav-nuevo").click();
+    await page.locator(".menuCrear").getByRole("button", { name: "Nuevo pedido" }).click();
     await elegirComercio(page, "Almacén Don Pepe");
     await page.locator(".tituloMarca", { hasText: "Frío Sur" }).click();
     const helado = page.locator(".listaProdutos .fila", { hasText: "Helado 1 kg" });

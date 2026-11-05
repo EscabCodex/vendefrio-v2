@@ -127,5 +127,5 @@
         caja.querySelector("#copiarAlias")?.addEventListener("click", () => copiar(d.alias));
     }
 
-    window.cobrarQrVendeFrio = { datos, hay, editar, mostrar };
+    window.cobrarQrVendeFrio = { datos, hay, editar, mostrar, copiar };
 }());

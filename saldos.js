@@ -18,9 +18,21 @@
 
     const normal = texto => String(texto || "").trim().toLocaleLowerCase("es");
 
+    // Lo pagado de cada pedido, recordado hasta que cambian los pagos: "A
+    // cobrar" lo pregunta por cada pedido entregado.
+    let pagadoRecordado = null;
+
     function pagadoDe(idPedido) {
-        return extras.lista("pagos").filter(pago => String(pago.idPedido) === String(idPedido))
-            .reduce((suma, pago) => suma + (Number(pago.monto) || 0), 0);
+        const marca = extras.marca ? extras.marca("pagos") : null;
+        if (!pagadoRecordado || marca === null || pagadoRecordado.marca !== marca) {
+            const sumas = new Map();
+            extras.lista("pagos").forEach(pago => {
+                const id = String(pago.idPedido);
+                sumas.set(id, (sumas.get(id) || 0) + (Number(pago.monto) || 0));
+            });
+            pagadoRecordado = { marca, sumas };
+        }
+        return pagadoRecordado.sumas.get(String(idPedido)) || 0;
     }
 
     function nube() {
@@ -31,12 +43,61 @@
         return Number(pedido && pedido.entrega && pedido.entrega.horaCelular) || Number(pedido && pedido.timestamp) || 0;
     }
 
-    // Los pedidos entregados sin cobrar, agrupados por comercio.
-    function cuentas() {
+    // Los pedidos entregados sin cobrar, agrupados por comercio. Se recuerdan
+    // hasta que cambian los pedidos, los comercios o los pagos: Inicio, la
+    // ficha y cada "+" de Nuevo pedido las preguntan (en un celular barato,
+    // rehacerlas cada vez trababa la pantalla).
+    let cuentasRecordadas = null;
+
+    function listaRecordada() {
         if (!nube() || typeof obtenerHistorial !== "function") return [];
+        const marca = typeof marcaDeColeccion === "function" && extras.marca
+            ? [marcaDeColeccion("historial"), marcaDeColeccion("comercios"), extras.marca("pagos")]
+            : null;
+        const sirve = marca && cuentasRecordadas && marca[2] !== null &&
+            marca.every((parte, i) => parte === cuentasRecordadas.marca[i]);
+        if (!sirve) cuentasRecordadas = { marca, lista: calcularCuentas() };
+        return cuentasRecordadas.lista;
+    }
+
+    function cuentas() {
+        return listaRecordada().map(grupo => ({ ...grupo, pedidos: grupo.pedidos.slice() }));
+    }
+
+    // Lo que debe cada comercio, para la lista de Comercios (informe del
+    // desconocido): un mapa por nombre, hecho una vez por cada cálculo de
+    // las cuentas, así cada tarjeta no recorre todas las cuentas.
+    let deudasRecordadas = { lista: null, mapa: new Map() };
+
+    function veDeudas() {
+        return typeof usaNubeReal === "function" && usaNubeReal() && Boolean(nube()?.puedeCobrar?.());
+    }
+
+    function deudaDe(nombre) {
+        if (!veDeudas()) return 0;
+        const lista = listaRecordada();
+        if (deudasRecordadas.lista !== lista) {
+            deudasRecordadas = { lista, mapa: new Map(lista.map(grupo => [normal(grupo.nombre), grupo.total])) };
+        }
+        return deudasRecordadas.mapa.get(normal(nombre)) || 0;
+    }
+
+    // "Te deben" en Inicio (T178): va grande en la tarjeta azul, al lado de
+    // "Vendido hoy", solo para quien cobra. null si no lo ve.
+    function resumenDeudas() {
+        if (!veDeudas()) return null;
+        const lista = listaRecordada().filter(grupo => grupo.total > 0);
+        return { total: lista.reduce((suma, grupo) => suma + grupo.total, 0), comercios: lista.length };
+    }
+
+    function calcularCuentas() {
         const grupos = {};
-        obtenerHistorial().forEach(pedido => {
-            if (!nube().cobroPendiente(pedido)) return;
+        // Se lee la lista compartida (sin copiar miles de pedidos en cada
+        // cambio) y se copian solo los que deben, como antes.
+        const comercios = typeof comerciosParaLeer === "function" ? comerciosParaLeer() : [];
+        historialParaLeer().forEach(pedidoGuardado => {
+            if (!pedidoGuardado || typeof pedidoGuardado !== "object" || !nube().cobroPendiente(pedidoGuardado)) return;
+            const pedido = clonarDatos(pedidoGuardado);
             const falta = Math.max(0, nube().montoACobrar(pedido));
             const nombre = String(pedido.comercio || "Sin comercio");
             const clave = normal(nombre);
@@ -46,7 +107,8 @@
         });
         return Object.values(grupos).map(grupo => {
             grupo.pedidos.sort((a, b) => horaEntrega(a) - horaEntrega(b));
-            grupo.comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre) : null;
+            const comercio = typeof buscarComercioPorNombre === "function" ? buscarComercioPorNombre(grupo.nombre, comercios) : null;
+            grupo.comercio = comercio ? clonarDatos(comercio) : null;
             grupo.tope = Number(grupo.comercio && grupo.comercio.topeDeuda) || 0;
             grupo.pasoTope = grupo.tope > 0 && grupo.total > grupo.tope;
             grupo.desde = horaEntrega(grupo.pedidos[0]);
@@ -76,9 +138,13 @@
         dibujarPantalla();
     }
 
-    // T113: filtro elegido en "A cobrar" (Todos, De mi ruta hoy, Más viejos).
+    // T113: filtro elegido en "A cobrar". Repaso de A cobrar: la fila de
+    // filtros es como la de Pedidos (número adentro) y la lupa va primera.
     let filtroACobrar = "todos";
+    let buscarACobrar = "";
+    let lupaACobrar = null;
     const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const DIAS_VIEJA = 7;
 
     function diasDesde(hora) {
         const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -101,17 +167,74 @@
         return `<span class="pzChip ${clase}">${textoAntiguedad(grupo.desde)}</span>`;
     }
 
-    function cuentasFiltradas(lista) {
-        if (filtroACobrar === "ruta") return lista.filter(esDeMiRutaHoy);
-        if (filtroACobrar === "viejos") return lista.slice().sort((a, b) => a.desde - b.desde);
-        return lista;
+    // "Más viejas": las de más de una semana, la más vieja primero.
+    // "Más grandes": las que pasan el promedio, la más grande primero.
+    function gruposDeFiltros(lista) {
+        const promedio = lista.length ? lista.reduce((suma, grupo) => suma + grupo.total, 0) / lista.length : 0;
+        return {
+            todos: lista,
+            ruta: lista.filter(esDeMiRutaHoy),
+            viejas: lista.filter(grupo => diasDesde(grupo.desde) > DIAS_VIEJA).sort((a, b) => a.desde - b.desde),
+            grandes: lista.filter(grupo => grupo.total >= promedio).sort((a, b) => b.total - a.total)
+        };
+    }
+
+    function dibujarFiltros(seccion, grupos) {
+        const fila = seccion.querySelector(".filtrosACobrar");
+        if (!fila) return;
+        if (!lupaACobrar || !fila.contains(lupaACobrar.caja)) {
+            const input = document.createElement("input");
+            input.type = "search";
+            input.id = "buscarACobrar";
+            input.placeholder = "Buscar comercio";
+            input.value = buscarACobrar;
+            input.addEventListener("input", () => { buscarACobrar = input.value; dibujarLista(); });
+            lupaACobrar = p.lupa ? p.lupa(input, { etiqueta: "Buscar comercio" }) : null;
+        }
+        [...fila.children].forEach(hijo => { if (!hijo.classList.contains("pzLupa")) hijo.remove(); });
+        [["todos", "Todos"], ["ruta", "De mi ruta hoy"], ["viejas", "Más viejas"], ["grandes", "Más grandes"]].forEach(([clave, texto]) => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "filtroEtapa" + (filtroACobrar === clave ? " activo" : "");
+            chip.dataset.filtroCobrar = clave;
+            chip.setAttribute("aria-pressed", String(filtroACobrar === clave));
+            chip.innerHTML = `<span class="filtroEtapaNombre">${texto}</span><small class="filtroEtapaCantidad">${grupos[clave].length}</small>`;
+            fila.appendChild(chip);
+        });
+        if (lupaACobrar) lupaACobrar.poner(fila);
     }
 
     function dibujarPantalla() {
         const seccion = document.getElementById("pantallaACobrar");
         if (!seccion || seccion.classList.contains("oculto")) return;
+        const main = seccion.querySelector("main");
+        if (!main.querySelector(".listaACobrar")) {
+            lupaACobrar = null;
+            main.innerHTML = `<div class="pzTarjeta pzRelleno pzTotalGrande"></div>
+                <div class="filtrosEtapaPedidos filtrosACobrar" role="group" aria-label="Filtrar"></div>
+                <div class="pzTarjeta pzLista listaACobrar"></div>
+                <div class="recordarACobrar"></div>`;
+            main.onclick = evento => {
+                const filtro = evento.target.closest("[data-filtro-cobrar]");
+                if (filtro) { filtroACobrar = filtro.dataset.filtroCobrar; dibujarLista(); return; }
+                const wa = evento.target.closest("[data-recordar]");
+                if (wa) { const grupo = cuentaDe(wa.dataset.recordar); if (grupo) recordar(grupo); return; }
+                if (evento.target.closest("[data-recordar-todos]")) { recordarATodos(); return; }
+                const fila = evento.target.closest("[data-cuenta]");
+                if (fila) opcionesCuenta(fila.dataset.cuenta);
+            };
+        }
+        dibujarLista();
+    }
+
+    function dibujarLista() {
+        const seccion = document.getElementById("pantallaACobrar");
+        if (!seccion) return;
         const todas = cuentas();
-        const lista = cuentasFiltradas(todas);
+        const grupos = gruposDeFiltros(todas);
+        if (!grupos[filtroACobrar]) filtroACobrar = "todos";
+        const texto = normal(buscarACobrar.trim());
+        const lista = texto ? grupos[filtroACobrar].filter(grupo => normal(grupo.nombre).includes(texto)) : grupos[filtroACobrar];
         const total = todas.reduce((suma, grupo) => suma + grupo.total, 0);
         const pedidos = todas.reduce((suma, grupo) => suma + grupo.pedidos.length, 0);
         const conWhatsapp = todas.filter(grupo => enlaceRecordatorio(grupo));
@@ -129,28 +252,18 @@
                 ${wa ? `<button type="button" class="botonWaACobrar" data-recordar="${p.esc(grupo.nombre)}" aria-label="Mandar recordatorio a ${p.esc(grupo.nombre)}">${p.ico("whatsapp", 20)}</button>` : ""}
             </div>`;
         }).join("");
-        const filtros = [["todos", "Todos"], ["ruta", "De mi ruta hoy"], ["viejos", "Más viejos"]]
-            .map(([clave, texto]) => `<button type="button" data-filtro-cobrar="${clave}" aria-pressed="${filtroACobrar === clave}">${texto}</button>`).join("");
-        const vacio = filtroACobrar === "ruta" && todas.length
-            ? "Nadie de tu ruta de hoy te debe."
+        const vacio = texto ? "Nadie con ese nombre te debe."
+            : filtroACobrar === "ruta" && todas.length ? "Nadie de tu ruta de hoy te debe."
             : "No te deben nada. ¡Bien!";
-        seccion.querySelector("main").innerHTML = `<div class="pzTarjeta pzRelleno pzTotalGrande">
-                <small>Te deben en total</small>
+        seccion.querySelector(".pzTotalGrande").innerHTML = `<small>Te deben en total</small>
                 <strong>${p.plata(total)}</strong>
-                <span>${textoPedidos(pedidos)} · ${todas.length} ${todas.length === 1 ? "comercio" : "comercios"}</span>
-            </div>
-            ${todas.length ? `<div class="pzSegmentos filtrosACobrar" role="group" aria-label="Filtrar">${filtros}</div>` : ""}
-            <div class="pzTarjeta pzLista">${filas || `<div class="pzVacio">${vacio}</div>`}</div>
-            ${conWhatsapp.length > 1 ? `<button type="button" class="pzBtn pzBtnSec recordarATodos" data-recordar-todos>${p.ico("whatsapp", 20)}Recordarles a todos (${conWhatsapp.length})</button>` : ""}`;
-        seccion.querySelector("main").onclick = evento => {
-            const filtro = evento.target.closest("[data-filtro-cobrar]");
-            if (filtro) { filtroACobrar = filtro.dataset.filtroCobrar; dibujarPantalla(); return; }
-            const wa = evento.target.closest("[data-recordar]");
-            if (wa) { const grupo = cuentaDe(wa.dataset.recordar); if (grupo) recordar(grupo); return; }
-            if (evento.target.closest("[data-recordar-todos]")) { recordarATodos(); return; }
-            const fila = evento.target.closest("[data-cuenta]");
-            if (fila) opcionesCuenta(fila.dataset.cuenta);
-        };
+                <span>${textoPedidos(pedidos)} · ${todas.length} ${todas.length === 1 ? "comercio" : "comercios"}</span>`;
+        const filaFiltros = seccion.querySelector(".filtrosACobrar");
+        filaFiltros.classList.toggle("oculto", !todas.length);
+        if (todas.length) dibujarFiltros(seccion, grupos);
+        seccion.querySelector(".listaACobrar").innerHTML = filas || `<div class="pzVacio">${vacio}</div>`;
+        seccion.querySelector(".recordarACobrar").innerHTML = conWhatsapp.length > 1
+            ? `<button type="button" class="pzBtn pzBtnSec recordarATodos" data-recordar-todos>${p.ico("whatsapp", 20)}Recordarles a todos (${conWhatsapp.length})</button>` : "";
     }
 
     // "Recordarles a todos": WhatsApp abre de a uno, así que se mandan en fila.
@@ -462,7 +575,8 @@
     function refrescar() {
         dibujarPantalla();
         window.seguimientoVendeFrio?.redibujarFicha?.();
-        if (typeof actualizarDashboard === "function") actualizarDashboard();
+        if (typeof window.pedirActualizarDashboard === "function") window.pedirActualizarDashboard();
+        else if (typeof actualizarDashboard === "function") actualizarDashboard();
     }
 
     (window.accionesPedidoExtras = window.accionesPedidoExtras || []).push((pedido, estado) => {
@@ -484,6 +598,10 @@
         return banner;
     });
     extras.escuchar("pagos", refrescar);
+    // Un pago cambia "Te deben" de Inicio.
+    extras.escuchar("pagos", () => {
+        if (typeof pedirActualizarDashboard === "function") pedirActualizarDashboard();
+    });
     // Acceso en Más, para quien cobra.
     (window.accesosMasExtras = window.accesosMasExtras || []).push({
         destino: "aCobrar", icono: "moneda", texto: "A cobrar",
@@ -491,5 +609,5 @@
         abrir: abrirPantalla
     });
 
-    window.saldosVendeFrio = { pagadoDe, cuentas, cuentaDe, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
+    window.saldosVendeFrio = { veDeudas, pagadoDe, cuentas, cuentaDe, deudaDe, resumenDeudas, abrirPantalla, registrarPago, verCuenta, htmlDebe, avisoParaPedido, mostrarRecibo, reciboDelPedido, textoRecordatorio, enlaceRecordatorio };
 }());

@@ -134,7 +134,9 @@
         if (typeof renderizarHistorial === "function") {
             try { renderizarHistorial(); } catch (error) { /* la pantalla no está */ }
         }
-        if (typeof actualizarDashboard === "function") actualizarDashboard();
+        // Inicio, una sola vez aunque lleguen varios cambios juntos (repasada).
+        if (typeof window.pedirActualizarDashboard === "function") window.pedirActualizarDashboard();
+        else if (typeof actualizarDashboard === "function") actualizarDashboard();
     }
 
     // ---------- En la ficha del pedido ----------

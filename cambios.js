@@ -103,10 +103,17 @@
         lat: "ubicación", envases: "envases"
     };
 
+    // Cómo estaba el comercio antes del cambio (se guarda congelado: no
+    // hace falta copiar todos los comercios en cada edición).
+    function comercioAntesDeCambiar(id) {
+        if (typeof comercioParaLeerPorId === "function") return comercioParaLeerPorId(id) || null;
+        return typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) || null : null;
+    }
+
     if (typeof window.actualizarComercioPorId === "function") {
         const original = window.actualizarComercioPorId;
         window.actualizarComercioPorId = function (id, datos) {
-            const antes = typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) : null;
+            const antes = comercioAntesDeCambiar(id);
             const resultado = original.apply(this, arguments);
             if (resultado && antes && datos && typeof datos === "object") {
                 try { anotarComercio(antes, datos); } catch (error) { console.warn(error); }
@@ -135,7 +142,7 @@
     if (typeof window.eliminarComercioPorId === "function") {
         const original = window.eliminarComercioPorId;
         window.eliminarComercioPorId = function (id) {
-            const antes = typeof obtenerComercios === "function" ? obtenerComercios().find(comercio => comercio.id === id) : null;
+            const antes = comercioAntesDeCambiar(id);
             const resultado = original.apply(this, arguments);
             if (resultado && antes) anotar("comercios", "borró un comercio", antes.nombre);
             return resultado;
@@ -198,7 +205,7 @@
 
     function abrir() {
         const seccion = p.pantalla("pantallaCambios", {
-            titulo: "Registro de cambios",
+            titulo: "¿Quién cambió qué?",
             sub: "Solo lo ves vos · no se puede borrar",
             icono: "historial",
             volverA: "mas"
@@ -219,7 +226,7 @@
             if (grupo && grupo.dia === dia) grupo.cambios.push(cambio);
             else grupos.push({ dia, cambios: [cambio] });
         });
-        const filtros = TIPOS.map(tipo => `<button type="button" class="pzFiltro" data-tipo="${tipo.clave}" aria-pressed="${tipo.clave === filtro}">${tipo.texto}</button>`).join("");
+        const filtros = TIPOS.map(tipo => `<button type="button" class="pzFiltro" data-tipo="${tipo.clave}" aria-pressed="${tipo.clave === filtro}">${tipo.texto} <b>${tipo.clave === "todo" ? todos.length : todos.filter(cambio => cambio.tipo === tipo.clave).length}</b></button>`).join("");
         const cuerpo = grupos.length
             ? grupos.map(grupo => `<section class="pzBloque grupoCambios">
                     <div class="pzBloqueCab"><h2>${p.esc(grupo.dia)}</h2></div>
@@ -240,7 +247,7 @@
 
     extras.escuchar("cambios", dibujar);
     (window.accesosMasExtras = window.accesosMasExtras || []).push({
-        destino: "cambios", icono: "historial", texto: "Registro de cambios",
+        destino: "cambios", icono: "historial", texto: "¿Quién cambió qué?",
         mostrar: () => typeof usaNubeReal === "function" && usaNubeReal() && p.esDueno(),
         abrir
     });
