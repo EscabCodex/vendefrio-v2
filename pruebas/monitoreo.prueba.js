@@ -61,3 +61,18 @@ test("monitoreo: viaja con la app", async () => {
     expect(sw).toContain('"./monitoreo.js"');
     expect(index).toContain('<script src="monitoreo.js" defer></script>');
 });
+
+test("monitoreo: las llaves de Más se apagan y quedan guardadas", async ({ page }) => {
+    const { entrarSinCuenta } = require("./datosGrandes");
+    const { abrirConfiguracionEn } = require("./recorridos");
+    await entrarSinCuenta(page);
+    await abrirConfiguracionEn(page, "seguridad");
+    const fluidez = page.getByRole("switch", { name: "Medir la fluidez" });
+    const errores = page.getByRole("switch", { name: "Avisar errores" });
+    await expect(fluidez).toBeChecked();
+    await expect(errores).toBeChecked();
+    await page.locator("label.ajFila", { hasText: "Avisar errores" }).click();
+    await expect(errores).not.toBeChecked();
+    const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem("vendefrio_preferencias")).avisarErrores);
+    expect(guardado).toBe(false);
+});
