@@ -30,7 +30,11 @@
         return elemento.getClientRects().length > 0;
     }
 
+    // Casi siempre hay una sola pantalla sin "oculto": esa es, sin medir
+    // nada (medir obliga al celular a acomodar toda la página).
     function pantallaVisible() {
+        const abiertas = document.querySelectorAll('body > section[id^="pantalla"]:not(.oculto)');
+        if (abiertas.length === 1 && !abiertas[0].hidden) return abiertas[0];
         return [...document.querySelectorAll('body > section[id^="pantalla"]')].find(seVe) || null;
     }
 

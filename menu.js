@@ -56,7 +56,11 @@ function mostrarPantalla(nombre) {
     if (nombre === "menu") actualizarDashboard();
     if (nombre === "pedido") {
         if (typeof cargarListaClientes === "function") cargarListaClientes();
-        if (typeof renderizarProductosPedido === "function") renderizarProductosPedido();
+        // Si se entra a la lista de Pedidos (la barra, Historial), el
+        // formulario de Nuevo pedido queda escondido: se dibuja recién al
+        // abrirlo. Con muchos productos, dibujarlo trababa el toque.
+        if (pantallas.pedido?.dataset.vista === "pedidos" && typeof renderizarPedidoSiSeVe === "function") renderizarPedidoSiSeVe();
+        else if (typeof renderizarProductosPedido === "function") renderizarProductosPedido();
     }
     if (nombre === "comercios" && typeof renderizarComerciosAdmin === "function") {
         renderizarComerciosAdmin();

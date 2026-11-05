@@ -61,9 +61,23 @@
 
     // --- Modo personal (T16d) ---
 
+    // Se consulta para cada pedido de la lista: el texto guardado se lee
+    // siempre, pero solo se vuelve a armar cuando cambia.
+    let personalesLeidos = { texto: undefined, datos: null };
     function datosPersonales() {
         try {
-            const datos = JSON.parse(localStorage.getItem(CLAVE_MODO_PERSONAL) || "null");
+            const texto = localStorage.getItem(CLAVE_MODO_PERSONAL);
+            if (texto !== personalesLeidos.texto) personalesLeidos = { texto, datos: armarDatosPersonales(texto) };
+            const datos = personalesLeidos.datos;
+            return datos && { nombre: datos.nombre, roles: datos.roles.slice() };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function armarDatosPersonales(texto) {
+        try {
+            const datos = JSON.parse(texto || "null");
             if (!datos || typeof datos !== "object") return null;
 
             const nombre = String(datos.nombre || "").trim();

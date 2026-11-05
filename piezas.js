@@ -537,10 +537,6 @@
             if (vigia) vigia.disconnect();
             vigia = null;
         };
-        // ¿El final de la lista está a menos de dos pantallas de lo que se ve?
-        function cerca() {
-            return contenedor.getBoundingClientRect().bottom < window.innerHeight * 3;
-        }
         function dibujar(minimo) {
             const inicio = performance.now();
             const fragmento = document.createDocumentFragment();
@@ -551,8 +547,9 @@
             }
             contenedor.appendChild(fragmento);
             if (siguiente < items.length) {
-                if (cerca()) setTimeout(seguir, 0);
-                else esperarAlDedo();
+                // El vigía avisa enseguida si el final ya está cerca, sin
+                // obligar al celular a medir la pantalla en este momento.
+                esperarAlDedo();
                 return;
             }
             contenedor.tandaVendeFrio = null;
