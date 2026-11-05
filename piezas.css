@@ -1826,3 +1826,5 @@ html .textosFichaMarca .ventasFichaMarca{color:var(--texto-sec) !important;}
 html .textosFichaMarca .ventasFichaMarca.sinVentas{color:#c2410c !important;}
 html[data-tema="oscuro"] .textosFichaMarca .ventasFichaMarca.sinVentas{color:#fb923c !important;}
 html[data-tema="oscuro"] .filaBarraMarca.resaltada{background:#2A323C;}
+/* Comercios: el horario se lee entero (puede ocupar dos renglones). */
+html body #pantallaComercios .datosComercioGrid .datoHorario{white-space:normal;overflow:visible;align-items:flex-start;}

@@ -236,12 +236,9 @@
         const unidades = pedido => (Array.isArray(pedido.productos) ? pedido.productos : []).reduce((suma, producto) => suma + Number(producto.cantidad || 1), 0);
         const veoPlata = window.verPlataVendeFrio?.puedoVer ? window.verPlataVendeFrio.puedoVer() : true;
         const primero = fechas.sort((a, b) => a - b)[0];
-        const ultimaVisita = String(datos.ultimaVisita).replace(/^(\d{1,2}\/\d{1,2})\/\d{4}$/, "$1");
 
         const numeros = [
             { valor: String(datos.pedidos), texto: datos.pedidos === 1 ? "pedido" : "pedidos", verPedidos: true },
-            { valor: String(datos.totalUnidades), texto: "unidades", verPedidos: true },
-            { valor: ultimaVisita, texto: "última visita" },
             { valor: perfil && perfil.promedioDias ? perfil.promedioDias + " días" : "—", texto: "pide cada", verPedidos: true },
             { valor: perfil ? textoHaceDias(perfil.diasDesdeUltimo) : "—", texto: "último pedido", verPedidos: true, clase: perfil && perfil.atrasado ? "fichaNumeroAviso" : "" }
         ];
@@ -253,13 +250,10 @@
         }
         if (veoPlata) {
             const delMesPlata = delMes.reduce((suma, pedido) => suma + total(pedido), 0);
-            const todos = pedidos.reduce((suma, pedido) => suma + total(pedido), 0);
             numeros.push({ valor: p.plata(delMesPlata), texto: "compró este mes", verPedidos: true, delMes: true });
-            numeros.push({ valor: pedidos.length ? p.plata(Math.round(todos / pedidos.length)) : "—", texto: "compra promedio", verPedidos: true });
         } else {
             const delMesUnidades = delMes.reduce((suma, pedido) => suma + unidades(pedido), 0);
             numeros.push({ valor: String(delMesUnidades), texto: "unidades este mes", verPedidos: true, delMes: true });
-            numeros.push({ valor: pedidos.length ? String(Math.round(datos.totalUnidades / pedidos.length)) : "—", texto: "unidades por pedido", verPedidos: true });
         }
         numeros.push({
             valor: primero ? primero.toLocaleDateString("es-AR", { month: "short", year: "numeric" }).replace(".", "").replace(" de ", " ") : "—",

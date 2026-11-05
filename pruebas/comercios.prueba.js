@@ -45,8 +45,7 @@ test("comercios: lista, tarjeta, datos del comercio y ficha", async ({ page }) =
     // 2. La tarjeta: datos y chips; el teléfono que falta se agrega ahí.
     const luna = pantalla.locator(".comercioCard", { hasText: "Kiosco Luna" });
     await expect(luna.locator(".chipsComercio")).toContainText("Visitado");
-    await expect(luna.locator(".chipsComercio")).toContainText("Nunca pidió");
-    await expect(luna.locator(".chipsComercio")).toContainText("Visita hoy");
+    await expect(luna.locator(".chipsComercio .chipEstado")).toHaveCount(1);
     await expect(luna.locator(".datosComercioGrid")).toContainText("Mitre 900");
     await capturar(page, "comercios-01-lista");
     await luna.getByRole("button", { name: "Agregar teléfono" }).click();
@@ -91,7 +90,7 @@ test("comercios: lista, tarjeta, datos del comercio y ficha", async ({ page }) =
     await luna.locator("h3").click();
     const ficha = page.locator(".modalFichaComercio");
     await expect(ficha.locator("#tituloFichaComercio")).toHaveText("Kiosco Luna");
-    await expect(ficha.locator(".fichaNumeros > div")).toHaveCount(9);
+    await expect(ficha.locator(".fichaNumeros > div")).toHaveCount(6);
     await expect(ficha.locator(".fichaDato")).toHaveCount(8);
     await expect(ficha.locator('.fichaDato[data-campo="nota"]')).toContainText("+ Agregar nota");
     await expect(ficha.getByRole("button", { name: "Actualizar con mi GPS" })).toBeVisible();

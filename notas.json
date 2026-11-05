@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 286,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Comercios más fáciles de leer",
+      "texto": "Cada tarjeta muestra una sola etiqueta, la más urgente, y el horario entero. La ficha tiene 6 cuadros."
+    },
+    {
       "version": 285,
       "fecha": "2026-11-05",
       "tipo": "mejor",

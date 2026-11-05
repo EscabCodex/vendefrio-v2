@@ -79,16 +79,6 @@ function textoHaceDias(dias) {
     return "hace " + dias + " días";
 }
 
-// Días desde una fecha guardada como "28/10/2026".
-function diasDesdeFechaGuardada(texto) {
-    const partes = String(texto || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (!partes) return null;
-    const fecha = new Date(Number(partes[3]), Number(partes[2]) - 1, Number(partes[1]));
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    return Math.max(0, Math.round((hoy - fecha) / 86400000));
-}
-
 function extraerCoordenadasDeMaps(enlace) {
     const texto = String(enlace || "").trim();
     if (!texto) return null;
@@ -439,18 +429,16 @@ function renderizarComercios() {
             comercio.horario ? dato("datoHorario", "alarma", comercio.horario) : falta("horario", "Agregar horario", nombre)
         ];
 
+        // Una sola etiqueta, la más urgente: archivado, debe, no pide hace rato, pendiente o visitado.
         const visitado = fueVisitado(comercio);
-        const chips = [];
-        if (comercioArchivado(comercio)) chips.push(chip("Archivado", "", "estadoComercio"));
-        else chips.push(chip(visitado ? "Visitado" : "Pendiente", visitado ? "ok" : "aviso", "estadoComercio"));
-        // Lo que debe (informe del desconocido; solo para quien cobra, lo calcula "A cobrar").
         const debe = window.saldosVendeFrio?.deudaDe?.(nombre) || 0;
-        if (debe > 0) chips.push(chip("Debe " + p.plata(debe), "peligro", "chipDebe"));
         const perfil = perfilesPorComercio.get(normalizarTexto(nombre));
-        if (perfil) chips.push(chip((perfil.atrasado ? "No pide " : "Pidió ") + textoHaceDias(perfil.diasDesdeUltimo), perfil.atrasado ? "aviso" : "", "chipGris chipPidio"));
-        else chips.push(chip("Nunca pidió", "", "chipGris chipPidio"));
-        const diasVisita = diasDesdeFechaGuardada(comercio.ultimaVisita);
-        chips.push(chip(diasVisita === null ? "Nunca visitado" : "Visita " + textoHaceDias(diasVisita), "", "chipGris chipVisita"));
+        let etiqueta;
+        if (comercioArchivado(comercio)) etiqueta = chip("Archivado", "", "estadoComercio");
+        else if (debe > 0) etiqueta = chip("Debe " + p.plata(debe), "peligro", "chipDebe");
+        else if (perfil && perfil.atrasado) etiqueta = chip("No pide " + textoHaceDias(perfil.diasDesdeUltimo), "aviso", "chipPidio");
+        else etiqueta = chip(visitado ? "Visitado" : "Pendiente", visitado ? "ok" : "aviso", "estadoComercio");
+        const chips = [etiqueta];
 
         card.innerHTML = `<div class="cabeceraCard">
                 <div class="avatar" style="background:${colorAvatar(nombre)}">${p.esc(iniciales(nombre))}</div>
