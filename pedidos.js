@@ -1128,6 +1128,12 @@ function generarPedido() {
     if (pedidoCantidad) pedidoCantidad.textContent = String(cantidadProductos);
     mostrarVistaPreviaPedido(ultimoPedidoTexto);
     mostrarImprimirPedidoGenerado(idPedidoNuevo);
+    // ¿Qué hacemos con este pedido? (entregar ahora, en reparto o dejarlo).
+    modalPedido?.querySelector(".queHacerPedido")?.remove();
+    window.seguimientoVendeFrio?.queHacerConPedido?.(idPedidoNuevo, {
+        contenedor: modalPedido?.querySelector(".modalContenido"),
+        alElegir: () => modalPedido?.classList.add("oculto")
+    });
     if (modalPedido) modalPedido.classList.remove("oculto");
     if (navigator.vibrate && window.preferenciasVendeFrio?.valor("vibrar") !== false) navigator.vibrate(35);
     ultimoPedidoGenerado = { firma: firmaDelPedidoActual(), hora: Date.now() };
@@ -1359,9 +1365,19 @@ function mostrarImprimirPedidoGenerado(id) {
     const puede = Boolean(pedido && window.impresionVendeFrio?.puedeImprimir?.(pedido));
     boton.classList.toggle("oculto", !puede);
     if (puede && window.icono && !boton.querySelector("svg")) {
-        boton.insertAdjacentHTML("afterbegin", window.icono("impresora", 18));
+        boton.insertAdjacentHTML("afterbegin", window.icono("impresora", 20));
     }
+    // Volver a editar: corrige el pedido recién guardado (en la nube).
+    const editar = document.getElementById("editarPedidoGenerado");
+    const puedeEditar = Boolean(pedido && window.nubeVendeFrio?.puedeEditarElPedido?.(pedido));
+    editar?.classList.toggle("oculto", !puedeEditar);
 }
+
+document.getElementById("editarPedidoGenerado")?.addEventListener("click", () => {
+    if (!idUltimoPedidoGenerado) return;
+    modalPedido?.classList.add("oculto");
+    abrirEdicionPedido(idUltimoPedidoGenerado);
+});
 
 document.getElementById("imprimirPedidoGenerado")?.addEventListener("click", () => {
     if (!idUltimoPedidoGenerado) return;

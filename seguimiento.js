@@ -5177,6 +5177,56 @@
 
     // Avisos (T23): al tocar un aviso se abre la ficha de su pedido, desde
     // cualquier pantalla. Devuelve false si el pedido ya no está.
+    // ---------- "¿Qué hacemos con este pedido?" ----------
+    // Al guardar un pedido (y en Rutas, en la hoja del pedido encima de la
+    // navegación): Entregar ahora (pregunta el cobro), Pasarlo a En reparto
+    // o Dejarlo cargado. Una sola pieza: queHacerConPedido(id, { contenedor,
+    // alElegir }) la dibuja dentro de una hoja que ya existe; sin
+    // contenedor abre su propia hoja.
+    function queHacerConPedido(id, { contenedor = null, alElegir = null } = {}) {
+        id = String(id || "");
+        const pedido = id && enLaNube() ? buscarPedido(id) : null;
+        if (!pedido || estadoActualDelPedido(pedido) === "entregado") return null;
+        const p = window.piezas;
+        const caja = document.createElement("div");
+        caja.className = "queHacerPedido";
+        const opciones = [
+            { clave: "entregar", icono: "check", texto: "Entregar ahora", sub: "· y cobrar", ve: puedeEntregar(pedido), sinSub: true },
+            { clave: "reparto", icono: "camion", texto: "A repartir", sub: "Pasa a En reparto", ve: estadoActualDelPedido(pedido) !== "enReparto" },
+            { clave: "dejar", icono: "reloj", texto: "Dejarlo cargado", sub: "Para después", ve: true }
+        ].filter(opcion => opcion.ve);
+        caja.innerHTML = `<h3 class="queHacerTit">¿Qué hacemos con este pedido?</h3>
+            <div class="queHacerOpciones">${opciones.map(opcion => `<button type="button" class="queHacerOpcion queHacer-${opcion.clave}" data-que="${opcion.clave}">
+                ${p.ico(opcion.icono, 22)}<strong>${p.esc(opcion.texto)}</strong>${opcion.sinSub ? "" : `<small>${p.esc(opcion.sub)}</small>`}
+            </button>`).join("")}</div>`;
+        let hojaPropia = null;
+        caja.addEventListener("click", evento => {
+            const boton = evento.target.closest("[data-que]");
+            if (!boton) return;
+            const que = boton.dataset.que;
+            try {
+                if (que === "entregar") {
+                    entregarSinCambios(id, estadoActualDelPedido(buscarPedido(id)));
+                } else if (que === "reparto") {
+                    window.nubeVendeFrio.agregarEstadoAlPedido(id, "enReparto", "");
+                    mostrarToast("Pedido en reparto");
+                }
+            } catch (error) {
+                avisarError(error);
+            }
+            if (hojaPropia) p.cerrar?.();
+            if (typeof alElegir === "function") alElegir(que);
+        });
+        if (contenedor) {
+            contenedor.querySelector(".queHacerPedido")?.remove();
+            contenedor.appendChild(caja);
+        } else {
+            hojaPropia = p.hoja({ titulo: "", etiqueta: "¿Qué hacemos con este pedido?" });
+            hojaPropia.querySelector(".pzHojaCuerpo").appendChild(caja);
+        }
+        return caja;
+    }
+
     window.seguimientoVendeFrio = {
         // "¿Qué hacemos con este pedido?" (Rutas): entrega todo y pregunta el cobro.
         entregarYCobrar(id) {
@@ -5185,6 +5235,7 @@
             entregarSinCambios(String(id), estadoActualDelPedido(pedido));
             return true;
         },
+        queHacerConPedido,
         redibujarFicha: () => dibujarFicha(),
         pedidoAbierto: () => idFichaAbierta,
         // Dónde está la sección (lugar.js la vuelve a abrir igual si
