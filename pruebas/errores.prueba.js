@@ -34,14 +34,19 @@ test("errores: datos de ejemplo completos y textos que se leen sobre el color pr
     // Los pedidos de ejemplo tienen fecha, unidades y mensaje, como los de
     // verdad: antes salían "Sin fecha · 0 unidades".
     await page.locator(".bottom-nav").getByRole("button", { name: "Pedidos" }).click();
-    const tarjeta = page.locator("#contenedorHistorial .historialCard").first();
+    // Desde 2026-11-01 el historial son los «Terminados» de Pedidos.
+    const lista = page.locator("#vistaPedidos");
+    const tarjeta = lista.getByRole("button", { name: /^Ver el pedido de / }).first();
     await expect(tarjeta).toBeVisible();
-    await expect(page.locator("#contenedorHistorial")).not.toContainText("Sin fecha");
+    await expect(lista).not.toContainText("Sin fecha");
     await expect(tarjeta).not.toContainText(" 0 unidades");
     await expect(tarjeta).toContainText(" unidades");
-    await tarjeta.getByRole("button", { name: "Ver pedido" }).click();
-    await expect(page.locator("#pedidoDetalle")).toContainText("Unidades totales");
-    await expect(page.locator("#pedidoDetalle")).toContainText("Frío Sur");
+    await tarjeta.click();
+    const ficha = page.locator(".fichaPedido");
+    await expect(ficha).toBeVisible();
+    await expect(ficha).toContainText("$");
+    await page.evaluate(() => window.lugarVendeFrio.atrasDelCelular());
+    await expect(ficha).toBeHidden();
     await capturar(page, "errores-02-pedido-de-ejemplo");
 
     // T153: los comercios de ejemplo tienen su última visita (la ficha decía
