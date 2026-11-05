@@ -2,6 +2,30 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 279,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "mapa",
+      "titulo": "Rutas liviana con muchos comercios",
+      "texto": "Los pines encimados se juntan en un círculo con cuántos son. Tocalo y el mapa se acerca."
+    },
+    {
+      "version": 279,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "tienda",
+      "titulo": "Comercios al editar un pedido",
+      "texto": "Al escribir el comercio aparecen sugerencias con el estilo de la app."
+    },
+    {
+      "version": 279,
+      "fecha": "2026-11-05",
+      "tipo": "mejor",
+      "icono": "chispa",
+      "titulo": "Más colores a elección",
+      "texto": "En Apariencia, «A elección» abre una paleta propia de 48 colores."
+    },
+    {
       "version": 278,
       "fecha": "2026-11-05",
       "tipo": "mejor",
