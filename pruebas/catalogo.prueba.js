@@ -108,7 +108,7 @@ test("catálogo: cuadros de color, editar marcas y ventanas nuevas", async ({ pa
     const ficha = page.getByRole("dialog", { name: "Pastas Doña Rosa" });
     await expect(ficha).toBeVisible();
     await expect(ficha.locator(".fichaNumeros > div")).toHaveCount(6);
-    await expect(ficha.locator(".fichaNumeros")).toContainText("sin precio");
+    await expect(ficha.locator(".fichaMarcaLectura")).toContainText("1 producto no tiene precio.");
     await expect(ficha.locator(".filaFichaMarca", { hasText: "+ Agregar precio" })).toHaveCount(1);
     await capturar(page, "catalogo-05-ficha-de-la-marca");
     // Su ⋯: lo que se hace con la marca (cambiar el nombre).

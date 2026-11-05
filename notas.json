@@ -2,6 +2,14 @@
   "explicacion": "Notas de cambios que ve el dueño al tocar «Hay una versión nueva». Cada cambio visible suma una nota ARRIBA de todo, con la versión de caché de sw.js. Ver «Notas de cambios» en WORKING_GUIDE.md.",
   "notas": [
     {
+      "version": 283,
+      "fecha": "2026-11-05",
+      "tipo": "nuevo",
+      "icono": "grafico",
+      "titulo": "Ficha de la marca para estudiar ventas",
+      "texto": "Elegí una marca en Catálogo: ves cuánto vende, quién la compra y a quién ofrecérsela."
+    },
+    {
       "version": 282,
       "fecha": "2026-11-05",
       "tipo": "mejor",

@@ -382,29 +382,83 @@ function plataMarca(valor) {
     return window.piezas ? window.piezas.plata(valor) : "$ " + Math.round(Number(valor) || 0).toLocaleString("es-AR");
 }
 
-// Unidades y plata de la marca este mes, y su producto más vendido.
-function numerosDelMesDeMarca(marca) {
-    const ahora = new Date();
-    const desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
+// Ficha de la marca para estudiar el mercado (Tanda 3, aprobada por el
+// dueño): todo sale de los pedidos que cuentan, sin pedir nada a la nube.
+// Si quien mira no puede ver la plata, se mide en unidades.
+function estudioDeMarca(marca) {
+    const conPlata = window.verPlataVendeFrio?.puedoVer?.() !== false;
     const pedidos = typeof pedidosQueCuentanParaLeer === "function" ? pedidosQueCuentanParaLeer() : [];
     const marcaNormal = normalizarTexto(marca);
-    const porProducto = {};
-    let unidades = 0;
-    let plata = 0;
+    const ahora = new Date();
+    const dia = 86400000;
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime();
+    const inicioAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).getTime();
+    const corteAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, ahora.getDate() + 1).getTime();
+    const hace30 = Date.now() - 30 * dia;
+    const hace60 = Date.now() - 60 * dia;
+    const hace90 = Date.now() - 90 * dia;
+    let mesPlata = 0, mesUnidades = 0, anterior = 0, ultimo = 0, totalMes = 0;
+    const porProducto = new Map();
+    const porComercio = new Map();
+    const activos = new Map();
+    const compranMarca = new Set();
+    const porMarcaMes = new Map();
     pedidos.forEach(pedido => {
         const fecha = typeof obtenerFechaRegistro === "function" ? obtenerFechaRegistro(pedido) : new Date(Number(pedido.timestamp) || 0);
-        if (!fecha || fecha.getTime() < desde) return;
+        const hora = fecha ? fecha.getTime() : 0;
+        const comercio = String(pedido.comercio || "").trim();
         (pedido.productos || []).forEach(item => {
-            if (!item || normalizarTexto(item.marca) !== marcaNormal) return;
+            if (!item) return;
             const cantidad = Number(item.cantidad) || 0;
-            unidades += cantidad;
-            plata += cantidad * (Number(item.precio) || 0);
-            const nombre = item.producto || item.nombre || "";
-            if (nombre) porProducto[nombre] = (porProducto[nombre] || 0) + cantidad;
+            if (!cantidad) return;
+            const valor = conPlata ? cantidad * (Number(item.precio) || 0) : cantidad;
+            if (hora >= inicioMes) {
+                totalMes += valor;
+                const otra = String(item.marca || "").trim() || "Sin marca";
+                porMarcaMes.set(otra, (porMarcaMes.get(otra) || 0) + valor);
+            }
+            if (comercio && hora >= hace60) activos.set(comercio, (activos.get(comercio) || 0) + cantidad);
+            if (normalizarTexto(item.marca) !== marcaNormal) return;
+            if (hora >= inicioMes) { mesPlata += cantidad * (Number(item.precio) || 0); mesUnidades += cantidad; }
+            else if (hora >= inicioAnterior && hora < corteAnterior) anterior += valor;
+            if (hora > ultimo) ultimo = hora;
+            const nombre = normalizarTexto(item.producto || item.nombre);
+            if (hora >= hace30) porProducto.set(nombre, (porProducto.get(nombre) || 0) + cantidad);
+            if (comercio && hora >= hace60) compranMarca.add(comercio);
+            if (comercio && hora >= hace90) porComercio.set(comercio, (porComercio.get(comercio) || 0) + cantidad);
         });
     });
-    const masVendido = Object.entries(porProducto).sort((x, y) => y[1] - x[1])[0];
-    return { unidades, plata, masVendido: masVendido && masVendido[1] > 0 ? masVendido[0] : "" };
+    const mesValor = conPlata ? mesPlata : mesUnidades;
+    const dias = ultimo ? Math.floor((Date.now() - ultimo) / dia) : -1;
+    const oportunidades = [...activos.entries()].filter(([comercio]) => !compranMarca.has(comercio)).sort((a, b) => b[1] - a[1]);
+    return {
+        conPlata, mesPlata, mesUnidades, porProducto, oportunidades,
+        parte: totalMes ? Math.round(mesValor / totalMes * 100) : 0,
+        cambio: anterior ? Math.round((mesValor - anterior) / anterior * 100) : null,
+        compran: compranMarca.size, activos: activos.size,
+        ultimo: dias < 0 ? "—" : dias === 0 ? "hoy" : dias === 1 ? "ayer" : "hace " + dias + " d",
+        top: [...porComercio.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5),
+        ranking: [...porMarcaMes.entries()].filter(([, valor]) => valor > 0).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    };
+}
+
+// Las frases de "Lo que dicen los números", armadas con los datos.
+function lecturaDeMarca(marca, estudio, lista) {
+    const frases = [];
+    if (estudio.cambio !== null && Math.abs(estudio.cambio) >= 5) {
+        frases.push(estudio.cambio > 0 ? `Viene creciendo: ${estudio.cambio}% más que el mes pasado a esta altura.` : `Viene bajando: ${Math.abs(estudio.cambio)}% menos que el mes pasado a esta altura.`);
+    }
+    const vendidos = lista.map(producto => [producto.nombre, estudio.porProducto.get(normalizarTexto(producto.nombre)) || 0]).filter(([, cantidad]) => cantidad > 0).sort((a, b) => b[1] - a[1]);
+    const total = vendidos.reduce((suma, [, cantidad]) => suma + cantidad, 0);
+    if (vendidos.length > 1 && total) {
+        const parte = Math.round(vendidos[0][1] / total * 100);
+        if (parte >= 35) frases.push(`${vendidos[0][0]} es el ${parte}% de lo que vendés de ${marca}.`);
+    }
+    const quietos = lista.length - vendidos.length;
+    if (quietos > 0 && vendidos.length) frases.push(quietos === 1 ? "1 producto no se vendió en 30 días." : `${quietos} productos no se vendieron en 30 días.`);
+    if (estudio.oportunidades.length) frases.push(estudio.oportunidades.length === 1 ? "1 comercio que te compra otras cosas nunca le compró: ofrecésela." : `${estudio.oportunidades.length} comercios que te compran otras cosas nunca le compraron: ofrecésela.`);
+    if (!frases.length) frases.push(total ? `Se vende parejo: ${estudio.compran} de tus ${estudio.activos} comercios la compran.` : "Todavía no hay pedidos de esta marca para estudiar.");
+    return frases.slice(0, 3);
 }
 
 function itemMenuMarca(icono, texto, clase = "") {
@@ -433,7 +487,10 @@ function abrirFichaMarca(marca, scroll = 0) {
     } catch (error) { /* sin stock: no se muestra */ }
     const sinPrecio = lista.filter(producto => !(Number(producto.precio) > 0));
     const pocoStock = lista.filter(producto => estados.get(producto.id)?.nivel !== undefined && estados.get(producto.id).nivel !== "ok").length;
-    const mes = numerosDelMesDeMarca(marca);
+    const estudio = estudioDeMarca(marca);
+    const vendido = producto => estudio.porProducto.get(normalizarTexto(producto.nombre)) || 0;
+    lista.sort((x, y) => vendido(y) - vendido(x));
+    const maximo = Math.max(1, ...lista.map(vendido));
 
     fichaMarca = document.createElement("div");
     fichaMarca.className = "modal modalFichaComercio modalFichaMarca " + tonoMarcaAdmin(marca);
@@ -441,12 +498,17 @@ function abrirFichaMarca(marca, scroll = 0) {
         <div class="fichaMarco">
             <div class="modalContenido fichaContenido fichaComercioNueva" role="dialog" aria-modal="true" aria-labelledby="tituloFichaMarca">
                 <button type="button" class="fichaCerrar" aria-label="Cerrar ficha">${window.icono("cerrarX", 20)}</button>
+                <button type="button" class="fichaAsistente" aria-label="Asistente" title="Asistente" data-abrir-asistente>${window.icono("chispa", 20)}</button>
                 <div class="fichaEncabezado">
                     <div class="fichaAvatar inicialesMarca" aria-hidden="true"></div>
                     <div class="fichaTitulo"><h2 id="tituloFichaMarca"></h2><small>Marca</small></div>
                 </div>
                 <div class="fichaNumeros"></div>
-                <div class="fichaMarcaProductos"><strong>Productos</strong><div class="listaFichaMarca"></div></div>
+                <div class="fichaMarcaLectura"><strong>Lo que dicen los números</strong><ul></ul></div>
+                <div class="fichaMarcaProductos"><strong>Productos · más vendidos en 30 días</strong><div class="listaFichaMarca"></div></div>
+                <div class="fichaMarcaProductos fichaMarcaComercios"><strong>Quién la compra más</strong><div></div></div>
+                <div class="fichaMarcaProductos fichaMarcaOportunidades"><strong>Para ofrecérsela</strong><div></div></div>
+                <div class="fichaMarcaProductos fichaMarcaRanking"><strong>Contra tus otras marcas · este mes</strong><div></div></div>
             </div>
             <div class="fichaVelo" hidden></div>
             <div class="fichaMenu" role="dialog" hidden></div>
@@ -456,16 +518,43 @@ function abrirFichaMarca(marca, scroll = 0) {
     fichaMarca.querySelector(".fichaAvatar").textContent = inicialesMarca(marca);
     fichaMarca.querySelector("#tituloFichaMarca").textContent = marca;
 
-    // Los seis números. "Sin precio" lleva a ponerle precio al primero.
+    // Los seis números para estudiar la marca.
+    const comparar = estudio.cambio === null ? "—" : (estudio.cambio > 0 ? "+" : "") + estudio.cambio + "%";
     const numeros = [
-        { valor: String(lista.length), texto: lista.length === 1 ? "producto" : "productos" },
-        { valor: mes.unidades + " u", texto: "vendidas este mes" },
-        { valor: plataMarca(mes.plata), texto: "vendido este mes" },
-        { valor: mes.masVendido || "—", texto: "más vendido", clase: "fichaNumeroTexto" },
-        { valor: String(sinPrecio.length), texto: "sin precio", clase: sinPrecio.length ? "fichaNumeroAviso" : "",
-            alTocar: sinPrecio.length ? () => abrirModalEditarProducto(sinPrecio[0].id) : null },
-        { valor: String(pocoStock), texto: "poco stock", clase: pocoStock ? "fichaNumeroAviso" : "" }
+        estudio.conPlata ? { valor: plataMarca(estudio.mesPlata), texto: "vendido este mes" } : { valor: estudio.mesUnidades + " u", texto: "vendidas este mes" },
+        { valor: estudio.parte + "%", texto: "de tus ventas" },
+        { valor: comparar, texto: "vs. mes pasado", clase: estudio.cambio !== null && estudio.cambio < 0 ? "fichaNumeroAviso" : "" },
+        estudio.conPlata ? { valor: estudio.mesUnidades + " u", texto: "unidades este mes" } : { valor: String(lista.length), texto: lista.length === 1 ? "producto" : "productos" },
+        { valor: estudio.compran + " de " + estudio.activos, texto: "comercios la compran" },
+        { valor: estudio.ultimo, texto: "último pedido" }
     ];
+    // Avisos que ya estaban: sin precio y poco stock, en la lectura.
+    const frases = lecturaDeMarca(marca, estudio, lista);
+    if (sinPrecio.length) frases.push(sinPrecio.length === 1 ? "1 producto no tiene precio." : sinPrecio.length + " productos no tienen precio.");
+    if (pocoStock) frases.push(pocoStock === 1 ? "1 producto tiene poco stock." : pocoStock + " productos tienen poco stock.");
+    const listaLectura = fichaMarca.querySelector(".fichaMarcaLectura ul");
+    frases.forEach(frase => { const li = document.createElement("li"); li.textContent = frase; listaLectura.appendChild(li); });
+    // Filas con barrita: comercios, oportunidades y marcas.
+    const filasConBarra = (caja, filas, vacio, alTocar) => {
+        const destino = fichaMarca.querySelector(caja + " > div");
+        if (!filas.length) { destino.innerHTML = '<p class="fichaMarcaVacio"></p>'; destino.firstChild.textContent = vacio; return; }
+        const mayor = Math.max(1, ...filas.map(fila => fila[1]));
+        filas.forEach(([nombre, valor, resaltar, texto], indice) => {
+            const fila = document.createElement(alTocar ? "button" : "div");
+            if (alTocar) { fila.type = "button"; fila.addEventListener("click", () => alTocar(nombre)); }
+            fila.className = "filaBarraMarca" + (resaltar ? " resaltada" : "");
+            fila.innerHTML = '<span class="filaBarraNumero"></span><span class="filaBarraTexto"><span class="filaBarraNombre"></span><span class="filaBarra"><i></i></span></span><b></b>';
+            fila.querySelector(".filaBarraNumero").textContent = String(indice + 1);
+            fila.querySelector(".filaBarraNombre").textContent = nombre;
+            fila.querySelector(".filaBarra i").style.width = Math.max(4, Math.round(valor / mayor * 100)) + "%";
+            fila.querySelector("b").textContent = texto;
+            destino.appendChild(fila);
+        });
+    };
+    const abrirComercio = nombre => { cerrarFichaMarca(); window.abrirFichaComercio?.(nombre); };
+    filasConBarra(".fichaMarcaComercios", estudio.top.map(([nombre, cantidad]) => [nombre, cantidad, false, cantidad + " u."]), "Todavía nadie la pidió en los últimos 90 días.", abrirComercio);
+    filasConBarra(".fichaMarcaOportunidades", estudio.oportunidades.slice(0, 5).map(([nombre, cantidad]) => [nombre, cantidad, false, cantidad + " u. de otras"]), "Todos tus comercios activos ya la compran.", abrirComercio);
+    filasConBarra(".fichaMarcaRanking", estudio.ranking.map(([nombre, valor]) => [nombre, valor, normalizarTexto(nombre) === normalizarTexto(marca), estudio.conPlata ? plataMarca(valor) : valor + " u."]), "Este mes todavía no hay ventas.");
     const cajaNumeros = fichaMarca.querySelector(".fichaNumeros");
     numeros.forEach(numero => {
         const caja = document.createElement("div");
@@ -504,6 +593,13 @@ function abrirFichaMarca(marca, scroll = 0) {
         const nombre = document.createElement("strong");
         nombre.textContent = producto.nombre;
         textos.appendChild(nombre);
+        const unidades = vendido(producto);
+        const ventas = document.createElement("small");
+        ventas.className = "ventasFichaMarca" + (unidades ? "" : " sinVentas");
+        ventas.innerHTML = unidades ? '<span class="filaBarra"><i></i></span>' : "";
+        ventas.append(document.createTextNode(unidades ? unidades + " u." : "Sin ventas en 30 días"));
+        if (unidades) ventas.querySelector("i").style.width = Math.max(4, Math.round(unidades / maximo * 100)) + "%";
+        textos.appendChild(ventas);
         const estado = estados.get(producto.id);
         if (estado) {
             const stock = document.createElement("small");
@@ -515,7 +611,10 @@ function abrirFichaMarca(marca, scroll = 0) {
         flecha.className = "flechaFilaProducto";
         flecha.innerHTML = window.icono("chevDerecha", 18);
         fila.append(foto, textos, textoPrecioAdmin(producto.precio), flecha);
-        fila.addEventListener("click", () => abrirModalEditarProducto(producto.id));
+        fila.addEventListener("click", () => {
+            if (typeof window.abrirFichaProducto === "function") { cerrarFichaMarca(); window.abrirFichaProducto(producto.id); }
+            else abrirModalEditarProducto(producto.id);
+        });
         listaFicha.appendChild(fila);
     });
     if (!lista.length) {
